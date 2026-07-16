@@ -17,7 +17,7 @@ The smallest successful build must demonstrate this uninterrupted story:
 6. Mission Control explains a safe 22-minute → 15-minute organizational change.
 7. The CTO approves once; assignments and objective progress visibly reorganize.
 8. Validation passes and demo-environment promotion requires approval.
-9. A real or controlled pull request and working Stripe preview prove the outcome.
+9. A working Stripe preview validates the outcome without displacing Mission Control's reorganization-and-completion climax.
 10. A compressed replay reconstructs the mission without repeating external effects.
 
 ## Non-negotiable cut rule
@@ -401,7 +401,7 @@ Block promotion until a human decision is recorded.
 
 ### Exit criteria
 
-- The ending proves work happened; “Mission Complete” is supplementary rather than the evidence.
+- The ending keeps Mission Control's reorganization and successful completion as the climax; external proof quietly validates that work happened.
 
 ## M8 — Replay epilogue
 

@@ -48,7 +48,7 @@ Projection tests, the production build, and the preview interaction pass as visi
 
 ### 2:20–2:40 — Completion
 
-The mission resolves into a still **Mission Debrief** rather than another dashboard. It mirrors the opening promise with “Here are the outcomes your AI organization produced,” shows **Completed**, **14m 52s**, **7m estimated savings**, and **1 human decision**, then presents one primary proof: an interactive, honestly labeled controlled local preview. A single **Open Preview** action closes the loop. Pull-request proof appears only after a genuine PR exists. All organizational motion stops so the audience can absorb the outcome.
+The mission resolves into a still **Mission Debrief** rather than another dashboard. It mirrors the opening promise with “Here are the outcomes your AI organization produced,” shows **Completed**, **14m 52s**, **7m estimated savings**, and **1 human decision**, then quietly offers an interactive, honestly labeled controlled local preview as supporting evidence. The reorganization and successful completion remain the climax; the preview validates that outcome without becoming a second demo. Pull-request proof appears only after a genuine PR exists. All organizational motion stops so the audience can absorb the outcome.
 
 ### 2:40–2:50 — Close
 

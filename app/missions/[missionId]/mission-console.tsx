@@ -62,7 +62,7 @@ export default function MissionConsole({ mission }: { mission: Mission }) {
           <div className="deliverables">
             <div><p className="section-label">Deliverables</p><strong>Validated build</strong><span>3 checks passed</span></div>
             <div><strong>Interactive preview</strong><span>Controlled local environment</span></div>
-            <a href="/preview/servicepilot" target="_blank" rel="noreferrer">Open Preview <span>↗</span></a>
+            <a href="/preview/servicepilot" target="_blank" rel="noreferrer">View Evidence <span>↗</span></a>
           </div>
           <p className="completion-note">1 organization change · Replay available · Organization idle</p>
         </section>
