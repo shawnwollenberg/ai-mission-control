@@ -23,13 +23,17 @@ They click **Launch**.
 
 Mission Control comes alive. Hermes creates outcome-oriented objectives, decomposes them into tasks, and assigns a specialized crew. Research, implementation, validation, and delivery become visible with their dependencies.
 
+The first implementation screenshot is deliberately smaller than the final command center: mission **Integrate Stripe Billing**, status **Planning…**, Mission Plan forming, Mission Health showing Schedule **Planning**, Risk **Unknown**, Next Decision **None**, and a Mission Log showing **Mission Created** then **Hermes Planning…**. Do not wait for a complete dashboard before this state is demoable.
+
 ### 0:45–1:15 — Parallel work becomes legible
 
 Research, coding, testing, and security activity appears as structured, human-readable events. The audience sees the important transitions rather than token streams: documentation found, implementation begun, tests run, secrets reviewed.
 
-### 1:15–1:55 — Optimize Mission (wow moment)
+The organization first reaches an earned **On Track / Low Risk** state. Then the demo introduces a believable crisis: Research exceeds its estimate, Coding remains waiting, and the critical path blocks. Pause for one beat while Mission Health changes to Schedule **Delayed**, Risk **Moderate**, Next Decision **Optimization Available**. This conflict is required; without it, the recommendation is an unearned feature demonstration.
 
-Mission Health becomes **Moderate Risk**, supported by evidence such as research exceeding its estimate, coding capacity sitting idle, and deployment remaining blocked. The CTO clicks **Optimize Mission**. Mission Control analyzes objective dependencies and available agent, tool, approval, budget, time, and context resources. It presents:
+### 1:15–1:55 — Review recommendation (wow moment)
+
+Mission Health becomes Schedule **Delayed**, Risk **Moderate**, Next Decision **Optimization Available**. Mission Control has already analyzed objective dependencies and available resources. It explains “why now?”—research exceeded its estimate, coding became idle, and a new parallel path is feasible. The CTO clicks **Review Recommendation**. Mission Control presents:
 
 - Critical path and supporting event evidence
 - Overloaded, idle, blocked, or constrained resources
@@ -44,7 +48,7 @@ Tests and security review pass. Mission Control requests promotion to the demo e
 
 ### 2:20–2:40 — Completion
 
-The mission resolves with a real GitHub pull request, passing tests, a working deployment or local preview, the functioning Stripe subscription feature, and a concise audit trail.
+The mission resolves with a real GitHub pull request, passing tests, a working deployment or local preview, the functioning Stripe subscription feature, and a concise audit trail. The final scorecard shows **Completed 14m 52s**, **Saved 7m**, **Human interventions 1**, **Policy violations 0**, and **Mission replay available**. All organizational motion stops and Mission Health becomes **Complete** so the ending feels conclusive.
 
 ### 2:40–2:50 — Close
 
@@ -104,7 +108,7 @@ Hermes proposes a plan; the platform validates it and the organization forms. Re
 
 ### 0:43–1:04 — Optimize the organization
 
-The CTO clicks **Optimize Mission**. Mission Control shows the critical path, idle capacity, and a coordinated recommendation. The CTO accepts; the objective timeline and crew assignments visibly reconfigure.
+Mission Control proactively shows **Optimization Available** with the critical path, idle capacity, estimated seven-minute savings, and “why now?” evidence. The CTO clicks **Review Recommendation**, then accepts; the Mission Plan and crew assignments visibly reconfigure.
 
 ### 1:04–1:22 — Trust boundary and proof
 

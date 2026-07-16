@@ -51,7 +51,7 @@ The differentiated job is: **Tell me what should happen next, and let me safely 
 
 ### Wow moment
 
-**Optimize Mission:** the user asks Mission Control to analyze the organization. It identifies the critical path and overloaded, idle, blocked, or constrained resources; proposes a coordinated organizational change; quantifies the projected improvement; explains its evidence; and—after atomic approval—visibly reconfigures objective execution and resource allocation.
+**Proactive mission recommendation:** Mission Control continuously projects the organization from its event history. When meaningful evidence identifies a better feasible plan, it surfaces **Optimization Available**, explains why now, quantifies the projected improvement, and invites the user to **Review Recommendation**. After atomic approval, it visibly reconfigures objective execution and resource allocation.
 
 Promotion to the demo environment is the secondary trust payoff: validated work cannot cross that boundary until the accountable human approves it.
 
@@ -68,7 +68,7 @@ Not approved. Provisional boundary:
 - Mission-scoped resources: agents, approvals, wallet budget, compute budget, tools, time, and context
 - One coordinator plus research, coding, testing, security, and deployment capabilities
 - One live mission run at a time
-- Mission status, agent roster, structured event feed, and approval panel
+- Mission status, agent roster, structured Mission Log, and approval panel
 - One evidence-backed organizational optimization with a coordinated recommendation
 - Human acceptance that changes real assignments or dependencies
 - One demo-environment promotion approval boundary
@@ -110,7 +110,17 @@ Aegis is not a reason to invent spending. If included, it quietly enforces agent
 
 The experience should feel like commanding a mission, not inspecting a project-management board or Grafana dashboard. The visual hierarchy is mission identity and explainable health, objectives, resources/crew, recommendations, approvals, telemetry, and mission log. “NASA” means operational clarity, purposeful motion, and strong status language—not decorative complexity.
 
-Mission Health is not an unexplained score. It is a qualitative state such as **On Track**, **Moderate Risk**, or **Critical**, accompanied by observed evidence, affected objectives, and confidence. The trust pattern is: **evidence → recommendation → rationale → approval**.
+The organization should feel alive because meaningful events are occurring, not because the interface simulates activity. The event stream is its heartbeat. Fake typing, fake terminal output, repeated thinking indicators, and decorative Matrix-style motion are prohibited.
+
+The primary emotional outcome is that the audience feels they watched an AI organization form and work. Architectural rigor earns trust, but it is supporting evidence rather than the story presented to judges.
+
+The demo must contain tension: initial progress, an event-derived critical-path crisis, a moment of organizational pause, a proactive recommendation, one human-approved reorganization, and a measurable completion payoff. Mission Control optimizes because the organization encountered a real constraint, never merely because an optimization feature exists.
+
+Organization members assemble progressively through real events rather than appearing as an immediately active roster. When the mission completes, motion and Mission Log activity stop; the organization becomes visibly idle.
+
+Mission Health answers three questions: **Schedule**, **Risk**, and **Next Decision**. It is accompanied by observed evidence, affected objectives, and confidence. The trust pattern is: **evidence → recommendation trigger → rationale → approval**.
+
+The first judge-facing planning panel is named **Mission Plan**. Objectives and tasks remain the internal hierarchy beneath that immediately understandable label.
 
 ## Delivery constraints — decided
 

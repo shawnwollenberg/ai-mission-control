@@ -1,10 +1,10 @@
 # Mission Control — Event Model
 
-**Status:** Approved and frozen — 2026-07-15
+**Status:** Approved; event-sourcing constitution revised 2026-07-16
 
 ## Purpose
 
-Every meaningful state change is recorded as a structured event. The append-only event stream is the source of truth for UI projections, Mission Health, optimization, approvals, audit, replay, and demo debugging. Events describe observable facts and decisions, not private model reasoning.
+Every meaningful state change is recorded as a structured event. The append-only event stream is the sole source of truth for Mission Plan, Mission Log, Mission Health, optimization, approvals, audit, replay, developer inspection, and every other business projection. All projection stores are disposable caches. Events describe observable facts and decisions, not private model reasoning.
 
 ## Candidate event envelope
 
@@ -79,7 +79,7 @@ Whether all fields are needed in the MVP remains undecided.
 ### Risk and intervention
 
 - `mission.risk_detected`
-- `optimization.requested`
+- `recommendation.triggered`
 - `optimization.completed`
 - `intervention.recommended`
 - `intervention.accepted`
@@ -127,7 +127,19 @@ Replay is also a user-visible demo projection: it re-emits historical projection
 
 ## Mission Health projection
 
-Mission Health returns a qualitative status (`on_track`, `moderate_risk`, or `critical`), reasons referencing affected objectives/tasks/resources, evidence event identifiers, confidence, calculation version, critical path, and projected completion.
+Mission Health answers exactly three executive questions:
+
+| Field | Initial example | Actionable example |
+|---|---|---|
+| Schedule | `Planning` | `Delayed` |
+| Risk | `Unknown` | `Moderate` |
+| Next Decision | `None` | `Optimization Available` |
+
+Schedule values are `planning`, `on_track`, or `delayed`. Risk values are `unknown`, `low`, `moderate`, or `high`. Next Decision is `none`, `optimization_available`, or a specific pending approval boundary required by the demo.
+
+The projection also carries reasons referencing affected objectives/tasks/resources, evidence event identifiers, confidence, calculation version, critical path, and projected completion. Those fields support explanation but do not add a fourth top-level answer.
+
+An optimization recommendation is proactive. When event-derived rules find a meaningful intervention, the runtime appends `recommendation.triggered` with the reasons, evidence event identifiers, and estimated benefit. The UI then shows **Review Recommendation**; it does not ask the user to initiate analysis with an always-visible **Optimize Mission** button.
 
 ## UI projection requirements
 
@@ -140,6 +152,22 @@ Each user-visible event should answer at least one of:
 - Does the human need to act?
 
 Raw prompts, chain-of-thought, secrets, and unfiltered tool payloads must not enter the user-facing event stream.
+
+The event stream is the visible heartbeat of the organization and must appear in the earliest mission UI. The judge-facing name is **Mission Log**, not Event Feed. The initial log may be visually plain, but it must be causally honest.
+
+- No fake typing indicators or repeated `Thinking…` states.
+- No synthetic terminal spam or decorative activity events.
+- Every animation corresponds to a newly appended canonical event or to a projection state emitted during explicit replay.
+- Quiet means no meaningful organizational event occurred; the UI must not manufacture motion to appear busy.
+
+## Developer Mode projection inspector
+
+Developer Mode renders two synchronized projections from the same canonical log:
+
+- **Events:** ordered sequence, type, actor, causation, correlation, and payload summary.
+- **State:** current Mission, Mission Plan, task/assignment, Mission Health, recommendation, and approval projections.
+
+Its first acceptance test appends `mission.created`, `plan.created`, `task.created`, `task.assigned`, `task.started`, and `task.completed`, then verifies the visible state after every sequence number. Clearing all projections and replaying those events must reproduce identical inspector and product views.
 
 ## Open questions
 

@@ -324,16 +324,16 @@ Provisional calculation:
 
 Mission Health runs continuously and is separate from optimization.
 
-- Health answers: “Are we on track, and what evidence supports that assessment?”
+- Health answers exactly three top-level questions: “What is the schedule state?”, “What is the risk level?”, and “What decision is needed next?”
 - Optimization answers: “Can a safe organizational change improve the outcome?”
 
-Health may surface **Optimization Available**, but the detailed analysis and atomic reorganization remain explicit user actions.
+Optimization analysis is proactive. Event-derived trigger rules run when relevant organizational facts change. If a safe material improvement exists, the canonical log records the trigger, its “why now?” evidence, and the resulting recommendation. Mission Health then projects **Optimization Available** and the UI offers **Review Recommendation**. Reviewing and atomically approving or rejecting the recommendation remain explicit user actions; applying it is never automatic.
 
 ## Events
 
 Minimum optimizer lifecycle:
 
-- `optimization.requested`
+- `recommendation.triggered`
 - `optimization.analysis_started`
 - `optimization.recommendation_created`
 - `optimization.no_improvement_found`

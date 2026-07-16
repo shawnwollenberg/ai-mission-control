@@ -7,7 +7,7 @@
 - [x] Select one exact target user and current alternative
 - [x] Write the product-level core problem statement
 - [x] Choose the concrete software-release mission
-- [x] Select Optimize Mission as the memorable wow moment
+- [x] Select proactive optimization recommendation review as the memorable wow moment
 - [x] Define demo-environment promotion as the approval risk boundary
 - [ ] Classify each demo beat as live, controlled, or simulated
 - [ ] Define the final artifact and proof of completion
@@ -27,6 +27,8 @@
 - [ ] Define explainable Mission Health states, evidence rules, and confidence
 - [ ] Define command, canonical append, projection, outbox, and safe replay semantics
 - [ ] Define canonical event envelope and demo event catalog
+- [ ] Build minimal Developer Mode event/projection inspector after Mission Plan, Mission Log, and Mission Health are visible
+- [ ] Require an event-consumption and no-independent-state declaration for every feature
 - [ ] Decide orchestration approach and agent execution contract
 - [ ] Define Aegis responsibility and failure behavior
 - [ ] Prove or reject Aegis deployment-policy feasibility; do not invent spend

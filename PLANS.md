@@ -1,6 +1,6 @@
 # Mission Control — First Execution Plan
 
-**Status:** Approved and frozen — implementation authorized 2026-07-15  
+**Status:** Approved; event-sourcing priorities revised 2026-07-16
 **Planning basis:** One or two builders, less than one week  
 **Estimation unit:** Focused person-hours, excluding long unattended external waits  
 **Optimization goal:** Maximize the quality and reliability of the 90-second demo, not architectural completeness
@@ -13,7 +13,7 @@ The smallest successful build must demonstrate this uninterrupted story:
 2. Mission Control automatically forms objectives and assigns a capability-based AI organization.
 3. Real event-derived state makes objective progress and organization status legible.
 4. Mission Health reports **Moderate Risk** with evidence.
-5. The CTO clicks **Optimize Mission**.
+5. Mission Control proactively surfaces **Optimization Available** with a “why now?” explanation.
 6. Mission Control explains a safe 22-minute → 15-minute organizational change.
 7. The CTO approves once; assignments and objective progress visibly reorganize.
 8. Validation passes and demo-environment promotion requires approval.
@@ -23,6 +23,26 @@ The smallest successful build must demonstrate this uninterrupted story:
 ## Non-negotiable cut rule
 
 Every task below must produce a visible, testable artifact. If work does not strengthen one of the ten demo beats, improve deterministic recovery, or prove a judge-facing claim, it moves to the backlog.
+
+Progress is reported by demo capability. Every update must state what was completed, what can be physically demonstrated now, what is blocking delivery, and what will be built next.
+
+## Two-track delivery priority
+
+### Track A — Demo (highest priority)
+
+`Mission Launch → Mission Plan → Mission Log → Mission Health → Recommendation → Approval → Optimization Animation → Mission Complete`
+
+These are the experiences judges see. Work is sequenced to create the feeling: **“I just watched an AI organization working.”**
+
+### Track B — Engineering (supporting)
+
+`Event Sourcing → Projection Rebuild → Developer Mode → Replay → Testing → Architecture`
+
+These capabilities make Track A trustworthy but do not lead the milestone narrative. If Track B delays Track A, reduce Track B to the smallest implementation that protects demo integrity.
+
+Before every implementation task ask: **Will a judge notice if this does not exist?** A “no” requires a concrete risk-reduction justification and a deliberately minimal scope.
+
+Every feature must still list the event types it consumes, the projection it produces, its lightweight rebuild test, and confirmation that it owns no independent business state.
 
 ## Real versus controlled contract
 
@@ -61,7 +81,7 @@ Every task below must produce a visible, testable artifact. If work does not str
 |---|---:|---|---|
 | M0 Contract freeze and fixture | 3h | None | Critical |
 | M1 Mission walking skeleton | 6h | M0 | Critical |
-| M2 Canonical event engine | 8h | M0 | Critical |
+| M2 Organization comes alive | 8h | M0, M1 launch | Critical; immediate priority |
 | M3 Executive mission UI | 10h | M1, M2 | Critical |
 | M4 Organization execution | 8h | M2 | Critical |
 | M5 Mission Health and optimizer | 10h | M0, M2, M4 | Critical |
@@ -127,55 +147,62 @@ Accept objective text, deadline, and priority; issue a mission-launch command.
 **Visible artifact:** Clicking **Launch Mission** creates a mission titled “Stripe Billing” and shows `Planning…`.  
 **Test:** Duplicate submission is idempotent and refresh does not create another mission.
 
-### M1.3 Materialize automatic objectives — 2h
+### M1.3 Validate the intentional launch transition — 2h
 
-Use the canonical mission template to create Research, Implementation, Validation, and Deployment without confirmation.
+Complete browser-level visual and interaction QA for mission submission, transition, refresh, and duplicate-launch handling.
 
-**Visible artifact:** Four objectives appear in the mission view after launch.  
-**Test:** Objective identifiers, order, and dependencies match the frozen fixture.
+**Visible artifact:** Launch moves confidently from intent entry to the `Planning…` mission shell.
+
+**Test:** The chosen judging viewport shows no broken transition, layout shift, or duplicate mission.
 
 ### Exit criteria
 
 - The first 20 seconds of the demo are clickable end to end.
 
-## M2 — Canonical event engine
+## M2 — Organization comes alive
 
 **Estimate:** 8h  
 **Dependencies:** M0  
 **Classification:** Critical
 
-### M2.1 Implement versioned event envelope and append contract — 2h
+### M2.1 Make Mission Plan appear — 2h
 
-Support event identity, type/version, mission sequence, timestamps, causation, correlation, visibility, and payload.
+Append the minimum canonical mission and planning events and project the judge-facing Mission Plan.
 
-**Visible artifact:** Developer event inspector shows ordered launch and planning events.  
-**Test:** Duplicate event identity is rejected; mission sequence is monotonic.
+**Visible artifact:** Research, Implementation, Validation, and Deployment form after mission launch.
 
-### M2.2 Build deterministic projections — 3h
+**Test:** Refresh shows the same event-derived plan without duplicating objectives.
 
-Project mission, objectives, tasks, resources, capabilities, allocations, approvals, and effect status solely from events.
+### M2.2 Make Mission Log live — 2h
 
-**Visible artifact:** Clearing projections and replaying events restores the same mission screen.  
-**Test:** Projection snapshot before and after rebuild is identical.
+Render meaningful canonical planning and work transitions as a live Mission Log.
 
-### M2.3 Add idempotent effect intent/result boundary — 1.5h
+**Visible artifact:** `Mission Created → Objectives Generated → Task Created → Task Assigned → Task Started` makes the organization visibly active.
 
-Record external actions as intents and outcomes so replay never reruns them.
+**Test:** Every log entry resolves to one canonical event; no fake activity is rendered.
 
-**Visible artifact:** Event inspector distinguishes requested, started, and completed effects.  
-**Test:** Rebuilding or replaying the mission produces zero additional external-effect calls.
+### M2.3 Make Mission Health react — 2h
 
-### M2.4 Stream projection updates — 1.5h
+Project Schedule, Risk, and Next Decision from the same event sequence driving the Mission Plan and Mission Log.
 
-Deliver live state changes using the simplest reliable transport. WebSockets are preferred only if they remain lower risk than SSE or polling after the runtime choice.
+**Visible artifact:** Health begins at Schedule `Planning`, Risk `Unknown`, Next Decision `None`, then changes when meaningful work events arrive.
 
-**Visible artifact:** Objective status updates without page refresh.  
-**Test:** Disconnect/reconnect converges to the current projected state without duplicate UI events.
+**Test:** Removing the supporting event removes the corresponding health conclusion.
+
+### M2.4 Add minimal Developer Mode proof — 2h
+
+Expose the ordered events beside the reconstructed state only after the three audience-facing surfaces work.
+
+**Visible artifact:** A basic internal inspector makes projection drift obvious.
+
+**Test:** Clearing projections and replaying the log restores identical Mission Plan, Mission Log, and Mission Health views.
 
 ### Exit criteria
 
 - The event log is canonical.
-- All displayed mission state can be deleted and rebuilt.
+- The audience can see an AI organization form, act, and change state.
+- Mission Plan, Mission Log, and Mission Health consume the same event history.
+- Minimal Developer Mode proves those visible projections rebuild without becoming the milestone itself.
 
 ## M3 — Executive mission UI
 
@@ -190,9 +217,9 @@ Define restrained NASA-inspired typography, colors, spacing, status language, an
 **Visible artifact:** Mission shell visibly reads as an operational command surface rather than a generic admin dashboard.  
 **Test:** At a glance, a reviewer can identify mission, status, health, and commander.
 
-### M3.2 Render objective progress — 3h
+### M3.2 Render Mission Plan progress — 3h
 
-Show Research, Implementation, Validation, and Deployment as large, event-derived progress bars with state and dependency context.
+Show the judge-facing **Mission Plan**, expanding into Research, Implementation, Validation, and Deployment as event-derived objectives and tasks with state and dependency context.
 
 **Visible artifact:** Objective bars advance as canonical fixture events arrive.  
 **Test:** Each visual state maps to a projection value; no animation mutates state.
@@ -204,9 +231,9 @@ Show Hermes and specialized agents as peers in the organization, with capabiliti
 **Visible artifact:** Crew view makes idle, active, and blocked capacity understandable without opening task details.  
 **Test:** A reviewer can identify the idle Deployment resource in under five seconds.
 
-### M3.4 Render executive mission log — 1.5h
+### M3.4 Polish the Mission Log — 1.5h
 
-Translate selected canonical events into concise operational language.
+Refine the basic M2 Mission Log into concise operational language and stronger visual hierarchy.
 
 **Visible artifact:** Mission log shows planning, assignments, progress, and decisions without raw prompts or chain-of-thought.  
 **Test:** Every log entry references a canonical event and respects visibility rules.
@@ -275,9 +302,9 @@ Use frozen durations, dependencies, progress, and allocations to reproduce the c
 
 ### M5.2 Derive explainable Mission Health — 2h
 
-Continuously project `On Track`, `Moderate Risk`, or `Critical` with event evidence and confidence basis.
+Continuously project exactly three top-level answers—Schedule, Risk, and Next Decision—with event evidence and confidence basis.
 
-**Visible artifact:** Mission Health becomes **Moderate Risk** and cites research overrun, idle resources, and blocked objectives.  
+**Visible artifact:** Mission Health changes from Schedule `Planning` / Risk `Unknown` / Next Decision `None` to Schedule `Delayed` / Risk `Moderate` / Next Decision `Optimization Available`.
 **Test:** Removing or changing the supporting events predictably changes the health result.
 
 ### M5.3 Generate one valid organizational recommendation — 3h
@@ -305,9 +332,9 @@ Validate capabilities, capacity, dependencies, required controls, and input sequ
 **Dependencies:** M3, M5  
 **Classification:** Critical; highest polish allocation
 
-### M6.1 Build Optimize Mission interaction — 2h
+### M6.1 Build proactive recommendation review — 2h
 
-Surface **Optimization Available**, run explicit analysis, and present the recommendation at executive depth.
+Automatically surface **Optimization Available** only after event-derived rules justify it. Present **Review Recommendation**, estimated savings, and “why now?” reasons such as research exceeding its estimate, coding becoming idle, and a new parallel path becoming feasible.
 
 **Visible artifact:** One click transitions from mission state to a legible recommendation without navigation confusion.  
 **Test:** The user can state the evidence, proposed change, benefit, and safety rationale after viewing it for ten seconds.
@@ -522,21 +549,22 @@ For one builder, reduce scope before reducing rehearsal:
 
 | Rank | Risk | Likelihood / impact | Mitigation | Kill signal |
 |---:|---|---|---|---|
-| 1 | Scope exceeds available person-hours | High / Critical | Freeze contract; honor cut order; no stretch before rehearsal | Critical path misses Day 3 checkpoint |
-| 2 | Optimization looks scripted or mathematically false | Medium / Critical | Frozen calculable fixture; event evidence; deterministic tests | Reviewer cannot reproduce 22 → 15 |
-| 3 | UI reads as AI Jira/Grafana | Medium / High | Executive hierarchy; outcome language; objective/resource emphasis | Viewer describes it as task tracking |
-| 4 | Wow animation is confusing | Medium / High | Allocate 10h; test without narration; simplify motion | Viewer cannot explain before/after |
-| 5 | External model/GitHub/Stripe/host fails | High / High | Controlled outputs and honest offline fallbacks | Two rehearsals fail on same dependency |
-| 6 | Event sourcing consumes the hackathon | Medium / High | Minimal append log and projectors; no generic framework | Infrastructure work has no visible artifact after 4h |
-| 7 | Real artifact path is too large | Medium / High | Tiny fixture repo; narrow Stripe test-mode feature | Baseline-to-proof flow not complete by Day 3 |
-| 8 | Replay reissues effects or diverges | Low / High | Projection-only replay; effect-count invariant | Replay changes event/effect counts |
-| 9 | Aegis distorts the story | Medium / Medium | Stretch only; two-hour feasibility kill switch | Requires invented spend or explanation detour |
+| 1 | Product surfaces diverge from the canonical event stream | Medium / Critical | Ship launch-to-visible-feed integration first; require UI, health, optimizer, approval, and replay to consume event projections | Any displayed state cannot be traced to and rebuilt from canonical events |
+| 2 | Scope exceeds available person-hours | High / Critical | Freeze contract; honor cut order; no stretch before rehearsal | Critical path misses Day 3 checkpoint |
+| 3 | Optimization looks scripted or mathematically false | Medium / Critical | Frozen calculable fixture; event evidence; deterministic tests | Reviewer cannot reproduce 22 → 15 |
+| 4 | UI reads as AI Jira/Grafana | Medium / High | Executive hierarchy; outcome language; objective/resource emphasis | Viewer describes it as task tracking |
+| 5 | Wow animation is confusing | Medium / High | Allocate 10h; test without narration; simplify motion | Viewer cannot explain before/after |
+| 6 | External model/GitHub/Stripe/host fails | High / High | Controlled outputs and honest offline fallbacks | Two rehearsals fail on same dependency |
+| 7 | Event sourcing consumes the hackathon | Medium / High | Minimal append log and projectors; no generic framework; visible feed within 4h | Infrastructure work has no visible artifact after 4h |
+| 8 | Real artifact path is too large | Medium / High | Tiny fixture repo; narrow Stripe test-mode feature | Baseline-to-proof flow not complete by Day 3 |
+| 9 | Replay reissues effects or diverges | Low / High | Projection-only replay; effect-count invariant | Replay changes event/effect counts |
+| 10 | Aegis distorts the story | Medium / Medium | Stretch only; two-hour feasibility kill switch | Requires invented spend or explanation detour |
 
 ## Definition of demo-ready
 
 - One reset action restores the known-good initial state.
 - Three consecutive 90-second runs finish within ±5 seconds.
-- Optimize Mission produces the same evidence-backed feasible recommendation.
+- The same event evidence produces the same proactive, feasible recommendation.
 - Atomic approval visibly changes event-derived organizational state exactly once.
 - Required testing and environment approval remain intact after optimization.
 - The final diff, test result, PR/PR fixture, and preview correspond to one another.

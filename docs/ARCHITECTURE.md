@@ -1,10 +1,30 @@
 # Mission Control — Architecture
 
-**Status:** Approved and frozen — 2026-07-15
+**Status:** Approved; event-sourcing constitution revised 2026-07-16
 
 ## Architectural goal
 
 Support one reliable, inspectable three-minute mission in which agent work, organizational state, optimization, and approval share a coherent event history.
+
+## Architectural constitution
+
+Mission Control has exactly one source of truth: the canonical append-only event log. Everything else is a disposable projection or cache.
+
+- Mission Plan, Mission Log, Mission Health, timeline, optimizer inputs and recommendations, approvals, replay, and every dashboard view own no independent business state.
+- No screen may maintain independent business state.
+- Every user-visible business fact must identify the canonical events from which it was projected.
+- Replaying the canonical event log into an empty system must reconstruct every user-visible view.
+- Only ephemeral interface state may remain outside the log: animation progress, scroll position, focus, open/closed panels, and local selections that do not change business behavior.
+- If a proposed feature requires independent business state, implementation stops until the exception is explicitly justified and recorded here.
+
+Mission Control is event-sourced, not merely event-driven. Events are durable organizational history; commands and effects may react to them, but events exist primarily so decisions, state, audit, and replay share one authoritative record.
+
+Before implementation, every feature must declare:
+
+1. The canonical event types it consumes.
+2. The projection it produces.
+3. Its rebuild test from an empty projection store.
+4. Confirmation that it owns no independent business state.
 
 ## Responsibility model
 
@@ -19,6 +39,8 @@ Support one reliable, inspectable three-minute mission in which agent work, orga
 ### Mission Control UI
 
 Projects mission state into a small number of legible views: progress, agent ownership, events, approval, and outcome.
+
+Developer Mode is a minimal supporting inspector showing ordered canonical events beside current projected state. It is built after the first judge-facing Mission Plan, Mission Log, and Mission Health slice is visible. It detects drift but is not a product milestone or a second source of truth.
 
 ### Platform runtime
 
@@ -114,7 +136,7 @@ Resource allocation: mission-scoped resources are required or consumed by object
 ## Skeptical constraints
 
 - A multi-agent framework is not automatically valuable; use one only if it reduces delivery risk.
-- A graph visualization is not automatically understandable; a linear event feed with clear dependencies may demo better.
+- A graph visualization is not automatically understandable; a linear Mission Log with clear dependencies may demo better.
 - Streaming tokens are not meaningful observability.
 - “Human in the loop” is not differentiated unless the approval is contextual, consequential, and actually enforced.
 - On-chain execution is not the product story; it must justify its latency and failure modes.
