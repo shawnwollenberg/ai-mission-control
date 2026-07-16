@@ -222,6 +222,14 @@ textarea:focus, input:focus, select:focus { border-color: rgba(183, 243, 107, .5
 .estimate strong { display: block; margin: 8px 0; font-size: 23px; }
 .estimate b { padding: 0 6px; color: var(--amber); }
 .recommendation-action button { display: flex; justify-content: space-between; width: 100%; padding: 14px; border: 1px solid var(--amber); color: #171006; background: var(--amber); font-weight: 780; text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
+.reorganization-card { width: min(1220px, 100%); margin: 16px auto 0; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 24px; padding: 24px 28px; border: 1px solid rgba(183,243,107,.48); background: linear-gradient(110deg, rgba(29,54,37,.92), rgba(12,18,16,.96)); box-shadow: 0 0 60px rgba(183,243,107,.08); animation: reorganization-arrive .6s ease-out; }
+.reorganization-card h2 { margin: 7px 0 0; font-size: 22px; }
+.reorganization-signal { display: flex; align-items: center; gap: 5px; min-width: 48px; }
+.reorganization-signal span { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 12px rgba(183,243,107,.8); animation: resource-transfer 1.15s ease-in-out infinite; }
+.reorganization-signal span:nth-child(2) { animation-delay: .16s; }
+.reorganization-signal span:nth-child(3) { animation-delay: .32s; }
+.reorganization-route { display: flex; align-items: center; gap: 12px; color: var(--muted); font: 650 9px/1.4 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+.reorganization-route b { color: var(--signal); font-size: 18px; }
 .completion-card { width: min(1000px, 100%); margin: 12vh auto 0; padding: 56px; border: 1px solid rgba(183,243,107,.24); background: rgba(12,18,16,.86); text-align: center; animation: completion-arrive .8s ease-out; }
 .completion-card h2 { margin: 15px 0 42px; font-size: clamp(38px, 5vw, 62px); letter-spacing: -.04em; }
 .completion-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border: 1px solid var(--line); background: var(--line); text-align: left; }
@@ -232,6 +240,8 @@ textarea:focus, input:focus, select:focus { border-color: rgba(183, 243, 107, .5
 
 @keyframes event-arrive { from { opacity: 0; transform: translateY(-7px); } }
 @keyframes recommendation-arrive { from { opacity: 0; transform: translateY(14px); } }
+@keyframes reorganization-arrive { from { opacity: 0; transform: scale(.985); } }
+@keyframes resource-transfer { 0%, 100% { opacity: .25; transform: translateX(-3px); } 50% { opacity: 1; transform: translateX(3px); } }
 @keyframes completion-arrive { from { opacity: 0; } }
 
 @media (max-width: 820px) {
@@ -239,6 +249,8 @@ textarea:focus, input:focus, select:focus { border-color: rgba(183, 243, 107, .5
   .mission-header { align-items: stretch; flex-direction: column; }
   .mission-facts { min-width: 0; }
   .command-grid, .recommendation-card { grid-template-columns: 1fr; }
+  .reorganization-card { grid-template-columns: auto 1fr; }
+  .reorganization-route { grid-column: 1 / -1; }
   .mission-log { grid-column: auto; }
   .health-grid, .completion-metrics { grid-template-columns: 1fr 1fr; }
   .recommendation-action { padding: 22px 0 0; border-left: 0; border-top: 1px solid var(--line); gap: 20px; }

@@ -33,14 +33,14 @@ The organization first reaches an earned **On Track / Low Risk** state. Then the
 
 ### 1:15–1:55 — Review recommendation (wow moment)
 
-Mission Health becomes Schedule **Delayed**, Risk **Moderate**, Next Decision **Optimization Available**. Mission Control has already analyzed objective dependencies and available resources. It explains “why now?”—research exceeded its estimate, coding became idle, and a new parallel path is feasible. The CTO clicks **Review Recommendation**. Mission Control presents:
+Mission Health becomes Schedule **Delayed**, Risk **Moderate**, Next Decision **Optimization Available**. Mission Control has already analyzed objective dependencies and available resources. It explains “why now?”—research exceeded its estimate, coding became idle, and a new parallel path is feasible. Mission Control presents the recommendation in context:
 
 - Critical path and supporting event evidence
 - Overloaded, idle, blocked, or constrained resources
 - A coordinated organizational change set
 - Current and revised projected completion
 
-The CTO clicks **Approve Optimization** once. Objective progress bars animate: Research remains active, Implementation splits, Validation starts earlier, and the critical path changes. Projected completion moves from 22 to 15 minutes. This changes real event-derived organizational state even if agent timing is controlled for reliability.
+The CTO clicks **Approve Reorganization** once. A visible reorganization state shows resources moving onto the critical path: Research remains active, Implementation splits, Validation starts earlier, and the critical path changes. Projected completion moves from 22 to 15 minutes. This changes real event-derived organizational state even if agent timing is controlled for reliability.
 
 ### 1:55–2:20 — Validation and environment approval
 
@@ -108,7 +108,7 @@ Hermes proposes a plan; the platform validates it and the organization forms. Re
 
 ### 0:43–1:04 — Optimize the organization
 
-Mission Control proactively shows **Optimization Available** with the critical path, idle capacity, estimated seven-minute savings, and “why now?” evidence. The CTO clicks **Review Recommendation**, then accepts; the Mission Plan and crew assignments visibly reconfigure.
+Mission Control proactively shows **Optimization Available** with the critical path, idle capacity, estimated seven-minute savings, and “why now?” evidence. The CTO clicks **Approve Reorganization**; the Mission Plan and crew assignments visibly reconfigure.
 
 ### 1:04–1:22 — Trust boundary and proof
 

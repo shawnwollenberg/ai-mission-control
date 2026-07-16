@@ -17,14 +17,16 @@ export default function MissionConsole({ mission }: { mission: Mission }) {
 
   useEffect(() => {
     if (visibleCount >= OPENING_EVENTS.length || approved) return;
-    const delay = visibleCount === 7 ? 2100 : visibleCount >= 8 ? 1250 : 850;
+    const delay = visibleCount === 7 ? 3800 : visibleCount >= 8 ? 1650 : 1050;
     const timer = window.setTimeout(() => setVisibleCount((count) => count + 1), delay);
     return () => window.clearTimeout(timer);
   }, [approved, visibleCount]);
 
   useEffect(() => {
     if (!approved || completionCount >= APPROVAL_EVENTS.length) return;
-    const timer = window.setTimeout(() => setCompletionCount((count) => count + 1), 720);
+    const currentEvent = APPROVAL_EVENTS[completionCount - 1];
+    const delay = currentEvent?.type === "organization.reconfigured" ? 2800 : currentEvent?.type === "recommendation.approved" ? 1200 : 950;
+    const timer = window.setTimeout(() => setCompletionCount((count) => count + 1), delay);
     return () => window.clearTimeout(timer);
   }, [approved, completionCount]);
 
@@ -83,6 +85,17 @@ export default function MissionConsole({ mission }: { mission: Mission }) {
               </div>
             </section>
           </section>
+
+          {projection.approved && (
+            <section className="reorganization-card" aria-live="polite">
+              <div className="reorganization-signal"><span /><span /><span /></div>
+              <div>
+                <p className="section-label">Reorganization approved</p>
+                <h2>{events.some((event) => event.type === "organization.reconfigured") ? "Three resources are advancing the critical path." : "Mission Control is applying the new organization."}</h2>
+              </div>
+              <div className="reorganization-route"><span>Research</span><b>→</b><span>Implementation + Validation</span></div>
+            </section>
+          )}
 
           {projection.recommendation && !projection.approved && (
             <section className="recommendation-card">
