@@ -2,11 +2,11 @@
 
 **Updated:** 2026-07-15  
 **Planning baseline:** Approved and frozen  
-**Current focus:** Milestone 1 — Mission launch
+**Current focus:** Milestone 2 — Objectives
 
 ## Milestones
 
-- [ ] M1 — Mission launch works end to end
+- [x] M1 — Mission launch works end to end
 - [ ] M2 — Objectives appear from canonical state
 - [ ] M3 — Tasks and assignments appear
 - [ ] M4 — Event-derived lifecycle and live mission log
@@ -18,17 +18,20 @@
 
 - [x] Remote repository detected
 - [x] Planning approval recorded
-- [ ] Frozen planning baseline committed and tagged
-- [ ] Application scaffold selected and created
-- [ ] Mission launch verified
+- [ ] Frozen planning baseline tagged
+- [x] Application scaffold selected and created
+- [x] Mission launch verified through production server, API creation, and rendered mission response
+- [x] TypeScript check passed
+- [x] Production build passed
+- [x] Production dependency audit passed with zero vulnerabilities
 
 ## Blockers
 
-- None.
+- In-app browser was unavailable, so visual interaction QA remains pending; HTTP-level end-to-end verification passed.
 
 ## Demo readiness
 
-- Launch: not ready
+- Launch: functionally ready; visual QA pending
 - Organization formation: not ready
 - Mission Health: not ready
 - Optimize Mission: not ready
