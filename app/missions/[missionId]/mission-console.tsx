@@ -51,15 +51,20 @@ export default function MissionConsole({ mission }: { mission: Mission }) {
 
       {projection.completed ? (
         <section className="completion-card">
-          <p className="section-label">Mission complete</p>
-          <h2>Stripe Billing delivered.</h2>
+          <p className="section-label">Mission debrief</p>
+          <h2>Here are the outcomes your AI organization produced.</h2>
           <div className="completion-metrics">
-            <Metric label="Completed" value="14m 52s" />
-            <Metric label="Saved" value="7m" />
-            <Metric label="Human interventions" value="1" />
-            <Metric label="Policy violations" value="0" />
+            <Metric label="Objective" value="Completed" />
+            <Metric label="Duration" value="14m 52s" />
+            <Metric label="Estimated savings" value="7m" />
+            <Metric label="Human decisions" value="1" />
           </div>
-          <p className="completion-note">Mission replay available · Organization idle</p>
+          <div className="deliverables">
+            <div><p className="section-label">Deliverables</p><strong>Validated build</strong><span>3 checks passed</span></div>
+            <div><strong>Interactive preview</strong><span>Controlled local environment</span></div>
+            <a href="/preview/servicepilot" target="_blank" rel="noreferrer">Open Preview <span>↗</span></a>
+          </div>
+          <p className="completion-note">1 organization change · Replay available · Organization idle</p>
         </section>
       ) : (
         <>
@@ -94,6 +99,16 @@ export default function MissionConsole({ mission }: { mission: Mission }) {
                 <h2>{events.some((event) => event.type === "organization.reconfigured") ? "Three resources are advancing the critical path." : "Mission Control is applying the new organization."}</h2>
               </div>
               <div className="reorganization-route"><span>Research</span><b>→</b><span>Implementation + Validation</span></div>
+            </section>
+          )}
+
+          {projection.approved && (
+            <section className="verification-card" aria-live="polite">
+              <div><p className="section-label">Outcome verification</p><h2>{projection.previewReady ? "Preview deployment ready" : "Validation in progress"}</h2></div>
+              <div className="verification-checks">
+                {["Projection tests passed", "Production build passed", "Preview interaction passed"].map((check) => <span className={projection.checks.includes(check) ? "verified" : "pending"} key={check}>{projection.checks.includes(check) ? "✓" : "○"} {check}</span>)}
+              </div>
+              <span className={`preview-state ${projection.previewReady ? "verified" : "pending"}`}>{projection.previewReady ? "✓ Preview ready" : "○ Preview pending"}</span>
             </section>
           )}
 

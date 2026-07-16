@@ -9,6 +9,8 @@ export type MissionEventType =
   | "recommendation.approved"
   | "organization.reconfigured"
   | "task.completed"
+  | "check.completed"
+  | "preview.ready"
   | "mission.completed";
 
 export type MissionEvent = {
@@ -29,6 +31,8 @@ export type MissionProjection = {
   plan: Array<{ name: string; state: "forming" | "active" | "waiting" | "complete"; owner: string }>;
   recommendation: boolean;
   approved: boolean;
+  checks: string[];
+  previewReady: boolean;
   completed: boolean;
 };
 
@@ -50,8 +54,11 @@ export const APPROVAL_EVENTS: MissionEvent[] = [
   { sequence: 12, type: "organization.reconfigured", actor: "Mission Control", message: "Organization reconfigured", detail: "Implementation split · validation started early" },
   { sequence: 13, type: "task.completed", actor: "Research", message: "Billing architecture resolved" },
   { sequence: 14, type: "task.completed", actor: "Coding", message: "Stripe Billing integrated" },
-  { sequence: 15, type: "task.completed", actor: "Testing", message: "Validation passed", detail: "Policy violations: 0" },
-  { sequence: 16, type: "mission.completed", actor: "Mission Control", message: "Mission complete", detail: "Completed in 14m 52s · 7m saved" },
+  { sequence: 15, type: "check.completed", actor: "Testing", message: "Projection tests passed" },
+  { sequence: 16, type: "check.completed", actor: "Build", message: "Production build passed" },
+  { sequence: 17, type: "check.completed", actor: "Testing", message: "Preview interaction passed" },
+  { sequence: 18, type: "preview.ready", actor: "Deployment", message: "Preview ready", detail: "Controlled local environment · no live charges" },
+  { sequence: 19, type: "mission.completed", actor: "Mission Control", message: "Mission complete", detail: "Completed in 14m 52s · 7m saved" },
 ];
 
 const BASE_PLAN: MissionProjection["plan"] = [
@@ -72,6 +79,8 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
     plan: BASE_PLAN.map((item) => ({ ...item })),
     recommendation: false,
     approved: false,
+    checks: [],
+    previewReady: false,
     completed: false,
   };
 
@@ -115,6 +124,8 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
       const matching = state.plan.find((item) => event.actor === item.owner);
       if (matching) matching.state = "complete";
     }
+    if (event.type === "check.completed") state.checks.push(event.message);
+    if (event.type === "preview.ready") state.previewReady = true;
     if (event.type === "mission.completed") {
       state.status = "Complete";
       state.schedule = "Complete";

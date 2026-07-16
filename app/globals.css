@@ -230,19 +230,56 @@ textarea:focus, input:focus, select:focus { border-color: rgba(183, 243, 107, .5
 .reorganization-signal span:nth-child(3) { animation-delay: .32s; }
 .reorganization-route { display: flex; align-items: center; gap: 12px; color: var(--muted); font: 650 9px/1.4 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
 .reorganization-route b { color: var(--signal); font-size: 18px; }
-.completion-card { width: min(1000px, 100%); margin: 12vh auto 0; padding: 56px; border: 1px solid rgba(183,243,107,.24); background: rgba(12,18,16,.86); text-align: center; animation: completion-arrive .8s ease-out; }
-.completion-card h2 { margin: 15px 0 42px; font-size: clamp(38px, 5vw, 62px); letter-spacing: -.04em; }
+.verification-card { width: min(1220px, 100%); margin: 16px auto 0; display: grid; grid-template-columns: 1fr 1.25fr auto; align-items: center; gap: 28px; padding: 22px 28px; border: 1px solid var(--line); background: rgba(12,18,16,.94); }
+.verification-card h2 { margin: 7px 0 0; font-size: 20px; }
+.verification-checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.verification-checks span, .preview-state { color: var(--muted); font: 600 9px/1.35 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .07em; }
+.verification-checks .verified, .preview-state.verified { color: var(--signal); }
+.completion-card { width: min(1040px, 100%); margin: 6vh auto 0; padding: 48px; border: 1px solid rgba(183,243,107,.24); background: rgba(12,18,16,.9); text-align: left; }
+.completion-card h2 { max-width: 800px; margin: 15px 0 38px; font-size: clamp(34px, 4.2vw, 56px); letter-spacing: -.04em; line-height: 1.03; }
 .completion-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border: 1px solid var(--line); background: var(--line); text-align: left; }
 .completion-metrics .metric { padding: 23px; }
 .completion-metrics .metric strong { font-size: 21px; }
+.deliverables { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 1px; margin-top: 18px; border: 1px solid var(--line); background: var(--line); }
+.deliverables > div, .deliverables > a { min-height: 98px; padding: 20px 22px; background: #0c1210; }
+.deliverables strong, .deliverables span { display: block; }
+.deliverables strong { margin-top: 8px; font-size: 16px; }
+.deliverables div > span { margin-top: 7px; color: var(--muted); font-size: 11px; }
+.deliverables > a { min-width: 190px; display: flex; align-items: center; justify-content: space-between; color: #071005; background: var(--signal); font-weight: 800; text-decoration: none; text-transform: uppercase; letter-spacing: .07em; }
 .completion-note { margin: 30px 0 0; color: var(--muted); font: 600 10px/1.4 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .12em; }
 .mission-complete .system-status span { background: #68716c; box-shadow: none; }
+
+.servicepilot-shell { min-height: 100vh; padding: 0 6vw 80px; color: #17211e; background: #f4f7f5; }
+.servicepilot-nav { height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #d8e0dc; }
+.servicepilot-nav strong { font-size: 18px; letter-spacing: -.02em; }
+.servicepilot-nav span { color: #65726c; font: 600 10px/1 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+.servicepilot-hero { max-width: 820px; margin: 80px auto 50px; text-align: center; }
+.servicepilot-hero p { color: #527364; font: 700 11px/1 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .15em; }
+.servicepilot-hero h1 { margin: 20px 0; font-size: clamp(42px, 5vw, 68px); line-height: 1; letter-spacing: -.05em; }
+.servicepilot-hero > span { color: #65726c; }
+.pricing-grid { width: min(1050px, 100%); margin: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.pricing-grid button { min-height: 260px; padding: 26px; border: 1px solid #d4deda; color: #17211e; background: white; text-align: left; cursor: pointer; transition: border-color .2s, transform .2s; }
+.pricing-grid button:hover { transform: translateY(-3px); }
+.pricing-grid button.selected { border: 2px solid #286849; box-shadow: 0 15px 45px rgba(35,87,62,.12); }
+.pricing-grid button > span { color: #527364; font: 700 10px/1 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .12em; }
+.pricing-grid button strong { display: block; margin-top: 24px; font-size: 42px; }
+.pricing-grid button small { color: #728078; font-size: 13px; font-weight: 500; }
+.pricing-grid button p { min-height: 44px; color: #65726c; line-height: 1.5; }
+.pricing-grid button b { display: block; margin-top: 28px; color: #286849; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.checkout-panel, .checkout-confirmation { width: min(1050px, 100%); margin: 14px auto 0; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px 26px; border: 1px solid #d4deda; background: white; }
+.checkout-panel div span, .checkout-panel div strong { display: block; }
+.checkout-panel div span { color: #65726c; font-size: 11px; }
+.checkout-panel div strong { margin-top: 5px; }
+.checkout-panel button { min-width: 250px; display: flex; justify-content: space-between; padding: 15px 18px; border: 0; color: white; background: #286849; font-weight: 750; cursor: pointer; }
+.checkout-confirmation { justify-content: flex-start; border-color: #8cbba4; background: #e9f6ef; }
+.checkout-confirmation > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: white; background: #286849; }
+.checkout-confirmation strong, .checkout-confirmation p { display: block; margin: 0; }
+.checkout-confirmation p { margin-top: 4px; color: #527364; }
 
 @keyframes event-arrive { from { opacity: 0; transform: translateY(-7px); } }
 @keyframes recommendation-arrive { from { opacity: 0; transform: translateY(14px); } }
 @keyframes reorganization-arrive { from { opacity: 0; transform: scale(.985); } }
 @keyframes resource-transfer { 0%, 100% { opacity: .25; transform: translateX(-3px); } 50% { opacity: 1; transform: translateX(3px); } }
-@keyframes completion-arrive { from { opacity: 0; } }
 
 @media (max-width: 820px) {
   .launch-grid { grid-template-columns: 1fr; padding: 70px 0; }
@@ -253,5 +290,9 @@ textarea:focus, input:focus, select:focus { border-color: rgba(183, 243, 107, .5
   .reorganization-route { grid-column: 1 / -1; }
   .mission-log { grid-column: auto; }
   .health-grid, .completion-metrics { grid-template-columns: 1fr 1fr; }
+  .verification-card, .deliverables, .pricing-grid { grid-template-columns: 1fr; }
+  .verification-checks { grid-template-columns: 1fr; }
+  .checkout-panel { align-items: stretch; flex-direction: column; }
+  .checkout-panel button { width: 100%; }
   .recommendation-action { padding: 22px 0 0; border-left: 0; border-top: 1px solid var(--line); gap: 20px; }
 }

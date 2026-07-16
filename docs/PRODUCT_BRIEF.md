@@ -118,6 +118,8 @@ The demo must contain tension: initial progress, an event-derived critical-path 
 
 Organization members assemble progressively through real events rather than appearing as an immediately active roster. When the mission completes, motion and Mission Log activity stop; the organization becomes visibly idle.
 
+The ending is a still Mission Debrief that mirrors the launch: **Give your AI organization an objective** becomes **Here are the outcomes your AI organization produced**. The primary proof is one working preview. Pull requests, CI, logs, and deployment details stay off the main ending unless they are genuine and strengthen the story. A controlled local preview must be labeled; no pull-request number or hosted deployment may be implied before it exists.
+
 Mission Health answers three questions: **Schedule**, **Risk**, and **Next Decision**. It is accompanied by observed evidence, affected objectives, and confidence. The trust pattern is: **evidence → recommendation trigger → rationale → approval**.
 
 The first judge-facing planning panel is named **Mission Plan**. Objectives and tasks remain the internal hierarchy beneath that immediately understandable label.

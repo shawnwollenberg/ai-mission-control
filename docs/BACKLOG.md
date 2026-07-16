@@ -10,7 +10,7 @@
 - [x] Select proactive optimization recommendation review as the memorable wow moment
 - [x] Define demo-environment promotion as the approval risk boundary
 - [ ] Classify each demo beat as live, controlled, or simulated
-- [ ] Define the final artifact and proof of completion
+- [x] Define the final artifact and proof of completion as a still Mission Debrief with one primary preview proof
 - [x] Define final proof categories: real PR, tests, preview, working feature
 - [x] Record deadline and team capacity
 - [ ] Obtain judging criteria, tracks, sponsor requirements, and required technologies

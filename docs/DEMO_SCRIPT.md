@@ -44,11 +44,11 @@ The CTO clicks **Approve Reorganization** once. A visible reorganization state s
 
 ### 1:55–2:20 — Validation and environment approval
 
-Tests and security review pass. Mission Control requests promotion to the demo environment with commit, checks, preview, and destination context. The CTO approves; the transition is enforced and recorded.
+Projection tests, the production build, and the preview interaction pass as visible event-derived checks. A controlled local preview becomes ready. Hosted preview and promotion approval remain deferred until a genuine destination exists.
 
 ### 2:20–2:40 — Completion
 
-The mission resolves with a real GitHub pull request, passing tests, a working deployment or local preview, the functioning Stripe subscription feature, and a concise audit trail. The final scorecard shows **Completed 14m 52s**, **Saved 7m**, **Human interventions 1**, **Policy violations 0**, and **Mission replay available**. All organizational motion stops and Mission Health becomes **Complete** so the ending feels conclusive.
+The mission resolves into a still **Mission Debrief** rather than another dashboard. It mirrors the opening promise with “Here are the outcomes your AI organization produced,” shows **Completed**, **14m 52s**, **7m estimated savings**, and **1 human decision**, then presents one primary proof: an interactive, honestly labeled controlled local preview. A single **Open Preview** action closes the loop. Pull-request proof appears only after a genuine PR exists. All organizational motion stops so the audience can absorb the outcome.
 
 ### 2:40–2:50 — Close
 
@@ -112,7 +112,7 @@ Mission Control proactively shows **Optimization Available** with the critical p
 
 ### 1:04–1:22 — Trust boundary and proof
 
-Tests and security checks pass. Demo-environment promotion pauses for CTO approval. Approve, then show the real pull request and functioning Stripe subscription preview.
+Tests and security checks pass. Open the controlled local preview and demonstrate the subscription selection flow. Do not show GitHub, CI, or deployment surfaces unless they are genuine and add more clarity than the preview.
 
 ### 1:22–1:30 — Close
 
