@@ -68,7 +68,9 @@ export async function runCodexPricingTask(missionId: string, baseUrl: string, to
     "Do not edit src/checkout-preview.ts; preserve its controlled checkout behavior.",
     `Run: ${validationCommand}`,
   ].join("\n");
-  const execution = await run(process.env.MISSION_CONTROL_CODEX_COMMAND ?? "codex", ["exec", "--ephemeral", "--skip-git-repo-check", "-s", "workspace-write", "-C", workspace, prompt], workspace);
+  const codexArgs = ["exec", "--ephemeral", "--skip-git-repo-check", "-s", "workspace-write", "-C", workspace];
+  if (process.env.MISSION_CONTROL_CODEX_MODEL) codexArgs.push("-m", process.env.MISSION_CONTROL_CODEX_MODEL);
+  const execution = await run(process.env.MISSION_CONTROL_CODEX_COMMAND ?? "codex", [...codexArgs, prompt], workspace);
   let provenance: "live" | "validated_fallback" = "live";
   let validation = await validate(workspace);
   if (execution.code !== 0 || validation.code !== 0 || !(await artifactIsExpected(workspace))) {
