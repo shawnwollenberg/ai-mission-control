@@ -3,5 +3,6 @@ node_modules/
 *.log
 *.tsbuildinfo
 .DS_Store
+.mission-control/
 .env*
 !.env.example

@@ -1,8 +1,8 @@
 # Mission Control — Implementation Status
 
-**Updated:** 2026-07-16
+**Updated:** 2026-07-17
 **Planning baseline:** Approved; delivery priorities revised
-**Current focus:** Milestone 2 — make the AI organization visibly come alive
+**Current focus:** Hermes → Codex proof slice, after durable-spine acceptance
 
 ## Technical program management cadence
 
@@ -19,13 +19,13 @@ Work is measured by demo capability, not internal milestone completion. An updat
 
 | Demo capability | Status | Current proof |
 |---|---|---|
-| Launch a mission | Complete; visual QA pending | Launch request creates the Stripe Billing mission and renders its mission route |
-| Show Mission Plan forming | Implemented; visual QA pending | Four workstreams assemble from the controlled canonical event sequence |
-| Display live organizational activity | Implemented; visual QA pending | Mission Log renders real planning, activation, delay, and completion events |
-| Surface Mission Health | Implemented; visual QA pending | Health projects the on-track state, crisis, recovery, and completion |
-| Generate optimization recommendation | Implemented; visual QA pending | Research overrun triggers a proactive recommendation with “why now?” evidence |
-| Approve organizational change | Implemented; visual QA pending | Approve Reorganization appends approval and reconfiguration events once |
-| Show work completing | Implemented; outcome integration pending | Controlled completion reaches a quiet measurable scorecard |
+| Launch a mission | Complete | Browser rehearsal confirms a persisted mission route and intentional launch state |
+| Show Mission Plan forming | Complete | Browser refresh during planning rebuilt the identical one-event projection and then resumed |
+| Display live organizational activity | Complete | Mission Log is rendered from ordered JSONL canonical events and survives refresh |
+| Surface Mission Health | Complete | Browser refresh preserved risk, recommendation, recovery, and validation projections |
+| Generate optimization recommendation | Complete | Browser refresh preserved the earned crisis and recommendation at event 10 |
+| Approve organizational change | Complete | Approval is idempotent and reorganization refresh reconstructed the event-derived critical-path change |
+| Show work completing | Controlled complete; live artifact pending | Browser refresh during validation and debrief preserved check and completion projections |
 | Replay the mission | Not started | Requires a stable canonical event history |
 
 ## Demo readiness
@@ -75,8 +75,7 @@ Track B exists to make Track A trustworthy. If supporting work begins delaying a
 
 ## Blockers
 
-- In-app browser is unavailable in the current session, so screenshots, interaction QA, and product-owner visual review remain blocked; HTTP-level flow verification passed.
-- The current mission/objective implementation is not yet proven to append and project one canonical event stream end to end.
+- The current completion artifacts are controlled, not genuine Hermes/Codex work. The next slice must add one real, bounded fixture artifact and label fallback evidence honestly.
 
 ## Biggest technical delivery risk
 
@@ -94,6 +93,13 @@ After launching **Integrate Stripe Billing**, the mission page must visibly show
 No fake typing, synthetic terminal output, or decorative activity is permitted. Every animation must be triggered by a real canonical event or a replayed projection of one.
 
 After that audience-facing sequence works, minimal Developer Mode must show the same ordered events beside reconstructed state and prove that those visible facts are projections.
+
+## Durable-spine gate — passed 2026-07-17
+
+- JSONL remains behind an EventStore boundary; the event envelope is versioned and every projection is reconstructed from persisted events.
+- Browser QA refreshed during planning, risk/recommendation, post-approval reorganization, validation, and mission debrief. Each phase retained its exact event count and visible projection; progression resumed rather than restarting.
+- Rebuild-equivalence, refresh, event-id idempotency, and concurrent advance tests pass.
+- The next authorized build is only the narrow Hermes → Codex fixture path: annual ServicePilot pricing option, validation update, controlled checkout preview retained, and honest live/fallback artifact provenance.
 
 ## Post-MVP recommendations
 

@@ -1,3 +1,5 @@
+export const EVENT_SCHEMA_VERSION = "1.0" as const;
+
 export type MissionEventType =
   | "mission.created"
   | "plan.created"
@@ -11,17 +13,52 @@ export type MissionEventType =
   | "task.completed"
   | "check.completed"
   | "preview.ready"
+  | "artifact.created"
   | "mission.completed";
 
-export type MissionEvent = {
-  sequence: number;
-  type: MissionEventType;
-  actor: string;
+export type EventProducer = {
+  kind: "platform" | "human" | "agent";
+  id: string;
+  label: string;
+};
+
+export type MissionEventData = {
   message: string;
   detail?: string;
+  objective?: string;
+  deadline?: string;
+  priority?: "High" | "Normal" | "Low";
+  commander?: string;
+  artifact?: {
+    kind: "file" | "git_diff" | "report";
+    path: string;
+    summary: string;
+    validation?: string;
+    provenance: "live" | "validated_fallback" | "controlled";
+  };
+};
+
+export type MissionEvent = {
+  schemaVersion: typeof EVENT_SCHEMA_VERSION;
+  eventId: string;
+  missionId: string;
+  sequence: number;
+  type: MissionEventType;
+  occurredAt: string;
+  producer: EventProducer;
+  correlationId: string;
+  causationId?: string;
+  subject?: { kind: "mission" | "task" | "artifact"; id: string };
+  data: MissionEventData;
 };
 
 export type MissionProjection = {
+  id: string;
+  objective: string;
+  deadline: string;
+  priority: "High" | "Normal" | "Low";
+  commander: string;
+  createdAt: string;
   status: "Planning" | "Running" | "Delayed" | "Complete";
   schedule: "Planning" | "On Track" | "Delayed" | "Complete";
   risk: "Unknown" | "Low" | "Moderate" | "None";
@@ -33,64 +70,79 @@ export type MissionProjection = {
   approved: boolean;
   checks: string[];
   previewReady: boolean;
+  artifacts: NonNullable<MissionEventData["artifact"]>[];
   completed: boolean;
 };
 
-export const OPENING_EVENTS: MissionEvent[] = [
-  { sequence: 1, type: "mission.created", actor: "Mission Control", message: "Mission accepted", detail: "High priority · deadline today" },
-  { sequence: 2, type: "plan.created", actor: "Hermes", message: "Mission Plan generated", detail: "Four outcome-oriented workstreams established" },
-  { sequence: 3, type: "agent.activated", actor: "Research", message: "Research agent activated", detail: "Stripe Billing integration path" },
-  { sequence: 4, type: "task.assigned", actor: "Coding", message: "Coding agent assigned", detail: "Waiting on billing architecture" },
-  { sequence: 5, type: "agent.activated", actor: "Testing", message: "Testing standing by", detail: "Validation plan prepared" },
-  { sequence: 6, type: "agent.activated", actor: "Deployment", message: "Deployment reserved", detail: "Demo environment held" },
-  { sequence: 7, type: "mission.health_changed", actor: "Mission Control", message: "Mission is on track", detail: "Critical path within today’s deadline" },
-  { sequence: 8, type: "task.delayed", actor: "Research", message: "Research estimate exceeded", detail: "Billing architecture unresolved · +7 min" },
-  { sequence: 9, type: "mission.health_changed", actor: "Mission Control", message: "Critical path blocked", detail: "Research exceeded estimate · coding waiting" },
-  { sequence: 10, type: "recommendation.triggered", actor: "Mission Control", message: "Reorganization available", detail: "Three resources can begin work immediately" },
-];
+export type ControlledEventTemplate = {
+  type: MissionEventType;
+  producer: EventProducer;
+  subject?: MissionEvent["subject"];
+  data: MissionEventData;
+};
 
-export const APPROVAL_EVENTS: MissionEvent[] = [
-  { sequence: 11, type: "recommendation.approved", actor: "You", message: "Reorganization approved", detail: "One human intervention recorded" },
-  { sequence: 12, type: "organization.reconfigured", actor: "Mission Control", message: "Organization reconfigured", detail: "Implementation split · validation started early" },
-  { sequence: 13, type: "task.completed", actor: "Research", message: "Billing architecture resolved" },
-  { sequence: 14, type: "task.completed", actor: "Coding", message: "Stripe Billing integrated" },
-  { sequence: 15, type: "check.completed", actor: "Testing", message: "Projection tests passed" },
-  { sequence: 16, type: "check.completed", actor: "Build", message: "Production build passed" },
-  { sequence: 17, type: "check.completed", actor: "Testing", message: "Preview interaction passed" },
-  { sequence: 18, type: "preview.ready", actor: "Deployment", message: "Preview ready", detail: "Controlled local environment · no live charges" },
-  { sequence: 19, type: "mission.completed", actor: "Mission Control", message: "Mission complete", detail: "Completed in 14m 52s · 7m saved" },
-];
+const platform = (id: string, label = "Mission Control"): EventProducer => ({ kind: "platform", id, label });
+const agent = (id: string, label: string): EventProducer => ({ kind: "agent", id, label });
 
-const BASE_PLAN: MissionProjection["plan"] = [
-  { name: "Research", state: "forming", owner: "Research" },
-  { name: "Implementation", state: "forming", owner: "Coding" },
-  { name: "Validation", state: "forming", owner: "Testing" },
-  { name: "Delivery", state: "forming", owner: "Deployment" },
+export const CONTROLLED_EVENT_TEMPLATES: ControlledEventTemplate[] = [
+  { type: "plan.created", producer: agent("hermes", "Hermes"), data: { message: "Mission Plan generated", detail: "Four outcome-oriented workstreams established" } },
+  { type: "agent.activated", producer: agent("research", "Research"), data: { message: "Research agent activated", detail: "Stripe Billing integration path" } },
+  { type: "task.assigned", producer: platform("runtime"), subject: { kind: "task", id: "task-implementation" }, data: { message: "Coding agent assigned", detail: "Waiting on billing architecture" } },
+  { type: "agent.activated", producer: agent("testing", "Testing"), data: { message: "Testing standing by", detail: "Validation plan prepared" } },
+  { type: "agent.activated", producer: agent("deployment", "Deployment"), data: { message: "Deployment reserved", detail: "Demo environment held" } },
+  { type: "mission.health_changed", producer: platform("health"), data: { message: "Mission is on track", detail: "Critical path within today’s deadline" } },
+  { type: "task.delayed", producer: agent("research", "Research"), subject: { kind: "task", id: "task-research" }, data: { message: "Research estimate exceeded", detail: "Billing architecture unresolved · +7 min" } },
+  { type: "mission.health_changed", producer: platform("health"), data: { message: "Critical path blocked", detail: "Research exceeded estimate · coding waiting" } },
+  { type: "recommendation.triggered", producer: platform("optimizer"), data: { message: "Reorganization available", detail: "Three resources can begin work immediately" } },
+  { type: "recommendation.approved", producer: { kind: "human", id: "commander", label: "You" }, data: { message: "Reorganization approved", detail: "One human intervention recorded" } },
+  { type: "organization.reconfigured", producer: platform("runtime"), data: { message: "Organization reconfigured", detail: "Implementation split · validation started early" } },
+  { type: "task.completed", producer: agent("research", "Research"), subject: { kind: "task", id: "task-research" }, data: { message: "Billing architecture resolved" } },
+  { type: "task.completed", producer: agent("coding", "Coding"), subject: { kind: "task", id: "task-implementation" }, data: { message: "Stripe Billing integrated" } },
+  { type: "check.completed", producer: agent("testing", "Testing"), data: { message: "Projection tests passed" } },
+  { type: "check.completed", producer: platform("build", "Build"), data: { message: "Production build passed" } },
+  { type: "check.completed", producer: agent("testing", "Testing"), data: { message: "Preview interaction passed" } },
+  { type: "preview.ready", producer: agent("deployment", "Deployment"), data: { message: "Preview ready", detail: "Controlled local environment · no live charges" } },
+  { type: "mission.completed", producer: platform("runtime"), data: { message: "Mission complete", detail: "Completed in 14m 52s · 7m saved" } },
 ];
 
 export function projectMission(events: MissionEvent[]): MissionProjection {
+  const created = events.find((event) => event.type === "mission.created");
+  if (!created) throw new Error("Mission projection requires mission.created");
+
   const state: MissionProjection = {
+    id: created.missionId,
+    objective: created.data.objective ?? "Untitled mission",
+    deadline: created.data.deadline ?? "Today",
+    priority: created.data.priority ?? "Normal",
+    commander: created.data.commander ?? "Hermes",
+    createdAt: created.occurredAt,
     status: "Planning",
     schedule: "Planning",
     risk: "Unknown",
     nextDecision: "None",
     healthHeadline: "Organization forming",
     healthDetail: "Hermes is building the Mission Plan.",
-    plan: BASE_PLAN.map((item) => ({ ...item })),
+    plan: [
+      { name: "Research", state: "forming", owner: "Research" },
+      { name: "Implementation", state: "forming", owner: "Coding" },
+      { name: "Validation", state: "forming", owner: "Testing" },
+      { name: "Delivery", state: "forming", owner: "Deployment" },
+    ],
     recommendation: false,
     approved: false,
     checks: [],
     previewReady: false,
+    artifacts: [],
     completed: false,
   };
 
   for (const event of events) {
     if (event.type === "plan.created") state.status = "Running";
-    if (event.sequence === 3) state.plan[0].state = "active";
-    if (event.sequence === 4) state.plan[1].state = "waiting";
-    if (event.sequence === 5) state.plan[2].state = "waiting";
-    if (event.sequence === 6) state.plan[3].state = "waiting";
-    if (event.sequence === 7) {
+    if (event.type === "agent.activated" && event.producer.id === "research") state.plan[0].state = "active";
+    if (event.type === "task.assigned" && event.subject?.id === "task-implementation") state.plan[1].state = "waiting";
+    if (event.type === "agent.activated" && event.producer.id === "testing") state.plan[2].state = "waiting";
+    if (event.type === "agent.activated" && event.producer.id === "deployment") state.plan[3].state = "waiting";
+    if (event.type === "mission.health_changed" && event.data.message === "Mission is on track") {
       state.schedule = "On Track";
       state.risk = "Low";
       state.healthHeadline = "Mission on track";
@@ -121,11 +173,12 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
       state.plan[2].state = "active";
     }
     if (event.type === "task.completed") {
-      const matching = state.plan.find((item) => event.actor === item.owner);
+      const matching = state.plan.find((item) => event.producer.label === item.owner);
       if (matching) matching.state = "complete";
     }
-    if (event.type === "check.completed") state.checks.push(event.message);
+    if (event.type === "check.completed") state.checks.push(event.data.message);
     if (event.type === "preview.ready") state.previewReady = true;
+    if (event.type === "artifact.created" && event.data.artifact) state.artifacts.push(event.data.artifact);
     if (event.type === "mission.completed") {
       state.status = "Complete";
       state.schedule = "Complete";

@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Objective is required" }, { status: 400 });
   }
 
-  const mission = createMission({
+  const mission = await createMission({
     objective: body.objective,
     deadline: body.deadline ?? "Today",
     priority: priorities.includes(body.priority as Priority) ? (body.priority as Priority) : "Normal",

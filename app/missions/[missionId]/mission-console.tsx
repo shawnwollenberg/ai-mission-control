@@ -1,40 +1,65 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { APPROVAL_EVENTS, OPENING_EVENTS, projectMission, type MissionEvent } from "@/lib/mission-events";
+import { projectMission, type MissionEvent } from "@/lib/mission-events";
 import type { Mission } from "@/lib/mission-store";
 
-export default function MissionConsole({ mission }: { mission: Mission }) {
-  const [visibleCount, setVisibleCount] = useState(1);
-  const [approved, setApproved] = useState(false);
-  const [completionCount, setCompletionCount] = useState(0);
-
-  const events = useMemo(() => {
-    const opening = OPENING_EVENTS.slice(0, visibleCount);
-    return approved ? [...opening, ...APPROVAL_EVENTS.slice(0, completionCount)] : opening;
-  }, [approved, completionCount, visibleCount]);
-  const projection = projectMission(events);
+export default function MissionConsole({ mission, initialEvents }: { mission: Mission; initialEvents: MissionEvent[] }) {
+  const [events, setEvents] = useState(initialEvents);
+  const [commandPending, setCommandPending] = useState(false);
+  const projection = useMemo(() => projectMission(events), [events]);
   const organizationReconfigured = events.some((event) => event.type === "organization.reconfigured");
 
   useEffect(() => {
-    if (visibleCount >= OPENING_EVENTS.length || approved) return;
-    const delay = visibleCount === 7 ? 3800 : visibleCount >= 8 ? 1650 : 1050;
-    const timer = window.setTimeout(() => setVisibleCount((count) => count + 1), delay);
-    return () => window.clearTimeout(timer);
-  }, [approved, visibleCount]);
+    const timer = window.setInterval(async () => {
+      const response = await fetch(`/api/missions/${mission.id}/events`, { cache: "no-store" });
+      if (!response.ok) return;
+      const body = (await response.json()) as { events: MissionEvent[] };
+      // Keep the existing array when the canonical stream is unchanged. Replacing it
+      // would restart the controlled-phase timeout on every poll.
+      setEvents((current) => body.events.length > current.length ? body.events : current);
+    }, 750);
+    return () => window.clearInterval(timer);
+  }, [mission.id]);
 
   useEffect(() => {
-    if (!approved || completionCount >= APPROVAL_EVENTS.length) return;
-    const currentEvent = APPROVAL_EVENTS[completionCount - 1];
-    const delay = currentEvent?.type === "organization.reconfigured" ? 2800 : currentEvent?.type === "recommendation.approved" ? 1200 : 950;
-    const timer = window.setTimeout(() => setCompletionCount((count) => count + 1), delay);
+    const currentEvent = events.at(-1);
+    if (!currentEvent || projection.completed || currentEvent.type === "recommendation.triggered" || commandPending) return;
+    const delay = currentEvent.type === "mission.health_changed" && currentEvent.data.message === "Mission is on track"
+      ? 3800
+      : currentEvent.sequence >= 8 && currentEvent.sequence < 11
+        ? 1650
+        : currentEvent.type === "recommendation.approved"
+          ? 1200
+          : currentEvent.type === "organization.reconfigured"
+            ? 2800
+            : currentEvent.sequence >= 12
+              ? 950
+              : 1050;
+    const timer = window.setTimeout(async () => {
+      setCommandPending(true);
+      try {
+        const response = await fetch(`/api/missions/${mission.id}/advance`, { method: "POST" });
+        if (!response.ok) return;
+        const body = (await response.json()) as { events: MissionEvent[] };
+        setEvents(body.events);
+      } finally {
+        setCommandPending(false);
+      }
+    }, delay);
     return () => window.clearTimeout(timer);
-  }, [approved, completionCount]);
+  }, [commandPending, events, mission.id, projection.completed]);
 
-  function approveReorganization() {
-    if (approved) return;
-    setApproved(true);
-    setCompletionCount(1);
+  async function approveReorganization() {
+    if (projection.approved || commandPending) return;
+    setCommandPending(true);
+    try {
+      const response = await fetch(`/api/missions/${mission.id}/approve`, { method: "POST" });
+      const body = (await response.json()) as { events: MissionEvent[] };
+      if (body.events) setEvents(body.events);
+    } finally {
+      setCommandPending(false);
+    }
   }
 
   return (
@@ -136,7 +161,7 @@ function PlanItem({ item, index }: { item: ReturnType<typeof projectMission>["pl
 }
 
 function LogItem({ event }: { event: MissionEvent }) {
-  return <div className={`log-item log-${event.type.replaceAll(".", "-")}`}><span className="log-sequence">{String(event.sequence).padStart(2, "0")}</span><div><strong>{event.message}</strong><small>{event.actor}{event.detail ? ` · ${event.detail}` : ""}</small></div></div>;
+  return <div className={`log-item log-${event.type.replaceAll(".", "-")}`}><span className="log-sequence">{String(event.sequence).padStart(2, "0")}</span><div><strong>{event.data.message}</strong><small>{event.producer.label}{event.data.detail ? ` · ${event.data.detail}` : ""}</small></div></div>;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
