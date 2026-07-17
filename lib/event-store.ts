@@ -10,9 +10,11 @@ import {
   type MissionEvent,
   type MissionProjection,
 } from "@/lib/mission-events";
+import { appendDynamoMissionEvent, readDynamoMissionEvents } from "@/lib/dynamodb-event-store";
 
 const DATA_DIR = process.env.MISSION_CONTROL_DATA_DIR ?? path.join(process.cwd(), ".mission-control", "events");
 const appendQueues = new Map<string, Promise<unknown>>();
+const useDynamoDb = process.env.EVENT_STORE === "dynamodb";
 
 function eventFile(missionId: string): string {
   if (!/^[a-zA-Z0-9-]+$/.test(missionId)) throw new Error("Invalid mission id");
@@ -24,6 +26,7 @@ async function ensureDataDir() {
 }
 
 export async function readMissionEvents(missionId: string): Promise<MissionEvent[]> {
+  if (useDynamoDb) return readDynamoMissionEvents(missionId);
   await ensureDataDir();
   try {
     const contents = await readFile(eventFile(missionId), "utf8");
@@ -40,6 +43,7 @@ export async function appendMissionEvent(
   template: ControlledEventTemplate,
   options: { eventId?: string; causationId?: string; occurredAt?: string } = {},
 ): Promise<MissionEvent> {
+  if (useDynamoDb) return appendDynamoMissionEvent(missionId, template, options);
   const previous = appendQueues.get(missionId) ?? Promise.resolve();
   const pending = previous.then(async () => {
     const events = await readMissionEvents(missionId);

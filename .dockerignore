@@ -1,0 +1,11 @@
+.git
+.github
+.next
+.mission-control
+node_modules
+videos
+docs
+infra
+*.log
+.env*
+!.env.example

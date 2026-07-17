@@ -1,0 +1,7 @@
+{
+  "app": "npx tsx infra/app.ts",
+  "context": {
+    "@aws-cdk/aws-ecs:enableImdsBlockingDeprecatedFeature": false,
+    "@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker": false
+  }
+}

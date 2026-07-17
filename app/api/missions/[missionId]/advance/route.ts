@@ -8,7 +8,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ mi
   const { missionId } = await params;
   const appended = await appendNextControlledEvent(missionId);
   if (appended?.subject?.id === "task-servicepilot-pricing" && process.env.MISSION_CONTROL_AGENT_TOKEN) {
-    void runCodexPricingTask(missionId, new URL(_request.url).origin, process.env.MISSION_CONTROL_AGENT_TOKEN).catch(() => undefined);
+    void runCodexPricingTask(missionId, new URL(_request.url).origin, process.env.MISSION_CONTROL_AGENT_TOKEN).catch((error) => {
+      console.error(JSON.stringify({ level: "error", event: "hermes_fixture_failed", missionId, message: error instanceof Error ? error.message : "unknown" }));
+    });
   }
   const events = await readMissionEvents(missionId);
   if (!events.length) return NextResponse.json({ error: "Mission not found" }, { status: 404 });

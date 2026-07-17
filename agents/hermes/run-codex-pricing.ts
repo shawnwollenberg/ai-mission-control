@@ -72,7 +72,10 @@ export async function runCodexPricingTask(missionId: string, baseUrl: string, to
   ].join("\n");
   const codexArgs = ["exec", "--ephemeral", "--skip-git-repo-check", "-s", "workspace-write", "-C", workspace];
   if (process.env.MISSION_CONTROL_CODEX_MODEL) codexArgs.push("-m", process.env.MISSION_CONTROL_CODEX_MODEL);
-  const execution = await run(process.env.MISSION_CONTROL_CODEX_COMMAND ?? "codex", [...codexArgs, prompt], workspace, codexExecutionTimeoutMs);
+  const liveCodexEnabled = process.env.ENABLE_LIVE_CODEX === "true";
+  const execution = liveCodexEnabled
+    ? await run(process.env.MISSION_CONTROL_CODEX_COMMAND ?? "codex", [...codexArgs, prompt], workspace, codexExecutionTimeoutMs)
+    : { code: 1, output: "Live Codex disabled; selecting verified fallback." };
   let provenance: "live" | "validated_fallback" = "live";
   let validation = await validate(workspace);
   if (execution.code !== 0 || validation.code !== 0 || !(await artifactIsExpected(workspace))) {

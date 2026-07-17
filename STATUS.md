@@ -2,7 +2,7 @@
 
 **Updated:** 2026-07-17
 **Planning baseline:** Approved; delivery priorities revised
-**Current focus:** Hermes → Codex proof slice, after durable-spine acceptance
+**Current focus:** Production AWS deployment at `mission.wallyweb.com`
 
 ## Technical program management cadence
 
@@ -72,14 +72,19 @@ Track B exists to make Track A trustworthy. If supporting work begins delaying a
 - [x] Event-derived organization assembly, crisis, recommendation, approval, and completion arc implemented
 - [x] TypeScript check and production build passed after the demo-arc implementation
 - [x] Mission creation and mission route returned HTTP success after implementation
+- [x] Existing WallyWeb AWS hosting, DNS, certificates, containers, and IaC patterns inspected read-only
+- [x] Dedicated ECS Fargate, ALB, ACM, Route 53, DynamoDB, ECR, Secrets Manager, and CloudWatch architecture documented
+- [x] DynamoDB canonical event-store adapter implemented with transactional sequence and idempotency protection
+- [x] Node.js 22 production container completed the controlled mission with `validated_fallback` provenance
+- [ ] AWS infrastructure deployed and hosted browser flow verified
 
 ## Blockers
 
-- The Hermes → Codex fallback rehearsal is complete and honestly labeled. A live Codex run is pending because the first bounded invocation exceeded its 30-second capacity window; it must pass before replay work begins.
+- No credential or architecture blocker is currently known. Deployment and hosted verification remain in progress.
 
 ## Biggest technical delivery risk
 
-The UI, Mission Health, optimizer, approvals, and replay could accidentally consume separate or partially duplicated state instead of one canonical event history. That would create locally convincing screens but prevent a reliable uninterrupted demo. The mitigation is lightweight projection rebuild coverage and a minimal Developer Mode inspector after Mission Plan, Mission Log, and Mission Health are visible—not before them.
+The AWS runtime could appear healthy while event ordering or idempotency fails under concurrent requests or a task replacement. The mitigation is a transactional DynamoDB append, consistent mission reads, repeated-command verification, and an ECS redeployment test against an existing mission URL before release.
 
 ## Next demo checkpoint
 
