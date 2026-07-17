@@ -86,7 +86,8 @@ export default function MissionConsole({ mission, initialEvents }: { mission: Mi
             <Metric label="Human decisions" value="1" />
           </div>
           <div className="deliverables">
-            <div><p className="section-label">Deliverables</p><strong>Validated build</strong><span>3 checks passed</span></div>
+            <div><p className="section-label">Deliverables</p><strong>Validated implementation</strong><span>{projection.checks.length} checks passed</span></div>
+            {projection.artifacts.map((artifact) => <div key={artifact.path}><strong>{artifact.summary}</strong><span>{artifact.provenance === "live" ? "Verified live artifact" : artifact.provenance === "validated_fallback" ? "Verified fallback artifact" : "Controlled artifact"}</span></div>)}
             <div><strong>Interactive preview</strong><span>Controlled local environment</span></div>
             <a href="/preview/servicepilot" target="_blank" rel="noreferrer">View Evidence <span>↗</span></a>
           </div>
@@ -137,9 +138,7 @@ export default function MissionConsole({ mission, initialEvents }: { mission: Mi
           {projection.approved && (
             <section className="verification-card" aria-live="polite">
               <div><p className="section-label">Outcome verification</p><h2>{projection.previewReady ? "Preview deployment ready" : "Validation in progress"}</h2></div>
-              <div className="verification-checks">
-                {["Projection tests passed", "Production build passed", "Preview interaction passed"].map((check) => <span className={projection.checks.includes(check) ? "verified" : "pending"} key={check}>{projection.checks.includes(check) ? "✓" : "○"} {check}</span>)}
-              </div>
+              <div className="verification-checks">{projection.checks.map((check) => <span className="verified" key={check}>✓ {check}</span>)}</div>
               <span className={`preview-state ${projection.previewReady ? "verified" : "pending"}`}>{projection.previewReady ? "✓ Preview ready" : "○ Preview pending"}</span>
             </section>
           )}
