@@ -78,3 +78,12 @@ Begin only after the hackathon proof sequence is complete and reliable. Mission 
 - [ ] Document Claude Code HTTP-hook integration as the second adapter
 
 Cut rule: implement only `Mission Control → Hermes → Codex → artifact → Mission Control`. Vendor payloads remain inside adapters. Do not begin a generalized plugin platform.
+
+## Post-MVP: Executive Advisor
+
+- [ ] Define an event-derived, versioned `ExecutiveContext` projection.
+- [ ] Add advisory request/response artifacts that remain distinct from deterministic facts and human decisions.
+- [ ] Add one explicit OpenAI-backed advisory interaction after the real-agent workflow is reliable.
+- [ ] Route any advice-derived command through existing deterministic validation and approval.
+
+Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner, or effect dispatcher. Details: `docs/POST_MVP_EXECUTIVE_ADVISOR.md`.

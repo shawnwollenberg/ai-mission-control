@@ -10,6 +10,8 @@ const fixtureRoot = path.resolve(process.cwd(), "fixtures/servicepilot-pricing")
 const allowedPaths = ["src/pricing-plans.ts", "tests/pricing-plans.test.mjs"];
 const validationCommand = "node --import tsx --test tests/pricing-plans.test.mjs";
 const tsxLoader = path.resolve(process.cwd(), "node_modules/tsx/dist/loader.mjs");
+const codexExecutionTimeoutMs = Number(process.env.MISSION_CONTROL_CODEX_EXECUTION_TIMEOUT_MS ?? 150_000);
+const validationTimeoutMs = Number(process.env.MISSION_CONTROL_VALIDATION_TIMEOUT_MS ?? 20_000);
 
 function run(command: string, args: string[], cwd: string, timeoutMs = 30_000) {
   return new Promise<{ code: number; output: string }>((resolve) => {
@@ -48,7 +50,7 @@ function event(missionId: string, type: MissionEvent["type"], message: string, d
 }
 
 function validate(workspace: string) {
-  return run(process.execPath, ["--import", tsxLoader, "--test", "tests/pricing-plans.test.mjs"], workspace);
+  return run(process.execPath, ["--import", tsxLoader, "--test", "tests/pricing-plans.test.mjs"], workspace, validationTimeoutMs);
 }
 
 export async function runCodexPricingTask(missionId: string, baseUrl: string, token: string) {
@@ -70,7 +72,7 @@ export async function runCodexPricingTask(missionId: string, baseUrl: string, to
   ].join("\n");
   const codexArgs = ["exec", "--ephemeral", "--skip-git-repo-check", "-s", "workspace-write", "-C", workspace];
   if (process.env.MISSION_CONTROL_CODEX_MODEL) codexArgs.push("-m", process.env.MISSION_CONTROL_CODEX_MODEL);
-  const execution = await run(process.env.MISSION_CONTROL_CODEX_COMMAND ?? "codex", [...codexArgs, prompt], workspace);
+  const execution = await run(process.env.MISSION_CONTROL_CODEX_COMMAND ?? "codex", [...codexArgs, prompt], workspace, codexExecutionTimeoutMs);
   let provenance: "live" | "validated_fallback" = "live";
   let validation = await validate(workspace);
   if (execution.code !== 0 || validation.code !== 0 || !(await artifactIsExpected(workspace))) {

@@ -447,6 +447,8 @@ Prepare honest controlled fallbacks for model, GitHub, Stripe, and preview-host 
 **Visible artifact:** Presenter controls can switch to disclosed fixture outcomes without breaking the mission.  
 **Test:** Disable each external dependency and complete the demo once.
 
+For the one live Hermes → Codex fixture, keep limits distinct: assignment claim must fail quickly, Codex execution receives a separately rehearsed 120–180 second job limit, validation has its own bounded command limit, and the presenter-facing wait remains short. Crossing the presenter-safe threshold explicitly selects the verified fallback; it must never fabricate a live completion or stall the controlled mission indefinitely.
+
 ### M9.3 Timed rehearsal and trimming — 3h
 
 Run the complete 90-second story repeatedly and remove anything that requires explanation but does not advance it.

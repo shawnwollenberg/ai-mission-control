@@ -8,9 +8,10 @@ export type HermesAssignment = MissionEvent & {
 export class MissionControlClient {
   constructor(private readonly baseUrl: string, private readonly token: string) {}
 
-  private async request(path: string, init?: RequestInit) {
+  private async request(path: string, init?: RequestInit, timeoutMs = 5_000) {
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
+      signal: AbortSignal.timeout(timeoutMs),
       headers: { authorization: `Bearer ${this.token}`, "content-type": "application/json", ...(init?.headers ?? {}) },
     });
     if (!response.ok) throw new Error(`Mission Control request failed: ${response.status}`);
