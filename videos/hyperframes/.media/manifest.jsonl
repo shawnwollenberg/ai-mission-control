@@ -1,0 +1,6 @@
+{"id":"image_001","type":"image","path":"assets/logo.png","source":"existing","description":"logo","width":512,"height":512,"provenance":{"provider":"local","adopted":true}}
+{"id":"image_002","type":"image","path":"assets/screenshots/debrief.png","source":"existing","description":"debrief","width":1280,"height":945,"provenance":{"provider":"local","adopted":true}}
+{"id":"image_003","type":"image","path":"assets/screenshots/launch.png","source":"existing","description":"launch","width":1280,"height":738,"provenance":{"provider":"local","adopted":true}}
+{"id":"image_004","type":"image","path":"assets/screenshots/mission-health.png","source":"existing","description":"mission health","width":1280,"height":1044,"provenance":{"provider":"local","adopted":true}}
+{"id":"image_005","type":"image","path":"assets/screenshots/organization.png","source":"existing","description":"organization","width":1280,"height":1044,"provenance":{"provider":"local","adopted":true}}
+{"id":"image_006","type":"image","path":"assets/screenshots/recommendation.png","source":"existing","description":"recommendation","width":1280,"height":1269,"provenance":{"provider":"local","adopted":true}}

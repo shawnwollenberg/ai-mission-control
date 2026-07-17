@@ -6,3 +6,5 @@ node_modules/
 .mission-control/
 .env*
 !.env.example
+videos/hyperframes/.thumbnails/
+videos/hyperframes/.waveform-cache/
