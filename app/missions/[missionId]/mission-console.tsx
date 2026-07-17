@@ -14,6 +14,7 @@ export default function MissionConsole({ mission }: { mission: Mission }) {
     return approved ? [...opening, ...APPROVAL_EVENTS.slice(0, completionCount)] : opening;
   }, [approved, completionCount, visibleCount]);
   const projection = projectMission(events);
+  const organizationReconfigured = events.some((event) => event.type === "organization.reconfigured");
 
   useEffect(() => {
     if (visibleCount >= OPENING_EVENTS.length || approved) return;
@@ -93,12 +94,18 @@ export default function MissionConsole({ mission }: { mission: Mission }) {
 
           {projection.approved && (
             <section className="reorganization-card" aria-live="polite">
-              <div className="reorganization-signal"><span /><span /><span /></div>
-              <div>
+              <div className="reorganization-heading">
+                <div className="reorganization-signal"><span /><span /><span /></div>
+                <div>
                 <p className="section-label">Reorganization approved</p>
-                <h2>{events.some((event) => event.type === "organization.reconfigured") ? "Three resources are advancing the critical path." : "Mission Control is applying the new organization."}</h2>
+                  <h2>{organizationReconfigured ? "Mission Control changed the critical path." : "Mission Control is applying the new organization."}</h2>
+                </div>
               </div>
-              <div className="reorganization-route"><span>Research</span><b>→</b><span>Implementation + Validation</span></div>
+              <div className="organization-change">
+                <div className="organization-before"><span>Before · serial</span><strong>Research <b>→</b> Implementation <b>→</b> Validation</strong><small>Coding waited for research to finish</small></div>
+                <div className="organization-now"><span>Now · parallel</span><strong>Research <b>→</b> Implementation <i>+</i> Validation</strong><small>Three resources advance together</small></div>
+              </div>
+              <div className="reorganization-impact"><span>Projected completion</span><strong>22m <b>→</b> {organizationReconfigured ? "15m" : "—"}</strong><small>{organizationReconfigured ? "7 minutes recovered" : "Recalculating critical path"}</small></div>
             </section>
           )}
 

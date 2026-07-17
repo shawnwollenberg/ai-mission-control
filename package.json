@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --import tsx --test tests/*.test.mjs",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
@@ -19,6 +19,7 @@
     "@types/node": "20.14.12",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "tsx": "^4.23.1",
     "typescript": "5.9.3"
   },
   "overrides": {

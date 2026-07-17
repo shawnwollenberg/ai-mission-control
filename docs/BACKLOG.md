@@ -62,3 +62,19 @@ Acceptance criteria will be added only after the product and architecture decisi
 - Broad integrations catalog
 - Multiple concurrent mission management
 - Enterprise analytics and permissions
+
+## Post-demo: first real agent workflow
+
+Begin only after the hackathon proof sequence is complete and reliable. Mission Control coordinates and observes existing agents; it does not replace Hermes, Codex, or Claude.
+
+- [ ] Define a versioned, vendor-neutral canonical agent-event envelope
+- [ ] Add authenticated `POST /api/agent-events` ingestion
+- [ ] Add authenticated assigned-work retrieval for Hermes
+- [ ] Publish a small Mission Control client library for Hermes
+- [ ] Build one bounded Codex adapter that maps its lifecycle to canonical events
+- [ ] Project ingested events into the existing Mission Log
+- [ ] Accept a concrete artifact or completion report from the adapter
+- [ ] Prove empty-state replay reconstructs mission state only from canonical events
+- [ ] Document Claude Code HTTP-hook integration as the second adapter
+
+Cut rule: implement only `Mission Control → Hermes → Codex → artifact → Mission Control`. Vendor payloads remain inside adapters. Do not begin a generalized plugin platform.

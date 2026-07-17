@@ -52,6 +52,8 @@ Hermes uses this boundary as one organization member with coordination capabilit
 
 Expose a small common contract for coordination, research, coding, testing, security, and deployment capabilities. Organization members may have distinct tools and permissions. Whether they are separate processes, model sessions, or controlled executors remains deliberately undecided.
 
+After the hackathon proof sequence, the first real integration will use a versioned vendor-neutral agent protocol for one bounded path: `Mission Control → Hermes → Codex → artifact → Mission Control`. Core events may describe assignments, lifecycle transitions, evidence, artifacts, and outcomes, but must not contain Hermes-, Codex-, or Claude-specific fields. Vendor payloads and lifecycle translation belong inside adapters. Claude Code follows through HTTP hooks only after the Codex path is complete and reliable. This is not authorization for a generalized plugin platform.
+
 ### Event store and projector
 
 Persists the canonical append-only mission event stream and deterministically derives read models for the UI, optimizer, health assessment, and audit trail. Replay rebuilds internal state and projections only. Recorded external-effect results replay as facts; replay never repeats GitHub writes, deployments, payments, or other side effects.
