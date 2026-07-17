@@ -76,15 +76,19 @@ Track B exists to make Track A trustworthy. If supporting work begins delaying a
 - [x] Dedicated ECS Fargate, ALB, ACM, Route 53, DynamoDB, ECR, Secrets Manager, and CloudWatch architecture documented
 - [x] DynamoDB canonical event-store adapter implemented with transactional sequence and idempotency protection
 - [x] Node.js 22 production container completed the controlled mission with `validated_fallback` provenance
-- [ ] AWS infrastructure deployed and hosted browser flow verified
+- [x] AWS infrastructure deployed with healthy ECS, HTTPS, DNS, DynamoDB, logs, and immutable image rollback
+- [x] Hosted API flow completed with 20 ordered events, one idempotent approval, and `validated_fallback` provenance
+- [x] A second public demo session remained isolated in its own event stream
+- [x] Completed mission reconstructed unchanged after terminating and replacing the only ECS task
+- [ ] Hosted visual browser flow verified
 
 ## Blockers
 
-- No credential or architecture blocker is currently known. Deployment and hosted verification remain in progress.
+- The in-app browser is not currently exposed to this Codex session, so visual interaction, console, network, presentation-viewport, and screenshot QA remain unverified. AWS deployment, persistence, TLS, isolation, and hosted API gates pass.
 
 ## Biggest technical delivery risk
 
-The AWS runtime could appear healthy while event ordering or idempotency fails under concurrent requests or a task replacement. The mitigation is a transactional DynamoDB append, consistent mission reads, repeated-command verification, and an ECS redeployment test against an existing mission URL before release.
+The largest remaining risk is a judge-visible browser regression that API and infrastructure checks cannot detect. The persistence risk has been retired by a completed 20-event hosted mission, repeated approval, isolated second session, and reconstruction after ECS task replacement. The remaining mitigation is one complete in-app browser rehearsal with console and network inspection.
 
 ## Next demo checkpoint
 

@@ -24,6 +24,17 @@ Mission Control does not modify the root website, its CloudFront distribution, i
 
 This is the smallest architecture matching the existing WallyWeb container pattern while supporting Next.js 16, Node.js 22, API routes, durable events, restarts, HTTPS, health checks, and rollback.
 
+## Production verification — 2026-07-17
+
+- CloudFormation deployment completed and ECS reached steady state with one healthy task.
+- HTTPS health returned `status: ok` with the DynamoDB adapter; HTTP redirects to HTTPS and the dedicated certificate is valid.
+- A hosted Stripe Billing mission completed with 20 ordered events, one approval, and honest `validated_fallback` artifact provenance.
+- Repeating approval did not append another approval event.
+- Two launches produced different unguessable mission IDs and independent event streams.
+- The only running ECS task was terminated and replaced. Reopening the completed mission returned the same 20 events, final state, approval count, and provenance.
+- TypeScript, seven automated tests, the production build, and the production critical-vulnerability audit passed.
+- Final visual browser QA is pending because no in-app browser instance was available to the deployment session. This is an explicit release gate, not an inferred pass.
+
 ## Event-store constitution
 
 The production table stores only canonical events, mission append metadata, and idempotency markers. Mission Plan, Mission Log, Mission Health, recommendations, approvals, artifacts, and completion remain projections rebuilt from ordered events.
