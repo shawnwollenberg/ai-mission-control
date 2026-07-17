@@ -9,9 +9,12 @@ process.env.MISSION_CONTROL_DATA_DIR = dataDir;
 
 const {
   appendMissionEvent,
+  appendAgentEvent,
   appendNextControlledEvent,
   approveRecommendation,
+  claimAssignment,
   createMission,
+  getAssignments,
   getMissionProjection,
   readMissionEvents,
 } = await import("../lib/event-store.ts");
@@ -36,7 +39,27 @@ test("the append-only event stream rebuilds every completed mission projection",
   const approved = await approveRecommendation(created.id);
   assert.equal(approved?.type, "recommendation.approved");
   while (await appendNextControlledEvent(created.id)) {
-    // Append the deterministic controlled sequence through mission completion.
+    // Append controlled events until the real bounded assignment is created.
+  }
+  const assignmentEvents = await readMissionEvents(created.id);
+  const assignment = getAssignments(assignmentEvents, "hermes")[0];
+  assert.equal(assignment?.subject?.id, "task-servicepilot-pricing");
+  await claimAssignment(created.id, "task-servicepilot-pricing", "hermes");
+  for (const [type, message] of [
+    ["artifact.created", "Annual pricing artifact produced"],
+    ["check.completed", "Pricing validation passed"],
+    ["task.completed", "Codex pricing task completed"],
+    ["preview.ready", "Controlled checkout preview ready"],
+    ["mission.completed", "Mission complete"],
+  ]) {
+    await appendAgentEvent({
+      schemaVersion: "1.0", eventId: `${created.id}:${type}`, missionId: created.id,
+      type, occurredAt: new Date().toISOString(), producer: { kind: "agent", id: "hermes", label: "Hermes" },
+      correlationId: created.id, data: {
+        message,
+        ...(type === "artifact.created" ? { artifact: { kind: "git_diff", path: "src/pricing-plans.ts", summary: "Added Growth Annual", provenance: "live" } } : {}),
+      },
+    });
   }
 
   const canonicalEvents = await readMissionEvents(created.id);
@@ -47,14 +70,29 @@ test("the append-only event stream rebuilds every completed mission projection",
   assert.equal(liveProjection?.completed, true);
   assert.deepEqual(rebuiltProjection, liveProjection);
   assert.equal(rebuiltProjection.previewReady, true);
-  assert.deepEqual(rebuiltProjection.checks, [
-    "Projection tests passed",
-    "Production build passed",
-    "Preview interaction passed",
-  ]);
+  assert.deepEqual(rebuiltProjection.checks, ["Pricing validation passed"]);
 
   const persistedLines = (await readFile(path.join(dataDir, `${created.id}.jsonl`), "utf8")).trim().split("\n");
   assert.equal(persistedLines.length, canonicalEvents.length);
+});
+
+test("Hermes derives and claims its assignment exactly once from canonical events", async () => {
+  const created = await createMission({ objective: "Hermes assignment", deadline: "Today", priority: "High" });
+  while (true) {
+    const next = await appendNextControlledEvent(created.id);
+    if (!next || next.type === "recommendation.triggered") break;
+  }
+  await approveRecommendation(created.id);
+  await appendNextControlledEvent(created.id);
+  await appendNextControlledEvent(created.id);
+  const beforeClaim = getAssignments(await readMissionEvents(created.id), "hermes");
+  assert.equal(beforeClaim.length, 1);
+  const [first, second] = await Promise.all([
+    claimAssignment(created.id, "task-servicepilot-pricing", "hermes"),
+    claimAssignment(created.id, "task-servicepilot-pricing", "hermes"),
+  ]);
+  assert.deepEqual(second, first);
+  assert.equal(getAssignments(await readMissionEvents(created.id), "hermes").length, 0);
 });
 
 test("refresh reconstruction reads the same mission without appending events", async () => {

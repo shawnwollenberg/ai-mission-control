@@ -5,6 +5,9 @@ export type MissionEventType =
   | "plan.created"
   | "agent.activated"
   | "task.assigned"
+  | "task.claimed"
+  | "task.started"
+  | "task.failed"
   | "mission.health_changed"
   | "task.delayed"
   | "recommendation.triggered"
@@ -36,7 +39,14 @@ export type MissionEventData = {
     validation?: string;
     provenance: "live" | "validated_fallback" | "controlled";
   };
+  assignment?: {
+    objective: string;
+    allowedPaths: string[];
+    validationCommand: string;
+  };
 };
+
+export type AgentEventInput = Omit<MissionEvent, "sequence">;
 
 export type MissionEvent = {
   schemaVersion: typeof EVENT_SCHEMA_VERSION;

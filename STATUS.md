@@ -75,7 +75,7 @@ Track B exists to make Track A trustworthy. If supporting work begins delaying a
 
 ## Blockers
 
-- The current completion artifacts are controlled, not genuine Hermes/Codex work. The next slice must add one real, bounded fixture artifact and label fallback evidence honestly.
+- The Hermes → Codex fallback rehearsal is complete and honestly labeled. A live Codex run is pending because the first bounded invocation exceeded its 30-second capacity window; it must pass before replay work begins.
 
 ## Biggest technical delivery risk
 
@@ -100,6 +100,13 @@ After that audience-facing sequence works, minimal Developer Mode must show the 
 - Browser QA refreshed during planning, risk/recommendation, post-approval reorganization, validation, and mission debrief. Each phase retained its exact event count and visible projection; progression resumed rather than restarting.
 - Rebuild-equivalence, refresh, event-id idempotency, and concurrent advance tests pass.
 - The next authorized build is only the narrow Hermes → Codex fixture path: annual ServicePilot pricing option, validation update, controlled checkout preview retained, and honest live/fallback artifact provenance.
+
+## Hermes → Codex slice — in rehearsal
+
+- Mission Control exposes authenticated assignment retrieval, exactly-once claim, and canonical event ingestion endpoints.
+- Hermes derives assignment state from the event log, copies an isolated ServicePilot fixture, allows Codex to modify only pricing and its test, verifies the expected annual plan independently, and publishes canonical lifecycle, artifact, validation, and completion events.
+- A forced failure rehearsal completed in-browser with a `validated_fallback` artifact. The Mission Debrief shows that provenance rather than claiming a live Codex result.
+- A live Terra/Codex rehearsal remains the release gate; compressed replay is still deferred.
 
 ## Post-MVP recommendations
 
