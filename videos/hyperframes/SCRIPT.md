@@ -41,3 +41,11 @@ The future won't be one AI assistant.
 It will be organizations of AI working together.
 
 Mission Control is the executive layer that keeps humans accountable while AI organizations execute.
+
+## Scene 9 — Built with Codex + GPT-5.6
+
+Mission Control itself was built with Codex powered by GPT-5.6.
+
+I used GPT-5.6 inside Codex as a product strategist, systems architect, and lead engineer—turning the initial concept into a product brief, event-sourced architecture, constrained optimizer, implementation plan, tested application, and AWS deployment.
+
+Codex also powers the live execution path, where Hermes assigns a bounded implementation task and Mission Control records the resulting lifecycle and artifact events.

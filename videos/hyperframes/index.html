@@ -26,11 +26,12 @@
     .verified{position:absolute;left:120px;top:500px;display:grid;gap:18px;z-index:4;width:900px}.verified-row{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:18px;padding:22px 24px;border-left:3px solid #1ce0d6;background:linear-gradient(90deg,rgba(28,224,214,.11),rgba(10,18,31,.5));font:20px 'IBM Plex Mono',monospace}.check{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:rgba(28,224,214,.16);color:#1ce0d6}.verified-row em{font-style:normal;color:#6f7e89;font-size:15px}
     .recommendation-focus{left:210px;top:180px;width:1500px;height:520px;border-color:rgba(244,189,98,.5);box-shadow:0 45px 150px rgba(0,0,0,.7),0 0 100px rgba(244,189,98,.16)}.recommendation-focus img{object-position:center top}.debrief-screen{left:360px;top:75px;width:1200px;height:930px}.pause-line{position:absolute;left:0;right:0;bottom:54px;text-align:center;color:#6f7e89;font:17px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase}
     .closing-logo{width:180px;height:180px;border-radius:42px;box-shadow:0 0 90px rgba(28,224,214,.25)}.tagline{font-size:28px!important}.promise{position:absolute;left:310px;right:310px;top:765px;text-align:center;font-size:25px;line-height:1.5;color:#c5d0d9}.promise strong{color:#f3f7fb}.built{position:absolute;bottom:58px;color:#70808d;font:17px 'IBM Plex Mono',monospace;letter-spacing:.08em}.accent{color:#1ce0d6}.final-black{position:absolute;inset:0;z-index:20;background:#000;opacity:0}
+    .build-heading{position:absolute;left:120px;top:84px;z-index:6}.build-heading h2{font-size:64px;margin-top:18px}.build-heading p{margin-top:16px;color:#9eb0bd;font-size:22px}.evidence-stage{position:absolute;left:120px;right:120px;top:310px;bottom:105px;z-index:5}.evidence-panel{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;gap:28px}.evidence-card{position:relative;padding:32px 34px;border:1px solid rgba(125,246,238,.2);border-radius:18px;background:linear-gradient(145deg,rgba(10,22,37,.97),rgba(5,12,23,.98));box-shadow:0 28px 75px rgba(0,0,0,.42)}.evidence-card.warm{border-color:rgba(244,189,98,.3)}.file-name{font:600 18px 'IBM Plex Mono',monospace;color:#1ce0d6;letter-spacing:.05em}.evidence-card.warm .file-name{color:#f4bd62}.evidence-card h3{font-size:32px;line-height:1.15;margin:25px 0 22px}.excerpt{padding:20px 22px;border-left:3px solid #1ce0d6;background:rgba(28,224,214,.055);font:18px/1.65 'IBM Plex Mono',monospace;color:#c5d0d9}.warm .excerpt{border-color:#f4bd62;background:rgba(244,189,98,.05)}.proof-list{display:grid;gap:14px;margin-top:22px}.proof-row{display:flex;align-items:center;gap:15px;padding:15px 18px;border-radius:10px;background:rgba(255,255,255,.04);font:18px 'IBM Plex Mono',monospace;color:#c5d0d9}.proof-row b{color:#1ce0d6}.proof-row span:last-child{margin-left:auto;color:#7f909d;font-size:15px}.build-model{position:absolute;right:120px;top:103px;padding:11px 17px;border-radius:999px;border:1px solid rgba(28,224,214,.28);background:rgba(28,224,214,.08);font:600 16px 'IBM Plex Mono',monospace;color:#9ff7f1;letter-spacing:.08em}.flow{display:flex;align-items:center;gap:14px;margin-top:28px;font:600 21px 'IBM Plex Mono',monospace;color:#d8e3ea}.flow i{font-style:normal;color:#1ce0d6}.hosting{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:27px}.hosting div{padding:18px;border:1px solid rgba(255,255,255,.1);border-radius:11px;text-align:center;font:600 17px 'IBM Plex Mono',monospace;color:#c5d0d9}.delivery-proof{margin-top:25px;color:#1ce0d6;font:600 21px 'IBM Plex Mono',monospace}
   </style>
 </head>
 <body>
-<div data-hf-id="hf-jrvh" id="root" data-composition-id="main" data-start="0" data-duration="120" data-width="1920" data-height="1080">
-  <audio data-hf-id="hf-ijdu" id="bgm" class="clip" data-start="0" data-duration="120" data-track-index="0" data-volume="0.15" src="assets/audio/mission-control-bed.m4a"></audio>
+<div data-hf-id="hf-jrvh" id="root" data-composition-id="main" data-start="0" data-duration="156" data-width="1920" data-height="1080">
+  <audio data-hf-id="hf-ijdu" id="bgm" class="clip" data-start="0" data-duration="156" data-track-index="0" data-volume="0.15" src="assets/audio/mission-control-bed-extended.m4a"></audio>
   <audio data-hf-id="hf-cqvw" id="narration-01" class="clip" data-start="0.4" data-duration="14.50" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-01.mp3"></audio>
   <audio data-hf-id="hf-rwa8" id="narration-02" class="clip" data-start="16.8" data-duration="8.74" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-02.mp3"></audio>
   <audio data-hf-id="hf-qhpz" id="narration-03" class="clip" data-start="29" data-duration="11.29" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-03.mp3"></audio>
@@ -38,7 +39,8 @@
   <audio data-hf-id="hf-w9zd" id="narration-05" class="clip" data-start="62" data-duration="9.43" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-05.mp3"></audio>
   <audio data-hf-id="hf-owza" id="narration-06" class="clip" data-start="75" data-duration="11.48" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-06.mp3"></audio>
   <audio data-hf-id="hf-edz3" id="narration-07" class="clip" data-start="93" data-duration="7.85" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-07.mp3"></audio>
-  <audio data-hf-id="hf-n1fn" id="narration-08" class="clip" data-start="104.5" data-duration="13.01" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-08.mp3"></audio>
+  <audio data-hf-id="hf-build-voice" id="narration-09" class="clip" data-start="104.5" data-duration="34.23" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-09.mp3"></audio>
+  <audio data-hf-id="hf-n1fn" id="narration-08" class="clip" data-start="140.5" data-duration="13.01" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-08.mp3"></audio>
   <section data-hf-id="hf-kkm8" id="s1" class="clip" data-start="0" data-duration="16" data-track-index="1">
     <div data-hf-id="hf-kxq8" class="grid"></div><div data-hf-id="hf-esdm" class="glow" style="left:510px;top:60px"></div>
     <div data-hf-id="hf-iebk" class="opening-hook"><div data-hf-id="hf-1jy8">Today, AI writes code.</div><div data-hf-id="hf-ynpu">Tomorrow, AI will build companies.</div></div>
@@ -70,7 +72,26 @@
   <section data-hf-id="hf-mnhf" id="s7" class="clip" data-start="91" data-duration="13" data-track-index="1">
     <div data-hf-id="hf-3yrh" class="grid"></div><div data-hf-id="hf-16jr" class="screen-wrap debrief-screen"><img data-hf-id="hf-w0dr" src="assets/screenshots/debrief.png" alt="Mission debrief"><div data-hf-id="hf-1k1t" class="frame-label">Mission debrief</div></div><div data-hf-id="hf-slch" class="pause-line">Decisions → artifacts → verified outcome</div>
   </section>
-  <section data-hf-id="hf-cd5e" id="s8" class="clip" data-start="104" data-duration="16" data-track-index="1">
+  <section data-hf-id="hf-build-scene" id="s9" class="clip" data-start="104" data-duration="36" data-track-index="1">
+    <div data-hf-id="hf-build-grid" class="grid"></div><div data-hf-id="hf-build-glow" class="glow" style="right:210px;top:20px"></div>
+    <div data-hf-id="hf-build-heading" class="build-heading"><div data-hf-id="hf-build-eye" class="eyebrow">How it was built</div><h2 data-hf-id="hf-build-title">Built with Codex + <span data-hf-id="hf-build-accent" class="accent">GPT-5.6</span></h2><p data-hf-id="hf-build-subtitle">GPT-5.6 powered the Codex development process.</p></div>
+    <div data-hf-id="hf-build-model" class="build-model">CODEX DEVELOPMENT WORKFLOW</div>
+    <div data-hf-id="hf-build-stage" class="evidence-stage">
+      <div data-hf-id="hf-build-panel-1" id="build-panel-1" class="evidence-panel">
+        <article data-hf-id="hf-build-agents" class="evidence-card"><div data-hf-id="hf-build-agents-file" class="file-name">AGENTS.md</div><h3 data-hf-id="hf-build-agents-title">Product direction became operating rules.</h3><div data-hf-id="hf-build-agents-copy" class="excerpt">Optimize for a compelling three-minute demo. Every meaningful agent action becomes a structured event.</div></article>
+        <article data-hf-id="hf-build-architecture" class="evidence-card"><div data-hf-id="hf-build-architecture-file" class="file-name">docs/ARCHITECTURE.md</div><h3 data-hf-id="hf-build-architecture-title">One canonical source of truth.</h3><div data-hf-id="hf-build-architecture-copy" class="excerpt">Mission Plan, Mission Health, recommendations, and debrief are projections rebuilt from the event log.</div></article>
+      </div>
+      <div data-hf-id="hf-build-panel-2" id="build-panel-2" class="evidence-panel">
+        <article data-hf-id="hf-build-optimizer" class="evidence-card warm"><div data-hf-id="hf-build-optimizer-file" class="file-name">Optimizer specification</div><h3 data-hf-id="hf-build-optimizer-title">A constrained recommendation, not magic.</h3><div data-hf-id="hf-build-optimizer-copy" class="excerpt">Trigger: critical path blocked. Evidence: research delayed, implementation waiting. Outcome: 22 → 15 minutes.</div></article>
+        <article data-hf-id="hf-build-tests" class="evidence-card"><div data-hf-id="hf-build-tests-file" class="file-name">Codex milestone update</div><h3 data-hf-id="hf-build-tests-title">Implementation stayed tied to proof.</h3><div data-hf-id="hf-build-proof" class="proof-list"><div data-hf-id="hf-build-proof-1" class="proof-row"><b data-hf-id="hf-build-proof-1-check">✓</b> TypeScript <span data-hf-id="hf-build-proof-1-status">PASSED</span></div><div data-hf-id="hf-build-proof-2" class="proof-row"><b data-hf-id="hf-build-proof-2-check">✓</b> Projection and idempotency tests <span data-hf-id="hf-build-proof-2-status">7 / 7</span></div><div data-hf-id="hf-build-proof-3" class="proof-row"><b data-hf-id="hf-build-proof-3-check">✓</b> Production build <span data-hf-id="hf-build-proof-3-status">PASSED</span></div></div></article>
+      </div>
+      <div data-hf-id="hf-build-panel-3" id="build-panel-3" class="evidence-panel">
+        <article data-hf-id="hf-build-runtime" class="evidence-card"><div data-hf-id="hf-build-runtime-file" class="file-name">Hermes → Codex lifecycle</div><h3 data-hf-id="hf-build-runtime-title">The real bounded execution path.</h3><div data-hf-id="hf-build-flow" class="flow"><span data-hf-id="hf-build-flow-1">TaskAssigned</span><i data-hf-id="hf-build-flow-a">→</i><span data-hf-id="hf-build-flow-2">TaskStarted</span><i data-hf-id="hf-build-flow-b">→</i><span data-hf-id="hf-build-flow-3">ArtifactCreated</span></div><div data-hf-id="hf-build-runtime-copy" class="excerpt" style="margin-top:30px">Mission Control records lifecycle and artifact events. GPT-5.6 is not presented as a runtime Executive Advisor.</div></article>
+        <article data-hf-id="hf-build-aws" class="evidence-card"><div data-hf-id="hf-build-aws-file" class="file-name">AWS production delivery</div><h3 data-hf-id="hf-build-aws-title">Designed, deployed, and verified with Codex.</h3><div data-hf-id="hf-build-hosting" class="hosting"><div data-hf-id="hf-build-host-1">ECS</div><div data-hf-id="hf-build-host-2">DynamoDB</div><div data-hf-id="hf-build-host-3">Route 53</div></div><div data-hf-id="hf-build-delivery" class="delivery-proof">mission.wallyweb.com · HEALTHY</div></article>
+      </div>
+    </div>
+  </section>
+  <section data-hf-id="hf-cd5e" id="s8" class="clip" data-start="140" data-duration="16" data-track-index="1">
     <div data-hf-id="hf-4d2i" class="grid"></div><div data-hf-id="hf-ywfk" class="glow" style="left:510px;top:80px"></div>
     <div data-hf-id="hf-gyjq" class="center-title"><img data-hf-id="hf-byyz" class="closing-logo" src="assets/logo.png" alt="Mission Control"><h1 data-hf-id="hf-rakl" style="margin-top:38px">Mission Control</h1><p data-hf-id="hf-teby" class="tagline">The executive layer for <span data-hf-id="hf-304x" class="accent">AI teams.</span></p><div data-hf-id="hf-zmj3" class="promise"><strong data-hf-id="hf-hu4x">Give your AI organization an objective.</strong><br data-hf-id="hf-szow">Mission Control handles everything else until human judgment is required.</div><div data-hf-id="hf-b11r" class="built">MISSION CONTROL FOR AI TEAMS &#160;•&#160; BUILT WITH OPENAI CODEX</div></div>
     <div data-hf-id="hf-8yaa" id="final-black" class="final-black"></div>
@@ -102,12 +123,23 @@
     .from("#s7 .screen-wrap",{opacity:0,scale:.965,duration:1,ease:"power2.out"},92)
     .to("#s7 .screen-wrap",{scale:1.045,y:-20,duration:10,ease:"none"},93)
     .from("#s7 .pause-line",{opacity:0,duration:.7,ease:"power2.out"},100)
-    .from("#s8 .closing-logo",{opacity:0,scale:.75,duration:1.15,ease:"back.out(1.5)"},104.7)
-    .from("#s8 h1",{opacity:0,y:28,duration:.8,ease:"power3.out"},105.3)
-    .from("#s8 .tagline",{opacity:0,y:18,duration:.8,ease:"power2.out"},106.1)
-    .from("#s8 .promise",{opacity:0,y:18,duration:1,ease:"power2.out"},112.7)
-    .from("#s8 .built",{opacity:0,duration:1,ease:"power2.out"},114.5)
-    .to("#final-black",{opacity:1,duration:1.1,ease:"power2.inOut"},118.9);
+    .from("#s9 .build-heading",{opacity:0,y:24,duration:.75,ease:"power3.out"},104.35)
+    .from("#s9 .build-model",{opacity:0,x:28,duration:.7,ease:"power3.out"},104.75)
+    .from("#build-panel-1 .evidence-card",{opacity:0,y:30,stagger:.22,duration:.7,ease:"power3.out"},105.2)
+    .to("#build-panel-1",{opacity:0,y:-24,duration:.6,ease:"power2.in"},114.4)
+    .from("#build-panel-2 .evidence-card",{opacity:0,y:30,stagger:.22,duration:.7,ease:"power3.out"},115.1)
+    .from("#build-panel-2 .proof-row",{opacity:0,x:24,stagger:.6,duration:.42,ease:"power2.out"},117.1)
+    .to("#build-panel-2",{opacity:0,y:-24,duration:.6,ease:"power2.in"},125.1)
+    .from("#build-panel-3 .evidence-card",{opacity:0,y:30,stagger:.22,duration:.7,ease:"power3.out"},125.8)
+    .from("#build-panel-3 .flow > *",{opacity:0,x:18,stagger:.4,duration:.4,ease:"power2.out"},128)
+    .from("#build-panel-3 .hosting div",{opacity:0,y:16,stagger:.35,duration:.4,ease:"power2.out"},130.4)
+    .from("#build-panel-3 .delivery-proof",{opacity:0,duration:.6,ease:"power2.out"},132.2)
+    .from("#s8 .closing-logo",{opacity:0,scale:.75,duration:1.15,ease:"back.out(1.5)"},140.7)
+    .from("#s8 h1",{opacity:0,y:28,duration:.8,ease:"power3.out"},141.3)
+    .from("#s8 .tagline",{opacity:0,y:18,duration:.8,ease:"power2.out"},142.1)
+    .from("#s8 .promise",{opacity:0,y:18,duration:1,ease:"power2.out"},148.7)
+    .from("#s8 .built",{opacity:0,duration:1,ease:"power2.out"},150.5)
+    .to("#final-black",{opacity:1,duration:1.1,ease:"power2.inOut"},154.9);
   window.__timelines["main"]=tl;
 </script>
 </body>

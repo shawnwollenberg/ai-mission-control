@@ -7,13 +7,15 @@ destination: youtube
 aspect: 1920x1080
 language: en
 audience: "Hackathon judges, technical founders, and engineering leaders"
-length: 120s
+length: 156s
 narration: yes
 ---
 
 ## Intent
 
 Create a calm, executive two-minute hackathon film that introduces Mission Control as a new category: the executive layer for AI organizations. The arc moves from fragmentation to coordinated work, then through a believable critical-path crisis, one consequential human decision, real execution evidence, and a satisfying debrief.
+
+After the debrief, add a concise build-story epilogue showing how Codex powered by GPT-5.6 was used for product strategy, architecture, engineering, verification, and AWS delivery. Then return to the original closing vision and logo.
 
 ## Assets
 

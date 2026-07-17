@@ -26,6 +26,7 @@ const scenes = [
   "Hermes coordinates execution. Codex performs the work. Every decision. Every artifact. Every outcome. Mission Control records the organization's history.",
   "Every mission ends with a complete executive debrief, connecting organizational decisions to verifiable outcomes.",
   "The future won't be one AI assistant. It will be organizations of AI working together. Mission Control is the executive layer that keeps humans accountable while AI organizations execute.",
+  "Mission Control itself was built with Codex powered by GPT-5.6. I used GPT-5.6 inside Codex as a product strategist, systems architect, and lead engineer—turning the initial concept into a product brief, event-sourced architecture, constrained optimizer, implementation plan, tested application, and AWS deployment. Codex also powers the live execution path, where Hermes assigns a bounded implementation task and Mission Control records the resulting lifecycle and artifact events.",
 ];
 
 const outputDir = path.join(project, "assets/audio/narration");
@@ -47,7 +48,7 @@ for (let index = 0; index < scenes.length; index += 1) {
           similarity_boost: 0.78,
           style: 0.08,
           use_speaker_boost: true,
-          speed: 0.94,
+          speed: index === 8 ? 1.08 : 0.94,
         },
       }),
     },
