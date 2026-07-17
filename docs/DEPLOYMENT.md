@@ -16,7 +16,7 @@ Mission Control does not modify the root website, its CloudFront distribution, i
 - Route 53 alias: `mission.wallyweb.com`
 - ACM regional certificate with DNS validation
 - Dedicated public Application Load Balancer with HTTP-to-HTTPS redirect
-- Dedicated ECS Fargate cluster and one desired Next.js task
+- Dedicated ARM64 ECS Fargate cluster and one desired Next.js task
 - Versioned image in a dedicated ECR repository
 - DynamoDB on-demand table as the canonical append-only event log
 - Secrets Manager generated token for the authenticated Hermes ingestion boundary
@@ -89,7 +89,7 @@ Build and push an immutable Git commit tag:
 ```bash
 IMAGE_TAG=$(git rev-parse --short=12 HEAD)
 aws ecr get-login-password --region us-east-1 --profile wallyweb | docker login --username AWS --password-stdin <repository-host>
-docker build --platform linux/amd64 -t mission-control:${IMAGE_TAG} .
+docker build --platform linux/arm64 -t mission-control:${IMAGE_TAG} .
 docker tag mission-control:${IMAGE_TAG} <repository-uri>:${IMAGE_TAG}
 docker push <repository-uri>:${IMAGE_TAG}
 npx cdk deploy MissionControlProduction -c stage=app -c imageTag=${IMAGE_TAG} --region us-east-1 --profile wallyweb --require-approval never
@@ -107,7 +107,7 @@ npm test
 npm run build
 IMAGE_TAG=$(git rev-parse --short=12 HEAD)
 aws ecr get-login-password --region us-east-1 --profile wallyweb | docker login --username AWS --password-stdin <repository-host>
-docker build --platform linux/amd64 -t <repository-uri>:${IMAGE_TAG} .
+docker build --platform linux/arm64 -t <repository-uri>:${IMAGE_TAG} .
 docker push <repository-uri>:${IMAGE_TAG}
 npx cdk deploy MissionControlProduction -c stage=app -c imageTag=${IMAGE_TAG} --region us-east-1 --profile wallyweb --require-approval never
 ```

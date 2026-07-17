@@ -52,6 +52,10 @@ export class MissionControlAppStack extends cdk.Stack {
       maxHealthyPercent: 200,
       cpu: 512,
       memoryLimitMiB: 1024,
+      runtimePlatform: {
+        cpuArchitecture: ecs.CpuArchitecture.ARM64,
+        operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
+      },
       publicLoadBalancer: true,
       assignPublicIp: true,
       certificate,
