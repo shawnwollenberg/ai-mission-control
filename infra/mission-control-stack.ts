@@ -71,6 +71,7 @@ export class MissionControlAppStack extends cdk.Stack {
         environment: {
           NODE_ENV: "production",
           PUBLIC_APP_URL: "https://mission.wallyweb.com",
+          INTERNAL_AGENT_URL: "http://127.0.0.1:3000",
           DEMO_MODE: "true",
           EVENT_STORE: "dynamodb",
           MISSION_EVENTS_TABLE: table.tableName,
