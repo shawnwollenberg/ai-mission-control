@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createCheckoutMessage, SERVICEPILOT_PLANS } from "@/lib/servicepilot-preview";
 
 export default function ServicePilotPreview() {
-  const [selectedPlan, setSelectedPlan] = useState("Growth");
+  const [selectedPlan, setSelectedPlan] = useState("Growth Annual");
   const [checkoutReady, setCheckoutReady] = useState(false);
 
   return (
@@ -18,7 +18,7 @@ export default function ServicePilotPreview() {
       <section className="pricing-grid">
         {SERVICEPILOT_PLANS.map((plan) => (
           <button className={selectedPlan === plan.name ? "selected" : ""} key={plan.name} onClick={() => { setSelectedPlan(plan.name); setCheckoutReady(false); }}>
-            <span>{plan.name}</span><strong>{plan.price}<small>/month</small></strong><p>{plan.detail}</p><b>{selectedPlan === plan.name ? "Selected" : "Select plan"}</b>
+            <span>{plan.name}</span><strong>{plan.price}<small>/{plan.interval}</small></strong><p>{plan.detail}</p><b>{selectedPlan === plan.name ? "Selected" : "Select plan"}</b>
           </button>
         ))}
       </section>

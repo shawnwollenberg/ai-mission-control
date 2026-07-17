@@ -1,7 +1,8 @@
 export const SERVICEPILOT_PLANS = [
-  { name: "Starter", price: "$19", detail: "For small service teams" },
-  { name: "Growth", price: "$49", detail: "Automation for growing operations" },
-  { name: "Scale", price: "$99", detail: "Advanced controls and support" },
+  { name: "Starter", price: "$19", interval: "month", detail: "For small service teams" },
+  { name: "Growth", price: "$49", interval: "month", detail: "Automation for growing operations" },
+  { name: "Growth Annual", price: "$490", interval: "year", detail: "Annual billing for growing operations" },
+  { name: "Scale", price: "$99", interval: "month", detail: "Advanced controls and support" },
 ] as const;
 
 export function createCheckoutMessage(planName: string): string {

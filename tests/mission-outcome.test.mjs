@@ -146,6 +146,13 @@ test("the controlled preview produces checkout evidence for every plan", () => {
   }
 });
 
+test("the controlled preview exposes the verified annual Growth artifact", () => {
+  assert.deepEqual(
+    SERVICEPILOT_PLANS.find((plan) => plan.name === "Growth Annual"),
+    { name: "Growth Annual", price: "$490", interval: "year", detail: "Annual billing for growing operations" },
+  );
+});
+
 test("the controlled preview rejects an unknown plan", () => {
   assert.throws(() => createCheckoutMessage("Enterprise"), /Unknown ServicePilot plan/);
 });
