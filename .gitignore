@@ -8,3 +8,4 @@ node_modules/
 !.env.example
 videos/hyperframes/.thumbnails/
 videos/hyperframes/.waveform-cache/
+videos/hyperframes/snapshots/crop-*/
