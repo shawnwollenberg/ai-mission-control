@@ -52,7 +52,6 @@ export default function LaunchPage() {
 
       <section className="launch-grid">
         <div className="launch-copy">
-          <BrandSprite asset="mark-primary" className="launch-brand-art" />
           <p className="section-label">New mission</p>
           <h1>Give your organization an outcome.</h1>
           <p className="lede">Mission Control coordinates the work and returns when human judgment is required.</p>
