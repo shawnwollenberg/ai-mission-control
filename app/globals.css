@@ -207,14 +207,19 @@ textarea:focus, input:focus, select:focus { border-color: rgba(183, 243, 107, .5
 .log-list { display: grid; max-height: 225px; overflow: hidden; }
 .log-item { display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); animation: event-arrive .4s ease-out; }
 .log-item:first-child { border-top-color: rgba(183,243,107,.3); }
+.log-milestone { padding-inline: 12px; background: rgba(183,243,107,.06); border-left: 2px solid rgba(183,243,107,.65); }
+.log-milestone strong { color: var(--signal); }
+.log-decision { padding-inline: 12px; background: rgba(244,189,98,.1); border-left: 2px solid var(--amber); }
+.log-decision strong { color: var(--amber); }
 .log-sequence { color: var(--signal); font: 600 9px/1.5 ui-monospace, monospace; }
 .log-item strong, .log-item small { display: block; }
 .log-item strong { font-size: 13px; }
 .log-item small { margin-top: 4px; color: var(--muted); font-size: 10px; }
 .log-task-delayed strong, .log-mission-health_changed strong { color: var(--amber); }
-.recommendation-card { width: min(1220px, 100%); margin: 16px auto 0; display: grid; grid-template-columns: 1fr 330px; gap: 32px; padding: 28px; border: 1px solid rgba(244,189,98,.5); background: linear-gradient(120deg, rgba(69,43,14,.72), rgba(13,19,17,.98) 58%); box-shadow: 0 22px 70px rgba(0,0,0,.35); animation: recommendation-arrive .55s ease-out; }
+.recommendation-card { width: min(1220px, 100%); margin: 16px auto 0; display: grid; grid-template-columns: 1fr 330px; gap: 32px; padding: 28px; border: 1px solid rgba(244,189,98,.72); background: linear-gradient(120deg, rgba(101,63,19,.98), rgba(27,31,19,.98) 58%); box-shadow: 0 22px 70px rgba(0,0,0,.35); animation: recommendation-arrive .55s ease-out; }
+.recommendation-spotlight { margin: 0 auto 16px; border-width: 2px; box-shadow: 0 0 0 1px rgba(244,189,98,.3), 0 28px 90px rgba(0,0,0,.48), inset 0 0 45px rgba(244,189,98,.08); }
 .recommendation-card h2 { margin: 9px 0; font-size: 27px; }
-.recommendation-card p:not(.section-label) { margin: 0; color: #c0c7c3; }
+.recommendation-card p:not(.section-label) { margin: 0; color: #eef1e9; }
 .why-now { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 .why-now strong, .why-now span { padding: 8px 10px; border: 1px solid var(--line); color: var(--muted); font: 600 9px/1 ui-monospace, monospace; }
 .why-now strong { color: var(--amber); border-color: rgba(244,189,98,.35); }

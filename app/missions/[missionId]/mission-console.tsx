@@ -91,10 +91,16 @@ export default function MissionConsole({ mission, initialEvents }: { mission: Mi
             <div><strong>Interactive preview</strong><span>Controlled local environment</span></div>
             <a href="/preview/servicepilot" target="_blank" rel="noreferrer">View Evidence <span>↗</span></a>
           </div>
-          <p className="completion-note">1 organization change · Replay available · Organization idle</p>
+          <p className="completion-note">1 organization change · Organization idle</p>
         </section>
       ) : (
         <>
+          {projection.recommendation && !projection.approved && (
+            <section className="recommendation-card recommendation-spotlight" aria-live="polite">
+              <div className="recommendation-copy"><p className="section-label">Mission Control Recommendation</p><h2>Research is blocking implementation.</h2><p>Mission Control found parallel work: frontend does not depend on the unresolved research decision, and validation can prepare fixtures now.</p><div className="why-now"><strong>Why now?</strong><span>Research exceeded estimate</span><span>Implementation became idle</span><span>Parallel path detected</span></div></div>
+              <div className="recommendation-action"><div className="estimate"><span>Estimated completion</span><strong>22 min <b>→</b> 15 min</strong><small>7 minutes saved</small></div><button onClick={approveReorganization}>Approve Reorganization <span>→</span></button></div>
+            </section>
+          )}
           <section className="command-grid">
             <section className="command-panel mission-plan">
               <div className="panel-title"><div><p className="section-label">Mission Plan</p><h2>The organization</h2></div><span>{projection.plan.filter((item) => item.state === "complete").length}/4 complete</span></div>
@@ -107,7 +113,7 @@ export default function MissionConsole({ mission, initialEvents }: { mission: Mi
               <p className="section-label">Mission Health</p>
               <h2>{projection.risk === "Moderate" ? "⚠ " : ""}{projection.healthHeadline}</h2>
               <p className="health-copy">{projection.healthDetail}</p>
-              <div className="health-grid"><Metric label="Schedule" value={projection.schedule} /><Metric label="Risk" value={projection.risk} /><Metric label="Next decision" value={projection.nextDecision} /></div>
+              <div className="health-grid"><Metric label="Current focus" value={projection.currentFocus} /><Metric label="Waiting" value={projection.waiting} /><Metric label="Next decision" value={projection.nextDecision === "Optimization Available" ? "Review recommendation" : projection.nextDecision} /></div>
             </section>
 
             <section className="command-panel mission-log">
@@ -143,12 +149,6 @@ export default function MissionConsole({ mission, initialEvents }: { mission: Mi
             </section>
           )}
 
-          {projection.recommendation && !projection.approved && (
-            <section className="recommendation-card">
-              <div className="recommendation-copy"><p className="section-label">Mission Control Recommendation</p><h2>Research is blocking implementation.</h2><p>Three resources can begin work immediately. Split implementation and start validation against the stable contract.</p><div className="why-now"><strong>Why now?</strong><span>Research exceeded estimate</span><span>Coding became idle</span><span>New parallel path detected</span></div></div>
-              <div className="recommendation-action"><div className="estimate"><span>Estimated completion</span><strong>22 min <b>→</b> 15 min</strong><small>7 minutes saved</small></div><button onClick={approveReorganization}>Approve Reorganization <span>→</span></button></div>
-            </section>
-          )}
         </>
       )}
     </main>
@@ -160,7 +160,8 @@ function PlanItem({ item, index }: { item: ReturnType<typeof projectMission>["pl
 }
 
 function LogItem({ event }: { event: MissionEvent }) {
-  return <div className={`log-item log-${event.type.replaceAll(".", "-")}`}><span className="log-sequence">{String(event.sequence).padStart(2, "0")}</span><div><strong>{event.data.message}</strong><small>{event.producer.label}{event.data.detail ? ` · ${event.data.detail}` : ""}</small></div></div>;
+  const tier = event.type === "recommendation.triggered" || event.type === "recommendation.approved" || event.type === "organization.reconfigured" || event.type === "task.delayed" ? "decision" : event.type === "plan.created" || event.type === "task.completed" || event.type === "check.completed" || event.type === "preview.ready" || event.type === "mission.completed" ? "milestone" : "normal";
+  return <div className={`log-item log-${tier} log-${event.type.replaceAll(".", "-")}`}><span className="log-sequence">{String(event.sequence).padStart(2, "0")}</span><div><strong>{tier === "milestone" ? "✓ " : tier === "decision" ? "⚠ " : ""}{event.data.message}</strong><small>{event.producer.label}{event.data.detail ? ` · ${event.data.detail}` : ""}</small></div></div>;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

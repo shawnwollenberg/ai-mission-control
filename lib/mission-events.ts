@@ -73,6 +73,8 @@ export type MissionProjection = {
   schedule: "Planning" | "On Track" | "Delayed" | "Complete";
   risk: "Unknown" | "Low" | "Moderate" | "None";
   nextDecision: "None" | "Optimization Available";
+  currentFocus: string;
+  waiting: string;
   healthHeadline: string;
   healthDetail: string;
   plan: Array<{ name: string; state: "forming" | "active" | "waiting" | "complete"; owner: string }>;
@@ -95,9 +97,9 @@ const platform = (id: string, label = "Mission Control"): EventProducer => ({ ki
 const agent = (id: string, label: string): EventProducer => ({ kind: "agent", id, label });
 
 export const CONTROLLED_EVENT_TEMPLATES: ControlledEventTemplate[] = [
-  { type: "plan.created", producer: agent("hermes", "Hermes"), data: { message: "Mission Plan generated", detail: "Four outcome-oriented workstreams established" } },
-  { type: "agent.activated", producer: agent("research", "Research"), data: { message: "Research agent activated", detail: "Stripe Billing integration path" } },
-  { type: "task.assigned", producer: platform("runtime"), subject: { kind: "task", id: "task-implementation" }, data: { message: "Coding agent assigned", detail: "Waiting on billing architecture" } },
+  { type: "plan.created", producer: agent("hermes", "Hermes"), data: { message: "Mission Plan created", detail: "Four workstreams are ready" } },
+  { type: "agent.activated", producer: agent("research", "Research"), data: { message: "Research active", detail: "Crew assigned · Stripe Billing integration path" } },
+  { type: "task.assigned", producer: platform("runtime"), subject: { kind: "task", id: "task-implementation" }, data: { message: "Implementation waiting on Research", detail: "Dependency recorded" } },
   { type: "agent.activated", producer: agent("testing", "Testing"), data: { message: "Testing standing by", detail: "Validation plan prepared" } },
   { type: "agent.activated", producer: agent("deployment", "Deployment"), data: { message: "Deployment reserved", detail: "Demo environment held" } },
   { type: "mission.health_changed", producer: platform("health"), data: { message: "Mission is on track", detail: "Critical path within today’s deadline" } },
@@ -130,6 +132,8 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
     schedule: "Planning",
     risk: "Unknown",
     nextDecision: "None",
+    currentFocus: "Planning…",
+    waiting: "None",
     healthHeadline: "Organization forming",
     healthDetail: "Hermes is building the Mission Plan.",
     plan: [
@@ -147,9 +151,9 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
   };
 
   for (const event of events) {
-    if (event.type === "plan.created") state.status = "Running";
-    if (event.type === "agent.activated" && event.producer.id === "research") state.plan[0].state = "active";
-    if (event.type === "task.assigned" && event.subject?.id === "task-implementation") state.plan[1].state = "waiting";
+    if (event.type === "plan.created") { state.status = "Running"; state.currentFocus = "Mission Plan created"; }
+    if (event.type === "agent.activated" && event.producer.id === "research") { state.plan[0].state = "active"; state.currentFocus = "Research active"; }
+    if (event.type === "task.assigned" && event.subject?.id === "task-implementation") { state.plan[1].state = "waiting"; state.waiting = "Implementation"; }
     if (event.type === "agent.activated" && event.producer.id === "testing") state.plan[2].state = "waiting";
     if (event.type === "agent.activated" && event.producer.id === "deployment") state.plan[3].state = "waiting";
     if (event.type === "mission.health_changed" && event.data.message === "Mission is on track") {
@@ -157,6 +161,7 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
       state.risk = "Low";
       state.healthHeadline = "Mission on track";
       state.healthDetail = "The critical path remains inside today’s deadline.";
+      state.currentFocus = "Research active";
     }
     if (event.type === "task.delayed") {
       state.status = "Delayed";
@@ -164,6 +169,8 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
       state.risk = "Moderate";
       state.healthHeadline = "Critical path blocked";
       state.healthDetail = "Research exceeded estimate. Coding is waiting.";
+      state.currentFocus = "Critical path blocked";
+      state.waiting = "Implementation";
     }
     if (event.type === "recommendation.triggered") {
       state.nextDecision = "Optimization Available";
@@ -179,6 +186,8 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
       state.risk = "Low";
       state.healthHeadline = "Organization reconfigured";
       state.healthDetail = "Three resources are now advancing the critical path.";
+      state.currentFocus = "Parallel work active";
+      state.waiting = "None";
       state.plan[1].state = "active";
       state.plan[2].state = "active";
     }
@@ -195,6 +204,8 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
       state.risk = "None";
       state.healthHeadline = "Mission complete";
       state.healthDetail = "The organization is now idle.";
+      state.currentFocus = "Complete";
+      state.waiting = "None";
       state.completed = true;
       state.plan.forEach((item) => { item.state = "complete"; });
     }
