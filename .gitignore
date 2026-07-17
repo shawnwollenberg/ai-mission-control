@@ -9,3 +9,4 @@ node_modules/
 videos/hyperframes/.thumbnails/
 videos/hyperframes/.waveform-cache/
 videos/hyperframes/snapshots/crop-*/
+videos/hyperframes/snapshots/*-review/

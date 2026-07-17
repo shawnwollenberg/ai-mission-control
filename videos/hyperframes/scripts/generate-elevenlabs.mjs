@@ -18,12 +18,12 @@ const voiceId = env.ELEVENLABS_VOICE_ID || env.voice_id;
 if (!apiKey || !voiceId) throw new Error("Missing ElevenLabs API key or voice ID");
 
 const scenes = [
-  "Today, building software with AI means managing multiple agents across disconnected tools. The work happens everywhere, but there is no single place to understand what your AI organization is doing.",
+  "Today, AI writes code. Tomorrow, AI will build companies. But AI work still happens everywhere, across disconnected tools, with no single place to understand what your AI organization is doing.",
   "Mission Control changes that. Give your AI organization an objective, and watch the organization assemble itself around the work.",
   "Every objective, assignment, and decision becomes part of a single organizational record. Instead of watching individual agents, you're supervising the organization itself.",
   "Mission Control continuously evaluates the organization's progress. When it detects a better organizational structure, it doesn't simply report the problem. It recommends a safer, faster path forward.",
   "Humans remain responsible for outcomes. Mission Control surfaces the evidence, proposes the change, and asks for judgment only when it matters.",
-  "Behind the scenes, Hermes coordinates execution while Codex performs a real implementation task. Mission Control records every verified artifact and every consequential decision in the organization's history.",
+  "Hermes coordinates execution. Codex performs the work. Every decision. Every artifact. Every outcome. Mission Control records the organization's history.",
   "Every mission ends with a complete executive debrief, connecting organizational decisions to verifiable outcomes.",
   "The future won't be one AI assistant. It will be organizations of AI working together. Mission Control is the executive layer that keeps humans accountable while AI organizations execute.",
 ];
@@ -31,7 +31,9 @@ const scenes = [
 const outputDir = path.join(project, "assets/audio/narration");
 await fs.mkdir(outputDir, { recursive: true });
 
+const requested = new Set(process.argv.slice(2).map((value) => Number(value)));
 for (let index = 0; index < scenes.length; index += 1) {
+  if (requested.size && !requested.has(index + 1)) continue;
   const response = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
     {

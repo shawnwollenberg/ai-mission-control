@@ -17,29 +17,31 @@
     .frame-label{position:absolute;left:28px;top:24px;padding:10px 14px;border-radius:999px;background:rgba(3,8,19,.78);border:1px solid rgba(255,255,255,.12);font:500 16px 'IBM Plex Mono',monospace;color:#c5d0d9;backdrop-filter:blur(10px)}
     .brand{display:flex;align-items:center;gap:22px}.brand img{width:86px;height:86px;border-radius:20px}.brand-name{font-size:44px;font-weight:700;letter-spacing:-.03em}.rule{width:90px;height:3px;background:#1ce0d6;margin:28px 0}
     .tool-grid{position:absolute;inset:350px 150px 105px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.tool{display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.11);border-radius:18px;background:rgba(10,20,34,.84);font-size:38px;font-weight:600;letter-spacing:-.02em}.tool small{display:block;color:#81909d;font:500 15px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;margin-left:18px}
+    .opening-hook{position:absolute;left:120px;top:118px;z-index:7}.opening-hook div{font-size:76px;font-weight:700;line-height:1.18;letter-spacing:-.045em}.opening-hook div+div{margin-top:12px;color:#1ce0d6}
     .center-title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:3}.center-title .brand{margin-bottom:32px}.center-title h1{font-size:100px}.center-title p{font-size:28px;color:#aab8c4;margin-top:22px}
     .event-stack{position:absolute;right:120px;top:228px;width:700px;display:grid;gap:14px;z-index:5}.event{padding:22px 25px;border:1px solid rgba(255,255,255,.12);background:rgba(6,14,26,.92);border-radius:14px;display:flex;align-items:center;gap:18px;box-shadow:0 18px 38px rgba(0,0,0,.25)}.event-dot{width:10px;height:10px;border-radius:50%;background:#1ce0d6;box-shadow:0 0 18px #1ce0d6}.event strong{font:600 21px 'IBM Plex Mono',monospace}.event span{margin-left:auto;color:#7e8d99;font:16px 'IBM Plex Mono',monospace}
     .risk-banner{position:absolute;left:1040px;bottom:250px;z-index:6;padding:25px 30px;width:650px;border-radius:16px;background:rgba(41,27,9,.93);border:1px solid rgba(244,189,98,.4);box-shadow:0 24px 70px rgba(0,0,0,.45)}.risk-banner b{font-size:26px;color:#f4bd62}.risk-banner p{font:18px/1.5 'IBM Plex Mono',monospace;color:#c9b996;margin-top:8px}
     .metric{display:flex;align-items:center;gap:30px;margin-top:28px}.metric .old{font-size:62px;color:#7f8b95}.metric .arrow{font-size:40px;color:#1ce0d6}.metric .new{font-size:88px;color:#f3f7fb;font-weight:700}.metric small{font:17px 'IBM Plex Mono',monospace;color:#7f8b95}
     .decision{position:absolute;left:117px;bottom:130px;z-index:5;padding:19px 28px;border-radius:10px;background:#1ce0d6;color:#031014;font-size:21px;font-weight:700;box-shadow:0 0 48px rgba(28,224,214,.28)}
     .verified{position:absolute;left:120px;top:500px;display:grid;gap:18px;z-index:4;width:900px}.verified-row{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:18px;padding:22px 24px;border-left:3px solid #1ce0d6;background:linear-gradient(90deg,rgba(28,224,214,.11),rgba(10,18,31,.5));font:20px 'IBM Plex Mono',monospace}.check{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:rgba(28,224,214,.16);color:#1ce0d6}.verified-row em{font-style:normal;color:#6f7e89;font-size:15px}
-    .debrief-screen{left:480px;top:75px;width:960px;height:930px}.pause-line{position:absolute;left:0;right:0;bottom:54px;text-align:center;color:#6f7e89;font:17px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase}
-    .closing-logo{width:180px;height:180px;border-radius:42px;box-shadow:0 0 90px rgba(28,224,214,.25)}.tagline{font-size:28px!important}.built{position:absolute;bottom:82px;color:#70808d;font:17px 'IBM Plex Mono',monospace;letter-spacing:.08em}.accent{color:#1ce0d6}
+    .recommendation-focus{left:210px;top:180px;width:1500px;height:520px;border-color:rgba(244,189,98,.5);box-shadow:0 45px 150px rgba(0,0,0,.7),0 0 100px rgba(244,189,98,.16)}.recommendation-focus img{object-position:center top}.debrief-screen{left:360px;top:75px;width:1200px;height:930px}.pause-line{position:absolute;left:0;right:0;bottom:54px;text-align:center;color:#6f7e89;font:17px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase}
+    .closing-logo{width:180px;height:180px;border-radius:42px;box-shadow:0 0 90px rgba(28,224,214,.25)}.tagline{font-size:28px!important}.promise{position:absolute;left:310px;right:310px;top:765px;text-align:center;font-size:25px;line-height:1.5;color:#c5d0d9}.promise strong{color:#f3f7fb}.built{position:absolute;bottom:58px;color:#70808d;font:17px 'IBM Plex Mono',monospace;letter-spacing:.08em}.accent{color:#1ce0d6}.final-black{position:absolute;inset:0;z-index:20;background:#000;opacity:0}
   </style>
 </head>
 <body>
 <div data-hf-id="hf-jrvh" id="root" data-composition-id="main" data-start="0" data-duration="120" data-width="1920" data-height="1080">
   <audio data-hf-id="hf-ijdu" id="bgm" class="clip" data-start="0" data-duration="120" data-track-index="0" data-volume="0.15" src="assets/audio/mission-control-bed.m4a"></audio>
-  <audio data-hf-id="hf-cqvw" id="narration-01" class="clip" data-start="0.4" data-duration="15.05" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-01.mp3"></audio>
+  <audio data-hf-id="hf-cqvw" id="narration-01" class="clip" data-start="0.4" data-duration="14.50" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-01.mp3"></audio>
   <audio data-hf-id="hf-rwa8" id="narration-02" class="clip" data-start="16.8" data-duration="8.74" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-02.mp3"></audio>
   <audio data-hf-id="hf-qhpz" id="narration-03" class="clip" data-start="29" data-duration="11.29" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-03.mp3"></audio>
   <audio data-hf-id="hf-8al2" id="narration-04" class="clip" data-start="44.8" data-duration="12.96" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-04.mp3"></audio>
   <audio data-hf-id="hf-w9zd" id="narration-05" class="clip" data-start="62" data-duration="9.43" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-05.mp3"></audio>
-  <audio data-hf-id="hf-owza" id="narration-06" class="clip" data-start="75" data-duration="14.03" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-06.mp3"></audio>
+  <audio data-hf-id="hf-owza" id="narration-06" class="clip" data-start="75" data-duration="11.48" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-06.mp3"></audio>
   <audio data-hf-id="hf-edz3" id="narration-07" class="clip" data-start="93" data-duration="7.85" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-07.mp3"></audio>
   <audio data-hf-id="hf-n1fn" id="narration-08" class="clip" data-start="104.5" data-duration="13.01" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-08.mp3"></audio>
   <section data-hf-id="hf-kkm8" id="s1" class="clip" data-start="0" data-duration="16" data-track-index="1">
     <div data-hf-id="hf-kxq8" class="grid"></div><div data-hf-id="hf-esdm" class="glow" style="left:510px;top:60px"></div>
+    <div data-hf-id="hf-iebk" class="opening-hook"><div data-hf-id="hf-1jy8">Today, AI writes code.</div><div data-hf-id="hf-ynpu">Tomorrow, AI will build companies.</div></div>
     <div data-hf-id="hf-bney" class="scene-copy"><div data-hf-id="hf-5kdr" class="eyebrow">The problem</div><h2 data-hf-id="hf-m0zq" style="margin-top:26px">AI work happens everywhere.</h2><p data-hf-id="hf-1m8f">But understanding the organization means chasing disconnected tools.</p></div>
     <div data-hf-id="hf-pqwj" class="tool-grid"><div data-hf-id="hf-p8qp" class="tool">Codex<small data-hf-id="hf-b6qc">Build</small></div><div data-hf-id="hf-4lzg" class="tool">Claude<small data-hf-id="hf-g708">Reason</small></div><div data-hf-id="hf-c86k" class="tool">Hermes<small data-hf-id="hf-99tm">Coordinate</small></div><div data-hf-id="hf-mxul" class="tool">GitHub<small data-hf-id="hf-yz66">Ship</small></div><div data-hf-id="hf-14ta" class="tool">Terminal<small data-hf-id="hf-e5ur">Execute</small></div><div data-hf-id="hf-5t76" class="tool">Browser<small data-hf-id="hf-wkux">Verify</small></div></div>
   </section>
@@ -58,12 +60,11 @@
     <div data-hf-id="hf-fooo" class="risk-banner"><b data-hf-id="hf-mpjh">Research exceeded estimate.</b><p data-hf-id="hf-hwlm">Implementation is waiting. A new parallel path is available.</p></div>
   </section>
   <section data-hf-id="hf-22vk" id="s5" class="clip" data-start="61" data-duration="13" data-track-index="1">
-    <div data-hf-id="hf-4rdj" class="grid"></div><div data-hf-id="hf-2n3z" class="screen-wrap screen-full"><img data-hf-id="hf-dfym" src="assets/screenshots/recommendation.png" alt="Mission Control recommendation"><div data-hf-id="hf-3ovz" class="frame-label">Evidence before intervention</div></div>
-    <div data-hf-id="hf-q62j" class="decision">Approve Reorganization</div>
+    <div data-hf-id="hf-4rdj" class="grid"></div><div data-hf-id="hf-2n3z" class="screen-wrap recommendation-focus"><img data-hf-id="hf-dfym" src="assets/screenshots/recommendation.png" alt="Mission Control recommendation"><div data-hf-id="hf-3ovz" class="frame-label">The recommendation</div></div>
   </section>
   <section data-hf-id="hf-0vri" id="s6" class="clip" data-start="74" data-duration="17" data-track-index="1">
     <div data-hf-id="hf-55ok" class="grid"></div><div data-hf-id="hf-d0cn" class="glow" style="right:260px;top:80px"></div>
-    <div data-hf-id="hf-bap4" class="scene-copy"><div data-hf-id="hf-nhqr" class="eyebrow">Verified execution</div><h2 data-hf-id="hf-z92m" style="margin-top:26px">Every consequential action becomes history.</h2><p data-hf-id="hf-6cq7">Hermes coordinates. Codex implements. Mission Control preserves the evidence.</p></div>
+    <div data-hf-id="hf-bap4" class="scene-copy"><div data-hf-id="hf-nhqr" class="eyebrow">Verified execution</div><h2 data-hf-id="hf-z92m" style="margin-top:26px">Every decision.<br data-hf-id="hf-x5px">Every artifact.<br data-hf-id="hf-rsrt">Every outcome.</h2><p data-hf-id="hf-6cq7">Mission Control preserves the organization’s history.</p></div>
     <div data-hf-id="hf-vz5o" class="verified"><div data-hf-id="hf-asir" class="verified-row"><i data-hf-id="hf-jkul" class="check">✓</i><span data-hf-id="hf-qfk0">Hermes claimed implementation</span><em data-hf-id="hf-w75n">VERIFIED</em></div><div data-hf-id="hf-2uoz" class="verified-row"><i data-hf-id="hf-hp4x" class="check">✓</i><span data-hf-id="hf-vk1c">Codex started pricing task</span><em data-hf-id="hf-isjf">VERIFIED</em></div><div data-hf-id="hf-2gdy" class="verified-row"><i data-hf-id="hf-iw20" class="check">✓</i><span data-hf-id="hf-haoi">Validation passed</span><em data-hf-id="hf-ie8e">VERIFIED</em></div><div data-hf-id="hf-222x" class="verified-row"><i data-hf-id="hf-ihqz" class="check">✓</i><span data-hf-id="hf-m4ko">Mission completed</span><em data-hf-id="hf-hzxd">VERIFIED</em></div></div>
   </section>
   <section data-hf-id="hf-mnhf" id="s7" class="clip" data-start="91" data-duration="13" data-track-index="1">
@@ -71,13 +72,17 @@
   </section>
   <section data-hf-id="hf-cd5e" id="s8" class="clip" data-start="104" data-duration="16" data-track-index="1">
     <div data-hf-id="hf-4d2i" class="grid"></div><div data-hf-id="hf-ywfk" class="glow" style="left:510px;top:80px"></div>
-    <div data-hf-id="hf-gyjq" class="center-title"><img data-hf-id="hf-byyz" class="closing-logo" src="assets/logo.png" alt="Mission Control"><h1 data-hf-id="hf-rakl" style="margin-top:38px">Mission Control</h1><p data-hf-id="hf-teby" class="tagline">The executive layer for <span data-hf-id="hf-304x" class="accent">AI organizations.</span></p><div data-hf-id="hf-b11r" class="built">MISSION CONTROL FOR AI TEAMS &#160;•&#160; BUILT WITH OPENAI CODEX</div></div>
+    <div data-hf-id="hf-gyjq" class="center-title"><img data-hf-id="hf-byyz" class="closing-logo" src="assets/logo.png" alt="Mission Control"><h1 data-hf-id="hf-rakl" style="margin-top:38px">Mission Control</h1><p data-hf-id="hf-teby" class="tagline">The executive layer for <span data-hf-id="hf-304x" class="accent">AI teams.</span></p><div data-hf-id="hf-zmj3" class="promise"><strong data-hf-id="hf-hu4x">Give your AI organization an objective.</strong><br data-hf-id="hf-szow">Mission Control handles everything else until human judgment is required.</div><div data-hf-id="hf-b11r" class="built">MISSION CONTROL FOR AI TEAMS &#160;•&#160; BUILT WITH OPENAI CODEX</div></div>
+    <div data-hf-id="hf-8yaa" id="final-black" class="final-black"></div>
   </section>
 </div>
 <script>
   window.__timelines=window.__timelines||{};
   const tl=gsap.timeline({paused:true});
-  tl.from("#s1 .tool",{opacity:0,y:28,stagger:.45,duration:.55,ease:"power3.out"},1.2)
+  tl.from("#s1 .opening-hook div",{opacity:0,y:34,stagger:1.55,duration:.75,ease:"power3.out"},0.35)
+    .to("#s1 .opening-hook",{opacity:0,y:-22,duration:.7,ease:"power2.in"},5.25)
+    .from("#s1 .scene-copy",{opacity:0,y:24,duration:.75,ease:"power3.out"},5.9)
+    .from("#s1 .tool",{opacity:0,y:28,stagger:.45,duration:.55,ease:"power3.out"},6.2)
     .to("#s1 .tool-grid",{scale:.82,opacity:.18,duration:1.4,ease:"power3.inOut"},13.8)
     .from("#s2 .scene-copy",{opacity:0,x:-46,duration:.9,ease:"power3.out"},16.5)
     .from("#s2 .screen-wrap",{opacity:0,x:74,scale:.96,duration:1.1,ease:"power3.out"},16.6)
@@ -90,10 +95,8 @@
     .from("#s4 .risk-banner",{opacity:0,y:30,duration:.7,ease:"power3.out"},49)
     .from("#s4 .metric > *",{opacity:0,y:20,stagger:.35,duration:.5,ease:"power2.out"},53)
     .to("#s4 .screen-wrap",{scale:1.045,x:-16,duration:15.5,ease:"none"},45.5)
-    .from("#s5 .screen-wrap",{opacity:0,scale:.97,duration:.9,ease:"power2.out"},61.3)
-    .to("#s5 .screen-wrap",{scale:1.05,y:-26,duration:11,ease:"none"},62.2)
-    .from("#s5 .decision",{opacity:0,scale:.9,duration:.7,ease:"back.out(1.6)"},65)
-    .to("#s5 .decision",{scale:.94,duration:.16,ease:"none"},70).to("#s5 .decision",{scale:1,duration:.38,ease:"back.out(2)"},70.16)
+    .from("#s5 .screen-wrap",{opacity:0,scale:.86,duration:1.2,ease:"back.out(1.35)"},61.3)
+    .to("#s5 .screen-wrap",{scale:1.08,y:-18,duration:11.2,ease:"none"},62.5)
     .from("#s6 .scene-copy",{opacity:0,x:-40,duration:.8,ease:"power3.out"},74.4)
     .from("#s6 .verified-row",{opacity:0,x:54,stagger:2.1,duration:.65,ease:"power3.out"},77)
     .from("#s7 .screen-wrap",{opacity:0,scale:.965,duration:1,ease:"power2.out"},92)
@@ -102,7 +105,9 @@
     .from("#s8 .closing-logo",{opacity:0,scale:.75,duration:1.15,ease:"back.out(1.5)"},104.7)
     .from("#s8 h1",{opacity:0,y:28,duration:.8,ease:"power3.out"},105.3)
     .from("#s8 .tagline",{opacity:0,y:18,duration:.8,ease:"power2.out"},106.1)
-    .from("#s8 .built",{opacity:0,duration:1,ease:"power2.out"},114.5);
+    .from("#s8 .promise",{opacity:0,y:18,duration:1,ease:"power2.out"},112.7)
+    .from("#s8 .built",{opacity:0,duration:1,ease:"power2.out"},114.5)
+    .to("#final-black",{opacity:1,duration:1.1,ease:"power2.inOut"},118.9);
   window.__timelines["main"]=tl;
 </script>
 </body>

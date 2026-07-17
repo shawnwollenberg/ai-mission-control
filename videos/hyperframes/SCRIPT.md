@@ -2,7 +2,9 @@
 
 ## Scene 1 — The Problem
 
-Today, building software with AI means managing multiple agents across disconnected tools. The work happens everywhere, but there is no single place to understand what your AI organization is doing.
+Today, AI writes code. Tomorrow, AI will build companies.
+
+But AI work still happens everywhere, across disconnected tools, with no single place to understand what your AI organization is doing.
 
 ## Scene 2 — The Mission
 
@@ -22,7 +24,11 @@ Humans remain responsible for outcomes. Mission Control surfaces the evidence, p
 
 ## Scene 6 — Real Execution
 
-Behind the scenes, Hermes coordinates execution while Codex performs a real implementation task. Mission Control records every verified artifact and every consequential decision in the organization's history.
+Hermes coordinates execution. Codex performs the work.
+
+Every decision. Every artifact. Every outcome.
+
+Mission Control records the organization's history.
 
 ## Scene 7 — Mission Debrief
 
