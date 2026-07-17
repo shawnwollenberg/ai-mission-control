@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { projectMission, type MissionEvent } from "@/lib/mission-events";
 import type { Mission } from "@/lib/mission-store";
+import { BrandSprite } from "@/app/brand-assets";
 
 export default function MissionConsole({ mission, initialEvents }: { mission: Mission; initialEvents: MissionEvent[] }) {
   const [events, setEvents] = useState(initialEvents);
@@ -65,7 +66,7 @@ export default function MissionConsole({ mission, initialEvents }: { mission: Mi
   return (
     <main className={`mission-shell ${projection.completed ? "mission-complete" : ""}`}>
       <nav className="brandbar">
-        <div className="brandmark">MC</div>
+        <BrandSprite asset="mark-compact" />
         <div><p className="eyebrow">Mission Control</p><p className="brand-subtitle">Live organization command</p></div>
         <div className="system-status"><span />{projection.completed ? "Organization idle" : "Mission live"}</div>
       </nav>
@@ -156,7 +157,8 @@ export default function MissionConsole({ mission, initialEvents }: { mission: Mi
 }
 
 function PlanItem({ item, index }: { item: ReturnType<typeof projectMission>["plan"][number]; index: number }) {
-  return <div className={`plan-item plan-${item.state}`}><span className="plan-index">0{index + 1}</span><div><strong>{item.name}</strong><small>{item.owner} agent</small></div><span className="plan-state">{item.state}</span></div>;
+  const assets = ["agent-research", "agent-coding", "agent-testing", "agent-deployment"] as const;
+  return <div className={`plan-item plan-${item.state}`}><BrandSprite asset={assets[index]} /><div><strong>{item.name}</strong><small>{item.owner} agent</small></div><span className="plan-state">{item.state}</span></div>;
 }
 
 function LogItem({ event }: { event: MissionEvent }) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { BrandSprite } from "./brand-assets";
 
 type LaunchInput = {
   objective: string;
@@ -41,7 +42,7 @@ export default function LaunchPage() {
   return (
     <main className="launch-shell">
       <nav className="brandbar">
-        <div className="brandmark">MC</div>
+        <BrandSprite asset="mark-compact" />
         <div>
           <p className="eyebrow">Mission Control</p>
           <p className="brand-subtitle">Executive operations for AI teams</p>
@@ -51,6 +52,7 @@ export default function LaunchPage() {
 
       <section className="launch-grid">
         <div className="launch-copy">
+          <BrandSprite asset="mark-primary" className="launch-brand-art" />
           <p className="section-label">New mission</p>
           <h1>Give your organization an outcome.</h1>
           <p className="lede">Mission Control coordinates the work and returns when human judgment is required.</p>
