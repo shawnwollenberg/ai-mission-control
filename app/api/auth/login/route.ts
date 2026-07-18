@@ -9,7 +9,10 @@ export async function POST(request: Request) {
     if (!body.email || !body.password)
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     const identity = await authenticateOwner(body.email, body.password);
-    if (!identity) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    if (!identity) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
     const response = NextResponse.json({ user: { email: identity.email, role: identity.role } });
     response.cookies.set(SESSION_COOKIE_NAME, await createSessionToken(identity), sessionCookieOptions());
     return response;

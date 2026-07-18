@@ -60,6 +60,24 @@ Approved: modular monolith, PostgreSQL authority, transactional outbox and datab
 9. **DynamoDB compatibility:** idempotent one-way import CLI, legacy envelope translation, source metadata, incompatibility report, removal plan.
 10. **Demo cutover:** versioned mock template and PostgreSQL-backed existing demo, golden projection/browser regression, operational docs and Phase 1 report.
 
+### Durable browser route migration — approved 2026-07-18
+
+| Browser-facing path                                                       | Slice disposition                                                                                                                                                                         |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`, `/logout`, `/api/auth/*`                                        | Migrated to PostgreSQL-backed owner authentication and server-validated sessions.                                                                                                         |
+| `/` mission launch                                                        | Migrated to authenticated durable creation; retains the existing visual launch treatment.                                                                                                 |
+| `GET/POST /api/missions`                                                  | One production list/create API backed by workspace-scoped projections and `CreateMission`. Legacy creation is removed.                                                                    |
+| `/missions`                                                               | New durable projection-backed mission list ordered by `updated_at`.                                                                                                                       |
+| `/missions/:missionId`                                                    | Migrated to PostgreSQL mission projection plus browser-safe PostgreSQL timeline. Clearly labeled `Simulated execution`.                                                                   |
+| `/api/missions/:missionId/events`                                         | Migrated to authenticated, workspace-scoped safe timeline query. Raw legacy event responses are removed.                                                                                  |
+| `/api/missions/:missionId/{plan,start,pause,resume,complete,fail,cancel}` | Explicit authenticated command endpoints with version checks and typed errors.                                                                                                            |
+| `/api/missions/:missionId/advance`, `/approve`                            | Removed from the browser surface; browser-timer authority is prohibited.                                                                                                                  |
+| Legacy `mission-console.tsx`                                              | Removed after durable detail controls replace it.                                                                                                                                         |
+| JSONL/DynamoDB demo event adapters                                        | Temporarily retained only for compatibility tests and the one-way import slice; inaccessible from main production navigation. Tracked for removal after import compatibility is complete. |
+| Hard-coded demo debrief and ServicePilot preview                          | Preview remains isolated demo evidence; the hard-coded mission debrief is removed from the durable mission path. A future debrief must derive from recorded events.                       |
+
+All lifecycle activity in this slice is manual and server-authoritative. It is explicitly presented as simulated execution; no connected agent is implied.
+
 ### Schema outline
 
 All tenant-owned tables include `workspace_id`. Domain events have no routine deletion policy.

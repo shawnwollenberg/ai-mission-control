@@ -1,13 +1,19 @@
 import { notFound } from "next/navigation";
-import { projectMission } from "@/lib/mission-events";
-import { readMissionEvents } from "@/lib/event-store";
-import MissionConsole from "./mission-console";
+import { requirePageIdentity } from "@/lib/page-auth";
+import { getMissionProjection, getMissionTimeline } from "@/lib/mission-queries";
+import DurableMissionConsole from "./durable-mission-console";
+
+export const dynamic = "force-dynamic";
 
 export default async function MissionPage({ params }: { params: Promise<{ missionId: string }> }) {
   const { missionId } = await params;
-  const events = await readMissionEvents(missionId);
-  if (!events.length) notFound();
-  const mission = projectMission(events);
-
-  return <MissionConsole mission={mission} initialEvents={events} />;
+  const identity = await requirePageIdentity(`/missions/${missionId}`);
+  const mission = await getMissionProjection(identity.workspaceId, missionId);
+  if (!mission) notFound();
+  return (
+    <DurableMissionConsole
+      initialMission={mission}
+      initialTimeline={await getMissionTimeline(identity.workspaceId, missionId)}
+    />
+  );
 }
