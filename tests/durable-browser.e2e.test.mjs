@@ -1,0 +1,207 @@
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import test from "node:test";
+
+if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for end-to-end tests");
+
+const port = 31_119;
+const origin = `http://127.0.0.1:${port}`;
+let server;
+let serverOutput = "";
+
+async function startServer() {
+  serverOutput = "";
+  server = spawn(process.execPath, [".next/standalone/server.js"], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      DATABASE_URL: process.env.DATABASE_URL,
+      MISSION_CONTROL_SESSION_SECRET: process.env.MISSION_CONTROL_SESSION_SECRET,
+      PUBLIC_APP_URL: origin,
+      HOSTNAME: "127.0.0.1",
+      PORT: String(port),
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  server.stdout.on("data", (chunk) => {
+    serverOutput += String(chunk);
+  });
+  server.stderr.on("data", (chunk) => {
+    serverOutput += String(chunk);
+  });
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    try {
+      const response = await fetch(`${origin}/api/health`);
+      if (response.ok) return;
+    } catch {
+      // Server is still starting.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`Mission Control did not start:\n${serverOutput}`);
+}
+
+async function stopServer() {
+  if (!server || server.exitCode !== null) return;
+  server.kill("SIGTERM");
+  await new Promise((resolve) => server.once("exit", resolve));
+}
+
+function browserHeaders(cookie, extra = {}) {
+  return { origin, ...(cookie ? { cookie } : {}), ...extra };
+}
+
+async function login() {
+  const response = await fetch(`${origin}/api/auth/login`, {
+    method: "POST",
+    headers: browserHeaders(undefined, { "content-type": "application/json" }),
+    body: JSON.stringify({ email: "owner@example.com", password: "mission-control-local-test" }),
+  });
+  assert.equal(response.status, 200);
+  return response.headers.get("set-cookie").split(";", 1)[0];
+}
+
+async function lifecycle(cookie, missionId, command, expectedVersion, idempotencyKey = crypto.randomUUID()) {
+  return fetch(`${origin}/api/missions/${missionId}/${command}`, {
+    method: "POST",
+    headers: browserHeaders(cookie, { "content-type": "application/json", "idempotency-key": idempotencyKey }),
+    body: JSON.stringify({ expectedVersion }),
+  });
+}
+
+test("authenticated durable browser mission survives restart and enforces lifecycle authority", async () => {
+  await startServer();
+  try {
+    const protectedPage = await fetch(`${origin}/missions`, { redirect: "manual" });
+    assert.equal(protectedPage.status, 307);
+    assert.match(protectedPage.headers.get("location"), /^\/login\?next=/);
+
+    const unauthenticatedApi = await fetch(`${origin}/api/missions`);
+    assert.equal(unauthenticatedApi.status, 401);
+
+    const invalidOrigin = await fetch(`${origin}/api/auth/login`, {
+      method: "POST",
+      headers: { origin: "https://invalid.example", "content-type": "application/json" },
+      body: JSON.stringify({ email: "owner@example.com", password: "mission-control-local-test" }),
+    });
+    assert.equal(invalidOrigin.status, 403);
+
+    const invalidLoginStartedAt = Date.now();
+    const invalidLogin = await fetch(`${origin}/api/auth/login`, {
+      method: "POST",
+      headers: browserHeaders(undefined, { "content-type": "application/json" }),
+      body: JSON.stringify({ email: "unknown@example.com", password: "definitely-wrong" }),
+    });
+    assert.equal(invalidLogin.status, 401);
+    assert.deepEqual(await invalidLogin.json(), { error: "Invalid credentials" });
+    assert.ok(Date.now() - invalidLoginStartedAt >= 450);
+
+    let cookie = await login();
+    const commandId = crypto.randomUUID();
+    const missionBody = {
+      name: "Production Mission Persistence Test",
+      objective: "Prove browser state is durable",
+      domain: "software_delivery",
+      priority: "high",
+      riskLevel: "unknown",
+      workspaceId: "00000000-0000-4000-8000-ffffffffffff",
+      status: "completed",
+    };
+    const createHeaders = browserHeaders(cookie, {
+      "content-type": "application/json",
+      "idempotency-key": commandId,
+    });
+    const createdResponse = await fetch(`${origin}/api/missions`, {
+      method: "POST",
+      headers: createHeaders,
+      body: JSON.stringify(missionBody),
+    });
+    assert.equal(createdResponse.status, 201);
+    const created = await createdResponse.json();
+    assert.equal(created.projection.status, "draft");
+    assert.notEqual(created.projection.workspaceId, missionBody.workspaceId);
+
+    const duplicateResponse = await fetch(`${origin}/api/missions`, {
+      method: "POST",
+      headers: createHeaders,
+      body: JSON.stringify(missionBody),
+    });
+    assert.equal(duplicateResponse.status, 200);
+    assert.equal((await duplicateResponse.json()).missionId, created.missionId);
+
+    const listResponse = await fetch(`${origin}/api/missions`, { headers: browserHeaders(cookie) });
+    assert.equal(listResponse.status, 200);
+    assert.ok((await listResponse.json()).missions.some((mission) => mission.missionId === created.missionId));
+
+    const detailResponse = await fetch(`${origin}/missions/${created.missionId}`, { headers: browserHeaders(cookie) });
+    assert.equal(detailResponse.status, 200);
+    const detailHtml = await detailResponse.text();
+    assert.match(detailHtml, /Production Mission Persistence Test/);
+    assert.match(detailHtml, /Simulated execution/);
+
+    const timelineResponse = await fetch(`${origin}/api/missions/${created.missionId}/events`, {
+      headers: browserHeaders(cookie),
+    });
+    const initialTimeline = (await timelineResponse.json()).timeline;
+    assert.deepEqual(
+      initialTimeline.map((entry) => entry.eventType),
+      ["mission.created"],
+    );
+
+    let transition = await lifecycle(cookie, created.missionId, "plan", 1);
+    assert.equal(transition.status, 200);
+    assert.equal((await transition.json()).projection.status, "planned");
+    transition = await lifecycle(cookie, created.missionId, "start", 2);
+    assert.equal((await transition.json()).projection.status, "running");
+    transition = await lifecycle(cookie, created.missionId, "pause", 3);
+    assert.equal((await transition.json()).projection.status, "paused");
+
+    const stale = await lifecycle(cookie, created.missionId, "resume", 2);
+    assert.equal(stale.status, 409);
+    assert.equal((await stale.json()).error.code, "concurrency_conflict");
+
+    await stopServer();
+    await startServer();
+    const persisted = await fetch(`${origin}/missions/${created.missionId}`, { headers: browserHeaders(cookie) });
+    assert.equal(persisted.status, 200);
+    assert.match(await persisted.text(), /paused/);
+
+    transition = await lifecycle(cookie, created.missionId, "resume", 4);
+    assert.equal((await transition.json()).projection.status, "running");
+    transition = await lifecycle(cookie, created.missionId, "complete", 5);
+    assert.equal((await transition.json()).projection.status, "completed");
+
+    const terminal = await lifecycle(cookie, created.missionId, "resume", 6);
+    assert.equal(terminal.status, 409);
+    assert.equal((await terminal.json()).error.code, "invalid_transition");
+
+    const logout = await fetch(`${origin}/logout`, { headers: browserHeaders(cookie), redirect: "manual" });
+    assert.equal(logout.status, 307);
+    cookie = "";
+    const afterLogout = await fetch(`${origin}/missions/${created.missionId}`, { redirect: "manual" });
+    assert.equal(afterLogout.status, 307);
+
+    cookie = await login();
+    const afterRelogin = await fetch(`${origin}/missions/${created.missionId}`, { headers: browserHeaders(cookie) });
+    assert.equal(afterRelogin.status, 200);
+    assert.match(await afterRelogin.text(), /completed/);
+
+    const finalTimelineResponse = await fetch(`${origin}/api/missions/${created.missionId}/events`, {
+      headers: browserHeaders(cookie),
+    });
+    const finalTimeline = (await finalTimelineResponse.json()).timeline;
+    assert.deepEqual(
+      finalTimeline.map((entry) => entry.eventType),
+      [
+        "mission.created",
+        "mission.planned",
+        "mission.started",
+        "mission.paused",
+        "mission.resumed",
+        "mission.completed",
+      ],
+    );
+  } finally {
+    await stopServer();
+  }
+});

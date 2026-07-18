@@ -83,12 +83,16 @@ Requirements: Node.js 22 and npm.
 
 ```bash
 npm ci
+npm run db:up
+npm run db:migrate
+npm run auth:hash -- 'choose-a-local-password'
+npm run db:seed
 npm run typecheck
 npm test
 npm run build
 npm run dev
 ```
 
-Open `http://localhost:3000`. Local development uses the append-only JSONL event store by default; no AWS credentials are required.
+Configure the PostgreSQL and owner/session environment variables documented in [Durable Browser Mission Operations](docs/DURABLE_BROWSER_OPERATIONS.md), then open `http://localhost:3000`. New browser missions use PostgreSQL as their canonical event and projection store. JSONL and DynamoDB remain only for temporary legacy-demo/import compatibility; no AWS credentials are required locally.
 
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the production architecture, environment variables, deployment process, health checks, logs, rollback, persistence verification, limitations, and estimated cost.

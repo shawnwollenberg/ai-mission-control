@@ -1,8 +1,16 @@
 # Mission Control — Implementation Status
 
-**Updated:** 2026-07-17
-**Planning baseline:** Approved; delivery priorities revised
-**Current focus:** Production AWS deployment at `mission.wallyweb.com`
+**Updated:** 2026-07-18
+**Planning baseline:** Phase 0 and Phase 1 architecture approved
+**Current focus:** Phase 1 durable PostgreSQL control plane
+
+## Phase 1 durable browser checkpoint
+
+- Authenticated owner launch, mission archive, mission detail, safe timeline, and lifecycle command routes now use PostgreSQL events and projections.
+- The detail UI is explicitly labeled `Simulated execution`; no connected agent is implied.
+- Browser-controlled `/advance` and `/approve` routes and the legacy mission console were removed.
+- Automated HTTP end-to-end and manual browser walkthroughs proved refresh, application restart, logout, re-login, idempotent creation, and stale-version conflict behavior.
+- Task aggregate/dependencies, projection rebuild, outbox claiming/worker operations, and DynamoDB import remain Phase 1 work.
 
 ## Technical program management cadence
 

@@ -16,6 +16,7 @@
     "start": "next start",
     "test": "node --import tsx --test tests/mission-outcome.test.mjs",
     "test:integration": "node --import tsx --test tests/*.integration.test.mjs",
+    "test:e2e": "node --test tests/*.e2e.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
