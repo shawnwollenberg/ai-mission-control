@@ -7,6 +7,7 @@ import {
   type MissionStatus,
 } from "@/domain/mission";
 import { NotFoundError } from "@/lib/application-errors";
+import { ConcurrencyConflictError } from "@/lib/application-errors";
 import { appendEvents, loadAggregateEvents } from "@/lib/postgres-event-store";
 import { applyMissionProjection } from "@/application/mission-projector";
 
@@ -43,10 +44,19 @@ export async function handleCreateMission(input: {
     correlationId: missionId,
     actor: { type: "human", id: input.actor.userId },
     events: [createMissionEvent({ ...input.mission, createdBy: input.actor.userId })],
+    outbox: [
+      {
+        eventIndex: 0,
+        topic: "mission.events",
+        idempotencyKey: `${input.commandId}:mission.created`,
+        payload: { missionId, eventType: "mission.created" },
+      },
+    ],
     applyProjections: applyMissionProjection,
   });
+  const durableMissionId = result.events[0]?.aggregateId ?? missionId;
   return {
-    missionId,
+    missionId: durableMissionId,
     aggregateVersion: result.events.at(-1)?.aggregateVersion ?? 1,
     status: "draft",
     eventIds: result.events.map((event) => event.eventId),
@@ -60,6 +70,7 @@ export async function handleMissionTransition(input: {
   commandId: string;
   missionId: string;
   target: MissionStatus;
+  expectedVersion?: number;
 }): Promise<CommandResult> {
   const existing = await loadAggregateEvents({
     workspaceId: input.actor.workspaceId,
@@ -68,6 +79,9 @@ export async function handleMissionTransition(input: {
   });
   const state = rehydrateMission(existing);
   if (!state) throw new NotFoundError("Mission");
+  if (input.expectedVersion !== undefined && input.expectedVersion !== state.version) {
+    throw new ConcurrencyConflictError({ expectedVersion: input.expectedVersion, actualVersion: state.version });
+  }
   const nextEvent = transitionMission(state, input.target);
   if (!nextEvent) {
     return {
@@ -91,6 +105,14 @@ export async function handleMissionTransition(input: {
     causationId: existing.at(-1)?.eventId,
     actor: { type: "human", id: input.actor.userId },
     events: [nextEvent],
+    outbox: [
+      {
+        eventIndex: 0,
+        topic: "mission.events",
+        idempotencyKey: `${input.commandId}:${nextEvent.eventType}`,
+        payload: { missionId: input.missionId, eventType: nextEvent.eventType },
+      },
+    ],
     applyProjections: applyMissionProjection,
   });
   return {
