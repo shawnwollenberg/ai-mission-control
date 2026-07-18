@@ -1,5 +1,11 @@
 # Phase 2 Codex Operations
 
+```bash
+nvm use
+node --version
+npm run runtime:check
+```
+
 Phase 2 runs the web application, generic coordinator worker, and Codex worker as separate processes. The Codex worker needs PostgreSQL access, the Codex CLI, and filesystem access only to explicitly configured repository, worktree, and artifact roots.
 
 ## Local startup

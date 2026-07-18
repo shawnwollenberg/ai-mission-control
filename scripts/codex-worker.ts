@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { claimJob, completeJob, failJob, renewJobLease } from "../lib/job-store";
 import { closeDatabasePool, getDatabasePool } from "../lib/database";
 import { executeCodex } from "../execution/codex-adapter";
+import { assertSupportedNodeVersion } from "../lib/runtime-version";
+assertSupportedNodeVersion();
 const workerId = process.env.WORKER_ID ?? `codex-${randomUUID().slice(0, 8)}`;
 let stopping = false;
 process.on("SIGTERM", () => {

@@ -6,6 +6,8 @@
     "node": ">=22.20.0 <23"
   },
   "scripts": {
+    "preinstall": "node scripts/require-node22.mjs",
+    "runtime:check": "node scripts/require-node22.mjs",
     "auth:hash": "tsx scripts/hash-password.ts",
     "dev": "next dev",
     "build": "next build",

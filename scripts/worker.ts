@@ -3,6 +3,9 @@ import { closeDatabasePool } from "../lib/database";
 import { claimJob, completeJob, failJob } from "../lib/job-store";
 import { processOneOutbox } from "../lib/outbox-dispatcher";
 import { runSimulationJob } from "../application/simulated-executor";
+import { assertSupportedNodeVersion } from "../lib/runtime-version";
+
+assertSupportedNodeVersion();
 
 const workerId = process.env.WORKER_ID ?? `worker-${randomUUID().slice(0, 8)}`;
 let stopping = false;

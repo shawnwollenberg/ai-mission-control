@@ -88,6 +88,8 @@ This distinction matters: Codex and GPT-5.6 built and deployed the product, whil
 Requirements: Node.js 22 and npm.
 
 ```bash
+nvm use
+npm run runtime:check
 npm ci
 npm run db:up
 npm run db:migrate

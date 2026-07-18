@@ -38,6 +38,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - run: node scripts/require-node22.mjs
       - run: npm ci
       - run: npm run db:migrate
       - run: npm run db:seed
