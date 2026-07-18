@@ -10,9 +10,9 @@ Aegis smart accounts may provide spending controls and policy enforcement, but A
 
 ## Current phase
 
-The hackathon demo is complete. Phase 0 and the Phase 1 production architecture were approved on 2026-07-18. Phase 1 durable-core implementation is active.
+The hackathon demo and Phase 1 durable core are complete at `8ed85b1`. Phase 2 controlled Codex execution was approved on 2026-07-18.
 
-Implement only the approved Phase 1 scope in `PLANS.md`, use its reviewable vertical slices, and stop at the Phase 1 boundary before external-agent execution.
+Implement only the approved Phase 2 scope in `PLANS.md` and `docs/PHASE_2_CODEX_EXECUTION.md`. Preserve the Phase 1 orchestration core, retain the simulated executor, and stop before Hermes, public webhooks, DeFi, autonomous merge/deploy, or multi-agent live planning.
 
 ## Source-of-truth documents
 
@@ -25,6 +25,7 @@ Read these before proposing or implementing work:
 - `docs/BACKLOG.md`
 - `docs/PRODUCTION_GAP_ANALYSIS.md`
 - `docs/PRODUCTION_ARCHITECTURE.md`
+- `docs/PHASE_2_CODEX_EXECUTION.md`
 - `PLANS.md`
 
 When decisions change, update the appropriate document.

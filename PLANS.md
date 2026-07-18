@@ -1,6 +1,6 @@
 # Mission Control — Production Readiness Execution Plan
 
-**Status:** Phase 1 complete; stopped at Phase 2 boundary — 2026-07-18
+**Status:** Phase 1 complete at `8ed85b1`; Phase 2 controlled Codex execution authorized — 2026-07-18
 
 **Planning date:** 2026-07-18
 
@@ -223,6 +223,31 @@ State what is real, mocked, incomplete, and deferred; list migrations and rollba
 ## Phase 2 — Real agent execution
 
 **Goal:** Dispatch and supervise real external work through durable, authenticated adapter boundaries.
+
+**Authorized vertical slice:** One bounded software-engineering task against a registered noncritical repository, executed by a real Codex CLI in a generated Git worktree. Local edits, declared tests, artifact collection, and a local commit are permitted. Push, PR creation, merge, deployment, destructive commands, infrastructure modification, secrets access, Hermes, public webhooks, DeFi, and multi-agent live execution are excluded. Detailed decisions: `docs/PHASE_2_CODEX_EXECUTION.md`.
+
+### Reviewable implementation slices
+
+1. Architecture and protocol documents.
+2. Workspace-scoped agent and repository registries.
+3. Execution aggregate, transactional projection, and task coordination.
+4. Runtime-validated protocol 1.0.
+5. Realpath repository guard, worktree manager, and safe process runner.
+6. Codex adapter command-line vertical slice.
+7. Leased Codex worker, operational heartbeats, recovery, cancellation, timeout, and failure classification.
+8. Checksummed local artifacts and execution evidence.
+9. Owner agent/repository management and live execution browser UI.
+10. Restart, safety, projection replay, integration, real acceptance, and completion report.
+
+### Phase 2 invariants
+
+- Codex-specific logic stays in registry, adapter, worker, protocol translation, artifact, and runtime-security modules.
+- The adapter never edits Mission, Task, Approval, or projection rows directly.
+- Browser input references repository IDs only; paths and branches are resolved from owner-managed policy.
+- Every live execution uses a unique generated branch/worktree and preserves it for review.
+- Full prompts, transcripts, diffs, and logs are artifact bodies, not event payloads.
+- No execution can push, merge, deploy, access secrets, or expand permissions autonomously.
+- `mock` and `codex` remain visibly and operationally distinct.
 
 ### Proposed scope
 

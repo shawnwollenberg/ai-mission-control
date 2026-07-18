@@ -20,8 +20,10 @@ Phase 1 does not build every adapter, autonomous DeFi execution, a general workf
 4. **At-least-once delivery with idempotent consumers:** Do not claim exactly-once external effects. Use command, callback, delivery, and execution idempotency keys plus adapter reconciliation.
 5. **External worker for Codex:** The web application never spawns Codex or arbitrary commands. An isolated worker accepts a constrained execution request and reports versioned events/artifacts.
 6. **Versioned event and execution protocols:** Existing `1.0` demo events remain readable. New production events use an explicit envelope and schema registry; upcasters preserve rebuild compatibility.
-7. **Deterministic authority:** State machines, dependencies, policy decisions, and health signals are deterministic. Models may propose plans or explain evidence but cannot directly mutate authoritative state.
-8. **DeFi analysis-only boundary:** Initial DeFi templates may retrieve, analyze, and simulate. Transaction signing and submission are prohibited.
+
+### Phase 2 controlled Codex execution decision — 2026-07-18
+
+Phase 2 instantiates the existing execution-plane boundary for one adapter. Agent and repository registries are workspace-scoped policy records; a versioned Execution aggregate is canonical for attempts; high-volume heartbeats use an operational table; Codex runs only in a separate leased worker and generated Git worktree; large/redacted evidence uses checksummed artifact storage. The web tier never spawns processes. Local commit is the maximum permitted side effect: push, merge, deployment, destructive commands, secrets access, public callbacks, and other adapters remain outside the boundary. Full lifecycle, safety, recovery, and deployment decisions are in `docs/PHASE_2_CODEX_EXECUTION.md`. 7. **Deterministic authority:** State machines, dependencies, policy decisions, and health signals are deterministic. Models may propose plans or explain evidence but cannot directly mutate authoritative state. 8. **DeFi analysis-only boundary:** Initial DeFi templates may retrieve, analyze, and simulate. Transaction signing and submission are prohibited.
 
 ## Four-layer architecture
 
