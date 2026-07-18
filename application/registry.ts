@@ -99,6 +99,13 @@ export async function registerRepository(input: {
   readAllowed?: boolean;
   writeAllowed?: boolean;
   commitAllowed?: boolean;
+  pushAllowed?: boolean;
+  pullRequestAllowed?: boolean;
+  protectedBranches?: string[];
+  allowedBranchPrefixes?: string[];
+  allowedRemotes?: string[];
+  providerType?: "local_fixture" | "github";
+  providerConfigurationReference?: string;
   validationCommands?: string[][];
 }) {
   owner(input.actor);
@@ -114,7 +121,7 @@ export async function registerRepository(input: {
   )
     throw new ValidationFailedError("Validation commands must be non-empty argument arrays");
   const result = await getDatabasePool().query(
-    `INSERT INTO repositories(workspace_id,repository_id,name,local_path,default_branch,allowed_agent_ids,read_allowed,write_allowed,commit_allowed,push_allowed,merge_allowed,deployment_allowed,validation_commands) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,false,false,false,$10) ON CONFLICT(workspace_id,repository_id) DO UPDATE SET name=EXCLUDED.name,default_branch=EXCLUDED.default_branch,allowed_agent_ids=EXCLUDED.allowed_agent_ids,read_allowed=EXCLUDED.read_allowed,write_allowed=EXCLUDED.write_allowed,commit_allowed=EXCLUDED.commit_allowed,validation_commands=EXCLUDED.validation_commands,updated_at=now() RETURNING *`,
+    `INSERT INTO repositories(workspace_id,repository_id,name,local_path,default_branch,allowed_agent_ids,read_allowed,write_allowed,commit_allowed,push_allowed,merge_allowed,deployment_allowed,validation_commands,pull_request_allowed,protected_branches,allowed_branch_prefixes,allowed_remotes,provider_type,provider_configuration_reference) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,false,false,$11,$12,$13,$14,$15,$16,$17) ON CONFLICT(workspace_id,repository_id) DO UPDATE SET name=EXCLUDED.name,default_branch=EXCLUDED.default_branch,allowed_agent_ids=EXCLUDED.allowed_agent_ids,read_allowed=EXCLUDED.read_allowed,write_allowed=EXCLUDED.write_allowed,commit_allowed=EXCLUDED.commit_allowed,push_allowed=EXCLUDED.push_allowed,pull_request_allowed=EXCLUDED.pull_request_allowed,protected_branches=EXCLUDED.protected_branches,allowed_branch_prefixes=EXCLUDED.allowed_branch_prefixes,allowed_remotes=EXCLUDED.allowed_remotes,provider_type=EXCLUDED.provider_type,provider_configuration_reference=EXCLUDED.provider_configuration_reference,validation_commands=EXCLUDED.validation_commands,updated_at=now() RETURNING *`,
     [
       input.actor.workspaceId,
       repositoryId,
@@ -125,7 +132,14 @@ export async function registerRepository(input: {
       input.readAllowed ?? true,
       input.writeAllowed ?? false,
       input.commitAllowed ?? false,
+      input.pushAllowed ?? false,
       JSON.stringify(commands),
+      input.pullRequestAllowed ?? false,
+      JSON.stringify(input.protectedBranches ?? [input.defaultBranch.trim()]),
+      JSON.stringify(input.allowedBranchPrefixes ?? ["codex/"]),
+      JSON.stringify(input.allowedRemotes ?? ["origin"]),
+      input.providerType ?? "local_fixture",
+      input.providerConfigurationReference ?? null,
     ],
   );
   return result.rows[0];

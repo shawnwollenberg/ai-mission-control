@@ -17,10 +17,13 @@ const { handleRequestExecution, handleExecutionTransition, handleExecutionFact, 
 const { executeCodex } = await import("../execution/codex-adapter.ts");
 const { createExecutionWorktree } = await import("../execution/worktree-manager.ts");
 const { readExecutionArtifact } = await import("../execution/artifact-store.ts");
+const { requestSensitiveAction, resolveActionApproval } = await import("../application/action-commands.ts");
+const { executeAction } = await import("../application/action-executor.ts");
 const workspaceId = randomUUID(),
   actor = { workspaceId, userId: "owner", role: "owner" },
   executionActor = { workspaceId, id: "owner", type: "human" };
 let root, repository, worktrees, artifacts;
+let completedExecution;
 const agentId = randomUUID(),
   repositoryId = randomUUID();
 test.before(async () => {
@@ -137,6 +140,7 @@ test("controlled Codex adapter completes in an isolated worktree with evidence a
     workerId: "integration-codex",
   });
   assert.equal(outcome.status, "succeeded");
+  completedExecution = { executionId: requested.executionId, outcome };
   assert.match(await readFile(path.join(outcome.worktreePath, "health.mjs"), "utf8"), /sample-app/);
   assert.doesNotMatch(await readFile(path.join(repository, "health.mjs"), "utf8"), /sample-app/);
   assert.ok(outcome.commitId);
@@ -174,6 +178,69 @@ test("controlled Codex adapter completes in an isolated worktree with evidence a
       ])
     ).rows[0].status,
     "completed",
+  );
+});
+test("denied publication changes no remote and approved publication pushes only the exact commit", async () => {
+  const remote = path.join(root, "remote.git");
+  await exec("git", ["init", "--bare", remote]);
+  await exec("git", ["remote", "add", "phase3", remote], { cwd: completedExecution.outcome.worktreePath });
+  await getDatabasePool().query(
+    "UPDATE repositories SET push_allowed=true,allowed_remotes=$3 WHERE workspace_id=$1 AND repository_id=$2",
+    [workspaceId, repositoryId, JSON.stringify(["phase3"])],
+  );
+  const parameters = { remote: "phase3", branch: completedExecution.outcome.branchName, force: false };
+  const denied = await requestSensitiveAction({
+    actor: { ...executionActor, role: "owner" },
+    commandId: randomUUID(),
+    executionId: completedExecution.executionId,
+    actionType: "repository.push_branch",
+    parameters,
+    targetResource: `repository:${repositoryId}`,
+  });
+  assert.equal(denied.decision.outcome, "require_approval");
+  await resolveActionApproval({
+    actor: { ...executionActor, role: "owner" },
+    approvalId: denied.approvalId,
+    granted: false,
+    reason: "Exercise denial boundary",
+  });
+  const absent = await exec("git", [
+    "ls-remote",
+    "--heads",
+    remote,
+    `refs/heads/${completedExecution.outcome.branchName}`,
+  ]);
+  assert.equal(absent.stdout.trim(), "");
+  const approved = await requestSensitiveAction({
+    actor: { ...executionActor, role: "owner" },
+    commandId: randomUUID(),
+    executionId: completedExecution.executionId,
+    actionType: "repository.push_branch",
+    parameters,
+    targetResource: `repository:${repositoryId}`,
+  });
+  await resolveActionApproval({
+    actor: { ...executionActor, role: "owner" },
+    approvalId: approved.approvalId,
+    granted: true,
+    reason: "Publish exact tested commit",
+  });
+  const result = await executeAction(workspaceId, approved.actionRequestId, "integration-action-worker");
+  assert.equal(result.commit, completedExecution.outcome.commitId);
+  assert.equal(result.branch, completedExecution.outcome.branchName);
+  const remoteCommit = (
+    await exec("git", ["ls-remote", "--heads", remote, `refs/heads/${completedExecution.outcome.branchName}`])
+  ).stdout
+    .trim()
+    .split(/\s+/)[0];
+  assert.equal(remoteCommit, completedExecution.outcome.commitId);
+  const approvals = await getDatabasePool().query(
+    "SELECT status FROM approval_projections WHERE workspace_id=$1 AND approval_id=ANY($2::uuid[]) ORDER BY created_at",
+    [workspaceId, [denied.approvalId, approved.approvalId]],
+  );
+  assert.deepEqual(
+    approvals.rows.map((row) => row.status),
+    ["denied", "consumed"],
   );
 });
 test("a recovered execution reuses its durable worktree and produces one commit", async () => {
