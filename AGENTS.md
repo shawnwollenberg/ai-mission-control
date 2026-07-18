@@ -10,9 +10,9 @@ Aegis smart accounts may provide spending controls and policy enforcement, but A
 
 ## Current phase
 
-We are currently in product planning and architecture mode.
+The hackathon demo is complete. Phase 0 and the Phase 1 production architecture were approved on 2026-07-18. Phase 1 durable-core implementation is active.
 
-Do not write production application code until the planning documents have been reviewed and explicitly approved.
+Implement only the approved Phase 1 scope in `PLANS.md`, use its reviewable vertical slices, and stop at the Phase 1 boundary before external-agent execution.
 
 ## Source-of-truth documents
 
@@ -23,6 +23,8 @@ Read these before proposing or implementing work:
 - `docs/ARCHITECTURE.md`
 - `docs/EVENT_MODEL.md`
 - `docs/BACKLOG.md`
+- `docs/PRODUCTION_GAP_ANALYSIS.md`
+- `docs/PRODUCTION_ARCHITECTURE.md`
 - `PLANS.md`
 
 When decisions change, update the appropriate document.
@@ -73,3 +75,12 @@ Mission Control displays:
 - Define acceptance criteria for every milestone.
 - Run relevant tests and validations after implementation begins.
 - Avoid premature infrastructure, authentication, billing, and enterprise features.
+- Use an execution plan for changes spanning multiple subsystems.
+- Keep the event log canonical and never introduce hidden state transitions.
+- Never represent simulated or fallback data as live data.
+- Never place raw secrets in source code, event payloads, logs, or database records; store credential references only.
+- Add tests for every new state transition and preserve backward compatibility for versioned agent protocols.
+- Do not silently weaken approval or policy enforcement.
+- Do not autonomously sign or submit financial transactions.
+- Keep arbitrary command execution out of the web server; agent runtimes belong behind isolated adapters/workers.
+- Update the relevant architecture and operational documents whenever a decision changes.

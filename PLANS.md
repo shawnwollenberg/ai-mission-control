@@ -1,584 +1,318 @@
-# Mission Control — First Execution Plan
+# Mission Control — Production Readiness Execution Plan
 
-**Status:** Approved; event-sourcing priorities revised 2026-07-16
-**Planning basis:** One or two builders, less than one week  
-**Estimation unit:** Focused person-hours, excluding long unattended external waits  
-**Optimization goal:** Maximize the quality and reliability of the 90-second demo, not architectural completeness
+**Status:** Phase 0 approved; Phase 1 implementation authorized — 2026-07-18
 
-## Demo outcome
+**Planning date:** 2026-07-18
+
+**Operating rule:** Deliver one reviewable vertical slice per phase and stop at every phase boundary
+
+## Outcome
+
+Evolve the deployed demo into a domain-neutral operational control plane while preserving its event-derived launch, crisis, recommendation, approval, provenance, and debrief experience. Production readiness means durable state, authenticated integrations, enforceable policy, observable execution, recovery behavior, and tested audit reconstruction—not a connected UI alone.
+
+## Non-negotiable invariants
+
+1. Canonical events are append-only; corrections are new events.
+2. UI and operational status are rebuildable projections with no independent business state.
+3. Commands validate expected aggregate version, legal transition, policy, and idempotency before append.
+4. External effects originate from durable outbox/job records, never an untracked web request.
+5. Simulated, controlled, fallback, and live execution are visibly distinct.
+6. Raw secrets, prompts, chain-of-thought, and large artifact bodies are excluded from events and logs.
+7. No autonomous financial transaction execution is introduced.
+8. Every phase preserves a one-command deterministic demo path and stops for review.
+
+## Phase 0 — Audit and architecture (complete)
+
+### Delivered
+
+- Repository and runtime audit: `docs/PRODUCTION_GAP_ANALYSIS.md`.
+- Four-plane architecture, domain model, event catalog, execution protocol, state machines, persistence proposal, threat model, and migration strategy: `docs/PRODUCTION_ARCHITECTURE.md`.
+- This phased executable plan.
+- Root Codex instructions updated for the production-planning gate.
+
+### Validation evidence
+
+- Typecheck passed.
+- 8/8 automated tests passed.
+- Production build passed.
+- Local launch page, health endpoint, and mission creation passed.
+- Production dependency audit reported zero vulnerabilities.
+- Lint gate is broken and recorded as Phase 1 bootstrap work.
 
-The smallest successful build must demonstrate this uninterrupted story:
+### Review gate — passed 2026-07-18
 
-1. A CTO launches “Stripe Billing” with a deadline and priority.
-2. Mission Control automatically forms objectives and assigns a capability-based AI organization.
-3. Real event-derived state makes objective progress and organization status legible.
-4. Mission Health reports **Moderate Risk** with evidence.
-5. Mission Control proactively surfaces **Optimization Available** with a “why now?” explanation.
-6. Mission Control explains a safe 22-minute → 15-minute organizational change.
-7. The CTO approves once; assignments and objective progress visibly reorganize.
-8. Validation passes and demo-environment promotion requires approval.
-9. A working Stripe preview validates the outcome without displacing Mission Control's reorganization-and-completion climax.
-10. A compressed replay reconstructs the mission without repeating external effects.
+Approved: modular monolith, PostgreSQL authority, transactional outbox and database-backed jobs, workspace-aware schema, single-user secure Phase 1 authentication, indefinite domain-event retention, local/S3-compatible artifact abstraction, one-way DynamoDB import, and an external Codex worker boundary. Phase 2 execution dispatch remains out of scope.
 
-## Non-negotiable cut rule
+## Phase 1 — Durable domain core
 
-Every task below must produce a visible, testable artifact. If work does not strengthen one of the ten demo beats, improve deterministic recovery, or prove a judge-facing claim, it moves to the backlog.
+**Goal:** Run the existing mock demo on production-grade events, explicit state machines, and rebuildable read models.
 
-Progress is reported by demo capability. Every update must state what was completed, what can be physically demonstrated now, what is blocking delivery, and what will be built next.
+### Reviewable vertical slices and commit boundaries
 
-## Two-track delivery priority
+1. **Validation baseline:** Node 22 declarations, Prettier check, supported ESLint flat configuration, CI validation workflow.
+2. **PostgreSQL foundation:** Docker Compose, database client, migration runner, ordered migrations, reset-safe development instructions.
+3. **Workspace and authentication:** seeded default workspace/user/membership, signed secure session cookie, owner/member authorization helpers, server-side workspace enforcement.
+4. **Event store:** v2 envelope, atomic multi-event append, aggregate head/version constraint, global position, command idempotency, typed concurrency conflict.
+5. **State machines:** authoritative Mission and Task transitions, dependency readiness, idempotent command handlers, terminal protection.
+6. **Projections:** transactional mission/task projections, query APIs, projector version/checkpoints, UI reads from projections rather than React reconstruction.
+7. **Outbox and internal jobs:** event/outbox atomicity, leased database jobs, bounded retries, dead-letter state, graceful worker shutdown and health/readiness.
+8. **Replay and artifacts:** resumable/restartable projection rebuild, artifact metadata and local storage provider with checksum/integrity verification.
+9. **DynamoDB compatibility:** idempotent one-way import CLI, legacy envelope translation, source metadata, incompatibility report, removal plan.
+10. **Demo cutover:** versioned mock template and PostgreSQL-backed existing demo, golden projection/browser regression, operational docs and Phase 1 report.
 
-### Track A — Demo (highest priority)
+### Schema outline
 
-`Mission Launch → Mission Plan → Mission Log → Mission Health → Recommendation → Approval → Optimization Animation → Mission Complete`
+All tenant-owned tables include `workspace_id`. Domain events have no routine deletion policy.
+
+| Table                                                     | Purpose / key constraints                                                                                                                        |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `workspaces`                                              | Default workspace and future isolation boundary.                                                                                                 |
+| `users`, `workspace_memberships`                          | One Phase 1 user; unique membership and `owner`/`member` role.                                                                                   |
+| `events`                                                  | Global `position`; unique `event_id`; unique `(workspace_id, aggregate_type, aggregate_id, aggregate_version)`; versioned JSON payload/metadata. |
+| `aggregate_heads`                                         | Current version per workspace aggregate; locked during append.                                                                                   |
+| `commands`                                                | Unique workspace/idempotency key with result event IDs and status.                                                                               |
+| `outbox`                                                  | Effect/consumer intent committed with events; unique idempotency key.                                                                            |
+| `projection_checkpoints`                                  | Projector name/version, last global position, rebuild state/error.                                                                               |
+| `mission_projections`                                     | Transactional, rebuildable mission read model.                                                                                                   |
+| `task_projections`, `task_dependencies`                   | Transactional, rebuildable task state and dependency graph.                                                                                      |
+| `execution_projections`, `approval_projections`, `agents` | Workspace-aware Phase 1 schema foundation; execution behavior remains deferred.                                                                  |
+| `jobs`, `dead_letters`                                    | Internal leased jobs, attempts, backoff, failure visibility.                                                                                     |
+| `artifacts`                                               | Metadata/checksum/object reference only; large content stays outside PostgreSQL/events.                                                          |
+| `webhook_deliveries`, `idempotency_records`               | Schema foundation for later authenticated adapters.                                                                                              |
 
-These are the experiences judges see. Work is sequenced to create the feeling: **“I just watched an AI organization working.”**
+### Migration order
 
-### Track B — Engineering (supporting)
+1. Extensions/enums and identity/workspace tables.
+2. Canonical events, aggregate heads, commands, and idempotency constraints.
+3. Mission/task projections and dependency edges.
+4. Outbox, jobs, dead letters, and projection checkpoints.
+5. Agent/execution/approval/webhook projection foundations.
+6. Artifact metadata.
+7. Seed the default workspace, single user, membership, templates, and deterministic demo data through an idempotent seed command.
 
-`Event Sourcing → Projection Rebuild → Developer Mode → Replay → Testing → Architecture`
+Migrations are forward-only in production. Development reset is explicit and never targets an unresolved database. Rollback is an application-version rollback plus a compatible forward migration when data has already been committed.
 
-These capabilities make Track A trustworthy but do not lead the milestone narrative. If Track B delays Track A, reduce Track B to the smallest implementation that protects demo integrity.
+### Event-store API
 
-Before every implementation task ask: **Will a judge notice if this does not exist?** A “no” requires a concrete risk-reduction justification and a deliberately minimal scope.
+```ts
+interface ProductionEventStore {
+  append(input: {
+    workspaceId: string;
+    aggregateType: string;
+    aggregateId: string;
+    expectedVersion: number;
+    commandId: string;
+    correlationId: string;
+    causationId?: string;
+    actor: { type: "human" | "agent" | "system" | "scheduler"; id: string };
+    events: NewDomainEvent[];
+    outbox?: NewOutboxMessage[];
+  }): Promise<AppendResult>;
+  readAggregate(query: AggregateQuery): Promise<DomainEvent[]>;
+  readMission(query: MissionEventQuery): Promise<DomainEvent[]>;
+  readAll(query: GlobalEventQuery): Promise<DomainEventPage>;
+}
+```
 
-Every feature must still list the event types it consumes, the projection it produces, its lightweight rebuild test, and confirmation that it owns no independent business state.
+An incorrect `expectedVersion` throws a typed conflict and appends nothing. A repeated `commandId` returns the stored result. Database uniqueness is authoritative.
 
-## Real versus controlled contract
+### Projection strategy
 
-### Must be real
+- Mission and Task projections are updated **transactionally** with canonical append during Phase 1.
+- Outbox delivery and future operational consumers are **asynchronous**.
+- Every projection is **rebuildable** by a deterministic projector from global event position zero.
+- Rebuild uses a named projector version, shadow/rebuild state, checkpoints, and idempotent upserts. A failed rebuild may resume from its committed checkpoint or restart after clearing only its isolated rebuild target.
+- UI query routes read projection tables. React owns presentation and ephemeral interaction state only.
 
-- Canonical append-only event recording
-- Event-derived mission, objective, task, resource, allocation, health, and approval state
-- Mission launch command and automatic objective creation
-- Capability and dependency validation
-- Optimizer calculation over the canonical demo state
-- Atomic approval and application of the recommendation
-- Stale-recommendation rejection
-- Promotion approval gate
-- Replay reconstruction from recorded events
-- Test execution against the ServicePilot demo repository
+### Authentication choice
 
-### May be controlled for reliability
+Phase 1 uses one environment-configured user authenticated by a server-validated password and a signed, `HttpOnly`, `Secure` (in production), `SameSite=Lax` session cookie with bounded lifetime and key rotation support. The user belongs to one automatically seeded default workspace. Authorization helpers require an active owner/member membership on every command and query. Password and session secrets come from the secret provider/environment and never enter domain events or tables. Multi-user OIDC, invitations, SSO, and advanced RBAC are deferred.
 
-- Agent execution timing
-- Exact agent prose and research output
-- Repository patch generation, provided the resulting branch and tests are genuine
-- GitHub pull-request creation if network credentials are unavailable during judging
-- Preview deployment, provided the fallback is explicitly described as a controlled local preview
+### Artifact storage
 
-### Must not be falsely implied
+The `ArtifactStore` port supports write, metadata lookup, authorized download reference, temporary deletion, and SHA-256 integrity verification. Local files use a configurable directory outside the repository. Production uses an S3-compatible provider. PostgreSQL stores only workspace/mission/task/execution references, provider/key, media type, byte size, checksum, provenance, and lifecycle metadata.
 
-- Control of external Codex, Claude Code, or Cursor sessions
-- Learned cross-mission organizational memory
-- General-purpose optimization beyond the supported template and operations
-- Real production access
-- Aegis enforcement unless it is separately proven and rehearsed
+### Database-backed job boundary
 
-## Critical path summary
+Phase 1 jobs are internal only: projection processing/rebuild, outbox processing, and failed-job detection. Workers use leases, bounded attempts, jittered backoff, correlation IDs, dead letters, graceful shutdown, and separate liveness/readiness. No job may start Codex or another external agent during Phase 1.
 
-| Milestone | Estimate | Depends on | Demo classification |
-|---|---:|---|---|
-| M0 Contract freeze and fixture | 3h | None | Critical |
-| M1 Mission walking skeleton | 6h | M0 | Critical |
-| M2 Organization comes alive | 8h | M0, M1 launch | Critical; immediate priority |
-| M3 Executive mission UI | 10h | M1, M2 | Critical |
-| M4 Organization execution | 8h | M2 | Critical |
-| M5 Mission Health and optimizer | 10h | M0, M2, M4 | Critical |
-| M6 Optimization approval and animation | 10h | M3, M5 | Critical |
-| M7 Proof and promotion gate | 8h | M2, M4 | Critical |
-| M8 Replay epilogue | 4h | M2, M3, M6, M7 | Critical but first cut if schedule slips |
-| M9 Demo hardening and rehearsal | 10h | M1–M8 | Critical |
-| S1 Live GitHub automation | 4h | M7 | Stretch |
-| S2 Hosted preview automation | 4h | M7 | Stretch |
-| S3 Aegis policy enforcement | 6–10h | M7 | Stretch |
+### DynamoDB migration approach
 
-Core plan: approximately **77 focused person-hours**. This is too large for one person working normal hours for less than a week, so the staged cut line and two-person parallel path are mandatory planning tools, not optional process.
+Provide an explicit CLI that reads legacy mission events through the existing DynamoDB adapter, translates supported `1.0` demo events into the v2 envelope, preserves safe IDs/timestamps, adds `metadata.importSource = "dynamodb-demo-v1"`, and appends with a stable import command ID. Repeated imports are idempotent. Unsupported records are reported and skipped without partial aggregate corruption. There is no dual write or continuous synchronization. After an agreed compatibility window, retain an export and remove DynamoDB application reads/infrastructure in a separately approved migration.
 
-## M0 — Freeze the executable demo contract
+### Known risks
 
-**Estimate:** 3h  
-**Dependencies:** None  
-**Classification:** Critical
+- Introducing PostgreSQL into the current DynamoDB deployment changes operating cost and recovery procedures.
+- Legacy demo event meanings are message-dependent and may not map cleanly to normalized production events.
+- Transactional projectors can lengthen append latency or couple schema rollout to event rollout.
+- Cookie authentication is intentionally narrow and must not become an accidental long-term identity platform.
+- A local filesystem artifact provider is single-host only and must never be selected in horizontally scaled production.
+- Demo pacing currently depends on browser timers and must move to deterministic mock jobs without changing the judge-facing rhythm.
+- The repository currently runs under Node 20 locally; all acceptance evidence must be regenerated under Node 22.
 
-### M0.1 Define canonical organization fixture — 1.5h
+### Phase 1 acceptance tests
 
-Specify the exact mission, four objectives, tasks, dependencies, capabilities, resource allocations, baseline durations, progress events, and before/after projections.
+1. PostgreSQL mission and projections survive web and worker restart.
+2. Empty-state replay reconstructs the complete mission/task projections.
+3. Repeated command ID produces no duplicate event/outbox outcome.
+4. Two appends at one expected version yield one success and one typed conflict.
+5. Illegal Mission/Task transitions append nothing.
+6. Completing a dependency changes a blocked dependent task to ready through canonical events.
+7. Workspace A cannot query or command Workspace B data.
+8. Applicable events and outbox records commit or roll back together.
+9. Failed projection rebuild resumes or restarts without corrupting the active projection.
+10. Existing launch → recommendation → approval → debrief flow runs from PostgreSQL-backed state.
+11. Terminal aggregates reject later mutation except explicitly modeled correction/audit commands.
+12. Artifact write/read/download/delete/integrity behavior is workspace-authorized and checksum-verified.
 
-**Visible artifact:** A reviewed fixture table showing why the initial plan takes 22 minutes and why the feasible optimized plan takes 15 minutes.  
-**Test:** A reviewer can calculate both critical paths from the table and obtain the stated values.
+### Proposed scope
 
-### M0.2 Freeze the 90-second presenter path — 1h
+1. Repair toolchain baseline: enforce Node 22, replace broken lint command, add format/lint/typecheck/test/build CI gates.
+2. Add PostgreSQL migrations for events, aggregate heads, commands, outbox, projection checkpoints, jobs/dead letters, and initial projections.
+3. Implement v2 event envelope, schema registry, legacy demo upcasters/projector, optimistic aggregate append, and command idempotency.
+4. Implement Mission, Task, and Execution transition tables plus dependency readiness.
+5. Add projection runner, checkpointing, seed command, rebuild command, and equality checks.
+6. Convert the controlled Stripe flow into `demo-stripe-billing@1` using a deterministic mock adapter and controllable clock.
+7. Switch the demo behind a feature flag only after golden event/projection and browser regression tests pass.
 
-Assign exact seconds, clicks, narration, expected UI state, and fallback for every beat.
+### Files/systems expected to change
 
-**Visible artifact:** A single-page presenter runbook with no branching choices during the primary demo.  
-**Test:** A tabletop walkthrough completes in 90 seconds without explaining implementation details.
+Domain/application/event modules, database schema and migration tooling, event-store adapters, mock template/adapter, route command boundary, tests, CI, environment documentation, and deployment database configuration. Experience styling should not materially change.
 
-### M0.3 Freeze the truth labels — 0.5h
+### Compatibility and migration risks
 
-Label each beat live, controlled, or fallback-only.
+- Legacy `1.0` demo events must remain readable.
+- Existing DynamoDB mission links need an explicit retention/read-only decision.
+- PostgreSQL cutover must not duplicate commands or effects.
+- Projector changes can alter visible demo state; golden snapshots and browser tests are mandatory.
 
-**Visible artifact:** Truth-label matrix adjacent to the presenter runbook.  
-**Test:** Every visible demo claim maps to an implementation artifact or an explicit controlled behavior.
+### Acceptance criteria
 
-### Exit criteria
+- Fresh database migration and seed complete with documented commands.
+- Every task/execution transition accepts legal moves and rejects illegal moves in unit tests.
+- Concurrent commands yield one aggregate version sequence and one idempotent result.
+- Dropping all projections and rebuilding produces identical checksums and visible demo state.
+- Process restart at every demo phase does not lose or duplicate progress.
+- Full deterministic demo completes with the same truth labels and no browser-timer authority.
+- Formatting, lint, typecheck, unit/integration tests, build, and dependency audit pass.
 
-- No unresolved number drives Mission Health or optimization.
-- No new product feature may enter the critical path without replacing an existing beat.
+### Stop report
 
-## M1 — Mission walking skeleton
+State what is real, mocked, incomplete, and deferred; list migrations and rollback; provide demo regression evidence; stop for review.
 
-**Estimate:** 6h  
-**Dependencies:** M0  
-**Classification:** Critical
+## Phase 2 — Real agent execution
 
-### M1.1 Establish the smallest runtime and UI shell — 2h
+**Goal:** Dispatch and supervise real external work through durable, authenticated adapter boundaries.
 
-Choose one backend approach and eliminate unnecessary process boundaries. Add only the launch and mission routes needed by the demo.
+### Proposed scope
 
-**Visible artifact:** Launch screen loads and transitions to an empty mission screen.  
-**Test:** A fresh local start reaches both screens using documented commands.
+1. Add agent registry, capabilities, trust, concurrency, configuration and credential references.
+2. Implement adapter port plus `mock` and signed `webhook` adapters.
+3. Add durable dispatch/delivery/poll/heartbeat/timeout/retry/cancel jobs with leases, backoff, and dead letters.
+4. Add authenticated protocol endpoints for acceptance, heartbeat, progress, artifact, completion, failure, and cancellation.
+5. Add per-agent credentials/signatures, timestamp/replay protection, schema/size validation, and execution authorization.
+6. Add operational execution and delivery projections while retaining the existing Mission Log presentation.
 
-### M1.2 Launch a fixed mission — 2h
+### Acceptance criteria
 
-Accept objective text, deadline, and priority; issue a mission-launch command.
+- A ready task is dispatched once logically under duplicate job delivery.
+- Duplicate callbacks return the original result and append no duplicate event.
+- Invalid signature, stale timestamp, wrong agent/execution, schema violation, and illegal transition are rejected and audited safely.
+- Stale heartbeat produces deterministic timeout/health evidence; a retry creates a new attempt.
+- Pause, cancel, manual retry, and reassign survive worker and web restarts.
+- Dead-lettered work is visible and recoverable by an authorized operator.
+- Mock-adapter software mission succeeds end to end without arbitrary sleeps.
 
-**Visible artifact:** Clicking **Launch Mission** creates a mission titled “Stripe Billing” and shows `Planning…`.  
-**Test:** Duplicate submission is idempotent and refresh does not create another mission.
+### Stop report
 
-### M1.3 Validate the intentional launch transition — 2h
+Demonstrate worker termination/recovery and callback replay tests; stop for review before policy-driven sensitive actions.
 
-Complete browser-level visual and interaction QA for mission submission, transition, refresh, and duplicate-launch handling.
+## Phase 3 — Human identity, approvals, and policy
 
-**Visible artifact:** Launch moves confidently from intent entry to the `Planning…` mission shell.
+**Goal:** Make human and agent authority enforceable and auditable.
 
-**Test:** The chosen judging viewport shows no broken transition, layout shift, or duplicate mission.
+### Proposed scope
 
-### Exit criteria
+1. Add OIDC authentication, workspaces, initial roles, ownership checks, secure sessions/headers, CSRF and rate limiting.
+2. Add versioned deterministic policy engine and credential-provider abstraction.
+3. Add approval request, grant, deny, expire, and stale-decision behavior bound to exact action/evidence/version.
+4. Build approval inbox and evidence view from projections.
+5. Add software, systems, and DeFi analysis-only default policies.
 
-- The first 20 seconds of the demo are clickable end to end.
+### Acceptance criteria
 
-## M2 — Organization comes alive
+- Cross-workspace read/command attempts fail in API and integration tests.
+- UI hiding is never the enforcement boundary.
+- Merge/deploy/destructive requests cannot dispatch without a valid, unexpired, parameter-bound approval.
+- Approval denial and expiration append audit events and prevent action.
+- Changed action parameters make an earlier approval stale.
+- DeFi signing/submission is denied even when an approval is attempted.
+- No credential value is stored in domain tables, events, or logs.
 
-**Estimate:** 8h  
-**Dependencies:** M0  
-**Classification:** Critical
+### Stop report
 
-### M2.1 Make Mission Plan appear — 2h
+Provide threat-model test evidence and policy matrix; stop for security review.
 
-Append the minimum canonical mission and planning events and project the judge-facing Mission Plan.
+## Phase 4 — First real Codex integration
 
-**Visible artifact:** Research, Implementation, Validation, and Deployment form after mission launch.
+**Goal:** Complete one real, bounded repository change through an isolated Codex worker.
 
-**Test:** Refresh shows the same event-derived plan without duplicating objectives.
+### Proposed scope
 
-### M2.2 Make Mission Log live — 2h
+1. Deploy/register a Codex worker outside the web tier.
+2. Create isolated branch/worktree execution with repository, path, tool, time, network, and resource constraints.
+3. Report acceptance, heartbeat, progress, sanitized failure, tests, usage, and immutable artifact metadata.
+4. Store diff/test/summary artifacts with checksum and provenance.
+5. Require approval before merge or deployment; do not automatically merge.
 
-Render meaningful canonical planning and work transitions as a live Mission Log.
+### Acceptance criteria
 
-**Visible artifact:** `Mission Created → Objectives Generated → Task Created → Task Assigned → Task Started` makes the organization visibly active.
+- A user creates a small noncritical repository mission and a real Codex worker receives it.
+- Progress and heartbeats are real and visible.
+- Worker loss produces a recoverable timeout without duplicate repository effects.
+- Tests and resulting commit/diff/PR metadata are attached and checksum-verifiable.
+- Merge/deploy remains blocked until explicit policy-compliant approval.
+- Full timeline rebuilds after all services restart.
+- Replayed callbacks and jobs do not duplicate commits, artifacts, or actions.
 
-**Test:** Every log entry resolves to one canonical event; no fake activity is rendered.
+### Stop report
 
-### M2.3 Make Mission Health react — 2h
+Label every result live/controlled/fallback, document repository credential boundaries, and stop before adding another runtime.
 
-Project Schedule, Risk, and Next Decision from the same event sequence driving the Mission Plan and Mission Log.
+## Phase 5 — Scheduling and operational workflows
 
-**Visible artifact:** Health begins at Schedule `Planning`, Risk `Unknown`, Next Decision `None`, then changes when meaningful work events arrive.
+**Goal:** Prove the core is domain-neutral through safe templates and scheduled mission instances.
 
-**Test:** Removing the supporting event removes the corresponding health conclusion.
+### Proposed scope
 
-### M2.4 Add minimal Developer Mode proof — 2h
+1. Add immutable template versions for software delivery, DeFi analysis, and systems monitoring.
+2. Add one-time/recurring schedules, time zones, disabled/manual modes, concurrency, and missed-run policy.
+3. Add deterministic health from heartbeat, failure, critical path, approval age, budget, deadline, availability, and retry evidence.
+4. Add usage/cost projections, agent heartbeat/detail, artifact viewer, and failed-job operations UI.
 
-Expose the ordered events beside the reconstructed state only after the three audience-facing surfaces work.
+### Acceptance criteria
 
-**Visible artifact:** A basic internal inspector makes projection drift obvious.
+- Each schedule trigger creates a new mission instance and never mutates a permanent mission.
+- Concurrent/missed runs follow configured policy under clock-controlled tests.
+- DeFi analysis ends with simulation/recommendation and contains no transaction execution path.
+- Monitoring mission detects a fixture anomaly, gates sensitive remediation, verifies recovery, and emits an incident debrief.
+- Mission debrief values are computed exclusively from recorded evidence.
+- Cost/usage totals reconcile to execution events and omit sensitive content.
 
-**Test:** Clearing projections and replaying the log restores identical Mission Plan, Mission Log, and Mission Health views.
+### Stop report
 
-### Exit criteria
+Show all three templates on the same orchestration core; stop before broad adapter or marketplace expansion.
 
-- The event log is canonical.
-- The audience can see an AI organization form, act, and change state.
-- Mission Plan, Mission Log, and Mission Health consume the same event history.
-- Minimal Developer Mode proves those visible projections rebuild without becoming the milestone itself.
+## Cross-phase test matrix
 
-## M3 — Executive mission UI
+- Unit: transitions, dependency resolution, policy, health, retry classification, schemas, serialization.
+- Integration: append/projection, command idempotency, dispatch/outbox, callback auth/replay, approvals, rebuild.
+- End to end: success, retry, heartbeat timeout, approve, deny, reassign, DeFi stop boundary, scheduled monitoring run.
+- Operational: web/worker termination, expired lease, dead letter/recovery, migration rollback, backup/restore, projection shadow rebuild.
+- Experience: golden demo at target viewport, accessibility, refresh at each phase, truth-label/provenance checks.
 
-**Estimate:** 10h  
-**Dependencies:** M1, M2  
-**Classification:** Critical
+Tests use controllable clocks and deterministic adapters; arbitrary sleeps are prohibited.
 
-### M3.1 Establish command-center visual system — 2h
+## Phase working method
 
-Define restrained NASA-inspired typography, colors, spacing, status language, and motion rules.
-
-**Visible artifact:** Mission shell visibly reads as an operational command surface rather than a generic admin dashboard.  
-**Test:** At a glance, a reviewer can identify mission, status, health, and commander.
-
-### M3.2 Render Mission Plan progress — 3h
-
-Show the judge-facing **Mission Plan**, expanding into Research, Implementation, Validation, and Deployment as event-derived objectives and tasks with state and dependency context.
-
-**Visible artifact:** Objective bars advance as canonical fixture events arrive.  
-**Test:** Each visual state maps to a projection value; no animation mutates state.
-
-### M3.3 Render organization and resources — 2h
-
-Show Hermes and specialized agents as peers in the organization, with capabilities, allocation, and availability.
-
-**Visible artifact:** Crew view makes idle, active, and blocked capacity understandable without opening task details.  
-**Test:** A reviewer can identify the idle Deployment resource in under five seconds.
-
-### M3.4 Polish the Mission Log — 1.5h
-
-Refine the basic M2 Mission Log into concise operational language and stronger visual hierarchy.
-
-**Visible artifact:** Mission log shows planning, assignments, progress, and decisions without raw prompts or chain-of-thought.  
-**Test:** Every log entry references a canonical event and respects visibility rules.
-
-### M3.5 Responsive demo layout — 1.5h
-
-Target the actual judging viewport and make the 90-second path usable without scrolling between primary actions.
-
-**Visible artifact:** Full primary flow fits the presentation viewport.  
-**Test:** Run at the chosen demo resolution with no clipped controls or layout shifts.
-
-### Exit criteria
-
-- A skeptical viewer understands current outcome, organization, and constraint in ten seconds.
-
-## M4 — Organization execution
-
-**Estimate:** 8h  
-**Dependencies:** M2  
-**Classification:** Critical
-
-### M4.1 Register capability-bearing organization members — 2h
-
-Represent Hermes as a coordinator-capable peer plus research, coding, testing, security, and deployment members with explicit capabilities.
-
-**Visible artifact:** Crew inspector shows capabilities rather than rigid role permissions.  
-**Test:** Capability-incompatible assignments are rejected.
-
-### M4.2 Execute the canonical mission state machine — 3h
-
-Hermes proposes coordination actions from event-derived state; the platform validates them, records accepted facts, and dispatches bounded agent actions.
-
-**Visible artifact:** Launch produces real task transitions and allocations in the mission UI.  
-**Test:** No task starts before hard dependencies are satisfied; capacity is never double-allocated.
-
-### M4.3 Attach controlled specialist outputs — 2h
-
-Produce bounded research, implementation, testing, and deployment artifacts with deterministic demo timing.
-
-**Visible artifact:** Each organization member produces one recognizable artifact or outcome.  
-**Test:** Restarting the demo fixture produces the same required state transitions within the timing budget.
-
-### M4.4 Failure-safe pause — 1h
-
-Convert agent or effect timeout into a visible blocked state rather than hanging the mission.
-
-**Visible artifact:** Injected failure produces an understandable executive alert.  
-**Test:** One forced timeout reaches a recoverable state within the configured limit.
-
-### Exit criteria
-
-- Hermes visibly coordinates the organization as a peer member; the platform runtime retains canonical state and dispatch authority.
-
-## M5 — Mission Health and optimizer
-
-**Estimate:** 10h  
-**Dependencies:** M0, M2, M4  
-**Classification:** Critical
-
-### M5.1 Compute critical path and projections — 3h
-
-Use frozen durations, dependencies, progress, and allocations to reproduce the current plan.
-
-**Visible artifact:** Analysis view shows the 22-minute projection and Research/Backend dependency evidence.  
-**Test:** Automated fixture test reproduces the frozen critical path and duration exactly.
-
-### M5.2 Derive explainable Mission Health — 2h
-
-Continuously project exactly three top-level answers—Schedule, Risk, and Next Decision—with event evidence and confidence basis.
-
-**Visible artifact:** Mission Health changes from Schedule `Planning` / Risk `Unknown` / Next Decision `None` to Schedule `Delayed` / Risk `Moderate` / Next Decision `Optimization Available`.
-**Test:** Removing or changing the supporting events predictably changes the health result.
-
-### M5.3 Generate one valid organizational recommendation — 3h
-
-Evaluate the declared Implementation split and capability-compatible parallel allocations.
-
-**Visible artifact:** Recommendation card contains evidence, five operations, 22 → 15 minute impact, safety proof, and confidence basis.  
-**Test:** Optimizer output matches the frozen fixture and preserves every hard constraint.
-
-### M5.4 Reject unsafe and stale recommendations — 2h
-
-Validate capabilities, capacity, dependencies, required controls, and input sequence when applying.
-
-**Visible artifact:** Diagnostic state explains why a deliberately invalid or stale recommendation cannot be applied.  
-**Test:** Attempts to skip validation, invent capability, double-allocate capacity, or approve stale analysis all fail.
-
-### Exit criteria
-
-- Every recommendation claim is reproducible from recorded inputs.
-- A language model is not the authority for feasibility or safety.
-
-## M6 — Optimization approval and wow animation
-
-**Estimate:** 10h  
-**Dependencies:** M3, M5  
-**Classification:** Critical; highest polish allocation
-
-### M6.1 Build proactive recommendation review — 2h
-
-Automatically surface **Optimization Available** only after event-derived rules justify it. Present **Review Recommendation**, estimated savings, and “why now?” reasons such as research exceeding its estimate, coding becoming idle, and a new parallel path becoming feasible.
-
-**Visible artifact:** One click transitions from mission state to a legible recommendation without navigation confusion.  
-**Test:** The user can state the evidence, proposed change, benefit, and safety rationale after viewing it for ten seconds.
-
-### M6.2 Apply one atomic approval — 2h
-
-Approve all recommendation operations as one idempotent command.
-
-**Visible artifact:** **Approve Optimization** records the decision and begins reconfiguration exactly once.  
-**Test:** Double-click or retry cannot apply operations twice.
-
-### M6.3 Animate organizational reconfiguration — 4h
-
-Animate objective bars, splits, allocations, critical-path state, and projected completion in a deliberate sequence driven by new projections.
-
-**Visible artifact:** Research holds, Implementation splits, Frontend/Testing/CI begin, and 22 minutes transitions to 15 minutes.  
-**Test:** Slow-motion review shows each animation corresponds to a canonical event-derived state change.
-
-### M6.4 Polish evidence and motion — 2h
-
-Tune pacing, hierarchy, transitions, and focus for the presentation viewport.
-
-**Visible artifact:** The complete optimization beat is understandable without narration.  
-**Test:** Three uninformed viewers can describe what changed and why; target at least two accurate responses.
-
-### Exit criteria
-
-- This is the most polished 20 seconds of the product.
-- The organization visibly changes; the UI does not merely update a number.
-
-## M7 — Outcome proof and promotion approval
-
-**Estimate:** 8h  
-**Dependencies:** M2, M4  
-**Classification:** Critical
-
-### M7.1 Create the tiny ServicePilot fixture repository — 2h
-
-Prepare only the baseline application needed to make Stripe Billing understandable and testable.
-
-**Visible artifact:** Baseline app runs locally and visibly lacks the subscription capability.  
-**Test:** Fresh setup reaches the baseline state using the documented command.
-
-### M7.2 Produce genuine feature and test artifacts — 2.5h
-
-Apply the controlled implementation result and run real automated validation.
-
-**Visible artifact:** Working Stripe test-mode checkout or subscription preview plus passing test output.  
-**Test:** Feature acceptance test and required automated tests pass from a clean fixture state.
-
-### M7.3 Provide pull-request proof — 1.5h
-
-Create a real branch and commit. Use a real GitHub pull request when credentials/network are available; otherwise display a clearly labeled controlled PR fixture backed by the genuine diff.
-
-**Visible artifact:** PR view contains real diff, checks, and mission correlation.  
-**Test:** Commit diff matches the tested preview artifact.
-
-### M7.4 Enforce demo-environment approval — 2h
-
-Block promotion until a human decision is recorded.
-
-**Visible artifact:** Approval card shows commit, checks, destination, and policy; approval transitions the preview to promoted state.  
-**Test:** Direct promotion before approval fails; approved promotion is idempotent.
-
-### Exit criteria
-
-- The ending keeps Mission Control's reorganization and successful completion as the climax; external proof quietly validates that work happened.
-
-## M8 — Replay epilogue
-
-**Estimate:** 4h  
-**Dependencies:** M2, M3, M6, M7  
-**Classification:** Critical but first feature cut if schedule slips
-
-### M8.1 Build compressed projection playback — 2.5h
-
-Read the completed event stream and animate historical projection states on an eight-second presentation clock without appending events.
-
-**Visible artifact:** Replay reconstructs launch, objectives, health change, optimization, approval, and completion.  
-**Test:** Event count and external-effect call count remain unchanged after replay.
-
-### M8.2 Add epilogue control and reset — 1.5h
-
-Provide a single Replay action and clean return to final state.
-
-**Visible artifact:** Presenter can trigger the replay reliably at 1:22 in the 90-second demo.  
-**Test:** Five consecutive replay runs complete within the target duration and return to the same projection.
-
-### Exit criteria
-
-- Replay feels like proof of the architecture, not a second product tour.
-
-## M9 — Demo hardening and rehearsal
-
-**Estimate:** 10h  
-**Dependencies:** M1–M8  
-**Classification:** Critical
-
-### M9.1 One-command reset and seeded run — 2h
-
-Reset local mission data, ServicePilot branch state, controlled effects, and presenter state.
-
-**Visible artifact:** Clean launch screen appears from one documented reset action.  
-**Test:** Five reset/run cycles produce the same canonical checkpoints.
-
-### M9.2 External dependency fallbacks — 2h
-
-Prepare honest controlled fallbacks for model, GitHub, Stripe, and preview-host failures.
-
-**Visible artifact:** Presenter controls can switch to disclosed fixture outcomes without breaking the mission.  
-**Test:** Disable each external dependency and complete the demo once.
-
-For the one live Hermes → Codex fixture, keep limits distinct: assignment claim must fail quickly, Codex execution receives a separately rehearsed 120–180 second job limit, validation has its own bounded command limit, and the presenter-facing wait remains short. Crossing the presenter-safe threshold explicitly selects the verified fallback; it must never fabricate a live completion or stall the controlled mission indefinitely.
-
-### M9.3 Timed rehearsal and trimming — 3h
-
-Run the complete 90-second story repeatedly and remove anything that requires explanation but does not advance it.
-
-**Visible artifact:** Recorded rehearsal completes in 90 seconds with the wow moment unobscured.  
-**Test:** Three consecutive runs finish within ±5 seconds.
-
-### M9.4 Judge comprehension test — 1.5h
-
-Show the demo to people without project context.
-
-**Visible artifact:** Written notes answering what the product is, what changed, why approval mattered, and what was real.  
-**Test:** At least two of three viewers identify “manages outcomes and reorganizes AI teams” rather than “AI Jira/dashboard.”
-
-### M9.5 Final capture and recovery kit — 1.5h
-
-Record a clean backup demo and preserve the exact known-good fixture.
-
-**Visible artifact:** Backup video, presenter runbook, truth labels, reset instructions, and known-good data snapshot.  
-**Test:** A teammate can restore and present from the kit without verbal setup.
-
-### Exit criteria
-
-- Demo is repeatable, comprehensible, and recoverable under venue conditions.
-
-## Stretch goals
-
-### S1 — Live GitHub automation — 4h
-
-**Depends on:** M7  
-**Artifact:** Mission creates or updates a real GitHub pull request live.  
-**Test:** Two rehearsed runs succeed without manual cleanup.  
-**Cut condition:** Any credential, rate-limit, or latency instability.
-
-### S2 — Hosted preview automation — 4h
-
-**Depends on:** M7  
-**Artifact:** Approved commit promotes to a hosted demo URL.  
-**Test:** Promotion completes inside the demo timing budget twice.  
-**Cut condition:** Hosting latency or setup threatens M6/M9.
-
-### S3 — Aegis policy enforcement — 6–10h
-
-**Depends on:** M7  
-**Artifact:** Aegis credibly enforces a relevant authority boundary without invented spending or blockchain exposition.  
-**Test:** Pre-approval action fails, post-approval action succeeds, and fallback is rehearsed.  
-**Cut condition:** No natural enforcement mapping is proven in two hours of isolated investigation.
-
-## Two-person parallel schedule
-
-### Day 1 — Contract and foundations
-
-- Both: M0
-- Builder A: M1
-- Builder B: M2
-
-**Checkpoint:** Launch creates replayable objectives by end of day.
-
-### Day 2 — Product becomes legible
-
-- Builder A: M3
-- Builder B: M4
-
-**Checkpoint:** Canonical fixture visibly advances through the organization.
-
-### Day 3 — Differentiation and proof
-
-- Builder A: M6 interaction shell, then M7 UI/proof surfaces
-- Builder B: M5 optimizer, then M7 execution/approval
-
-**Checkpoint:** 22 → 15 recommendation applies to real state; tested artifact is visible.
-
-### Day 4 — Wow moment and replay
-
-- Both: M6 animation and comprehension review
-- One builder only after M6 is strong: M8 replay
-
-**Checkpoint:** Rough 90-second end-to-end demo.
-
-### Day 5 — Hardening only
-
-- Both: M9
-- Stretch work is forbidden until three consecutive successful rehearsals.
-
-**Checkpoint:** Known-good build, backup capture, and recovery kit.
-
-## Solo cut plan
-
-For one builder, reduce scope before reducing rehearsal:
-
-1. Use one application runtime and the simplest live-update mechanism.
-2. Use controlled specialist outputs rather than multiple live model calls.
-3. Keep genuine local tests and a genuine Git branch/diff.
-4. Use a controlled PR surface if GitHub automation costs more than 90 minutes.
-5. Use a local preview and simulated promotion state if hosting costs more than 90 minutes.
-6. Cut replay before cutting optimization animation or hardening.
-7. Omit Aegis entirely unless sponsor rules require it.
-
-## Ranked delivery risks
-
-| Rank | Risk | Likelihood / impact | Mitigation | Kill signal |
-|---:|---|---|---|---|
-| 1 | Product surfaces diverge from the canonical event stream | Medium / Critical | Ship launch-to-visible-feed integration first; require UI, health, optimizer, approval, and replay to consume event projections | Any displayed state cannot be traced to and rebuilt from canonical events |
-| 2 | Scope exceeds available person-hours | High / Critical | Freeze contract; honor cut order; no stretch before rehearsal | Critical path misses Day 3 checkpoint |
-| 3 | Optimization looks scripted or mathematically false | Medium / Critical | Frozen calculable fixture; event evidence; deterministic tests | Reviewer cannot reproduce 22 → 15 |
-| 4 | UI reads as AI Jira/Grafana | Medium / High | Executive hierarchy; outcome language; objective/resource emphasis | Viewer describes it as task tracking |
-| 5 | Wow animation is confusing | Medium / High | Allocate 10h; test without narration; simplify motion | Viewer cannot explain before/after |
-| 6 | External model/GitHub/Stripe/host fails | High / High | Controlled outputs and honest offline fallbacks | Two rehearsals fail on same dependency |
-| 7 | Event sourcing consumes the hackathon | Medium / High | Minimal append log and projectors; no generic framework; visible feed within 4h | Infrastructure work has no visible artifact after 4h |
-| 8 | Real artifact path is too large | Medium / High | Tiny fixture repo; narrow Stripe test-mode feature | Baseline-to-proof flow not complete by Day 3 |
-| 9 | Replay reissues effects or diverges | Low / High | Projection-only replay; effect-count invariant | Replay changes event/effect counts |
-| 10 | Aegis distorts the story | Medium / Medium | Stretch only; two-hour feasibility kill switch | Requires invented spend or explanation detour |
-
-## Definition of demo-ready
-
-- One reset action restores the known-good initial state.
-- Three consecutive 90-second runs finish within ±5 seconds.
-- The same event evidence produces the same proactive, feasible recommendation.
-- Atomic approval visibly changes event-derived organizational state exactly once.
-- Required testing and environment approval remain intact after optimization.
-- The final diff, test result, PR/PR fixture, and preview correspond to one another.
-- Replay appends no events and repeats no effects.
-- The presenter can state exactly what is live, controlled, and fallback-only.
-- Unfamiliar viewers describe the product as managing AI-team outcomes, not tracking tickets.
-
-## Approval record
-
-- Product brief: approved 2026-07-15
-- Demo script: approved 2026-07-15
-- Architecture: approved 2026-07-15
-- First execution plan: approved 2026-07-15
-
-All four planning gates were approved on 2026-07-15. Planning documents are frozen unless the user explicitly requests a design change.
+Before each phase, present exact scope, files/systems, migrations, compatibility risks, and rollback. Implement the smallest complete vertical slice, run every relevant gate, report real/mocked/incomplete/deferred behavior, make one reviewable phase commit only when requested, and stop for approval. Architectural changes update the source-of-truth documents in the same phase.
