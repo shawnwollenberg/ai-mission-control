@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { listAgents, registerAgent } from "@/application/registry";
 import { apiErrorResponse } from "@/lib/http-errors";
 import { requireApiIdentity, requireMutationOrigin, unauthenticatedResponse } from "@/lib/request-auth";
+import { registerRemoteAgent } from "@/application/remote-agent-registry";
 export async function GET() {
   const identity = await requireApiIdentity();
   if (!identity) return unauthenticatedResponse();
@@ -21,7 +22,21 @@ export async function POST(request: Request) {
       concurrencyLimit?: number;
       runtimeConfigurationReference?: string;
       credentialReference?: string;
+      adapterType?: "codex" | "remote_http";
+      endpoint?: string;
     };
+    if (body.adapterType === "remote_http") {
+      const registration = await registerRemoteAgent({
+        actor: identity,
+        name: body.name,
+        description: body.description,
+        endpoint: body.endpoint ?? "",
+        capabilities: body.capabilities ?? [],
+        supportedDomains: body.supportedDomains ?? [],
+        concurrencyLimit: body.concurrencyLimit,
+      });
+      return NextResponse.json(registration, { status: 201 });
+    }
     const agent = await registerAgent({
       actor: identity,
       name: body.name,
