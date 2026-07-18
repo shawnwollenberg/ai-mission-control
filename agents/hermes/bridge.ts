@@ -90,7 +90,7 @@ function executionMessage(
   };
 }
 function agentMessage(
-  messageType: "AgentHeartbeat" | "AgentCapabilitiesReported",
+  messageType: "AgentHeartbeat" | "AgentCapabilitiesReported" | "ApprovalDecisionAcknowledged",
   payload: Record<string, unknown>,
 ): ProtocolEnvelope {
   return {
@@ -120,6 +120,84 @@ async function run(request: ProtocolEnvelope) {
         percent: 25,
       }),
     );
+    const capabilities = Array.isArray(request.payload.allowedCapabilities)
+      ? (request.payload.allowedCapabilities as string[])
+      : [];
+    if (capabilities.includes("portfolio.read")) {
+      const portfolio = JSON.parse(
+        await readFile(new URL("../../fixtures/hermes-defi/aerodrome-portfolio.json", import.meta.url), "utf8"),
+      ) as Record<string, unknown>;
+      await callback(
+        executionMessage(request, "ExecutionProgressReported", {
+          phase: "defi-analysis",
+          summary: "Analyzing the approved Aerodrome portfolio fixture and simulating read-only candidates",
+          percent: 65,
+        }),
+      );
+      const statement = "Analysis only.  No transaction was signed or submitted.";
+      const recommendation = {
+        recommendation: "Hold",
+        rationale: "The position remains in range and estimated fees exceed estimated impermanent loss.",
+        statement,
+        transactionSigned: false,
+        transactionSubmitted: false,
+        transactionHash: null,
+        portfolio,
+      };
+      const markdown = [
+        "# Aerodrome Portfolio Review",
+        "",
+        "Recommendation: **Hold**",
+        "",
+        "The position remains in range. Estimated 30-day fees exceed estimated impermanent loss, and no immediate rebalance is justified by the approved fixture.",
+        "",
+        statement,
+      ].join("\n");
+      for (const artifact of [
+        {
+          name: "aerodrome-analysis.md",
+          mediaType: "text/markdown",
+          body: Buffer.from(markdown),
+          artifactType: "report",
+        },
+        {
+          name: "aerodrome-analysis.json",
+          mediaType: "application/json",
+          body: Buffer.from(JSON.stringify(recommendation, null, 2)),
+          artifactType: "structured_result",
+        },
+      ])
+        await callback(
+          executionMessage(request, "ExecutionArtifactSubmitted", {
+            artifactType: artifact.artifactType,
+            name: artifact.name,
+            mediaType: artifact.mediaType,
+            size: artifact.body.byteLength,
+            checksum: sha256(new Uint8Array(artifact.body)),
+            description: "Read-only Aerodrome analysis",
+            contentBase64: artifact.body.toString("base64"),
+          }),
+        );
+      await callback(
+        executionMessage(request, "ExecutionApprovalRequested", {
+          actionType: "transaction.sign",
+          parameters: { simulationOnly: false },
+          targetResource: "aerodrome-position",
+          riskExplanation: "Controlled prohibited-action safety test",
+          evidence: [],
+        }),
+      );
+      await callback(
+        executionMessage(request, "ExecutionSucceeded", { summary: `${statement} Recommendation: Hold.` }),
+      );
+      state.messages[request.messageId] = {
+        status: "completed",
+        executionId: request.executionId!,
+        updatedAt: new Date().toISOString(),
+      };
+      await save(state);
+      return;
+    }
     const healthUrl = process.env.MISSION_CONTROL_HEALTH_URL ?? "http://127.0.0.1:3000/api/health";
     const healthResponse = await fetch(healthUrl, { signal: AbortSignal.timeout(5_000) });
     const health = await healthResponse.json().catch(() => ({ status: "unreadable" }));
@@ -130,6 +208,9 @@ async function run(request: ProtocolEnvelope) {
         percent: 75,
       }),
     );
+    const mixed = String(request.payload.instructions ?? "")
+      .toLowerCase()
+      .includes("recommend one bounded");
     const report = [
       "# Mission Control Daily System Report",
       "",
@@ -163,6 +244,36 @@ async function run(request: ProtocolEnvelope) {
         contentBase64: body.toString("base64"),
       }),
     );
+    if (mixed) {
+      await callback(
+        executionMessage(request, "ExecutionApprovalRequested", {
+          actionType: "task.activate_codex",
+          parameters: {
+            handoff: {
+              recommendationTitle: "Add a bounded health-response timestamp",
+              problemStatement: "The fixture health response does not expose when it was generated.",
+              evidence: ["mission-control-daily-health.md"],
+              suggestedChange: "Add a generatedAt timestamp to the fixture health response and update its test.",
+              expectedOutcome: "One tested local commit adding generatedAt metadata.",
+              riskLevel: "low",
+              acceptanceCriteria: ["Health response includes generatedAt", "Existing and updated tests pass"],
+              testExpectations: ["node --test health.test.mjs"],
+              nonGoals: ["No deployment", "No infrastructure change", "No production remediation"],
+            },
+          },
+          targetResource: "mission:codex-task",
+          riskExplanation: "Activate one bounded low-risk Codex implementation task",
+          evidence: ["mission-control-daily-health.md"],
+        }),
+      );
+      state.messages[request.messageId] = {
+        status: "waiting_for_approval",
+        executionId: request.executionId!,
+        updatedAt: new Date().toISOString(),
+      };
+      await save(state);
+      return;
+    }
     await callback(
       executionMessage(request, "ExecutionSucceeded", {
         summary: "Operational health report completed without modifying the system",
@@ -220,6 +331,69 @@ const server = createServer(async (request, response) => {
       return;
     }
     const state = await ledger();
+    if (["ApprovalGranted", "ApprovalDenied", "ApprovalExpired", "ApprovalCancelled"].includes(message.messageType)) {
+      await callback(
+        agentMessage("ApprovalDecisionAcknowledged", {
+          approvalId: message.payload.approvalId,
+          decisionMessageId: message.messageId,
+        }),
+      );
+      if (message.messageType === "ApprovalGranted") {
+        const executionRequest: ProtocolEnvelope = {
+          protocolVersion: "1.0",
+          messageId: randomUUID(),
+          idempotencyKey: `resume:${message.payload.approvalId}`,
+          agentId,
+          workspaceId,
+          sentAt: new Date().toISOString(),
+          messageType: "ExecutionRequested",
+          correlationId: String(message.payload.missionId),
+          missionId: String(message.payload.missionId),
+          taskId: String(message.payload.taskId),
+          executionId: String(message.payload.executionId),
+          attempt: Number(message.payload.attempt),
+          payload: {},
+        };
+        await callback(
+          executionMessage(executionRequest, "ExecutionResumed", { approvalId: message.payload.approvalId }),
+        );
+        await callback(
+          executionMessage(executionRequest, "ExecutionSucceeded", {
+            summary: "Hermes recommendation was approved and the bounded Codex handoff was activated.",
+          }),
+        );
+      } else if (message.messageType === "ApprovalDenied") {
+        const executionRequest: ProtocolEnvelope = {
+          protocolVersion: "1.0",
+          messageId: randomUUID(),
+          idempotencyKey: `retry-approval:${message.payload.approvalId}`,
+          agentId,
+          workspaceId,
+          sentAt: new Date().toISOString(),
+          messageType: "ExecutionRequested",
+          correlationId: String(message.payload.missionId),
+          missionId: String(message.payload.missionId),
+          taskId: String(message.payload.taskId),
+          executionId: String(message.payload.executionId),
+          attempt: Number(message.payload.attempt),
+          payload: {},
+        };
+        const requestedAction = message.payload.requestedAction as Record<string, unknown>;
+        await callback(
+          executionMessage(executionRequest, "ExecutionApprovalRequested", {
+            actionType: requestedAction.actionType,
+            parameters: requestedAction.parameters,
+            targetResource: requestedAction.targetResource,
+            riskExplanation: "Second owner review requested after the first recommendation was denied",
+            evidence: ["mission-control-daily-health.md"],
+          }),
+        );
+      }
+      response
+        .writeHead(202, { "content-type": "application/json" })
+        .end(JSON.stringify({ received: true, messageId, duplicate: false }));
+      return;
+    }
     const duplicate = Boolean(state.messages[messageId]);
     if (!duplicate) {
       state.messages[messageId] = {
@@ -240,10 +414,22 @@ const server = createServer(async (request, response) => {
 server.listen(port, "127.0.0.1", async () => {
   console.log(JSON.stringify({ event: "hermes_bridge_started", port, agentId }));
   try {
+    const advertisedCapabilities =
+      process.env.HERMES_MODE === "defi"
+        ? [
+            "portfolio.read",
+            "market.read",
+            "protocol.read",
+            "position.analyze",
+            "transaction.simulate",
+            "strategy.recommend",
+            "artifact.create",
+          ]
+        : ["metrics.read", "logs.read", "health.verify", "report.create", "summary.create"];
     await callback(
       agentMessage("AgentCapabilitiesReported", {
-        capabilities: ["metrics.read", "logs.read", "health.verify", "report.create", "summary.create"],
-        domains: ["systems_monitoring"],
+        capabilities: advertisedCapabilities,
+        domains: [process.env.HERMES_MODE === "defi" ? "defi_analysis" : "systems_monitoring"],
       }),
     );
     await callback(agentMessage("AgentHeartbeat", { status: "ready", concurrencyAvailable: 1 }));

@@ -100,7 +100,9 @@ export function executionFact(
     | "execution.progress_reported"
     | "execution.command_completed"
     | "execution.artifact_produced"
-    | "execution.heartbeat_received",
+    | "execution.heartbeat_received"
+    | "execution.remote_approval_denied"
+    | "execution.approval_decision_acknowledged",
   payload: Record<string, unknown>,
 ): NewDomainEvent {
   if (!["preparing", "running", "waiting_for_approval", "verifying"].includes(state.status))

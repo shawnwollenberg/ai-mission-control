@@ -1,0 +1,15 @@
+{
+  "asOf": "2026-07-18T20:00:00.000Z",
+  "network": "Base",
+  "protocol": "Aerodrome",
+  "pool": "WETH/USDC concentrated liquidity",
+  "position": {
+    "valueUsd": 12500,
+    "rangeUtilizationPercent": 68,
+    "feesUsd30d": 184.22,
+    "estimatedImpermanentLossUsd": 71.4,
+    "inRange": true
+  },
+  "market": { "ethUsd": 3480, "volatility30dPercent": 42 },
+  "approvedActions": ["read", "analyze", "simulate", "recommend"]
+}

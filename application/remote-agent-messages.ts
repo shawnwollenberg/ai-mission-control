@@ -8,8 +8,14 @@ import { stableUuid } from "@/lib/stable-id";
 import { coordinateAfterTask } from "@/application/mission-coordinator";
 import type { ProtocolEnvelope } from "@/remote-agent/protocol";
 import { sha256 } from "@/remote-agent/protocol";
+import { applyApprovalProjection, requestRemoteApproval } from "@/application/approval-commands";
 
-type Credential = { workspace_id: string; agent_id: string; credential_id: string };
+type Credential = {
+  workspace_id: string;
+  agent_id: string;
+  credential_id: string;
+  credential_record_status: string;
+};
 async function executionRow(message: ProtocolEnvelope, workspaceId: string) {
   const row = (
     await getDatabasePool().query<{
@@ -53,6 +59,42 @@ async function transition(
   });
 }
 export async function processRemoteMessage(message: ProtocolEnvelope, credential: Credential) {
+  if (message.messageType === "ApprovalDecisionAcknowledged") {
+    const approvalId = String(message.payload.approvalId ?? "");
+    const approval = await loadAggregateEvents({
+      workspaceId: credential.workspace_id,
+      aggregateType: "approval",
+      aggregateId: approvalId,
+    });
+    const requested = approval.find((event) => event.eventType === "approval.requested");
+    if (!requested || requested.payload.agentId !== credential.agent_id)
+      throw new ValidationFailedError("Approval acknowledgement is not authorized");
+    await appendEvents({
+      workspaceId: credential.workspace_id,
+      aggregateType: "approval",
+      aggregateId: approvalId,
+      missionId: requested.missionId,
+      expectedVersion: approval.length,
+      commandId: stableUuid(`remote:${message.messageId}:approval-ack`),
+      commandType: "AcknowledgeRemoteApprovalDecision",
+      correlationId: requested.correlationId,
+      causationId: approval.at(-1)?.eventId,
+      actor: { type: "agent", id: credential.agent_id },
+      events: [
+        {
+          eventType: "approval.decision_acknowledged",
+          eventSchemaVersion: 1,
+          payload: {
+            status: approval.at(-1)?.payload.status,
+            agentId: credential.agent_id,
+            messageId: message.messageId,
+          },
+        },
+      ],
+      applyProjections: applyApprovalProjection,
+    });
+    return { status: "acknowledged", approvalId };
+  }
   if (message.messageType === "AgentHeartbeat" || message.messageType === "AgentCapabilitiesReported") {
     const events = await loadAggregateEvents({
       workspaceId: credential.workspace_id,
@@ -61,6 +103,8 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     });
     const eventType =
       message.messageType === "AgentHeartbeat" ? "agent.heartbeat_received" : "agent.capabilities_reported";
+    const credentialVerified =
+      message.messageType === "AgentHeartbeat" && credential.credential_record_status === "pending_verification";
     await appendEvents({
       workspaceId: credential.workspace_id,
       aggregateType: "agent",
@@ -71,7 +115,19 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       correlationId: message.correlationId,
       causationId: events.at(-1)?.eventId,
       actor: { type: "agent", id: credential.agent_id },
-      events: [{ eventType, eventSchemaVersion: 1, occurredAt: message.sentAt, payload: message.payload }],
+      events: [
+        { eventType, eventSchemaVersion: 1, occurredAt: message.sentAt, payload: message.payload },
+        ...(credentialVerified
+          ? [
+              {
+                eventType: "agent.credential_verified",
+                eventSchemaVersion: 1,
+                occurredAt: message.sentAt,
+                payload: { credentialId: credential.credential_id },
+              },
+            ]
+          : []),
+      ],
       applyProjections: async (client, appended) => {
         const last = appended.at(-1)!;
         if (eventType === "agent.heartbeat_received") {
@@ -83,6 +139,15 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
             `INSERT INTO agent_heartbeats(workspace_id,agent_id,credential_id,protocol_version,received_at,reported_at) VALUES($1,$2,$3,'1.0',now(),$4) ON CONFLICT(workspace_id,agent_id) DO UPDATE SET credential_id=EXCLUDED.credential_id,protocol_version=EXCLUDED.protocol_version,received_at=EXCLUDED.received_at,reported_at=EXCLUDED.reported_at`,
             [credential.workspace_id, credential.agent_id, credential.credential_id, message.sentAt],
           );
+          await client.query(
+            "UPDATE agent_credentials SET last_used_at=now(),status=CASE WHEN credential_id=$3 AND status='pending_verification' THEN 'active' ELSE status END,verified_at=CASE WHEN credential_id=$3 AND status='pending_verification' THEN now() ELSE verified_at END WHERE workspace_id=$1 AND agent_id=$2 AND credential_id=$3",
+            [credential.workspace_id, credential.agent_id, credential.credential_id],
+          );
+          if (credentialVerified)
+            await client.query(
+              "UPDATE agents SET credential_status='active',updated_at=now() WHERE workspace_id=$1 AND agent_id=$2",
+              [credential.workspace_id, credential.agent_id],
+            );
         } else if (Array.isArray(message.payload.capabilities)) {
           const allowed = (
             await client.query<{ capabilities: string[] }>(
@@ -193,11 +258,57 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       });
       return { status: "accepted", artifactId: artifact.artifactId };
     }
+    case "ExecutionApprovalRequested": {
+      const requested = await requestRemoteApproval({
+        workspaceId: credential.workspace_id,
+        missionId: message.missionId!,
+        taskId: message.taskId!,
+        executionId: message.executionId!,
+        agentId: message.agentId,
+        messageId: message.messageId,
+        actionType: String(message.payload.actionType ?? ""),
+        parameters: (message.payload.parameters as Record<string, unknown>) ?? {},
+        targetResource: String(message.payload.targetResource ?? "mission"),
+        riskExplanation: String(message.payload.riskExplanation ?? "Remote workflow decision requested"),
+        evidence: Array.isArray(message.payload.evidence) ? message.payload.evidence : [],
+        expiresAt: String(message.payload.expiresAt ?? new Date(Date.now() + 15 * 60_000).toISOString()),
+      });
+      if (requested.outcome === "deny") {
+        await handleExecutionFact({
+          actor: actor(credential),
+          commandId: stableUuid(`remote:${message.messageId}:approval-denied`),
+          executionId: message.executionId!,
+          type: "execution.remote_approval_denied",
+          payload: {
+            actionType: message.payload.actionType,
+            actionHash: requested.actionHash,
+            policy: requested.decision,
+          },
+        });
+        return { status: "denied", policy: requested.decision };
+      }
+      await transition(message, credential, "waiting_for_approval");
+      await handleTaskTransition({
+        actor: actor(credential),
+        commandId: stableUuid(`remote:${message.messageId}:task-waiting`),
+        taskId: message.taskId!,
+        target: "waiting_for_approval",
+        details: { approvalId: requested.approvalId },
+      });
+      return { status: "approval_required", approvalId: requested.approvalId };
+    }
     case "ExecutionPaused":
       await transition(message, credential, "paused");
       return { status: "accepted" };
     case "ExecutionResumed":
       await transition(message, credential, "running");
+      await handleTaskTransition({
+        actor: actor(credential),
+        commandId: stableUuid(`remote:${message.messageId}:task-resumed`),
+        taskId: message.taskId!,
+        target: "running",
+        details: { approvalDecision: "granted" },
+      });
       return { status: "accepted" };
     case "ExecutionSucceeded": {
       const latest = (

@@ -29,8 +29,8 @@ export async function applyTaskProjection(client: PoolClient, events: DomainEven
         `INSERT INTO task_projections (
         workspace_id, task_id, mission_id, aggregate_version, name, instructions, expected_output, status,
         priority, risk_level, required_capabilities, maximum_attempts, timeout_seconds, approval_requirements,
-        verification_requirements, current_attempt, created_at, updated_at, last_event_position
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9,$10,$11,$12,$13,$14,0,$15,$15,$16)
+        verification_requirements, required_resources, current_attempt, created_at, updated_at, last_event_position
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9,$10,$11,$12,$13,$14,$15,0,$16,$16,$17)
       ON CONFLICT (workspace_id,task_id) DO UPDATE SET aggregate_version=EXCLUDED.aggregate_version,
         status=EXCLUDED.status, updated_at=EXCLUDED.updated_at, last_event_position=EXCLUDED.last_event_position`,
         [
@@ -48,6 +48,7 @@ export async function applyTaskProjection(client: PoolClient, events: DomainEven
           event.payload.timeoutSeconds,
           JSON.stringify(event.payload.approvalPolicy),
           JSON.stringify(event.payload.verificationRequirements),
+          JSON.stringify(event.payload.requiredResources ?? []),
           event.occurredAt,
           event.position,
         ],

@@ -3,6 +3,74 @@ import { appendEvents, loadAggregateEvents, type DomainEvent } from "@/lib/postg
 import { NotFoundError, ValidationFailedError } from "@/lib/application-errors";
 import { stableUuid } from "@/lib/stable-id";
 import { getDatabasePool } from "@/lib/database";
+import { canonicalHash } from "@/lib/canonical-json";
+import { evaluateRemoteApproval } from "@/policy/remote-approval-policy";
+import { handleCreateTask, handleTaskTransition } from "@/application/task-commands";
+export async function requestRemoteApproval(input: {
+  workspaceId: string;
+  missionId: string;
+  taskId: string;
+  executionId: string;
+  agentId: string;
+  messageId: string;
+  actionType: string;
+  parameters: Record<string, unknown>;
+  targetResource: string;
+  riskExplanation: string;
+  evidence: unknown[];
+  expiresAt: string;
+}) {
+  const decision = evaluateRemoteApproval(input.actionType),
+    actionHash = canonicalHash({
+      actionType: input.actionType,
+      parameters: input.parameters,
+      targetResource: input.targetResource,
+      executionId: input.executionId,
+      agentId: input.agentId,
+    });
+  if (decision.outcome === "deny") return { outcome: "deny" as const, decision, actionHash };
+  const approvalId = stableUuid(`remote-approval:${input.messageId}:${actionHash}`),
+    result = await appendEvents({
+      workspaceId: input.workspaceId,
+      aggregateType: "approval",
+      aggregateId: approvalId,
+      missionId: input.missionId,
+      expectedVersion: 0,
+      commandId: stableUuid(`request-remote-approval:${input.messageId}:${actionHash}`),
+      commandType: "RequestRemoteApproval",
+      correlationId: input.missionId,
+      actor: { type: "agent", id: input.agentId },
+      events: [
+        {
+          eventType: "approval.requested",
+          eventSchemaVersion: 1,
+          payload: {
+            taskId: input.taskId,
+            executionId: input.executionId,
+            agentId: input.agentId,
+            approvalType: "remote_workflow",
+            requestedAction: {
+              actionType: input.actionType,
+              parameters: input.parameters,
+              targetResource: input.targetResource,
+            },
+            actionHash,
+            riskExplanation: input.riskExplanation,
+            riskLevel: "moderate",
+            policyReasons: decision.reasons,
+            policyVersion: decision.policyVersion,
+            evidence: input.evidence,
+            requestedBy: input.agentId,
+            supportingEvidenceSummary: "Authenticated remote-agent recommendation and referenced evidence",
+            expiresAt: input.expiresAt,
+            status: "pending",
+          },
+        },
+      ],
+      applyProjections: applyApprovalProjection,
+    });
+  return { outcome: "require_approval" as const, approvalId, event: result.events[0], actionHash, decision };
+}
 export async function applyApprovalProjection(client: PoolClient, events: DomainEvent[]) {
   for (const e of events) {
     if (e.eventType === "approval.requested")
@@ -31,7 +99,12 @@ export async function applyApprovalProjection(client: PoolClient, events: Domain
           e.payload.policyVersion ?? null,
         ],
       );
-    else if (e.eventType.startsWith("approval."))
+    else if (e.eventType === "approval.decision_acknowledged")
+      await client.query(
+        "UPDATE approval_projections SET aggregate_version=$3,remote_decision_delivery_status='acknowledged',remote_decision_acknowledged_at=$4 WHERE workspace_id=$1 AND approval_id=$2",
+        [e.workspaceId, e.aggregateId, e.aggregateVersion, e.occurredAt],
+      );
+    else if (e.eventType.startsWith("approval.")) {
       await client.query(
         "UPDATE approval_projections SET status=$3,aggregate_version=$4,decided_by=COALESCE($5,decided_by),decision_reason=COALESCE($6,decision_reason),decided_at=COALESCE(decided_at,$7),consumed_at=CASE WHEN $3='consumed' THEN $7 ELSE consumed_at END,policy_version_at_execution=COALESCE($8,policy_version_at_execution) WHERE workspace_id=$1 AND approval_id=$2",
         [
@@ -45,6 +118,12 @@ export async function applyApprovalProjection(client: PoolClient, events: Domain
           e.payload.policyVersionAtExecution ?? null,
         ],
       );
+      if (["approval.granted", "approval.denied", "approval.expired"].includes(e.eventType))
+        await client.query(
+          "UPDATE approval_projections SET remote_decision_delivery_status='pending' WHERE workspace_id=$1 AND approval_id=$2 AND approval_type='remote_workflow'",
+          [e.workspaceId, e.aggregateId],
+        );
+    }
   }
 }
 export async function requestActionApproval(input: {
@@ -159,7 +238,7 @@ export async function decideApproval(input: {
 }) {
   const projection = (
     await getDatabasePool().query(
-      "SELECT status,expires_at FROM approval_projections WHERE workspace_id=$1 AND approval_id=$2",
+      "SELECT p.status,p.expires_at,p.approval_type,p.agent_id,p.execution_id,p.mission_id,p.task_id,p.action_hash,p.requested_action,(SELECT attempt FROM execution_projections e WHERE e.workspace_id=p.workspace_id AND e.execution_id=p.execution_id) attempt FROM approval_projections p WHERE p.workspace_id=$1 AND p.approval_id=$2",
       [input.workspaceId, input.approvalId],
     )
   ).rows[0];
@@ -203,13 +282,73 @@ export async function decideApproval(input: {
     outbox: [
       {
         eventIndex: 0,
-        topic: "approval.resolved",
+        topic: projection.approval_type === "remote_workflow" ? "remote-agent.delivery" : "approval.resolved",
         idempotencyKey: `decision:${input.approvalId}`,
-        payload: { approvalId: input.approvalId, missionId: last.missionId, taskId: last.payload.taskId, eventType },
+        payload:
+          projection.approval_type === "remote_workflow"
+            ? {
+                messageId: stableUuid(`remote-approval-decision:${input.approvalId}:${eventType}`),
+                agentId: projection.agent_id,
+                messageType: input.granted ? "ApprovalGranted" : "ApprovalDenied",
+                protocolVersion: "1.0",
+                executionId: projection.execution_id,
+                missionId: projection.mission_id,
+                taskId: projection.task_id,
+                approvalId: input.approvalId,
+                decisionPayload: {
+                  approvalId: input.approvalId,
+                  missionId: projection.mission_id,
+                  taskId: projection.task_id,
+                  executionId: projection.execution_id,
+                  attempt: projection.attempt,
+                  actionHash: projection.action_hash,
+                  requestedAction: projection.requested_action,
+                  decision: input.granted ? "granted" : "denied",
+                  reason: input.reason,
+                },
+              }
+            : { approvalId: input.approvalId, missionId: last.missionId, taskId: last.payload.taskId, eventType },
       },
     ],
     applyProjections: applyApprovalProjection,
   });
+  if (
+    input.granted &&
+    projection.approval_type === "remote_workflow" &&
+    projection.requested_action?.actionType === "task.activate_codex"
+  ) {
+    const handoff = projection.requested_action.parameters?.handoff ?? {};
+    const taskId = stableUuid(`remote-codex-task:${input.approvalId}`);
+    await handleCreateTask({
+      actor: { workspaceId: input.workspaceId, id: "mission-coordinator", type: "system" },
+      commandId: stableUuid(`create-remote-codex-task:${input.approvalId}`),
+      taskId,
+      task: {
+        missionId: projection.mission_id,
+        name: String(handoff.recommendationTitle ?? "Implement approved Hermes recommendation"),
+        instructions: [
+          String(handoff.problemStatement ?? "Implement the approved bounded improvement."),
+          `Suggested change: ${String(handoff.suggestedChange ?? "Apply the approved low-risk change.")}`,
+          `Acceptance criteria: ${JSON.stringify(handoff.acceptanceCriteria ?? [])}`,
+          `Test expectations: ${JSON.stringify(handoff.testExpectations ?? [])}`,
+          `Explicit non-goals: ${JSON.stringify(handoff.nonGoals ?? [])}`,
+        ].join("\n"),
+        expectedOutput: String(handoff.expectedOutcome ?? "One tested local commit"),
+        priority: "normal",
+        riskLevel: "low",
+        requiredCapabilities: ["repository.read", "repository.write", "code.implement", "test.run", "git.commit"],
+        maximumAttempts: 1,
+        timeoutSeconds: 600,
+      },
+    });
+    await handleTaskTransition({
+      actor: { workspaceId: input.workspaceId, id: "mission-coordinator", type: "system" },
+      commandId: stableUuid(`activate-remote-codex-task:${input.approvalId}`),
+      taskId,
+      target: "ready",
+      details: { approvalId: input.approvalId, sourceAgentId: projection.agent_id },
+    });
+  }
   return { applied: true, event: result.events[0] };
 }
 

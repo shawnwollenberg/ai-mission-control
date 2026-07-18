@@ -32,6 +32,7 @@ export type CreateTaskInput = {
   priority: "high" | "normal" | "low";
   riskLevel: "unknown" | "low" | "moderate" | "high";
   requiredCapabilities?: string[];
+  requiredResources?: Array<{ resourceType: string; resourceId: string; permission: string }>;
   maximumAttempts?: number;
   timeoutSeconds?: number;
   approvalPolicy?: Record<string, unknown>;
@@ -70,6 +71,7 @@ export function createTaskEvent(input: CreateTaskInput): NewDomainEvent {
       priority: input.priority,
       riskLevel: input.riskLevel,
       requiredCapabilities: input.requiredCapabilities ?? [],
+      requiredResources: input.requiredResources ?? [],
       maximumAttempts,
       timeoutSeconds: input.timeoutSeconds ?? null,
       approvalPolicy: input.approvalPolicy ?? {},

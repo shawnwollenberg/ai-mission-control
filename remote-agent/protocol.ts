@@ -16,12 +16,16 @@ export const inboundMessageTypes = [
   "ExecutionCancellationAcknowledged",
   "AgentHeartbeat",
   "AgentCapabilitiesReported",
+  "ApprovalDecisionAcknowledged",
 ] as const;
 export const outboundMessageTypes = [
   "ExecutionRequested",
   "ExecutionResumeRequested",
   "ExecutionCancellationRequested",
-  "ApprovalDecisionDelivered",
+  "ApprovalGranted",
+  "ApprovalDenied",
+  "ApprovalExpired",
+  "ApprovalCancelled",
   "AgentConfigurationChanged",
 ] as const;
 export type InboundMessageType = (typeof inboundMessageTypes)[number];

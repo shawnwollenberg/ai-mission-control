@@ -8,6 +8,12 @@ import {
   releaseProtocolMessage,
   reserveProtocolMessage,
 } from "@/application/remote-agent-messages";
+import {
+  auditProtocolSecurityFailure,
+  enforceProtocolRateLimit,
+  rateCategory,
+  securityReason,
+} from "@/remote-agent/security";
 
 const path = "/api/agent-protocol/v1/messages";
 export async function POST(request: Request) {
@@ -18,6 +24,7 @@ export async function POST(request: Request) {
       workspaceId: authenticated.credential.workspace_id,
       messageId: authenticated.headers.messageId,
     });
+    await enforceProtocolRateLimit(authenticated.credential.workspace_id, message.agentId, rateCategory(message));
     const receipt = await reserveProtocolMessage({
       credential: authenticated.credential,
       message,
@@ -41,6 +48,7 @@ export async function POST(request: Request) {
       throw error;
     }
   } catch (error) {
+    await auditProtocolSecurityFailure(request, securityReason(error)).catch(() => undefined);
     return apiErrorResponse(error, "agent_protocol_message_rejected");
   }
 }

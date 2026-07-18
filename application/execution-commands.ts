@@ -15,6 +15,7 @@ import { getDatabasePool } from "@/lib/database";
 import { enqueueJob } from "@/lib/job-store";
 import { handleTaskTransition } from "@/application/task-commands";
 import { stableUuid } from "@/lib/stable-id";
+import { evaluateAgentEligibility, type RequiredResource } from "@/application/agent-eligibility";
 export type ExecutionActor = { workspaceId: string; id: string; type: ActorType };
 type DispatchTaskRow = { mission_id: string; status: string; current_attempt: number; timeout_seconds: number | null };
 async function append(
@@ -135,40 +136,25 @@ export async function handleRequestRemoteExecution(input: {
         expected_output: string | null;
         required_capabilities: string[];
         domain: string;
+        required_resources: RequiredResource[];
       }
     >(
-      `SELECT t.mission_id,t.status,t.current_attempt,t.timeout_seconds,t.name,t.instructions,t.expected_output,t.required_capabilities,m.domain FROM task_projections t JOIN mission_projections m ON m.workspace_id=t.workspace_id AND m.mission_id=t.mission_id WHERE t.workspace_id=$1 AND t.task_id=$2`,
+      `SELECT t.mission_id,t.status,t.current_attempt,t.timeout_seconds,t.name,t.instructions,t.expected_output,t.required_capabilities,t.required_resources,m.domain FROM task_projections t JOIN mission_projections m ON m.workspace_id=t.workspace_id AND m.mission_id=t.mission_id WHERE t.workspace_id=$1 AND t.task_id=$2`,
       [input.actor.workspaceId, input.taskId],
     )
   ).rows[0];
   if (!task) throw new NotFoundError("Task");
   if (task.status !== "ready") throw new ValidationFailedError("Task must be ready for execution");
-  const agent = (
-    await getDatabasePool().query<{
-      adapter_type: string;
-      status: string;
-      capabilities: string[];
-      supported_domains: string[];
-      protocol_versions: string[];
-      concurrency_limit: number;
-      current_executions: number;
-      last_heartbeat_at: Date | null;
-    }>(
-      `SELECT a.*,count(e.*) FILTER(WHERE e.status NOT IN('succeeded','failed','timed_out','cancelled'))::int current_executions FROM agents a LEFT JOIN execution_projections e ON e.workspace_id=a.workspace_id AND e.agent_id=a.agent_id WHERE a.workspace_id=$1 AND a.agent_id=$2 GROUP BY a.workspace_id,a.agent_id`,
-      [input.actor.workspaceId, input.agentId],
-    )
-  ).rows[0];
-  if (!agent || agent.adapter_type !== "remote_http")
-    throw new ValidationFailedError("A registered remote HTTP agent is required");
-  if (agent.status !== "active" || !agent.last_heartbeat_at || Date.now() - agent.last_heartbeat_at.getTime() > 90_000)
-    throw new ValidationFailedError("Remote agent is not active with a fresh heartbeat");
-  if (
-    !agent.supported_domains.includes(task.domain) ||
-    task.required_capabilities.some((capability) => !agent.capabilities.includes(capability))
-  )
-    throw new ValidationFailedError("Remote agent is missing the task domain or required capabilities");
-  if (!agent.protocol_versions.includes("1.0") || agent.current_executions >= agent.concurrency_limit)
-    throw new ValidationFailedError("Remote agent is not eligible for another protocol 1.0 execution");
+  const eligibility = await evaluateAgentEligibility({
+    workspaceId: input.actor.workspaceId,
+    agentId: input.agentId,
+    domain: task.domain,
+    requiredCapabilities: task.required_capabilities,
+    requiredResources: task.required_resources,
+    protocolVersion: "1.0",
+  });
+  if (!eligibility.eligible)
+    throw new ValidationFailedError("Remote agent is ineligible", { reasons: eligibility.reasons });
   const executionId = input.executionId ?? randomUUID(),
     attempt = task.current_attempt + 1,
     timeoutSeconds = input.timeoutSeconds ?? task.timeout_seconds ?? 3600,
@@ -213,6 +199,7 @@ export async function handleRequestRemoteExecution(input: {
             instructions: task.instructions,
             expectedOutput: task.expected_output,
             allowedCapabilities: task.required_capabilities,
+            allowedResources: task.required_resources,
             prohibitedActions: [
               "merge",
               "deploy",
@@ -269,7 +256,12 @@ export async function handleExecutionFact(input: {
   actor: ExecutionActor;
   commandId: string;
   executionId: string;
-  type: "execution.progress_reported" | "execution.command_completed" | "execution.artifact_produced";
+  type:
+    | "execution.progress_reported"
+    | "execution.command_completed"
+    | "execution.artifact_produced"
+    | "execution.remote_approval_denied"
+    | "execution.approval_decision_acknowledged";
   payload: Record<string, unknown>;
 }) {
   const events = await loadAggregateEvents({

@@ -16,6 +16,7 @@ export async function deliverRemoteMessage(workspaceId: string, payload: Record<
   const path = new URL(row.endpoint).pathname || "/",
     sentAt = new Date().toISOString(),
     nonce = randomBytes(18).toString("base64url");
+  const isExecution = String(payload.messageType).startsWith("Execution");
   const envelope: ProtocolEnvelope = {
     protocolVersion: "1.0",
     messageId,
@@ -25,12 +26,16 @@ export async function deliverRemoteMessage(workspaceId: string, payload: Record<
     sentAt,
     messageType: payload.messageType as ProtocolEnvelope["messageType"],
     correlationId: String(payload.missionId ?? payload.executionId),
-    missionId: String(payload.missionId),
-    taskId: String(payload.taskId),
-    executionId: String(payload.executionId),
-    attempt: Number(payload.attempt),
+    ...(isExecution
+      ? {
+          missionId: String(payload.missionId),
+          taskId: String(payload.taskId),
+          executionId: String(payload.executionId),
+          attempt: Number(payload.attempt),
+        }
+      : {}),
     payload: {
-      ...(payload.taskEnvelope as Record<string, unknown>),
+      ...((isExecution ? payload.taskEnvelope : payload.decisionPayload) as Record<string, unknown>),
       callback: {
         url: `${process.env.MISSION_CONTROL_PUBLIC_URL ?? "http://127.0.0.1:3000"}/api/agent-protocol/v1/messages`,
       },
@@ -75,12 +80,22 @@ export async function deliverRemoteMessage(workspaceId: string, payload: Record<
       "UPDATE webhook_deliveries SET status='delivered',attempt_count=attempt_count+1,response_status=$3,response_summary='transport acknowledged',delivered_at=now(),updated_at=now() WHERE workspace_id=$1 AND message_id=$2",
       [workspaceId, messageId, response.status],
     );
+    if (String(payload.messageType).startsWith("Approval"))
+      await getDatabasePool().query(
+        "UPDATE approval_projections SET remote_decision_delivery_status=CASE WHEN remote_decision_delivery_status='acknowledged' THEN 'acknowledged' ELSE 'delivered' END,remote_decision_message_id=$3,remote_decision_delivered_at=now() WHERE workspace_id=$1 AND approval_id=$2",
+        [workspaceId, payload.approvalId, messageId],
+      );
     return acknowledgement;
   } catch (error) {
     await getDatabasePool().query(
       "UPDATE webhook_deliveries SET status='failed',attempt_count=attempt_count+1,last_error_class='retryable_transport',response_summary=$3,updated_at=now() WHERE workspace_id=$1 AND message_id=$2",
       [workspaceId, messageId, error instanceof Error ? error.message : "Remote delivery failed"],
     );
+    if (String(payload.messageType).startsWith("Approval"))
+      await getDatabasePool().query(
+        "UPDATE approval_projections SET remote_decision_delivery_status='failed',remote_decision_message_id=$3 WHERE workspace_id=$1 AND approval_id=$2",
+        [workspaceId, payload.approvalId, messageId],
+      );
     throw error;
   }
 }

@@ -325,6 +325,10 @@ Provide threat-model test evidence and policy matrix; stop for security review.
 6. Mixed Hermes analysis and Codex implementation mission with separate push and PR approvals.
 7. Full security, recovery, projection rebuild, browser, and operational validation.
 
+### Completion status
+
+Phase 4 implementation and genuine DeFi/mixed-agent acceptance completed on 2026-07-18. Credential lifecycle, deterministic health and eligibility, separate resource grants, durable remote approvals, browser supervision, analysis-only DeFi, and a Hermes-to-Codex handoff are operational. The exact Codex commit was pushed after a separate approval. PR creation remained safely unperformed because GitHub rejected the fixture branch's unrelated history; no history rewrite or authority expansion was attempted. See `docs/PHASE_4_COMPLETION_REPORT.md` and `docs/PHASE_4_OPERATIONS.md`.
+
 ### Acceptance criteria
 
 - At least one genuine Hermes execution and one mixed Hermes/Codex mission use the generic protocol and existing aggregates.

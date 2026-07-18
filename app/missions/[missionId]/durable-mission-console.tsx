@@ -25,6 +25,18 @@ const availableCommands: Record<string, Array<{ command: string; label: string }
     { command: "cancel", label: "Cancel" },
   ],
 };
+const modeLabel = (mode: string) =>
+  mode === "live_codex"
+    ? "Live Codex execution"
+    : mode === "live_remote"
+      ? "Live Hermes execution"
+      : "Simulated execution";
+const modeDescription = (mode: string) =>
+  mode === "live_remote"
+    ? "Authenticated remote work is durably delivered and supervised."
+    : mode === "live_codex"
+      ? "Connected work is isolated and supervised."
+      : "No connected agent is running.";
 
 export default function DurableMissionConsole({
   initialMission,
@@ -155,12 +167,8 @@ export default function DurableMissionConsole({
       </header>
       <section className="execution-mode">
         <span>Execution mode</span>
-        <strong>{mission.executionMode === "live_codex" ? "Live Codex execution" : "Simulated execution"}</strong>
-        <small>
-          {mission.executionMode === "live_codex"
-            ? "Connected work is isolated and supervised."
-            : "No connected agent is running."}
-        </small>
+        <strong>{modeLabel(mission.executionMode)}</strong>
+        <small>{modeDescription(mission.executionMode)}</small>
       </section>
       <section className="durable-grid">
         <section className="command-panel mission-summary">
@@ -231,7 +239,11 @@ export default function DurableMissionConsole({
               <div>
                 <p className="section-label">Execution supervision</p>
                 <h2>
-                  {executions.some((e) => e.adapterType === "codex") ? "Live Codex execution" : "Simulated execution"}
+                  {executions.some((e) => e.adapterType === "remote_http")
+                    ? "Live Hermes execution"
+                    : executions.some((e) => e.adapterType === "codex")
+                      ? "Live Codex execution"
+                      : "Simulated execution"}
                 </h2>
               </div>
               <span>{executions.length} attempts</span>
@@ -322,8 +334,8 @@ export default function DurableMissionConsole({
             </span>
           </div>
           <p>
-            <strong>{mission.executionMode === "live_codex" ? "Live Codex execution" : "Simulated execution"}</strong> ·{" "}
-            {mission.readyTaskCount} ready · {mission.runningTaskCount} active · {mission.blockedTaskCount} blocked
+            <strong>{modeLabel(mission.executionMode)}</strong> · {mission.readyTaskCount} ready ·{" "}
+            {mission.runningTaskCount} active · {mission.blockedTaskCount} blocked
           </p>
           <div className="log-list">
             {tasks.map((task) => (

@@ -87,7 +87,37 @@ export async function getAgentDetail(workspaceId: string, agentId: string) {
       [workspaceId, agentId],
     )
   ).rows;
-  return { agent, executions };
+  const credentials = (
+    await getDatabasePool().query(
+      "SELECT credential_id,version,status,created_at,last_used_at,verified_at,expires_at,overlap_ends_at,revoked_at FROM agent_credentials WHERE workspace_id=$1 AND agent_id=$2 ORDER BY version DESC",
+      [workspaceId, agentId],
+    )
+  ).rows;
+  const resources = (
+    await getDatabasePool().query(
+      "SELECT resource_type,resource_id,permissions,created_at,revoked_at FROM agent_resource_permissions WHERE workspace_id=$1 AND agent_id=$2 ORDER BY resource_type,resource_id",
+      [workspaceId, agentId],
+    )
+  ).rows;
+  const deliveries = (
+    await getDatabasePool().query(
+      "SELECT message_type,status,attempt_count,response_status,response_summary,created_at,delivered_at FROM webhook_deliveries WHERE workspace_id=$1 AND agent_id=$2 ORDER BY created_at DESC LIMIT 20",
+      [workspaceId, agentId],
+    )
+  ).rows;
+  const artifacts = (
+    await getDatabasePool().query(
+      `SELECT artifact_id,kind,media_type,byte_size,checksum_sha256,created_at FROM artifacts WHERE workspace_id=$1 AND execution_id IN (SELECT execution_id FROM execution_projections WHERE workspace_id=$1 AND agent_id=$2) AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 20`,
+      [workspaceId, agentId],
+    )
+  ).rows;
+  const securityEvents = (
+    await getDatabasePool().query(
+      "SELECT reason_code,occurred_at,metadata FROM protocol_security_events WHERE workspace_id=$1 AND agent_id=$2 ORDER BY occurred_at DESC LIMIT 20",
+      [workspaceId, agentId],
+    )
+  ).rows;
+  return { agent, executions, credentials, resources, deliveries, artifacts, securityEvents };
 }
 export async function registerRepository(input: {
   actor: RegistryActor;
