@@ -6,7 +6,7 @@ import { handleTaskTransition } from "@/application/task-commands";
 import { coordinateAfterTask } from "@/application/mission-coordinator";
 import { stableUuid } from "@/lib/stable-id";
 import { createExecutionWorktree } from "@/execution/worktree-manager";
-import { runSafeProcess } from "@/execution/safe-process";
+import { runSafeProcess, type ProcessResult } from "@/execution/safe-process";
 import { storeExecutionArtifact } from "@/execution/artifact-store";
 import { validateExecutionRequest, type ExecutionRequest } from "@/execution/protocol";
 type Context = {
@@ -30,6 +30,8 @@ type Context = {
   push_allowed: boolean;
   merge_allowed: boolean;
   deployment_allowed: boolean;
+  worktree_path: string | null;
+  branch_name: string | null;
 };
 const actor = (workspaceId: string, workerId: string) => ({ workspaceId, id: workerId, type: "agent" as const });
 const command = (executionId: string, action: string) => stableUuid(`codex:${executionId}:${action}`);
@@ -96,48 +98,81 @@ export async function executeCodex(input: {
       target: "accepted",
       details: { workerId: input.workerId, stage: "accepted" },
     });
-  await handleExecutionTransition({
-    actor: a,
-    commandId: command(input.executionId, "prepare"),
-    executionId: input.executionId,
-    target: "preparing",
-    details: { workerId: input.workerId, stage: "preparing_repository" },
-  });
-  let worktree;
-  try {
-    worktree = await createExecutionWorktree({
-      repositoryPath: row.local_path,
-      repositoryRoot: process.env.CODEX_REPOSITORY_ROOT!,
-      worktreeRoot: process.env.CODEX_WORKTREE_ROOT!,
-      missionId: row.mission_id,
-      taskId: row.task_id,
-      executionId: row.execution_id,
-      baseRef: row.default_branch,
+  let currentStatus = (await context(input.workspaceId, input.executionId)).status;
+  if (currentStatus === "accepted")
+    await handleExecutionTransition({
+      actor: a,
+      commandId: command(input.executionId, "prepare"),
+      executionId: input.executionId,
+      target: "preparing",
+      details: { workerId: input.workerId, stage: "preparing_repository" },
     });
-  } catch (error) {
-    await fail(a, row, "repository_unavailable", "requires-human-review", error);
-    throw error;
-  }
-  await handleExecutionTransition({
-    actor: a,
-    commandId: command(input.executionId, "start"),
-    executionId: input.executionId,
-    target: "running",
-    details: {
-      workerId: input.workerId,
-      stage: "running_codex",
-      branchName: worktree.branchName,
-      worktreePath: worktree.worktreePath,
-    },
-  });
-  await handleTaskTransition({
-    actor: a,
-    commandId: command(input.executionId, "task-start"),
-    taskId: row.task_id,
-    target: "running",
-  });
+  const current = await context(input.workspaceId, input.executionId);
+  currentStatus = current.status;
+  let worktree = current.worktree_path
+    ? {
+        repositoryPath: row.local_path,
+        worktreePath: current.worktree_path,
+        branchName: current.branch_name!,
+        baseCommit: "",
+      }
+    : undefined;
+  if (!worktree)
+    try {
+      worktree = await createExecutionWorktree({
+        repositoryPath: row.local_path,
+        repositoryRoot: process.env.CODEX_REPOSITORY_ROOT!,
+        worktreeRoot: process.env.CODEX_WORKTREE_ROOT!,
+        missionId: row.mission_id,
+        taskId: row.task_id,
+        executionId: row.execution_id,
+        baseRef: row.default_branch,
+      });
+      await handleExecutionFact({
+        actor: a,
+        commandId: command(input.executionId, "worktree-ready"),
+        executionId: input.executionId,
+        type: "execution.progress_reported",
+        payload: {
+          stage: "worktree_ready",
+          summary: "Isolated worktree created",
+          branchName: worktree.branchName,
+          worktreePath: worktree.worktreePath,
+        },
+      });
+    } catch (error) {
+      await fail(a, row, "repository_unavailable", "requires-human-review", error);
+      throw error;
+    }
+  currentStatus = (await context(input.workspaceId, input.executionId)).status;
+  if (currentStatus === "preparing")
+    await handleExecutionTransition({
+      actor: a,
+      commandId: command(input.executionId, "start"),
+      executionId: input.executionId,
+      target: "running",
+      details: {
+        workerId: input.workerId,
+        stage: "running_codex",
+        branchName: worktree.branchName,
+        worktreePath: worktree.worktreePath,
+      },
+    });
+  const taskStatus = (
+    await getDatabasePool().query<{ status: string }>(
+      "SELECT status FROM task_projections WHERE workspace_id=$1 AND task_id=$2",
+      [row.workspace_id, row.task_id],
+    )
+  ).rows[0]?.status;
+  if (taskStatus === "assigned")
+    await handleTaskTransition({
+      actor: a,
+      commandId: command(input.executionId, "task-start"),
+      taskId: row.task_id,
+      target: "running",
+    });
   const promptBody = prompt(request, worktree.worktreePath);
-  await storeExecutionArtifact({
+  await storeOnce({
     workspaceId: row.workspace_id,
     missionId: row.mission_id,
     taskId: row.task_id,
@@ -146,13 +181,25 @@ export async function executeCodex(input: {
     mediaType: "text/plain",
     body: promptBody,
   });
-  await handleExecutionFact({
-    actor: a,
-    commandId: command(input.executionId, "progress-codex"),
-    executionId: input.executionId,
-    type: "execution.progress_reported",
-    payload: { stage: "editing_files", summary: "Codex started in the isolated worktree" },
-  });
+  currentStatus = (await context(input.workspaceId, input.executionId)).status;
+  if (currentStatus === "running")
+    await handleExecutionFact({
+      actor: a,
+      commandId: command(input.executionId, "progress-codex"),
+      executionId: input.executionId,
+      type: "execution.progress_reported",
+      payload: { stage: "editing_files", summary: "Codex started in the isolated worktree" },
+    });
+  currentStatus = (await context(input.workspaceId, input.executionId)).status;
+  let result: ProcessResult = {
+    exitCode: 0,
+    signal: null,
+    stdout: "Recovered execution after Codex process completion",
+    stderr: "",
+    timedOut: false,
+    cancelled: false,
+    durationMs: 0,
+  };
   const executable = process.env.CODEX_EXECUTABLE ?? "codex",
     prefix = process.env.CODEX_EXECUTABLE_ARGS_JSON
       ? (JSON.parse(process.env.CODEX_EXECUTABLE_ARGS_JSON) as string[])
@@ -167,22 +214,23 @@ export async function executeCodex(input: {
           worktree.worktreePath,
           "-",
         ];
-  const result = await runSafeProcess({
-    executable,
-    args: prefix,
-    cwd: worktree.worktreePath,
-    allowedRoot: process.env.CODEX_WORKTREE_ROOT!,
-    env: {
-      PATH: process.env.CODEX_RUNTIME_PATH ?? process.env.PATH ?? "",
-      ...(process.env.CODEX_HOME ? { CODEX_HOME: process.env.CODEX_HOME } : {}),
-    },
-    stdin: promptBody,
-    timeoutMs: request.timeoutSeconds * 1000,
-    maxOutputBytes: 2_000_000,
-    signal: input.signal,
-    redact: (process.env.CODEX_REDACT_VALUES ?? "").split(",").filter(Boolean),
-  });
-  await storeExecutionArtifact({
+  if (currentStatus === "running")
+    result = await runSafeProcess({
+      executable,
+      args: prefix,
+      cwd: worktree.worktreePath,
+      allowedRoot: process.env.CODEX_WORKTREE_ROOT!,
+      env: {
+        PATH: process.env.CODEX_RUNTIME_PATH ?? process.env.PATH ?? "",
+        ...(process.env.CODEX_HOME ? { CODEX_HOME: process.env.CODEX_HOME } : {}),
+      },
+      stdin: promptBody,
+      timeoutMs: request.timeoutSeconds * 1000,
+      maxOutputBytes: 2_000_000,
+      signal: input.signal,
+      redact: (process.env.CODEX_REDACT_VALUES ?? "").split(",").filter(Boolean),
+    });
+  await storeOnce({
     workspaceId: row.workspace_id,
     missionId: row.mission_id,
     taskId: row.task_id,
@@ -191,6 +239,22 @@ export async function executeCodex(input: {
     mediaType: "application/jsonl",
     body: `${result.stdout}\n${result.stderr}`,
   });
+  const externalExecutionId = result.stdout.split("\n").flatMap((line) => {
+    try {
+      const parsed = JSON.parse(line) as { thread_id?: unknown };
+      return typeof parsed.thread_id === "string" ? [parsed.thread_id] : [];
+    } catch {
+      return [];
+    }
+  })[0];
+  if (externalExecutionId)
+    await handleExecutionFact({
+      actor: a,
+      commandId: command(input.executionId, "external-id"),
+      executionId: input.executionId,
+      type: "execution.progress_reported",
+      payload: { stage: "codex_completed", summary: "Codex process returned", externalExecutionId },
+    });
   if (result.cancelled) {
     await cancel(a, row);
     return { terminal: true, status: "cancelled" };
@@ -203,13 +267,15 @@ export async function executeCodex(input: {
     await fail(a, row, "execution_failure", "requires-human-review", new Error(`Codex exited ${result.exitCode}`));
     return { terminal: true, status: "failed" };
   }
-  await handleExecutionTransition({
-    actor: a,
-    commandId: command(input.executionId, "verify"),
-    executionId: input.executionId,
-    target: "verifying",
-    details: { stage: "running_tests" },
-  });
+  currentStatus = (await context(input.workspaceId, input.executionId)).status;
+  if (currentStatus === "running")
+    await handleExecutionTransition({
+      actor: a,
+      commandId: command(input.executionId, "verify"),
+      executionId: input.executionId,
+      target: "verifying",
+      details: { stage: "running_tests" },
+    });
   await handleTaskTransition({
     actor: a,
     commandId: command(input.executionId, "task-verify"),
@@ -229,7 +295,7 @@ export async function executeCodex(input: {
       signal: input.signal,
       redact: (process.env.CODEX_REDACT_VALUES ?? "").split(",").filter(Boolean),
     });
-    await storeExecutionArtifact({
+    await storeOnce({
       workspaceId: row.workspace_id,
       missionId: row.mission_id,
       taskId: row.task_id,
@@ -254,9 +320,17 @@ export async function executeCodex(input: {
       return { terminal: true, status: "failed" };
     }
   }
-  const patch = await git(worktree.worktreePath, ["diff", "--binary", "HEAD"]);
+  let patch = await git(worktree.worktreePath, ["diff", "--binary", "HEAD"]);
   const status = await git(worktree.worktreePath, ["status", "--short"]);
-  await storeExecutionArtifact({
+  let existingCommit: string | undefined;
+  if (!status.stdout.trim()) {
+    const subject = (await git(worktree.worktreePath, ["log", "-1", "--format=%s"])).stdout.trim();
+    if (subject.includes(row.execution_id)) {
+      existingCommit = (await git(worktree.worktreePath, ["rev-parse", "HEAD"])).stdout.trim();
+      patch = await git(worktree.worktreePath, ["show", "--binary", "--format=", existingCommit]);
+    }
+  }
+  await storeOnce({
     workspaceId: row.workspace_id,
     missionId: row.mission_id,
     taskId: row.task_id,
@@ -265,7 +339,7 @@ export async function executeCodex(input: {
     mediaType: "text/x-diff",
     body: patch.stdout,
   });
-  await storeExecutionArtifact({
+  await storeOnce({
     workspaceId: row.workspace_id,
     missionId: row.mission_id,
     taskId: row.task_id,
@@ -274,7 +348,7 @@ export async function executeCodex(input: {
     mediaType: "text/plain",
     body: status.stdout,
   });
-  if (!status.stdout.trim()) {
+  if (!status.stdout.trim() && !existingCommit) {
     await fail(a, row, "execution_failure", "requires-human-review", new Error("Codex produced no repository changes"));
     return { terminal: true, status: "failed" };
   }
@@ -282,23 +356,26 @@ export async function executeCodex(input: {
     await fail(a, row, "invalid_configuration", "non-retryable", new Error("Repository does not permit local commits"));
     return { terminal: true, status: "failed" };
   }
-  await git(worktree.worktreePath, ["add", "--all"]);
-  const committed = await git(worktree.worktreePath, [
-    "-c",
-    "user.name=Mission Control Codex",
-    "-c",
-    "user.email=codex@localhost",
-    "commit",
-    "-m",
-    `codex: complete execution ${row.execution_id}`,
-  ]);
-  if (committed.exitCode !== 0) {
-    await fail(a, row, "command_failure", "requires-human-review", new Error(committed.stderr));
-    return { terminal: true, status: "failed" };
+  let commit = existingCommit;
+  if (!commit) {
+    await git(worktree.worktreePath, ["add", "--all"]);
+    const committed = await git(worktree.worktreePath, [
+      "-c",
+      "user.name=Mission Control Codex",
+      "-c",
+      "user.email=codex@localhost",
+      "commit",
+      "-m",
+      `codex: complete execution ${row.execution_id}`,
+    ]);
+    if (committed.exitCode !== 0) {
+      await fail(a, row, "command_failure", "requires-human-review", new Error(committed.stderr));
+      return { terminal: true, status: "failed" };
+    }
+    commit = (await git(worktree.worktreePath, ["rev-parse", "HEAD"])).stdout.trim();
   }
-  const commit = (await git(worktree.worktreePath, ["rev-parse", "HEAD"])).stdout.trim();
   const summary = result.stdout.split("\n").filter(Boolean).at(-1)?.slice(0, 1000) ?? "Codex execution completed";
-  await storeExecutionArtifact({
+  await storeOnce({
     workspaceId: row.workspace_id,
     missionId: row.mission_id,
     taskId: row.task_id,
@@ -342,6 +419,13 @@ async function git(cwd: string, args: string[]) {
     maxOutputBytes: 2_000_000,
   });
 }
+async function storeOnce(input: Parameters<typeof storeExecutionArtifact>[0]) {
+  const exists = await getDatabasePool().query(
+    "SELECT 1 FROM artifacts WHERE workspace_id=$1 AND execution_id=$2 AND kind=$3 AND deleted_at IS NULL",
+    [input.workspaceId, input.executionId, input.kind],
+  );
+  return exists.rowCount ? undefined : storeExecutionArtifact(input);
+}
 async function fail(
   a: ReturnType<typeof actor>,
   row: Context,
@@ -361,6 +445,14 @@ async function fail(
       retryDisposition,
     },
   });
+  await handleTaskTransition({
+    actor: a,
+    commandId: command(row.execution_id, `task-fail-${classification}`),
+    taskId: row.task_id,
+    target: "failed",
+    details: { reason: error instanceof Error ? error.message : String(error), classification },
+  });
+  await coordinateAfterTask(row.workspace_id, row.mission_id, row.task_id, "task.failed");
 }
 async function cancel(a: ReturnType<typeof actor>, row: Context) {
   await handleExecutionTransition({
@@ -386,4 +478,12 @@ async function timeout(a: ReturnType<typeof actor>, row: Context) {
     target: "timed_out",
     details: { stage: "timed_out", classification: "timeout", retryDisposition: "requires-human-review" },
   });
+  await handleTaskTransition({
+    actor: a,
+    commandId: command(row.execution_id, "task-timeout"),
+    taskId: row.task_id,
+    target: "failed",
+    details: { reason: "execution_timeout", classification: "timeout" },
+  });
+  await coordinateAfterTask(row.workspace_id, row.mission_id, row.task_id, "task.failed");
 }

@@ -14,8 +14,9 @@ const log = (event: string, data: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ event, workerId, ...data }));
 async function main() {
   log("codex_worker_started");
+  const leaseSeconds = Number(process.env.CODEX_JOB_LEASE_SECONDS ?? 90);
   while (!stopping) {
-    const job = await claimJob(workerId, 90, undefined, "execute_codex");
+    const job = await claimJob(workerId, leaseSeconds, undefined, "execute_codex");
     if (!job) {
       await new Promise((resolve) => setTimeout(resolve, Number(process.env.WORKER_POLL_MS ?? 1000)));
       continue;
@@ -38,10 +39,17 @@ async function main() {
           ).rows[0];
           if (!execution) return;
           if (execution.cancellation_requested_at) abort.abort();
-          await renewJobLease(job.jobId, workerId, 90);
+          await renewJobLease(job.jobId, workerId, leaseSeconds);
           await getDatabasePool().query(
-            `INSERT INTO execution_heartbeats(workspace_id,execution_id,agent_id,worker_id,stage,received_at,lease_expires_at) VALUES($1,$2,$3,$4,$5,now(),now()+interval '90 seconds') ON CONFLICT(workspace_id,execution_id) DO UPDATE SET worker_id=EXCLUDED.worker_id,stage=EXCLUDED.stage,received_at=now(),lease_expires_at=EXCLUDED.lease_expires_at`,
-            [execution.workspace_id, executionId, execution.agent_id, workerId, execution.stage ?? "claimed"],
+            `INSERT INTO execution_heartbeats(workspace_id,execution_id,agent_id,worker_id,stage,received_at,lease_expires_at) VALUES($1,$2,$3,$4,$5,now(),now()+($6*interval '1 second')) ON CONFLICT(workspace_id,execution_id) DO UPDATE SET worker_id=EXCLUDED.worker_id,stage=EXCLUDED.stage,received_at=now(),lease_expires_at=EXCLUDED.lease_expires_at`,
+            [
+              execution.workspace_id,
+              executionId,
+              execution.agent_id,
+              workerId,
+              execution.stage ?? "claimed",
+              leaseSeconds,
+            ],
           );
           await getDatabasePool().query(
             "UPDATE agents SET last_heartbeat_at=now(),status=CASE WHEN status='disabled' THEN status ELSE 'active' END,updated_at=now() WHERE workspace_id=$1 AND agent_id=$2",
@@ -68,6 +76,7 @@ async function main() {
     } finally {
       clearInterval(heartbeat);
     }
+    if (process.env.CODEX_WORKER_ONCE === "1") stopping = true;
   }
   log("codex_worker_stopped");
 }

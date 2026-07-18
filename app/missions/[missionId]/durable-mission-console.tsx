@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BrandSprite } from "@/app/brand-assets";
 import type { MissionReadModel } from "@/lib/mission-projection-store";
 import type { MissionTimelineEntry } from "@/lib/mission-queries";
-import type { ApprovalReadModel, TaskReadModel } from "@/lib/execution-queries";
+import type { ApprovalReadModel, ExecutionReadModel, TaskReadModel } from "@/lib/execution-queries";
 
 const availableCommands: Record<string, Array<{ command: string; label: string }>> = {
   draft: [
@@ -31,16 +31,19 @@ export default function DurableMissionConsole({
   initialTimeline,
   initialTasks,
   initialApprovals,
+  initialExecutions,
 }: {
   initialMission: MissionReadModel;
   initialTimeline: MissionTimelineEntry[];
   initialTasks: TaskReadModel[];
   initialApprovals: ApprovalReadModel[];
+  initialExecutions: ExecutionReadModel[];
 }) {
   const [mission, setMission] = useState(initialMission);
   const [timeline, setTimeline] = useState(initialTimeline);
   const [tasks, setTasks] = useState(initialTasks);
   const [approvals, setApprovals] = useState(initialApprovals);
+  const [executions, setExecutions] = useState(initialExecutions);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
@@ -56,10 +59,12 @@ export default function DurableMissionConsole({
           mission: MissionReadModel;
           tasks: TaskReadModel[];
           approvals: ApprovalReadModel[];
+          executions: ExecutionReadModel[];
         };
         setMission(body.mission);
         setTasks(body.tasks);
         setApprovals(body.approvals);
+        setExecutions(body.executions);
       }
       if (timelineResponse.ok)
         setTimeline(((await timelineResponse.json()) as { timeline: MissionTimelineEntry[] }).timeline);
@@ -75,6 +80,16 @@ export default function DurableMissionConsole({
       body: JSON.stringify({ decision, reason: `${decision} recorded in Mission Control` }),
     });
     if (!response.ok) setError("Approval decision could not be recorded.");
+    setPending(false);
+  }
+  async function cancelExecution(executionId: string) {
+    setPending(true);
+    const response = await fetch(`/api/executions/${executionId}/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+      body: "{}",
+    });
+    if (!response.ok) setError("Execution cancellation could not be requested.");
     setPending(false);
   }
 
@@ -135,8 +150,12 @@ export default function DurableMissionConsole({
       </header>
       <section className="execution-mode">
         <span>Execution mode</span>
-        <strong>Simulated execution</strong>
-        <small>No connected agent is running.</small>
+        <strong>{mission.executionMode === "live_codex" ? "Live Codex execution" : "Simulated execution"}</strong>
+        <small>
+          {mission.executionMode === "live_codex"
+            ? "Connected work is isolated and supervised."
+            : "No connected agent is running."}
+        </small>
       </section>
       <section className="durable-grid">
         <section className="command-panel mission-summary">
@@ -201,6 +220,57 @@ export default function DurableMissionConsole({
             </p>
           )}
         </section>
+        {executions.length > 0 && (
+          <section className="command-panel mission-summary">
+            <div className="panel-title">
+              <div>
+                <p className="section-label">Execution supervision</p>
+                <h2>
+                  {executions.some((e) => e.adapterType === "codex") ? "Live Codex execution" : "Simulated execution"}
+                </h2>
+              </div>
+              <span>{executions.length} attempts</span>
+            </div>
+            {executions.map((execution) => (
+              <div className="approval-card" key={execution.executionId}>
+                <strong>
+                  {execution.agentName ?? execution.agentId ?? "Agent"} · {execution.status}
+                </strong>
+                <p>
+                  Execution {execution.executionId.slice(0, 8)} · attempt {execution.attempt} · stage{" "}
+                  {execution.stage ?? "requested"}
+                </p>
+                <p>{execution.progressSummary ?? "Waiting for progress"}</p>
+                <small>
+                  Last heartbeat:{" "}
+                  {execution.lastHeartbeat ? new Date(execution.lastHeartbeat).toLocaleString() : "Not received"} ·{" "}
+                  {execution.commandsCompleted} commands · {execution.artifacts.length} artifacts
+                </small>
+                {execution.commitId && (
+                  <p>
+                    Local commit: <code>{execution.commitId}</code>
+                  </p>
+                )}
+                {execution.failureClassification && <p>Failure: {execution.failureClassification}</p>}
+                <ul>
+                  {execution.artifacts.map((artifact) => (
+                    <li key={artifact.artifactId}>
+                      {artifact.kind} · {artifact.byteSize} bytes · {artifact.checksum.slice(0, 12)}
+                    </li>
+                  ))}
+                </ul>
+                {!["succeeded", "failed", "timed_out", "cancelled"].includes(execution.status) && (
+                  <button
+                    disabled={pending || Boolean(execution.cancellationRequestedAt)}
+                    onClick={() => cancelExecution(execution.executionId)}
+                  >
+                    {execution.cancellationRequestedAt ? "Cancellation requested" : "Cancel execution"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </section>
+        )}
         <section className="command-panel mission-summary">
           <div className="panel-title">
             <div>
@@ -212,7 +282,7 @@ export default function DurableMissionConsole({
             </span>
           </div>
           <p>
-            <strong>{mission.executionMode === "simulated" ? "Simulated execution" : mission.executionMode}</strong> ·{" "}
+            <strong>{mission.executionMode === "live_codex" ? "Live Codex execution" : "Simulated execution"}</strong> ·{" "}
             {mission.readyTaskCount} ready · {mission.runningTaskCount} active · {mission.blockedTaskCount} blocked
           </p>
           <div className="log-list">
@@ -222,8 +292,10 @@ export default function DurableMissionConsole({
                 <div>
                   <strong>{task.name}</strong>
                   <small>
-                    {task.assignedExecutor ?? "Unassigned"} · attempt {task.currentAttempt}/{task.maximumAttempts} ·{" "}
-                    {task.riskLevel} risk
+                    {executions.find((execution) => execution.taskId === task.taskId)?.agentName ??
+                      task.assignedExecutor ??
+                      "Unassigned"}{" "}
+                    · attempt {task.currentAttempt}/{task.maximumAttempts} · {task.riskLevel} risk
                   </small>
                   {task.progressSummary && <p>{task.progressSummary}</p>}
                   {task.blockingDependencies.length > 0 && (
@@ -260,12 +332,16 @@ export default function DurableMissionConsole({
               <p>
                 {mission.name} finished with status <strong>{mission.status}</strong>. {mission.completedTaskCount}{" "}
                 tasks completed, {mission.failedTaskCount} failed, and {mission.cancelledTaskCount} were cancelled.{" "}
-                {timeline.length} canonical events and {approvals.length} approval decisions were recorded over{" "}
+                {timeline.length} canonical events,{" "}
+                {approvals.filter((approval) => approval.status !== "pending").length} approval decisions, and{" "}
+                {executions.reduce((count, execution) => count + execution.artifacts.length, 0)} artifacts were recorded
+                over{" "}
                 {Math.max(
                   0,
                   Math.round((new Date(mission.updatedAt).getTime() - new Date(mission.createdAt).getTime()) / 1000),
                 )}{" "}
-                seconds. No artifacts were recorded. The recorded simulation outcome is {mission.status}.
+                seconds. The recorded {mission.executionMode === "live_codex" ? "live Codex" : "simulation"} outcome is{" "}
+                {mission.status}.
               </p>
             </div>
           )}

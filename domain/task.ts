@@ -42,7 +42,7 @@ const transitions: Record<TaskStatus, readonly TaskStatus[]> = {
   pending: ["blocked", "ready", "cancelled"],
   blocked: ["ready", "cancelled"],
   ready: ["assigned", "cancelled"],
-  assigned: ["running", "ready", "cancelled"],
+  assigned: ["running", "ready", "failed", "cancelled"],
   running: ["waiting_for_approval", "paused", "verifying", "failed", "cancelled"],
   waiting_for_approval: ["running", "failed", "cancelled"],
   paused: ["running", "cancelled"],

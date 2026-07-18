@@ -18,6 +18,7 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
       initialTimeline={await getMissionTimeline(identity.workspaceId, missionId)}
       initialTasks={execution.tasks}
       initialApprovals={execution.approvals}
+      initialExecutions={execution.executions}
     />
   );
 }

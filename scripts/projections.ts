@@ -5,6 +5,7 @@ import { loadEventsFromGlobalPosition, type DomainEvent } from "../lib/postgres-
 import { applyMissionProjection } from "../application/mission-projector";
 import { applyTaskProjection } from "../application/task-projector";
 import { applyApprovalProjection } from "../application/approval-commands";
+import { applyExecutionProjection } from "../application/execution-projector";
 const args = process.argv.slice(2);
 const value = (flag: string) => {
   const i = args.indexOf(flag);
@@ -49,6 +50,7 @@ async function snapshot(client: PoolClient) {
     task_projections: "1,2",
     task_dependencies: "1,2,3,4",
     approval_projections: "1,2",
+    execution_projections: "1,2",
   };
   const out: Record<string, unknown> = {};
   for (const [table, order] of Object.entries(tables))
@@ -64,6 +66,7 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
   const suffix = workspace ? " WHERE workspace_id=$1" : "";
   const params = workspace ? [workspace] : [];
   await client.query(`DELETE FROM approval_projections${suffix}`, params);
+  await client.query(`DELETE FROM execution_projections${suffix}`, params);
   await client.query(`DELETE FROM task_projections${suffix}`, params);
   await client.query(`DELETE FROM mission_projections${suffix}`, params);
   for (const event of stream) {
@@ -74,6 +77,7 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
     if (event.aggregateType === "mission") await applyMissionProjection(client, [event]);
     else if (event.aggregateType === "task") await applyTaskProjection(client, [event]);
     else if (event.aggregateType === "approval") await applyApprovalProjection(client, [event]);
+    else if (event.aggregateType === "execution") await applyExecutionProjection(client, [event]);
   }
 }
 async function main() {
