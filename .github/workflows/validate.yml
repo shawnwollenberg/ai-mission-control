@@ -12,6 +12,26 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16.4-bookworm
+        env:
+          POSTGRES_DB: mission_control
+          POSTGRES_USER: mission_control
+          POSTGRES_PASSWORD: mission_control_local
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U mission_control -d mission_control"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://mission_control:mission_control_local@127.0.0.1:54329/mission_control
+      MISSION_CONTROL_OWNER_EMAIL: owner@example.com
+      MISSION_CONTROL_OWNER_NAME: Mission Owner
+      MISSION_CONTROL_OWNER_PASSWORD_HASH: $2b$12$2xRWf/nOhRjQnL0qd8Sx0ON.33RTh0qZS/a30tevLGbpNos/Mc3/S
+      MISSION_CONTROL_SESSION_SECRET: integration-current-session-key-0001,integration-previous-session-key-0002
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,8 +39,11 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run db:seed
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:integration
       - run: npm run build

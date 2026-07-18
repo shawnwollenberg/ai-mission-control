@@ -6,13 +6,16 @@
     "node": ">=22.20.0 <23"
   },
   "scripts": {
+    "auth:hash": "tsx scripts/hash-password.ts",
     "dev": "next dev",
     "build": "next build",
     "db:down": "docker compose down",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
     "db:up": "docker compose up -d --wait postgres",
     "start": "next start",
-    "test": "node --import tsx --test tests/*.test.mjs",
+    "test": "node --import tsx --test tests/mission-outcome.test.mjs",
+    "test:integration": "node --import tsx --test tests/*.integration.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
@@ -21,6 +24,8 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1090.0",
     "@aws-sdk/lib-dynamodb": "^3.1090.0",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.3",
     "next": "16.2.10",
     "pg": "^8.22.0",
     "react": "19.2.7",
