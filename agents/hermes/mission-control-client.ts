@@ -6,7 +6,10 @@ export type HermesAssignment = MissionEvent & {
 };
 
 export class MissionControlClient {
-  constructor(private readonly baseUrl: string, private readonly token: string) {}
+  constructor(
+    private readonly baseUrl: string,
+    private readonly token: string,
+  ) {}
 
   private async request(path: string, init?: RequestInit, timeoutMs = 5_000) {
     const response = await fetch(`${this.baseUrl}${path}`, {

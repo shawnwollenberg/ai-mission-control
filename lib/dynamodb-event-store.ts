@@ -1,11 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
-import {
-  EVENT_SCHEMA_VERSION,
-  type ControlledEventTemplate,
-  type MissionEvent,
-} from "@/lib/mission-events";
+import { EVENT_SCHEMA_VERSION, type ControlledEventTemplate, type MissionEvent } from "@/lib/mission-events";
 
 const tableName = process.env.MISSION_EVENTS_TABLE;
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
@@ -34,11 +30,13 @@ function expiresAt(): number {
 async function readDuplicate(missionId: string, eventId: string): Promise<MissionEvent | undefined> {
   const TableName = requireTable();
   const PK = missionPk(missionId);
-  const marker = await client.send(new GetCommand({
-    TableName,
-    Key: { PK, SK: `IDEMPOTENCY#${eventId}` },
-    ConsistentRead: true,
-  }));
+  const marker = await client.send(
+    new GetCommand({
+      TableName,
+      Key: { PK, SK: `IDEMPOTENCY#${eventId}` },
+      ConsistentRead: true,
+    }),
+  );
   const existingSk = marker.Item?.eventSk as string | undefined;
   if (!existingSk) return undefined;
   const existing = await client.send(new GetCommand({ TableName, Key: { PK, SK: existingSk }, ConsistentRead: true }));
@@ -46,13 +44,15 @@ async function readDuplicate(missionId: string, eventId: string): Promise<Missio
 }
 
 export async function readDynamoMissionEvents(missionId: string): Promise<MissionEvent[]> {
-  const result = await client.send(new QueryCommand({
-    TableName: requireTable(),
-    KeyConditionExpression: "PK = :pk AND begins_with(SK, :event)",
-    ExpressionAttributeValues: { ":pk": missionPk(missionId), ":event": "EVENT#" },
-    ConsistentRead: true,
-    ScanIndexForward: true,
-  }));
+  const result = await client.send(
+    new QueryCommand({
+      TableName: requireTable(),
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :event)",
+      ExpressionAttributeValues: { ":pk": missionPk(missionId), ":event": "EVENT#" },
+      ConsistentRead: true,
+      ScanIndexForward: true,
+    }),
+  );
   return (result.Items ?? []).map((item) => item.event as MissionEvent);
 }
 
@@ -82,45 +82,57 @@ export async function appendDynamoMissionEvent(
       occurredAt: options.occurredAt ?? new Date().toISOString(),
       producer: template.producer,
       correlationId: missionId,
-      ...(options.causationId ?? prior?.eventId ? { causationId: options.causationId ?? prior?.eventId } : {}),
+      ...((options.causationId ?? prior?.eventId) ? { causationId: options.causationId ?? prior?.eventId } : {}),
       ...(template.subject ? { subject: template.subject } : {}),
       data: template.data,
     };
     const SK = eventSk(sequence, id);
     const ttl = expiresAt();
     try {
-      await client.send(new TransactWriteCommand({
-        TransactItems: [
-          {
-            Update: {
-              TableName,
-              Key: { PK, SK: "META" },
-              UpdateExpression: "SET nextSequence = :next, expiresAt = :ttl, missionId = :missionId",
-              ConditionExpression: current === 0 ? "attribute_not_exists(nextSequence)" : "nextSequence = :current",
-              ExpressionAttributeValues: {
-                ":next": sequence,
-                ":ttl": ttl,
-                ":missionId": missionId,
-                ...(current === 0 ? {} : { ":current": current }),
+      await client.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Update: {
+                TableName,
+                Key: { PK, SK: "META" },
+                UpdateExpression: "SET nextSequence = :next, expiresAt = :ttl, missionId = :missionId",
+                ConditionExpression: current === 0 ? "attribute_not_exists(nextSequence)" : "nextSequence = :current",
+                ExpressionAttributeValues: {
+                  ":next": sequence,
+                  ":ttl": ttl,
+                  ":missionId": missionId,
+                  ...(current === 0 ? {} : { ":current": current }),
+                },
               },
             },
-          },
-          {
-            Put: {
-              TableName,
-              Item: { PK, SK, event, eventId: id, missionId, sequence, eventType: event.type, occurredAt: event.occurredAt, expiresAt: ttl },
-              ConditionExpression: "attribute_not_exists(PK)",
+            {
+              Put: {
+                TableName,
+                Item: {
+                  PK,
+                  SK,
+                  event,
+                  eventId: id,
+                  missionId,
+                  sequence,
+                  eventType: event.type,
+                  occurredAt: event.occurredAt,
+                  expiresAt: ttl,
+                },
+                ConditionExpression: "attribute_not_exists(PK)",
+              },
             },
-          },
-          {
-            Put: {
-              TableName,
-              Item: { PK, SK: `IDEMPOTENCY#${id}`, eventSk: SK, eventId: id, missionId, expiresAt: ttl },
-              ConditionExpression: "attribute_not_exists(PK)",
+            {
+              Put: {
+                TableName,
+                Item: { PK, SK: `IDEMPOTENCY#${id}`, eventSk: SK, eventId: id, missionId, expiresAt: ttl },
+                ConditionExpression: "attribute_not_exists(PK)",
+              },
             },
-          },
-        ],
-      }));
+          ],
+        }),
+      );
       return event;
     } catch (error) {
       const existing = await readDuplicate(missionId, id);

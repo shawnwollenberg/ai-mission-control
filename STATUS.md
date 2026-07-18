@@ -17,27 +17,27 @@ Work is measured by demo capability, not internal milestone completion. An updat
 
 ## Demo capabilities
 
-| Demo capability | Status | Current proof |
-|---|---|---|
-| Launch a mission | Complete | Browser rehearsal confirms a persisted mission route and intentional launch state |
-| Show Mission Plan forming | Complete | Browser refresh during planning rebuilt the identical one-event projection and then resumed |
-| Display live organizational activity | Complete | Mission Log is rendered from ordered JSONL canonical events and survives refresh |
-| Surface Mission Health | Complete | Browser refresh preserved risk, recommendation, recovery, and validation projections |
-| Generate optimization recommendation | Complete | Browser refresh preserved the earned crisis and recommendation at event 10 |
-| Approve organizational change | Complete | Approval is idempotent and reorganization refresh reconstructed the event-derived critical-path change |
-| Show work completing | Controlled complete; live artifact pending | Browser refresh during validation and debrief preserved check and completion projections |
-| Replay the mission | Not started | Requires a stable canonical event history |
+| Demo capability                      | Status                                     | Current proof                                                                                          |
+| ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Launch a mission                     | Complete                                   | Browser rehearsal confirms a persisted mission route and intentional launch state                      |
+| Show Mission Plan forming            | Complete                                   | Browser refresh during planning rebuilt the identical one-event projection and then resumed            |
+| Display live organizational activity | Complete                                   | Mission Log is rendered from ordered JSONL canonical events and survives refresh                       |
+| Surface Mission Health               | Complete                                   | Browser refresh preserved risk, recommendation, recovery, and validation projections                   |
+| Generate optimization recommendation | Complete                                   | Browser refresh preserved the earned crisis and recommendation at event 10                             |
+| Approve organizational change        | Complete                                   | Approval is idempotent and reorganization refresh reconstructed the event-derived critical-path change |
+| Show work completing                 | Controlled complete; live artifact pending | Browser refresh during validation and debrief preserved check and completion projections               |
+| Replay the mission                   | Not started                                | Requires a stable canonical event history                                                              |
 
 ## Demo readiness
 
-| Experience | Status | Evidence required to turn green |
-|---|---|---|
-| Launch feels intentional | 🟡 | Visual QA confirms a confident launch-to-mission transition |
-| AI organization feels alive | 🟡 | Implemented; browser review must confirm the assembly rhythm |
-| Mission progress is obvious | 🟡 | Implemented; comprehension review remains |
-| Recommendation is compelling | 🟡 | Implemented; visual review must confirm the crisis and recommendation land |
-| Approval interaction is satisfying | 🟡 | Implemented; browser review must verify the reorganization is unmistakable |
-| Mission completion feels rewarding | 🟡 | Controlled scorecard implemented; real outcome proof remains |
+| Experience                         | Status | Evidence required to turn green                                            |
+| ---------------------------------- | ------ | -------------------------------------------------------------------------- |
+| Launch feels intentional           | 🟡     | Visual QA confirms a confident launch-to-mission transition                |
+| AI organization feels alive        | 🟡     | Implemented; browser review must confirm the assembly rhythm               |
+| Mission progress is obvious        | 🟡     | Implemented; comprehension review remains                                  |
+| Recommendation is compelling       | 🟡     | Implemented; visual review must confirm the crisis and recommendation land |
+| Approval interaction is satisfying | 🟡     | Implemented; browser review must verify the reorganization is unmistakable |
+| Mission completion feels rewarding | 🟡     | Controlled scorecard implemented; real outcome proof remains               |
 
 ## Two-track delivery model
 

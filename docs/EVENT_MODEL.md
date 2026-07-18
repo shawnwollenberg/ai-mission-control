@@ -8,20 +8,20 @@ Every meaningful state change is recorded as a structured event. The append-only
 
 ## Candidate event envelope
 
-| Field | Purpose |
-|---|---|
-| `event_id` | Unique event identity |
-| `event_type` | Versioned semantic name |
-| `occurred_at` | Source timestamp |
-| `recorded_at` | Ingestion timestamp |
-| `mission_id` | Mission correlation |
-| `task_id` | Optional task correlation |
-| `agent_id` | Optional actor correlation |
-| `causation_id` | Event or command that caused this event |
-| `correlation_id` | Cross-step operation correlation |
-| `sequence` | Stable mission-local ordering |
-| `visibility` | User-facing, diagnostic, or hidden-sensitive |
-| `payload` | Event-specific, versioned data |
+| Field            | Purpose                                      |
+| ---------------- | -------------------------------------------- |
+| `event_id`       | Unique event identity                        |
+| `event_type`     | Versioned semantic name                      |
+| `occurred_at`    | Source timestamp                             |
+| `recorded_at`    | Ingestion timestamp                          |
+| `mission_id`     | Mission correlation                          |
+| `task_id`        | Optional task correlation                    |
+| `agent_id`       | Optional actor correlation                   |
+| `causation_id`   | Event or command that caused this event      |
+| `correlation_id` | Cross-step operation correlation             |
+| `sequence`       | Stable mission-local ordering                |
+| `visibility`     | User-facing, diagnostic, or hidden-sensitive |
+| `payload`        | Event-specific, versioned data               |
 
 Whether all fields are needed in the MVP remains undecided.
 
@@ -129,11 +129,11 @@ Replay is also a user-visible demo projection: it re-emits historical projection
 
 Mission Health answers exactly three executive questions:
 
-| Field | Initial example | Actionable example |
-|---|---|---|
-| Schedule | `Planning` | `Delayed` |
-| Risk | `Unknown` | `Moderate` |
-| Next Decision | `None` | `Optimization Available` |
+| Field         | Initial example | Actionable example       |
+| ------------- | --------------- | ------------------------ |
+| Schedule      | `Planning`      | `Delayed`                |
+| Risk          | `Unknown`       | `Moderate`               |
+| Next Decision | `None`          | `Optimization Available` |
 
 Schedule values are `planning`, `on_track`, or `delayed`. Risk values are `unknown`, `low`, `moderate`, or `high`. Next Decision is `none`, `optimization_available`, or a specific pending approval boundary required by the demo.
 

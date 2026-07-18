@@ -97,24 +97,88 @@ const platform = (id: string, label = "Mission Control"): EventProducer => ({ ki
 const agent = (id: string, label: string): EventProducer => ({ kind: "agent", id, label });
 
 export const CONTROLLED_EVENT_TEMPLATES: ControlledEventTemplate[] = [
-  { type: "plan.created", producer: agent("hermes", "Hermes"), data: { message: "Mission Plan created", detail: "Four workstreams are ready" } },
-  { type: "agent.activated", producer: agent("research", "Research"), data: { message: "Research active", detail: "Crew assigned · Stripe Billing integration path" } },
-  { type: "task.assigned", producer: platform("runtime"), subject: { kind: "task", id: "task-implementation" }, data: { message: "Implementation waiting on Research", detail: "Dependency recorded" } },
-  { type: "agent.activated", producer: agent("testing", "Testing"), data: { message: "Testing standing by", detail: "Validation plan prepared" } },
-  { type: "agent.activated", producer: agent("deployment", "Deployment"), data: { message: "Deployment reserved", detail: "Demo environment held" } },
-  { type: "mission.health_changed", producer: platform("health"), data: { message: "Mission is on track", detail: "Critical path within today’s deadline" } },
-  { type: "task.delayed", producer: agent("research", "Research"), subject: { kind: "task", id: "task-research" }, data: { message: "Research estimate exceeded", detail: "Billing architecture unresolved · +7 min" } },
-  { type: "mission.health_changed", producer: platform("health"), data: { message: "Critical path blocked", detail: "Research exceeded estimate · coding waiting" } },
-  { type: "recommendation.triggered", producer: platform("optimizer"), data: { message: "Reorganization available", detail: "Three resources can begin work immediately" } },
-  { type: "recommendation.approved", producer: { kind: "human", id: "commander", label: "You" }, data: { message: "Reorganization approved", detail: "One human intervention recorded" } },
-  { type: "organization.reconfigured", producer: platform("runtime"), data: { message: "Organization reconfigured", detail: "Implementation split · validation started early" } },
-  { type: "task.completed", producer: agent("research", "Research"), subject: { kind: "task", id: "task-research" }, data: { message: "Billing architecture resolved" } },
-  { type: "task.completed", producer: agent("coding", "Coding"), subject: { kind: "task", id: "task-implementation" }, data: { message: "Stripe Billing integrated" } },
+  {
+    type: "plan.created",
+    producer: agent("hermes", "Hermes"),
+    data: { message: "Mission Plan created", detail: "Four workstreams are ready" },
+  },
+  {
+    type: "agent.activated",
+    producer: agent("research", "Research"),
+    data: { message: "Research active", detail: "Crew assigned · Stripe Billing integration path" },
+  },
+  {
+    type: "task.assigned",
+    producer: platform("runtime"),
+    subject: { kind: "task", id: "task-implementation" },
+    data: { message: "Implementation waiting on Research", detail: "Dependency recorded" },
+  },
+  {
+    type: "agent.activated",
+    producer: agent("testing", "Testing"),
+    data: { message: "Testing standing by", detail: "Validation plan prepared" },
+  },
+  {
+    type: "agent.activated",
+    producer: agent("deployment", "Deployment"),
+    data: { message: "Deployment reserved", detail: "Demo environment held" },
+  },
+  {
+    type: "mission.health_changed",
+    producer: platform("health"),
+    data: { message: "Mission is on track", detail: "Critical path within today’s deadline" },
+  },
+  {
+    type: "task.delayed",
+    producer: agent("research", "Research"),
+    subject: { kind: "task", id: "task-research" },
+    data: { message: "Research estimate exceeded", detail: "Billing architecture unresolved · +7 min" },
+  },
+  {
+    type: "mission.health_changed",
+    producer: platform("health"),
+    data: { message: "Critical path blocked", detail: "Research exceeded estimate · coding waiting" },
+  },
+  {
+    type: "recommendation.triggered",
+    producer: platform("optimizer"),
+    data: { message: "Reorganization available", detail: "Three resources can begin work immediately" },
+  },
+  {
+    type: "recommendation.approved",
+    producer: { kind: "human", id: "commander", label: "You" },
+    data: { message: "Reorganization approved", detail: "One human intervention recorded" },
+  },
+  {
+    type: "organization.reconfigured",
+    producer: platform("runtime"),
+    data: { message: "Organization reconfigured", detail: "Implementation split · validation started early" },
+  },
+  {
+    type: "task.completed",
+    producer: agent("research", "Research"),
+    subject: { kind: "task", id: "task-research" },
+    data: { message: "Billing architecture resolved" },
+  },
+  {
+    type: "task.completed",
+    producer: agent("coding", "Coding"),
+    subject: { kind: "task", id: "task-implementation" },
+    data: { message: "Stripe Billing integrated" },
+  },
   { type: "check.completed", producer: agent("testing", "Testing"), data: { message: "Projection tests passed" } },
   { type: "check.completed", producer: platform("build", "Build"), data: { message: "Production build passed" } },
   { type: "check.completed", producer: agent("testing", "Testing"), data: { message: "Preview interaction passed" } },
-  { type: "preview.ready", producer: agent("deployment", "Deployment"), data: { message: "Preview ready", detail: "Controlled local environment · no live charges" } },
-  { type: "mission.completed", producer: platform("runtime"), data: { message: "Mission complete", detail: "Completed in 14m 52s · 7m saved" } },
+  {
+    type: "preview.ready",
+    producer: agent("deployment", "Deployment"),
+    data: { message: "Preview ready", detail: "Controlled local environment · no live charges" },
+  },
+  {
+    type: "mission.completed",
+    producer: platform("runtime"),
+    data: { message: "Mission complete", detail: "Completed in 14m 52s · 7m saved" },
+  },
 ];
 
 export function projectMission(events: MissionEvent[]): MissionProjection {
@@ -151,9 +215,18 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
   };
 
   for (const event of events) {
-    if (event.type === "plan.created") { state.status = "Running"; state.currentFocus = "Mission Plan created"; }
-    if (event.type === "agent.activated" && event.producer.id === "research") { state.plan[0].state = "active"; state.currentFocus = "Research active"; }
-    if (event.type === "task.assigned" && event.subject?.id === "task-implementation") { state.plan[1].state = "waiting"; state.waiting = "Implementation"; }
+    if (event.type === "plan.created") {
+      state.status = "Running";
+      state.currentFocus = "Mission Plan created";
+    }
+    if (event.type === "agent.activated" && event.producer.id === "research") {
+      state.plan[0].state = "active";
+      state.currentFocus = "Research active";
+    }
+    if (event.type === "task.assigned" && event.subject?.id === "task-implementation") {
+      state.plan[1].state = "waiting";
+      state.waiting = "Implementation";
+    }
     if (event.type === "agent.activated" && event.producer.id === "testing") state.plan[2].state = "waiting";
     if (event.type === "agent.activated" && event.producer.id === "deployment") state.plan[3].state = "waiting";
     if (event.type === "mission.health_changed" && event.data.message === "Mission is on track") {
@@ -207,7 +280,9 @@ export function projectMission(events: MissionEvent[]): MissionProjection {
       state.currentFocus = "Complete";
       state.waiting = "None";
       state.completed = true;
-      state.plan.forEach((item) => { item.state = "complete"; });
+      state.plan.forEach((item) => {
+        item.state = "complete";
+      });
     }
   }
 

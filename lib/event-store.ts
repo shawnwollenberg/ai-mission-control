@@ -31,7 +31,10 @@ export async function readMissionEvents(missionId: string): Promise<MissionEvent
   try {
     const contents = await readFile(eventFile(missionId), "utf8");
     if (!contents.trim()) return [];
-    return contents.trim().split("\n").map((line) => JSON.parse(line) as MissionEvent);
+    return contents
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as MissionEvent);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw error;
@@ -61,7 +64,7 @@ export async function appendMissionEvent(
       occurredAt: options.occurredAt ?? new Date().toISOString(),
       producer: template.producer,
       correlationId: missionId,
-      ...(options.causationId ?? prior?.eventId ? { causationId: options.causationId ?? prior?.eventId } : {}),
+      ...((options.causationId ?? prior?.eventId) ? { causationId: options.causationId ?? prior?.eventId } : {}),
       ...(template.subject ? { subject: template.subject } : {}),
       data: template.data,
     };
@@ -70,51 +73,78 @@ export async function appendMissionEvent(
     await writeFile(eventFile(missionId), nextContents, "utf8");
     return event;
   });
-  appendQueues.set(missionId, pending.catch(() => undefined));
+  appendQueues.set(
+    missionId,
+    pending.catch(() => undefined),
+  );
   return pending;
 }
 
 export async function appendAgentEvent(input: AgentEventInput): Promise<MissionEvent> {
   if (input.schemaVersion !== EVENT_SCHEMA_VERSION) throw new Error("Unsupported event schema version");
-  if (!input.eventId || !input.missionId || !input.type || !input.occurredAt || !input.producer?.id || !input.data?.message) {
+  if (
+    !input.eventId ||
+    !input.missionId ||
+    !input.type ||
+    !input.occurredAt ||
+    !input.producer?.id ||
+    !input.data?.message
+  ) {
     throw new Error("Invalid canonical agent event");
   }
-  return appendMissionEvent(input.missionId, {
-    type: input.type,
-    producer: input.producer,
-    ...(input.subject ? { subject: input.subject } : {}),
-    data: input.data,
-  }, {
-    eventId: input.eventId,
-    ...(input.causationId ? { causationId: input.causationId } : {}),
-    occurredAt: input.occurredAt,
-  });
-}
-
-export function getAssignments(events: MissionEvent[], agentId: string) {
-  const claimedTaskIds = new Set(events.filter((event) => event.type === "task.claimed").map((event) => event.subject?.id));
-  return events.filter((event) =>
-    event.type === "task.assigned"
-    && event.producer.kind === "agent"
-    && event.producer.id === agentId
-    && event.subject?.kind === "task"
-    && event.data.assignment
-    && !claimedTaskIds.has(event.subject.id),
+  return appendMissionEvent(
+    input.missionId,
+    {
+      type: input.type,
+      producer: input.producer,
+      ...(input.subject ? { subject: input.subject } : {}),
+      data: input.data,
+    },
+    {
+      eventId: input.eventId,
+      ...(input.causationId ? { causationId: input.causationId } : {}),
+      occurredAt: input.occurredAt,
+    },
   );
 }
 
-export async function claimAssignment(missionId: string, taskId: string, agentId: string): Promise<MissionEvent | undefined> {
+export function getAssignments(events: MissionEvent[], agentId: string) {
+  const claimedTaskIds = new Set(
+    events.filter((event) => event.type === "task.claimed").map((event) => event.subject?.id),
+  );
+  return events.filter(
+    (event) =>
+      event.type === "task.assigned" &&
+      event.producer.kind === "agent" &&
+      event.producer.id === agentId &&
+      event.subject?.kind === "task" &&
+      event.data.assignment &&
+      !claimedTaskIds.has(event.subject.id),
+  );
+}
+
+export async function claimAssignment(
+  missionId: string,
+  taskId: string,
+  agentId: string,
+): Promise<MissionEvent | undefined> {
   const events = await readMissionEvents(missionId);
-  const assignment = events.find((event) => event.type === "task.assigned" && event.subject?.id === taskId && event.producer.id === agentId);
+  const assignment = events.find(
+    (event) => event.type === "task.assigned" && event.subject?.id === taskId && event.producer.id === agentId,
+  );
   if (!assignment) return undefined;
   const claimed = events.find((event) => event.type === "task.claimed" && event.subject?.id === taskId);
   if (claimed) return claimed;
-  return appendMissionEvent(missionId, {
-    type: "task.claimed",
-    producer: { kind: "agent", id: agentId, label: agentId === "hermes" ? "Hermes" : agentId },
-    subject: { kind: "task", id: taskId },
-    data: { message: "Implementation claimed", detail: "Hermes accepted the bounded assignment" },
-  }, { eventId: `${missionId}:${taskId}:claimed` });
+  return appendMissionEvent(
+    missionId,
+    {
+      type: "task.claimed",
+      producer: { kind: "agent", id: agentId, label: agentId === "hermes" ? "Hermes" : agentId },
+      subject: { kind: "task", id: taskId },
+      data: { message: "Implementation claimed", detail: "Hermes accepted the bounded assignment" },
+    },
+    { eventId: `${missionId}:${taskId}:claimed` },
+  );
 }
 
 export async function createMission(input: {
@@ -149,20 +179,25 @@ export async function appendNextControlledEvent(missionId: string): Promise<Miss
   if (!events.length) return undefined;
   const lastEvent = events.at(-1);
   if (lastEvent?.type === "organization.reconfigured") {
-    return appendMissionEvent(missionId, {
-      type: "task.assigned",
-      producer: { kind: "agent", id: "hermes", label: "Hermes" },
-      subject: { kind: "task", id: "task-servicepilot-pricing" },
-      data: {
-        message: "Implementation assigned to Codex",
-        detail: "Hermes can begin the independent annual-pricing path",
-        assignment: {
-          objective: "Add the annual ServicePilot pricing option and update its validation without changing checkout preview behavior.",
-          allowedPaths: ["src/pricing-plans.ts", "tests/pricing-plans.test.mjs"],
-          validationCommand: "node --import tsx --test tests/pricing-plans.test.mjs",
+    return appendMissionEvent(
+      missionId,
+      {
+        type: "task.assigned",
+        producer: { kind: "agent", id: "hermes", label: "Hermes" },
+        subject: { kind: "task", id: "task-servicepilot-pricing" },
+        data: {
+          message: "Implementation assigned to Codex",
+          detail: "Hermes can begin the independent annual-pricing path",
+          assignment: {
+            objective:
+              "Add the annual ServicePilot pricing option and update its validation without changing checkout preview behavior.",
+            allowedPaths: ["src/pricing-plans.ts", "tests/pricing-plans.test.mjs"],
+            validationCommand: "node --import tsx --test tests/pricing-plans.test.mjs",
+          },
         },
       },
-    }, { eventId: `${missionId}:task-servicepilot-pricing:assigned` });
+      { eventId: `${missionId}:task-servicepilot-pricing:assigned` },
+    );
   }
   if (events.some((event) => event.subject?.id === "task-servicepilot-pricing")) return undefined;
   const nextTemplate = CONTROLLED_EVENT_TEMPLATES[events.length - 1];

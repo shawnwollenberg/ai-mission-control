@@ -24,8 +24,12 @@ function run(command: string, args: string[], cwd: string, timeoutMs = 30_000) {
       clearTimeout(timeout);
       resolve({ code, output });
     };
-    child.stdout.on("data", (chunk) => { output += String(chunk); });
-    child.stderr.on("data", (chunk) => { output += String(chunk); });
+    child.stdout.on("data", (chunk) => {
+      output += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      output += String(chunk);
+    });
     const timeout = setTimeout(() => {
       child.kill("SIGTERM");
       finish(124);
@@ -38,33 +42,62 @@ function run(command: string, args: string[], cwd: string, timeoutMs = 30_000) {
 async function artifactIsExpected(workspace: string) {
   const plans = await readFile(path.join(workspace, "src/pricing-plans.ts"), "utf8");
   const tests = await readFile(path.join(workspace, "tests/pricing-plans.test.mjs"), "utf8");
-  return plans.includes('name: "Growth Annual"') && plans.includes("annualPrice: 490") && tests.includes("Growth Annual");
+  return (
+    plans.includes('name: "Growth Annual"') && plans.includes("annualPrice: 490") && tests.includes("Growth Annual")
+  );
 }
 
-function event(missionId: string, type: MissionEvent["type"], message: string, detail?: string, artifact?: MissionEvent["data"]["artifact"]): Omit<MissionEvent, "sequence" | "schemaVersion"> {
+function event(
+  missionId: string,
+  type: MissionEvent["type"],
+  message: string,
+  detail?: string,
+  artifact?: MissionEvent["data"]["artifact"],
+): Omit<MissionEvent, "sequence" | "schemaVersion"> {
   return {
-    eventId: randomUUID(), missionId, type, occurredAt: new Date().toISOString(),
-    producer: { kind: "agent", id: "hermes", label: "Hermes" }, correlationId: missionId,
-    subject: { kind: "task", id: "task-servicepilot-pricing" }, data: { message, ...(detail ? { detail } : {}), ...(artifact ? { artifact } : {}) },
+    eventId: randomUUID(),
+    missionId,
+    type,
+    occurredAt: new Date().toISOString(),
+    producer: { kind: "agent", id: "hermes", label: "Hermes" },
+    correlationId: missionId,
+    subject: { kind: "task", id: "task-servicepilot-pricing" },
+    data: { message, ...(detail ? { detail } : {}), ...(artifact ? { artifact } : {}) },
   };
 }
 
 function validate(workspace: string) {
-  return run(process.execPath, ["--import", tsxLoader, "--test", "tests/pricing-plans.test.mjs"], workspace, validationTimeoutMs);
+  return run(
+    process.execPath,
+    ["--import", tsxLoader, "--test", "tests/pricing-plans.test.mjs"],
+    workspace,
+    validationTimeoutMs,
+  );
 }
 
 export async function runCodexPricingTask(missionId: string, baseUrl: string, token: string) {
   const client = new MissionControlClient(baseUrl, token);
   const [assignment] = await client.assignments(missionId);
-  if (!assignment || assignment.subject?.id !== "task-servicepilot-pricing") throw new Error("No unclaimed ServicePilot pricing assignment");
+  if (!assignment || assignment.subject?.id !== "task-servicepilot-pricing")
+    throw new Error("No unclaimed ServicePilot pricing assignment");
   await client.claim(missionId, assignment.subject.id);
-  await client.publish(event(missionId, "task.started", "Codex pricing task started", "Hermes prepared an isolated ServicePilot workspace"));
+  await client.publish(
+    event(
+      missionId,
+      "task.started",
+      "Codex pricing task started",
+      "Hermes prepared an isolated ServicePilot workspace",
+    ),
+  );
 
   const workspace = await mkdtemp(path.join(os.tmpdir(), "mission-control-servicepilot-"));
-  await cp(fixtureRoot, workspace, { recursive: true, filter: (source) => !source.includes(`${path.sep}fallback${path.sep}`) });
+  await cp(fixtureRoot, workspace, {
+    recursive: true,
+    filter: (source) => !source.includes(`${path.sep}fallback${path.sep}`),
+  });
   const prompt = [
     "Complete one bounded ServicePilot pricing task.",
-    "Edit only src/pricing-plans.ts and tests/pricing-plans.test.mjs.",
+    `Edit only ${allowedPaths.join(" and ")}.`,
     "Add Growth Annual with annualPrice 490 and interval year.",
     "Update the pricing test for that annual option.",
     "Do not edit src/checkout-preview.ts; preserve its controlled checkout behavior.",
@@ -74,29 +107,73 @@ export async function runCodexPricingTask(missionId: string, baseUrl: string, to
   if (process.env.MISSION_CONTROL_CODEX_MODEL) codexArgs.push("-m", process.env.MISSION_CONTROL_CODEX_MODEL);
   const liveCodexEnabled = process.env.ENABLE_LIVE_CODEX === "true";
   const execution = liveCodexEnabled
-    ? await run(process.env.MISSION_CONTROL_CODEX_COMMAND ?? "codex", [...codexArgs, prompt], workspace, codexExecutionTimeoutMs)
+    ? await run(
+        process.env.MISSION_CONTROL_CODEX_COMMAND ?? "codex",
+        [...codexArgs, prompt],
+        workspace,
+        codexExecutionTimeoutMs,
+      )
     : { code: 1, output: "Live Codex disabled; selecting verified fallback." };
   let provenance: "live" | "validated_fallback" = "live";
   let validation = await validate(workspace);
   if (execution.code !== 0 || validation.code !== 0 || !(await artifactIsExpected(workspace))) {
     provenance = "validated_fallback";
     await cp(path.join(fixtureRoot, "fallback", "pricing-plans.ts"), path.join(workspace, "src/pricing-plans.ts"));
-    await cp(path.join(fixtureRoot, "fallback", "pricing-plans.test.mjs"), path.join(workspace, "tests/pricing-plans.test.mjs"));
+    await cp(
+      path.join(fixtureRoot, "fallback", "pricing-plans.test.mjs"),
+      path.join(workspace, "tests/pricing-plans.test.mjs"),
+    );
     validation = await validate(workspace);
   }
-  if (validation.code !== 0 || !(await artifactIsExpected(workspace))) throw new Error("Live and fallback pricing artifacts failed validation");
-  await client.publish(event(missionId, "artifact.created", "Annual pricing artifact produced", provenance === "live" ? "Codex produced the verified annual plan" : "Previously validated fallback artifact used", {
-    kind: "git_diff", path: "src/pricing-plans.ts", summary: "Added Growth Annual at $490/year", validation: "pricing-plans tests passed", provenance,
-  }));
+  if (validation.code !== 0 || !(await artifactIsExpected(workspace)))
+    throw new Error("Live and fallback pricing artifacts failed validation");
+  await client.publish(
+    event(
+      missionId,
+      "artifact.created",
+      "Annual pricing artifact produced",
+      provenance === "live" ? "Codex produced the verified annual plan" : "Previously validated fallback artifact used",
+      {
+        kind: "git_diff",
+        path: "src/pricing-plans.ts",
+        summary: "Added Growth Annual at $490/year",
+        validation: "pricing-plans tests passed",
+        provenance,
+      },
+    ),
+  );
   await client.publish(event(missionId, "check.completed", "Pricing validation passed", validationCommand));
-  await client.publish(event(missionId, "task.completed", "Codex pricing task completed", provenance === "live" ? "Verified live artifact" : "Verified fallback artifact"));
-  await client.publish(event(missionId, "preview.ready", "Controlled checkout preview ready", "Existing local checkout preview preserved"));
-  await client.publish(event(missionId, "mission.completed", "Mission complete", provenance === "live" ? "Live Codex artifact verified" : "Validated fallback artifact verified"));
+  await client.publish(
+    event(
+      missionId,
+      "task.completed",
+      "Codex pricing task completed",
+      provenance === "live" ? "Verified live artifact" : "Verified fallback artifact",
+    ),
+  );
+  await client.publish(
+    event(missionId, "preview.ready", "Controlled checkout preview ready", "Existing local checkout preview preserved"),
+  );
+  await client.publish(
+    event(
+      missionId,
+      "mission.completed",
+      "Mission complete",
+      provenance === "live" ? "Live Codex artifact verified" : "Validated fallback artifact verified",
+    ),
+  );
   return { workspace, provenance };
 }
 
 if (process.argv[1]?.endsWith("run-codex-pricing.ts")) {
-  const [missionId, baseUrl = "http://localhost:3000", token = process.env.MISSION_CONTROL_AGENT_TOKEN] = process.argv.slice(2);
-  if (!missionId || !token) throw new Error("Usage: tsx agents/hermes/run-codex-pricing.ts <missionId> [baseUrl] <token>");
-  runCodexPricingTask(missionId, baseUrl, token).then(console.log).catch((error) => { console.error(error); process.exitCode = 1; });
+  const [missionId, baseUrl = "http://localhost:3000", token = process.env.MISSION_CONTROL_AGENT_TOKEN] =
+    process.argv.slice(2);
+  if (!missionId || !token)
+    throw new Error("Usage: tsx agents/hermes/run-codex-pricing.ts <missionId> [baseUrl] <token>");
+  runCodexPricingTask(missionId, baseUrl, token)
+    .then(console.log)
+    .catch((error) => {
+      console.error(error);
+      process.exitCode = 1;
+    });
 }

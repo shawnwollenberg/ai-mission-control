@@ -8,5 +8,8 @@ test("preserves the controlled checkout preview", () => {
 });
 
 test("lists the existing monthly plans", () => {
-  assert.deepEqual(pricingPlans.map((plan) => plan.name), ["Starter", "Growth", "Scale"]);
+  assert.deepEqual(
+    pricingPlans.map((plan) => plan.name),
+    ["Starter", "Growth", "Scale"],
+  );
 });

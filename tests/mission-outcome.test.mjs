@@ -53,11 +53,25 @@ test("the append-only event stream rebuilds every completed mission projection",
     ["mission.completed", "Mission complete"],
   ]) {
     await appendAgentEvent({
-      schemaVersion: "1.0", eventId: `${created.id}:${type}`, missionId: created.id,
-      type, occurredAt: new Date().toISOString(), producer: { kind: "agent", id: "hermes", label: "Hermes" },
-      correlationId: created.id, data: {
+      schemaVersion: "1.0",
+      eventId: `${created.id}:${type}`,
+      missionId: created.id,
+      type,
+      occurredAt: new Date().toISOString(),
+      producer: { kind: "agent", id: "hermes", label: "Hermes" },
+      correlationId: created.id,
+      data: {
         message,
-        ...(type === "artifact.created" ? { artifact: { kind: "git_diff", path: "src/pricing-plans.ts", summary: "Added Growth Annual", provenance: "live" } } : {}),
+        ...(type === "artifact.created"
+          ? {
+              artifact: {
+                kind: "git_diff",
+                path: "src/pricing-plans.ts",
+                summary: "Added Growth Annual",
+                provenance: "live",
+              },
+            }
+          : {}),
       },
     });
   }

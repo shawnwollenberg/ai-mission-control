@@ -1,0 +1,12 @@
+.next/
+.mission-control/
+cdk.out/
+node_modules/
+package-lock.json
+videos/
+MCImages.png
+*.mp3
+*.m4a
+*.mp4
+*.png
+*.jpg

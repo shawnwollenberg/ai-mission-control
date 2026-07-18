@@ -47,7 +47,9 @@ export default function LaunchPage() {
           <p className="eyebrow">Mission Control</p>
           <p className="brand-subtitle">Executive operations for AI teams</p>
         </div>
-        <div className="system-status"><span /> Systems nominal</div>
+        <div className="system-status">
+          <span /> Systems nominal
+        </div>
       </nav>
 
       <section className="launch-grid">
@@ -86,7 +88,9 @@ export default function LaunchPage() {
               Priority
               <select
                 value={mission.priority}
-                onChange={(event) => setMission({ ...mission, priority: event.target.value as LaunchInput["priority"] })}
+                onChange={(event) =>
+                  setMission({ ...mission, priority: event.target.value as LaunchInput["priority"] })
+                }
               >
                 <option>High</option>
                 <option>Normal</option>

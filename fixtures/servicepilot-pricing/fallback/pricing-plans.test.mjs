@@ -8,6 +8,12 @@ test("preserves the controlled checkout preview", () => {
 });
 
 test("lists the annual ServicePilot pricing option", () => {
-  assert.deepEqual(pricingPlans.map((plan) => plan.name), ["Starter", "Growth", "Growth Annual", "Scale"]);
-  assert.deepEqual(pricingPlans.find((plan) => plan.name === "Growth Annual"), { name: "Growth Annual", annualPrice: 490, interval: "year" });
+  assert.deepEqual(
+    pricingPlans.map((plan) => plan.name),
+    ["Starter", "Growth", "Growth Annual", "Scale"],
+  );
+  assert.deepEqual(
+    pricingPlans.find((plan) => plan.name === "Growth Annual"),
+    { name: "Growth Annual", annualPrice: 490, interval: "year" },
+  );
 });
