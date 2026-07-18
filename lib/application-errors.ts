@@ -38,3 +38,15 @@ export class DatabaseUnavailableError extends ApplicationError {
     super("database_unavailable", "The database is temporarily unavailable", undefined, options);
   }
 }
+
+export class NotFoundError extends ApplicationError {
+  constructor(resource: string) {
+    super("not_found", `${resource} was not found`);
+  }
+}
+
+export class InvalidTransitionError extends ApplicationError {
+  constructor(aggregate: string, from: string, to: string) {
+    super("invalid_transition", `${aggregate} cannot transition from ${from} to ${to}`, { aggregate, from, to });
+  }
+}
