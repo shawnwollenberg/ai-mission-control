@@ -20,6 +20,8 @@
     "worker:actions": "tsx scripts/action-worker.ts",
     "execution:run-codex": "tsx scripts/run-codex-execution.ts",
     "phase2:acceptance:setup": "tsx scripts/setup-phase2-acceptance.ts",
+    "phase3:acceptance:setup": "tsx scripts/setup-phase3-acceptance.ts",
+    "phase3:action": "tsx scripts/phase3-action.ts",
     "projections:rebuild": "tsx scripts/projections.ts",
     "projections:verify": "tsx scripts/projections.ts --verify",
     "legacy:import-dynamodb": "tsx scripts/import-dynamodb.ts",
