@@ -65,7 +65,8 @@ async function callback(message: ProtocolEnvelope) {
     },
     body,
   });
-  if (!response.ok) throw new Error(`Hermes callback failed: ${response.status}`);
+  if (!response.ok)
+    throw new Error(`Hermes callback failed: ${response.status} ${await response.text().catch(() => "")}`.trim());
   return response.json();
 }
 function executionMessage(

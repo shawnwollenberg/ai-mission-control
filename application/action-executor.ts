@@ -12,6 +12,7 @@ import { stableUuid } from "@/lib/stable-id";
 import { evaluatePolicy } from "@/policy/policy-engine";
 import { loadPolicyRestrictions } from "@/policy/policy-store";
 import { ValidationFailedError } from "@/lib/application-errors";
+import { validatePublicationPreflight } from "@/git/publication-preflight";
 
 async function append(
   workspaceId: string,
@@ -85,6 +86,18 @@ export async function executeAction(
   });
   if (policy.outcome !== "require_approval" || policy.policyVersion !== row.policy_version)
     throw new ValidationFailedError("Current policy requires a new decision");
+  await validatePublicationPreflight({
+    worktreePath: row.worktree_path,
+    worktreeRoot: process.env.CODEX_WORKTREE_ROOT!,
+    remote: String(parameters.remote ?? "origin"),
+    allowedRemotes: row.allowed_remotes,
+    targetBranch: String(parameters.targetBranch ?? row.default_branch),
+    protectedBranches: row.protected_branches,
+    allowedBranchPrefixes: row.allowed_branch_prefixes,
+    generatedBranch: String(parameters.sourceBranch ?? parameters.branch),
+    approvedCommit: String(parameters.commit),
+    force: Boolean(parameters.force),
+  });
   await consumeApproval({
     workspaceId,
     approvalId: row.approval_id,

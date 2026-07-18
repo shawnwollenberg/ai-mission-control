@@ -10,13 +10,14 @@ import { stableUuid } from "@/lib/stable-id";
 import { evaluatePolicy, type ActionType, type PolicyInput } from "@/policy/policy-engine";
 import { loadPolicyRestrictions } from "@/policy/policy-store";
 import { enqueueJob } from "@/lib/job-store";
+import { validatePublicationPreflight } from "@/git/publication-preflight";
 
 export type ActionActor = { workspaceId: string; id: string; type: ActorType; role?: "owner" | "member" };
 
 async function context(workspaceId: string, executionId: string) {
   const row = (
     await getDatabasePool().query(
-      `SELECT e.*,a.status agent_status,a.trust_level,a.capabilities,r.default_branch,r.protected_branches,r.allowed_branch_prefixes,r.allowed_remotes,r.push_allowed,r.pull_request_allowed FROM execution_projections e JOIN agents a ON a.workspace_id=e.workspace_id AND a.agent_id=e.agent_id JOIN repositories r ON r.workspace_id=e.workspace_id AND r.repository_id=e.repository_id WHERE e.workspace_id=$1 AND e.execution_id=$2`,
+      `SELECT e.*,a.status agent_status,a.trust_level,a.capabilities,r.local_path,r.default_branch,r.protected_branches,r.allowed_branch_prefixes,r.allowed_remotes,r.push_allowed,r.pull_request_allowed FROM execution_projections e JOIN agents a ON a.workspace_id=e.workspace_id AND a.agent_id=e.agent_id JOIN repositories r ON r.workspace_id=e.workspace_id AND r.repository_id=e.repository_id WHERE e.workspace_id=$1 AND e.execution_id=$2`,
       [workspaceId, executionId],
     )
   ).rows[0];
@@ -85,7 +86,7 @@ export async function requestSensitiveAction(input: {
 }) {
   const row = await context(input.actor.workspaceId, input.executionId);
   const actionId = input.actionRequestId ?? randomUUID();
-  const bound = {
+  const bound: Record<string, unknown> = {
     actionType: input.actionType,
     repositoryId: row.repository_id,
     executionId: input.executionId,
@@ -93,6 +94,19 @@ export async function requestSensitiveAction(input: {
     commit: row.commit_id,
     ...input.parameters,
   };
+  if (["repository.push_branch", "repository.create_pull_request"].includes(input.actionType))
+    await validatePublicationPreflight({
+      worktreePath: String(row.worktree_path),
+      worktreeRoot: process.env.CODEX_WORKTREE_ROOT!,
+      remote: String(bound.remote ?? "origin"),
+      allowedRemotes: row.allowed_remotes as string[],
+      targetBranch: String(bound.targetBranch ?? row.default_branch),
+      protectedBranches: row.protected_branches as string[],
+      allowedBranchPrefixes: row.allowed_branch_prefixes as string[],
+      generatedBranch: String(bound.sourceBranch ?? bound.branch),
+      approvedCommit: String(bound.commit),
+      force: Boolean(bound.force),
+    });
   const actionHash = canonicalHash(bound);
   const restrictions = await loadPolicyRestrictions(input.actor.workspaceId, {
     repositoryId: row.repository_id,

@@ -3,7 +3,15 @@ import { executeAction } from "../application/action-executor";
 import { DEFAULT_OWNER_ID, DEFAULT_WORKSPACE_ID } from "../lib/identity-constants";
 import { closeDatabasePool } from "../lib/database";
 const args = process.argv.slice(2),
-  value = (flag: string) => args[args.indexOf(flag) + 1];
+  value = (flag: string) => {
+    const index = args.indexOf(flag);
+    return index < 0 ? undefined : args[index + 1];
+  },
+  required = (flag: string) => {
+    const result = value(flag);
+    if (!result) throw new Error(`${flag} is required`);
+    return result;
+  };
 async function main() {
   const mode = value("--mode"),
     actor = { workspaceId: DEFAULT_WORKSPACE_ID, id: DEFAULT_OWNER_ID, type: "human" as const, role: "owner" as const };
@@ -13,10 +21,10 @@ async function main() {
         await requestSensitiveAction({
           actor,
           commandId: crypto.randomUUID(),
-          executionId: value("--execution"),
+          executionId: required("--execution"),
           actionType: "repository.push_branch",
-          parameters: { remote: "origin", branch: value("--branch"), force: false },
-          targetResource: `repository:${value("--repository")}`,
+          parameters: { remote: "origin", branch: required("--branch"), force: false },
+          targetResource: `repository:${required("--repository")}`,
         }),
       ),
     );
@@ -28,17 +36,18 @@ async function main() {
         await requestSensitiveAction({
           actor,
           commandId: crypto.randomUUID(),
-          executionId: value("--execution"),
+          executionId: required("--execution"),
           actionType: "repository.create_pull_request",
           parameters: {
-            sourceBranch: value("--branch"),
-            targetBranch: "main",
-            title: "Phase 3: governed Codex publication",
+            sourceBranch: required("--branch"),
+            targetBranch: value("--target") ?? "main",
+            title: value("--title") ?? "Phase 3: governed Codex publication",
             description:
+              value("--description") ??
               "Real Codex fixture change published through separate Mission Control push and pull-request approvals. No merge or deployment.",
-            providerRepository: "shawnwollenberg/ai-mission-control",
+            providerRepository: value("--provider-repository") ?? "shawnwollenberg/ai-mission-control",
           },
-          targetResource: `repository:${value("--repository")}`,
+          targetResource: `repository:${required("--repository")}`,
         }),
       ),
     );
@@ -49,9 +58,9 @@ async function main() {
       JSON.stringify({
         applied: await resolveActionApproval({
           actor,
-          approvalId: value("--approval"),
+          approvalId: required("--approval"),
           granted: value("--decision") === "grant",
-          reason: value("--reason"),
+          reason: required("--reason"),
         }),
       }),
     );
@@ -59,7 +68,7 @@ async function main() {
   }
   if (mode === "execute") {
     console.log(
-      JSON.stringify(await executeAction(DEFAULT_WORKSPACE_ID, value("--action"), "phase3-acceptance-worker")),
+      JSON.stringify(await executeAction(DEFAULT_WORKSPACE_ID, required("--action"), "phase3-acceptance-worker")),
     );
     return;
   }

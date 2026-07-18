@@ -184,6 +184,7 @@ test("controlled Codex adapter completes in an isolated worktree with evidence a
 test("denied publication changes no remote and approved publication pushes only the exact commit", async () => {
   const remote = path.join(root, "remote.git");
   await exec("git", ["init", "--bare", remote]);
+  await exec("git", ["push", remote, "main:main"], { cwd: repository });
   await exec("git", ["remote", "add", "phase3", remote], { cwd: completedExecution.outcome.worktreePath });
   await getDatabasePool().query(
     "UPDATE repositories SET push_allowed=true,allowed_remotes=$3 WHERE workspace_id=$1 AND repository_id=$2",
@@ -270,6 +271,7 @@ test("denied publication changes no remote and approved publication pushes only 
     executionId: completedExecution.executionId,
     actionType: "repository.create_pull_request",
     parameters: {
+      remote: "phase3",
       sourceBranch: completedExecution.outcome.branchName,
       targetBranch: "main",
       title: "Health metadata",

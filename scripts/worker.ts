@@ -25,7 +25,7 @@ async function main() {
     try {
       if ((await expireDueApprovals(workerId)) > 0) worked = true;
       worked = await processOneOutbox(workerId);
-      const job = await claimJob(workerId);
+      const job = await claimJob(workerId, 30, undefined, "simulate_task");
       if (job) {
         worked = true;
         try {
