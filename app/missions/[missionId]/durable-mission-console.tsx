@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BrandSprite } from "@/app/brand-assets";
 import type { MissionReadModel } from "@/lib/mission-projection-store";
 import type { MissionTimelineEntry } from "@/lib/mission-queries";
+import type { ApprovalReadModel, TaskReadModel } from "@/lib/execution-queries";
 
 const availableCommands: Record<string, Array<{ command: string; label: string }>> = {
   draft: [
@@ -17,8 +18,6 @@ const availableCommands: Record<string, Array<{ command: string; label: string }
   ],
   running: [
     { command: "pause", label: "Pause" },
-    { command: "complete", label: "Complete" },
-    { command: "fail", label: "Fail" },
     { command: "cancel", label: "Cancel" },
   ],
   paused: [
@@ -30,14 +29,54 @@ const availableCommands: Record<string, Array<{ command: string; label: string }
 export default function DurableMissionConsole({
   initialMission,
   initialTimeline,
+  initialTasks,
+  initialApprovals,
 }: {
   initialMission: MissionReadModel;
   initialTimeline: MissionTimelineEntry[];
+  initialTasks: TaskReadModel[];
+  initialApprovals: ApprovalReadModel[];
 }) {
   const [mission, setMission] = useState(initialMission);
   const [timeline, setTimeline] = useState(initialTimeline);
+  const [tasks, setTasks] = useState(initialTasks);
+  const [approvals, setApprovals] = useState(initialApprovals);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (["completed", "failed", "cancelled"].includes(mission.status)) return;
+    const timer = window.setInterval(async () => {
+      const [executionResponse, timelineResponse] = await Promise.all([
+        fetch(`/api/missions/${mission.missionId}/execution`, { cache: "no-store" }),
+        fetch(`/api/missions/${mission.missionId}/events`, { cache: "no-store" }),
+      ]);
+      if (executionResponse.ok) {
+        const body = (await executionResponse.json()) as {
+          mission: MissionReadModel;
+          tasks: TaskReadModel[];
+          approvals: ApprovalReadModel[];
+        };
+        setMission(body.mission);
+        setTasks(body.tasks);
+        setApprovals(body.approvals);
+      }
+      if (timelineResponse.ok)
+        setTimeline(((await timelineResponse.json()) as { timeline: MissionTimelineEntry[] }).timeline);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [mission.missionId, mission.status]);
+
+  async function decide(approvalId: string, decision: "grant" | "deny") {
+    setPending(true);
+    const response = await fetch(`/api/approvals/${approvalId}/decision`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision, reason: `${decision} recorded in Mission Control` }),
+    });
+    if (!response.ok) setError("Approval decision could not be recorded.");
+    setPending(false);
+  }
 
   async function command(name: string) {
     if (pending) return;
@@ -160,6 +199,75 @@ export default function DurableMissionConsole({
             <p className="form-error" role="alert">
               {error}
             </p>
+          )}
+        </section>
+        <section className="command-panel mission-summary">
+          <div className="panel-title">
+            <div>
+              <p className="section-label">Durable task plan</p>
+              <h2>Dependency execution</h2>
+            </div>
+            <span>
+              {mission.completedTaskCount}/{mission.totalTaskCount} complete
+            </span>
+          </div>
+          <p>
+            <strong>{mission.executionMode === "simulated" ? "Simulated execution" : mission.executionMode}</strong> ·{" "}
+            {mission.readyTaskCount} ready · {mission.runningTaskCount} active · {mission.blockedTaskCount} blocked
+          </p>
+          <div className="log-list">
+            {tasks.map((task) => (
+              <div className="log-item" key={task.taskId}>
+                <span className="log-sequence">{task.status.slice(0, 2).toUpperCase()}</span>
+                <div>
+                  <strong>{task.name}</strong>
+                  <small>
+                    {task.assignedExecutor ?? "Unassigned"} · attempt {task.currentAttempt}/{task.maximumAttempts} ·{" "}
+                    {task.riskLevel} risk
+                  </small>
+                  {task.progressSummary && <p>{task.progressSummary}</p>}
+                  {task.blockingDependencies.length > 0 && (
+                    <p>
+                      Blocked by{" "}
+                      {task.blockingDependencies
+                        .map((id) => tasks.find((t) => t.taskId === id)?.name ?? id.slice(0, 8))
+                        .join(", ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          {approvals.map((approval) => (
+            <div className="approval-card" key={approval.approvalId}>
+              <strong>{approval.status === "pending" ? "Approval required" : `Approval ${approval.status}`}</strong>
+              <p>{approval.riskExplanation}</p>
+              {approval.status === "pending" && (
+                <div className="mission-actions">
+                  <button disabled={pending} onClick={() => decide(approval.approvalId, "grant")}>
+                    Grant and continue
+                  </button>
+                  <button disabled={pending} onClick={() => decide(approval.approvalId, "deny")}>
+                    Deny
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+          {["completed", "failed", "cancelled"].includes(mission.status) && (
+            <div>
+              <h3>Durable debrief</h3>
+              <p>
+                {mission.name} finished with status <strong>{mission.status}</strong>. {mission.completedTaskCount}{" "}
+                tasks completed, {mission.failedTaskCount} failed, and {mission.cancelledTaskCount} were cancelled.{" "}
+                {timeline.length} canonical events and {approvals.length} approval decisions were recorded over{" "}
+                {Math.max(
+                  0,
+                  Math.round((new Date(mission.updatedAt).getTime() - new Date(mission.createdAt).getTime()) / 1000),
+                )}{" "}
+                seconds. No artifacts were recorded. The recorded simulation outcome is {mission.status}.
+              </p>
+            </div>
           )}
         </section>
         <section className="command-panel mission-log">

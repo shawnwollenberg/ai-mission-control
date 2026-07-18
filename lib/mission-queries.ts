@@ -22,11 +22,29 @@ const labels: Record<string, string> = {
   "mission.completed": "Simulated execution completed",
   "mission.failed": "Mission failed",
   "mission.cancelled": "Mission cancelled",
+  "task.created": "Task created",
+  "task.dependency_added": "Task dependency added",
+  "task.became_blocked": "Task blocked",
+  "task.became_ready": "Task ready",
+  "task.assigned": "Simulated executor assigned",
+  "task.started": "Simulated task started",
+  "task.progress_reported": "Task progress recorded",
+  "task.approval_requested": "Approval requested",
+  "task.resumed": "Task resumed",
+  "task.verification_started": "Verification started",
+  "task.completed": "Task completed",
+  "task.failed": "Task failed",
+  "task.cancelled": "Task cancelled",
+  "approval.requested": "Approval requested",
+  "approval.granted": "Approval granted",
+  "approval.denied": "Approval denied",
 };
 
 function safeSummary(event: DomainEvent): string {
   if (event.eventType === "mission.created") return String(event.payload.objective ?? "Mission accepted").slice(0, 300);
   if (typeof event.payload.summary === "string") return event.payload.summary.slice(0, 300);
+  if (typeof event.payload.name === "string") return event.payload.name.slice(0, 300);
+  if (typeof event.payload.reason === "string") return event.payload.reason.slice(0, 300);
   if (typeof event.payload.status === "string") return `Mission status changed to ${event.payload.status}`;
   return "This event type is not yet supported by the current timeline renderer.";
 }

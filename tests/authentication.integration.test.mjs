@@ -54,5 +54,7 @@ test("jose session round-trip preserves workspace identity and rejects tampering
   };
   const token = await createSessionToken(identity);
   assert.deepEqual(await verifySessionToken(token), identity);
-  assert.equal(await verifySessionToken(`${token.slice(0, -1)}x`), undefined);
+  const parts = token.split(".");
+  parts[2] = `${parts[2][0] === "a" ? "b" : "a"}${parts[2].slice(1)}`;
+  assert.equal(await verifySessionToken(parts.join(".")), undefined);
 });

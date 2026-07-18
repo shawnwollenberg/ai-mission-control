@@ -10,6 +10,8 @@ import { NotFoundError } from "@/lib/application-errors";
 import { ConcurrencyConflictError } from "@/lib/application-errors";
 import { appendEvents, loadAggregateEvents } from "@/lib/postgres-event-store";
 import { applyMissionProjection } from "@/application/mission-projector";
+import { activateMissionTasks, cancelMissionTasks } from "@/application/mission-coordinator";
+import { getDatabasePool } from "@/lib/database";
 
 export type CommandActor = {
   workspaceId: string;
@@ -93,6 +95,27 @@ export async function handleMissionTransition(input: {
       alreadyInState: true,
     };
   }
+  if (input.target === "running" && state.status === "planned") {
+    const taskCount = await getDatabasePool().query<{ count: string }>(
+      "SELECT count(*)::text count FROM task_projections WHERE workspace_id = $1 AND mission_id = $2",
+      [input.actor.workspaceId, input.missionId],
+    );
+    if (Number(taskCount.rows[0].count) === 0)
+      throw new (await import("@/lib/application-errors")).ValidationFailedError(
+        "Mission requires a durable task plan",
+      );
+  }
+  if (input.target === "completed") {
+    const counts = await getDatabasePool().query<{ total: string; completed: string }>(
+      `SELECT count(*)::text total, count(*) FILTER (WHERE status='completed')::text completed
+       FROM task_projections WHERE workspace_id=$1 AND mission_id=$2`,
+      [input.actor.workspaceId, input.missionId],
+    );
+    if (Number(counts.rows[0].total) === 0 || counts.rows[0].total !== counts.rows[0].completed)
+      throw new (await import("@/lib/application-errors")).ValidationFailedError(
+        "Mission completes only after all required tasks complete",
+      );
+  }
   const result = await appendEvents({
     workspaceId: input.actor.workspaceId,
     aggregateType: "mission",
@@ -115,6 +138,10 @@ export async function handleMissionTransition(input: {
     ],
     applyProjections: applyMissionProjection,
   });
+  if (input.target === "running")
+    await activateMissionTasks(input.actor.workspaceId, input.missionId, result.events[0].eventId);
+  if (input.target === "cancelled")
+    await cancelMissionTasks(input.actor.workspaceId, input.missionId, result.events[0].eventId);
   return {
     missionId: input.missionId,
     aggregateVersion: result.events.at(-1)?.aggregateVersion ?? state.version,

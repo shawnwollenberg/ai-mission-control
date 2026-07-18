@@ -19,6 +19,10 @@ Launch the built-in Stripe Billing mission and Mission Control will:
 
 There is no fake typing or decorative terminal activity. Every visible transition corresponds to a canonical event or a projection rebuilt from those events.
 
+## Durable local control plane
+
+The authenticated Phase 1 path now runs on PostgreSQL canonical events and rebuildable mission, task, dependency, and approval projections. `npm run worker` advances only clearly labeled simulated tasks through leased database jobs. See [the Phase 1 completion report](docs/PHASE_1_COMPLETION_REPORT.md) and [worker operations](docs/WORKER_OPERATIONS.md). The DynamoDB demo described below remains deployed legacy compatibility evidence, not the authority for the new browser path.
+
 ## Architectural constitution
 
 Mission Control has exactly one source of truth: the event log. Mission Plan, Mission Log, Mission Health, recommendations, approvals, artifacts, and the final debrief own no independent business state. Replaying a mission's events from an empty projection reconstructs every user-visible fact except ephemeral UI state.

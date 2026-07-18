@@ -1,8 +1,12 @@
 # Mission Control — Implementation Status
 
 **Updated:** 2026-07-18
-**Planning baseline:** Phase 0 and Phase 1 architecture approved
-**Current focus:** Phase 1 durable PostgreSQL control plane
+**Planning baseline:** Phase 1 complete
+**Current focus:** Stopped for review at the Phase 2 external-execution boundary
+
+## 2026-07-18 — Phase 1 complete
+
+Durable tasks, dependencies, authoritative coordination, event-backed approvals, leased jobs, internal worker execution, transactional outbox dispatch, atomic projection rebuild, drift verification, one-way DynamoDB import, browser task execution, and durable debrief are implemented. The full scenario survives web restart, worker restart, and projection rebuild. See `docs/PHASE_1_COMPLETION_REPORT.md`.
 
 ## Phase 1 durable browser checkpoint
 
@@ -10,7 +14,7 @@
 - The detail UI is explicitly labeled `Simulated execution`; no connected agent is implied.
 - Browser-controlled `/advance` and `/approve` routes and the legacy mission console were removed.
 - Automated HTTP end-to-end and manual browser walkthroughs proved refresh, application restart, logout, re-login, idempotent creation, and stale-version conflict behavior.
-- Task aggregate/dependencies, projection rebuild, outbox claiming/worker operations, and DynamoDB import remain Phase 1 work.
+- The original JSONL/DynamoDB demo remains isolated compatibility evidence; the authenticated durable browser path is PostgreSQL-authoritative.
 
 ## Technical program management cadence
 

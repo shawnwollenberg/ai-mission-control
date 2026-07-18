@@ -1,0 +1,163 @@
+import { createHash, randomUUID } from "node:crypto";
+import type { PoolClient } from "pg";
+import { closeDatabasePool, getDatabasePool, withTransaction } from "../lib/database";
+import { loadEventsFromGlobalPosition, type DomainEvent } from "../lib/postgres-event-store";
+import { applyMissionProjection } from "../application/mission-projector";
+import { applyTaskProjection } from "../application/task-projector";
+import { applyApprovalProjection } from "../application/approval-commands";
+const args = process.argv.slice(2);
+const value = (flag: string) => {
+  const i = args.indexOf(flag);
+  return i >= 0 ? args[i + 1] : undefined;
+};
+const workspace = value("--workspace");
+const projection = value("--projection") ?? "all";
+const verify = args.includes("--verify");
+async function events() {
+  if (workspace) {
+    const all: DomainEvent[] = [];
+    let position = 0;
+    while (true) {
+      const page = await loadEventsFromGlobalPosition({ workspaceId: workspace, afterPosition: position, limit: 2000 });
+      all.push(...page);
+      if (page.length < 2000) break;
+      position = page.at(-1)!.position;
+    }
+    return all;
+  }
+  const workspaces = await getDatabasePool().query<{ workspace_id: string }>(
+    "SELECT DISTINCT workspace_id FROM events",
+  );
+  const all = (await Promise.all(workspaces.rows.map((r) => loadWorkspace(r.workspace_id)))).flat();
+  return all.sort((a, b) => a.position - b.position);
+}
+async function loadWorkspace(id: string) {
+  const all: DomainEvent[] = [];
+  let p = 0;
+  while (true) {
+    const page = await loadEventsFromGlobalPosition({ workspaceId: id, afterPosition: p, limit: 2000 });
+    all.push(...page);
+    if (page.length < 2000) return all;
+    p = page.at(-1)!.position;
+  }
+}
+async function snapshot(client: PoolClient) {
+  const where = workspace ? " WHERE workspace_id=$1" : "";
+  const params = workspace ? [workspace] : [];
+  const tables: Record<string, string> = {
+    mission_projections: "1,2",
+    task_projections: "1,2",
+    task_dependencies: "1,2,3,4",
+    approval_projections: "1,2",
+  };
+  const out: Record<string, unknown> = {};
+  for (const [table, order] of Object.entries(tables))
+    out[table] = (
+      await client.query(
+        `SELECT row_to_json(x) value FROM (SELECT * FROM ${table}${where} ORDER BY ${order}) x`,
+        params,
+      )
+    ).rows.map((r) => r.value);
+  return out;
+}
+async function replay(client: PoolClient, stream: DomainEvent[]) {
+  const suffix = workspace ? " WHERE workspace_id=$1" : "";
+  const params = workspace ? [workspace] : [];
+  await client.query(`DELETE FROM approval_projections${suffix}`, params);
+  await client.query(`DELETE FROM task_projections${suffix}`, params);
+  await client.query(`DELETE FROM mission_projections${suffix}`, params);
+  for (const event of stream) {
+    if (event.eventSchemaVersion !== 1)
+      throw new Error(
+        `Unsupported event version ${event.eventSchemaVersion} for ${event.eventType} at position ${event.position}`,
+      );
+    if (event.aggregateType === "mission") await applyMissionProjection(client, [event]);
+    else if (event.aggregateType === "task") await applyTaskProjection(client, [event]);
+    else if (event.aggregateType === "approval") await applyApprovalProjection(client, [event]);
+  }
+}
+async function main() {
+  if (!["all", "missions", "tasks", "approvals"].includes(projection))
+    throw new Error(`Unknown projection ${projection}`);
+  const stream = await events();
+  if (verify) {
+    let before: Record<string, unknown> = {},
+      after: Record<string, unknown> = {};
+    try {
+      await withTransaction(async (client) => {
+        const locked = await client.query<{ ok: boolean }>("SELECT pg_try_advisory_xact_lock($1) ok", [1_296_743_202]);
+        if (!locked.rows[0].ok) throw new Error("A projection rebuild is already running");
+        before = await snapshot(client);
+        await replay(client, stream);
+        after = await snapshot(client);
+        throw new Error("__ROLLBACK_VERIFY__");
+      });
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== "__ROLLBACK_VERIFY__") throw error;
+    }
+    const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+    const discrepancies = Object.keys(before).flatMap((table) =>
+      hash(before[table]) === hash(after[table])
+        ? []
+        : [
+            {
+              table,
+              liveHash: hash(before[table]),
+              replayHash: hash(after[table]),
+              liveRows: (before[table] as unknown[]).length,
+              replayRows: (after[table] as unknown[]).length,
+            },
+          ],
+    );
+    const equal = discrepancies.length === 0;
+    console.log(
+      JSON.stringify({
+        event: "projection_verification",
+        workspace: workspace ?? "all",
+        projection,
+        equal,
+        eventCount: stream.length,
+        discrepancies,
+      }),
+    );
+    if (!equal) process.exitCode = 2;
+    return;
+  }
+  const rebuildId = randomUUID();
+  await getDatabasePool().query(
+    "INSERT INTO projection_rebuild_runs(rebuild_id,workspace_id,projection,status) VALUES($1,$2,$3,'running')",
+    [rebuildId, workspace ?? null, projection],
+  );
+  try {
+    await withTransaction(async (client) => {
+      const locked = await client.query<{ ok: boolean }>("SELECT pg_try_advisory_xact_lock($1) ok", [1_296_743_202]);
+      if (!locked.rows[0].ok) throw new Error("A projection rebuild is already running");
+      await replay(client, stream);
+      await client.query(
+        "UPDATE projection_rebuild_runs SET status='complete',last_position=$2,event_count=$3,completed_at=now() WHERE rebuild_id=$1",
+        [rebuildId, stream.at(-1)?.position ?? 0, stream.length],
+      );
+    });
+    console.log(
+      JSON.stringify({
+        event: "projection_rebuild_complete",
+        rebuildId,
+        workspace: workspace ?? "all",
+        projection,
+        eventCount: stream.length,
+      }),
+    );
+  } catch (error) {
+    await getDatabasePool().query(
+      "UPDATE projection_rebuild_runs SET status='failed',failure=$2,completed_at=now() WHERE rebuild_id=$1",
+      [rebuildId, { message: error instanceof Error ? error.message : String(error) }],
+    );
+    throw error;
+  }
+}
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(closeDatabasePool);

@@ -5,6 +5,7 @@ import test from "node:test";
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for integration tests");
 
 const { handleCreateMission, handleMissionTransition } = await import("../application/mission-commands.ts");
+const { handleCreateTask } = await import("../application/task-commands.ts");
 const { InvalidTransitionError } = await import("../lib/application-errors.ts");
 const { closeDatabasePool, getDatabasePool } = await import("../lib/database.ts");
 const { getMissionProjection } = await import("../lib/mission-projection-store.ts");
@@ -55,9 +56,26 @@ test("mission creation writes the event and transactional projection", async () 
 
 test("valid lifecycle transitions update events and projection", async () => {
   const created = await create();
-  for (const target of ["planned", "running", "paused", "running", "completed"]) {
+  await handleMissionTransition({ actor, commandId: randomUUID(), missionId: created.missionId, target: "planned" });
+  const durableTask = await handleCreateTask({
+    actor: { workspaceId, id: actor.userId, type: "human" },
+    commandId: randomUUID(),
+    task: {
+      missionId: created.missionId,
+      name: "Required task",
+      instructions: "Complete the durable task",
+      priority: "normal",
+      riskLevel: "low",
+    },
+  });
+  for (const target of ["running", "paused", "running"]) {
     await handleMissionTransition({ actor, commandId: randomUUID(), missionId: created.missionId, target });
   }
+  const taskActor = { workspaceId, id: actor.userId, type: "human" };
+  const { handleTaskTransition } = await import("../application/task-commands.ts");
+  for (const target of ["assigned", "running", "verifying", "completed"])
+    await handleTaskTransition({ actor: taskActor, commandId: randomUUID(), taskId: durableTask.taskId, target });
+  await handleMissionTransition({ actor, commandId: randomUUID(), missionId: created.missionId, target: "completed" });
   const projection = await getMissionProjection(workspaceId, created.missionId);
   assert.equal(projection?.status, "completed");
   assert.equal(projection?.aggregateVersion, 6);

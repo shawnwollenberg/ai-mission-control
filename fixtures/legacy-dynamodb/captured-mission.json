@@ -1,0 +1,48 @@
+{
+  "missions": [
+    {
+      "missionId": "legacy-servicepilot-001",
+      "events": [
+        {
+          "schemaVersion": "1.0",
+          "eventId": "legacy-event-created",
+          "missionId": "legacy-servicepilot-001",
+          "sequence": 1,
+          "type": "mission.created",
+          "occurredAt": "2026-07-01T12:00:00.000Z",
+          "producer": { "kind": "human", "id": "commander", "label": "You" },
+          "correlationId": "legacy-servicepilot-001",
+          "data": {
+            "message": "Mission accepted",
+            "objective": "Validate ServicePilot billing readiness",
+            "deadline": "Today",
+            "priority": "High",
+            "commander": "Hermes"
+          }
+        },
+        {
+          "schemaVersion": "1.0",
+          "eventId": "legacy-event-plan",
+          "missionId": "legacy-servicepilot-001",
+          "sequence": 2,
+          "type": "plan.created",
+          "occurredAt": "2026-07-01T12:01:00.000Z",
+          "producer": { "kind": "agent", "id": "hermes", "label": "Hermes" },
+          "correlationId": "legacy-servicepilot-001",
+          "data": { "message": "Mission Plan created" }
+        },
+        {
+          "schemaVersion": "1.0",
+          "eventId": "legacy-event-complete",
+          "missionId": "legacy-servicepilot-001",
+          "sequence": 3,
+          "type": "mission.completed",
+          "occurredAt": "2026-07-01T12:15:00.000Z",
+          "producer": { "kind": "platform", "id": "runtime", "label": "Mission Control" },
+          "correlationId": "legacy-servicepilot-001",
+          "data": { "message": "Mission complete" }
+        }
+      ]
+    }
+  ]
+}

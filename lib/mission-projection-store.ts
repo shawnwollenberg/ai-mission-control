@@ -18,6 +18,14 @@ export type MissionReadModel = {
   deadline?: string;
   totalTaskCount: number;
   completedTaskCount: number;
+  blockedTaskCount: number;
+  readyTaskCount: number;
+  runningTaskCount: number;
+  waitingApprovalTaskCount: number;
+  failedTaskCount: number;
+  cancelledTaskCount: number;
+  currentCriticalBlocker?: string;
+  executionMode: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -42,6 +50,14 @@ type MissionProjectionRow = {
   deadline: Date | null;
   total_task_count: number;
   completed_task_count: number;
+  blocked_task_count: number;
+  ready_task_count: number;
+  running_task_count: number;
+  waiting_approval_task_count: number;
+  failed_task_count: number;
+  cancelled_task_count: number;
+  current_critical_blocker: string | null;
+  execution_mode: string;
   created_by: string;
   created_at: Date;
   updated_at: Date;
@@ -67,6 +83,14 @@ function mapMission(row: MissionProjectionRow): MissionReadModel {
     ...(row.deadline ? { deadline: row.deadline.toISOString() } : {}),
     totalTaskCount: row.total_task_count,
     completedTaskCount: row.completed_task_count,
+    blockedTaskCount: row.blocked_task_count,
+    readyTaskCount: row.ready_task_count,
+    runningTaskCount: row.running_task_count,
+    waitingApprovalTaskCount: row.waiting_approval_task_count,
+    failedTaskCount: row.failed_task_count,
+    cancelledTaskCount: row.cancelled_task_count,
+    ...(row.current_critical_blocker ? { currentCriticalBlocker: row.current_critical_blocker } : {}),
+    executionMode: row.execution_mode,
     createdBy: row.created_by,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
@@ -76,7 +100,9 @@ function mapMission(row: MissionProjectionRow): MissionReadModel {
 
 const columns = `workspace_id, mission_id, aggregate_version, name, objective, description, domain, priority, risk_level,
   status, requested_outcome, success_criteria, constraints, budget_limits, deadline, total_task_count,
-  completed_task_count, created_by, created_at, updated_at, last_event_position`;
+  completed_task_count, blocked_task_count, ready_task_count, running_task_count,
+  waiting_approval_task_count, failed_task_count, cancelled_task_count, current_critical_blocker,
+  execution_mode, created_by, created_at, updated_at, last_event_position`;
 
 export async function getMissionProjection(
   workspaceId: string,

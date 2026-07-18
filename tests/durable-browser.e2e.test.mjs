@@ -8,6 +8,7 @@ const port = 31_119;
 const origin = `http://127.0.0.1:${port}`;
 let server;
 let serverOutput = "";
+let worker;
 
 async function startServer() {
   serverOutput = "";
@@ -45,6 +46,18 @@ async function stopServer() {
   if (!server || server.exitCode !== null) return;
   server.kill("SIGTERM");
   await new Promise((resolve) => server.once("exit", resolve));
+}
+function startWorker() {
+  worker = spawn(process.execPath, ["node_modules/tsx/dist/cli.mjs", "scripts/worker.ts"], {
+    cwd: process.cwd(),
+    env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL, WORKER_POLL_MS: "25" },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+async function stopWorker() {
+  if (!worker || worker.exitCode !== null) return;
+  worker.kill("SIGTERM");
+  await new Promise((resolve) => worker.once("exit", resolve));
 }
 
 function browserHeaders(cookie, extra = {}) {
@@ -168,8 +181,36 @@ test("authenticated durable browser mission survives restart and enforces lifecy
 
     transition = await lifecycle(cookie, created.missionId, "resume", 4);
     assert.equal((await transition.json()).projection.status, "running");
-    transition = await lifecycle(cookie, created.missionId, "complete", 5);
-    assert.equal((await transition.json()).projection.status, "completed");
+    startWorker();
+    await stopWorker();
+    startWorker();
+    let execution;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const response = await fetch(`${origin}/api/missions/${created.missionId}/execution`, {
+        headers: browserHeaders(cookie),
+      });
+      execution = await response.json();
+      if (execution.approvals?.some((item) => item.status === "pending")) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    const approval = execution.approvals.find((item) => item.status === "pending");
+    assert.ok(approval, "simulated execution should reach its approval boundary");
+    const decision = await fetch(`${origin}/api/approvals/${approval.approvalId}/decision`, {
+      method: "POST",
+      headers: browserHeaders(cookie, { "content-type": "application/json" }),
+      body: JSON.stringify({ decision: "grant", reason: "E2E evidence accepted" }),
+    });
+    assert.equal(decision.status, 200);
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const response = await fetch(`${origin}/api/missions/${created.missionId}/execution`, {
+        headers: browserHeaders(cookie),
+      });
+      execution = await response.json();
+      if (execution.mission.status === "completed") break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.equal(execution.mission.status, "completed");
+    assert.equal(execution.tasks.filter((item) => item.status === "completed").length, 7);
 
     const terminal = await lifecycle(cookie, created.missionId, "resume", 6);
     assert.equal(terminal.status, 409);
@@ -190,18 +231,13 @@ test("authenticated durable browser mission survives restart and enforces lifecy
       headers: browserHeaders(cookie),
     });
     const finalTimeline = (await finalTimelineResponse.json()).timeline;
-    assert.deepEqual(
-      finalTimeline.map((entry) => entry.eventType),
-      [
-        "mission.created",
-        "mission.planned",
-        "mission.started",
-        "mission.paused",
-        "mission.resumed",
-        "mission.completed",
-      ],
-    );
+    const eventTypes = finalTimeline.map((entry) => entry.eventType);
+    assert.equal(eventTypes[0], "mission.created");
+    assert.ok(eventTypes.includes("task.dependency_added"));
+    assert.ok(eventTypes.includes("approval.granted"));
+    assert.equal(eventTypes.at(-1), "mission.completed");
   } finally {
+    await stopWorker();
     await stopServer();
   }
 });
