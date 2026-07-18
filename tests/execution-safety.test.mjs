@@ -6,6 +6,8 @@ import test from "node:test";
 import { validateExecutionRequest } from "../execution/protocol.ts";
 import { runSafeProcess } from "../execution/safe-process.ts";
 import { executionBranch, validateRepositoryPath } from "../execution/worktree-manager.ts";
+import { failureDisposition, failurePolicies } from "../execution/failures.ts";
+import { requestExecution, rehydrateExecution, transitionExecution } from "../domain/execution.ts";
 const id = () => crypto.randomUUID();
 test("protocol 1.0 validates identity and rejects unsupported versions", () => {
   const request = {
@@ -71,4 +73,73 @@ test("repository guard rejects symlink escape and branch generation is determini
   );
   const branch = executionBranch(id(), id(), id());
   assert.match(branch, /^codex\/[0-9a-f-]+\/[0-9a-f-]+\/[0-9a-f-]+$/);
+});
+test("every Phase 2 failure classification has an explicit retry disposition", () => {
+  assert.deepEqual(Object.keys(failurePolicies).sort(), [
+    "artifact_failure",
+    "authentication_failure",
+    "cancellation",
+    "codex_start_failure",
+    "command_failure",
+    "execution_failure",
+    "invalid_configuration",
+    "protocol_error",
+    "repository_unavailable",
+    "test_failure",
+    "timeout",
+    "unknown",
+    "worker_lost",
+  ]);
+  assert.equal(failureDisposition("authentication_failure"), "non-retryable");
+  assert.equal(failureDisposition("worker_lost"), "retryable");
+});
+test("execution aggregate enforces valid and terminal transitions", () => {
+  const executionId = id(),
+    missionId = id(),
+    requestedEvent = requestExecution({
+      missionId,
+      taskId: id(),
+      agentId: id(),
+      repositoryId: id(),
+      attempt: 1,
+      adapterType: "codex",
+      timeoutSeconds: 60,
+      idempotencyKey: id(),
+    }),
+    created = {
+      position: 1,
+      eventId: id(),
+      eventType: requestedEvent.eventType,
+      eventSchemaVersion: 1,
+      aggregateType: "execution",
+      aggregateId: executionId,
+      aggregateVersion: 1,
+      missionId,
+      workspaceId: id(),
+      correlationId: missionId,
+      actorType: "human",
+      actorId: "owner",
+      occurredAt: new Date().toISOString(),
+      payload: requestedEvent.payload,
+      metadata: {},
+    };
+  const requested = rehydrateExecution([created]);
+  assert.equal(transitionExecution(requested, "accepted").eventType, "execution.accepted");
+  assert.throws(
+    () => transitionExecution(requested, "succeeded"),
+    (error) => error?.code === "invalid_transition",
+  );
+  const succeeded = {
+    ...created,
+    position: 2,
+    eventId: id(),
+    aggregateVersion: 2,
+    eventType: "execution.succeeded",
+    payload: { status: "succeeded" },
+  };
+  const terminal = rehydrateExecution([created, succeeded]);
+  assert.throws(
+    () => transitionExecution(terminal, "running"),
+    (error) => error?.code === "invalid_transition",
+  );
 });

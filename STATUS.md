@@ -1,8 +1,12 @@
 # Mission Control — Implementation Status
 
 **Updated:** 2026-07-18
-**Planning baseline:** Phase 1 complete
-**Current focus:** Stopped for review at the Phase 2 external-execution boundary
+**Planning baseline:** Phase 2 complete
+**Current focus:** Stopped for review before Phase 3
+
+## 2026-07-18 — Phase 2 complete
+
+A real Codex worker now performs one bounded repository change through the existing durable execution boundary. The run uses a registered agent and repository, a leased external worker, an isolated Git worktree, real heartbeats and progress, checksummed artifacts, declared validation, and a local commit. The authenticated UI exposes agent management and live execution supervision while preserving the simulated path. Push, merge, and deployment remain disabled. See `docs/PHASE_2_COMPLETION_REPORT.md`.
 
 ## 2026-07-18 — Phase 1 complete
 

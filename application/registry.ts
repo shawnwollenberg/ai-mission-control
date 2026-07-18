@@ -68,10 +68,26 @@ export async function setAgentEnabled(input: { actor: RegistryActor; agentId: st
 export async function listAgents(workspaceId: string) {
   return (
     await getDatabasePool().query(
-      `SELECT a.*,count(e.*) FILTER(WHERE e.status NOT IN('succeeded','failed','timed_out','cancelled'))::int current_execution_count FROM agents a LEFT JOIN execution_projections e ON e.workspace_id=a.workspace_id AND e.agent_id=a.agent_id WHERE a.workspace_id=$1 GROUP BY a.workspace_id,a.agent_id ORDER BY a.created_at`,
+      `SELECT a.*,CASE WHEN a.status='active' AND a.last_heartbeat_at < now()-interval '3 minutes' THEN 'offline' WHEN a.status='active' AND a.last_heartbeat_at < now()-interval '90 seconds' THEN 'degraded' ELSE a.status END effective_status,count(e.*) FILTER(WHERE e.status NOT IN('succeeded','failed','timed_out','cancelled'))::int current_execution_count FROM agents a LEFT JOIN execution_projections e ON e.workspace_id=a.workspace_id AND e.agent_id=a.agent_id WHERE a.workspace_id=$1 GROUP BY a.workspace_id,a.agent_id ORDER BY a.created_at`,
       [workspaceId],
     )
   ).rows;
+}
+export async function getAgentDetail(workspaceId: string, agentId: string) {
+  const agent = (
+    await getDatabasePool().query(
+      `SELECT a.*,CASE WHEN a.status='active' AND a.last_heartbeat_at < now()-interval '3 minutes' THEN 'offline' WHEN a.status='active' AND a.last_heartbeat_at < now()-interval '90 seconds' THEN 'degraded' ELSE a.status END effective_status,count(e.*) FILTER(WHERE e.status NOT IN('succeeded','failed','timed_out','cancelled'))::int current_execution_count FROM agents a LEFT JOIN execution_projections e ON e.workspace_id=a.workspace_id AND e.agent_id=a.agent_id WHERE a.workspace_id=$1 AND a.agent_id=$2 GROUP BY a.workspace_id,a.agent_id`,
+      [workspaceId, agentId],
+    )
+  ).rows[0];
+  if (!agent) throw new NotFoundError("Agent");
+  const executions = (
+    await getDatabasePool().query(
+      `SELECT execution_id,mission_id,task_id,status,stage,progress_summary,commit_id,started_at,completed_at,created_at FROM execution_projections WHERE workspace_id=$1 AND agent_id=$2 ORDER BY created_at DESC LIMIT 10`,
+      [workspaceId, agentId],
+    )
+  ).rows;
+  return { agent, executions };
 }
 export async function registerRepository(input: {
   actor: RegistryActor;

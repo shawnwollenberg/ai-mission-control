@@ -1,6 +1,6 @@
 # Phase 2 — Controlled Codex Execution
 
-**Status:** Architecture approved by the Phase 2 authorization; implementation active — 2026-07-18
+**Status:** Complete and validated — 2026-07-18
 
 ## Boundary and first outcome
 

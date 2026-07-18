@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 type Agent = {
   agent_id: string;
   name: string;
@@ -10,6 +11,7 @@ type Agent = {
   last_heartbeat_at?: string;
   concurrency_limit: number;
   current_execution_count: number;
+  effective_status?: string;
 };
 export default function AgentRegistry({ initialAgents }: { initialAgents: Agent[] }) {
   const [agents, setAgents] = useState(initialAgents),
@@ -62,10 +64,13 @@ export default function AgentRegistry({ initialAgents }: { initialAgents: Agent[
               <div className="log-item" key={agent.agent_id}>
                 <span className="log-sequence">{agent.adapter_type === "codex" ? "CX" : "MO"}</span>
                 <div>
-                  <strong>{agent.name}</strong>
+                  <strong>
+                    <Link href={`/agents/${agent.agent_id}`}>{agent.name}</Link>
+                  </strong>
                   <small>
-                    {agent.adapter_type === "codex" ? "Connected Codex agent" : "Simulated agent"} · {agent.status} ·{" "}
-                    {agent.current_execution_count}/{agent.concurrency_limit} active
+                    {agent.adapter_type === "codex" ? "Connected Codex agent" : "Simulated agent"} ·{" "}
+                    {agent.effective_status ?? agent.status} · {agent.current_execution_count}/{agent.concurrency_limit}{" "}
+                    active
                   </small>
                   <p>{agent.capabilities.join(" · ")}</p>
                   <p>

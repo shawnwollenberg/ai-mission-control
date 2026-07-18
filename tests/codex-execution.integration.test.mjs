@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -12,12 +12,17 @@ const { getDatabasePool, closeDatabasePool } = await import("../lib/database.ts"
 const { handleCreateMission, handleMissionTransition } = await import("../application/mission-commands.ts");
 const { handleCreateTask } = await import("../application/task-commands.ts");
 const { registerAgent, registerRepository } = await import("../application/registry.ts");
-const { handleRequestExecution } = await import("../application/execution-commands.ts");
+const { handleRequestExecution, handleExecutionTransition, handleExecutionFact, handleExecutionCancellation } =
+  await import("../application/execution-commands.ts");
 const { executeCodex } = await import("../execution/codex-adapter.ts");
+const { createExecutionWorktree } = await import("../execution/worktree-manager.ts");
+const { readExecutionArtifact } = await import("../execution/artifact-store.ts");
 const workspaceId = randomUUID(),
   actor = { workspaceId, userId: "owner", role: "owner" },
   executionActor = { workspaceId, id: "owner", type: "human" };
 let root, repository, worktrees, artifacts;
+const agentId = randomUUID(),
+  repositoryId = randomUUID();
 test.before(async () => {
   root = await mkdtemp(path.join(os.tmpdir(), "mission-control-codex-"));
   repository = path.join(root, "repository");
@@ -55,8 +60,6 @@ test.after(async () => {
   await rm(root, { recursive: true, force: true });
 });
 test("controlled Codex adapter completes in an isolated worktree with evidence and no push", async () => {
-  const agentId = randomUUID(),
-    repositoryId = randomUUID();
   await registerAgent({
     actor,
     agentId,
@@ -153,6 +156,16 @@ test("controlled Codex adapter completes in an isolated worktree with evidence a
     )
   ).rows[0];
   assert.deepEqual(policy, { push_allowed: false, merge_allowed: false, deployment_allowed: false });
+  const artifact = (
+    await getDatabasePool().query(
+      "SELECT artifact_id,storage_key FROM artifacts WHERE workspace_id=$1 AND execution_id=$2 ORDER BY created_at LIMIT 1",
+      [workspaceId, requested.executionId],
+    )
+  ).rows[0];
+  assert.ok(await readExecutionArtifact(workspaceId, artifact.artifact_id));
+  assert.equal(await readExecutionArtifact(randomUUID(), artifact.artifact_id), undefined);
+  await writeFile(path.join(artifacts, artifact.storage_key), "corrupted");
+  await assert.rejects(() => readExecutionArtifact(workspaceId, artifact.artifact_id), /checksum mismatch/);
   assert.equal(
     (
       await getDatabasePool().query("SELECT status FROM mission_projections WHERE workspace_id=$1 AND mission_id=$2", [
@@ -161,5 +174,143 @@ test("controlled Codex adapter completes in an isolated worktree with evidence a
       ])
     ).rows[0].status,
     "completed",
+  );
+});
+test("a recovered execution reuses its durable worktree and produces one commit", async () => {
+  const mission = await handleCreateMission({
+    actor,
+    commandId: randomUUID(),
+    mission: {
+      name: "Recovered health metadata",
+      objective: "Recover bounded work after worker loss",
+      domain: "software_delivery",
+      priority: "normal",
+      riskLevel: "low",
+    },
+  });
+  const task = await handleCreateTask({
+    actor: executionActor,
+    commandId: randomUUID(),
+    task: {
+      missionId: mission.missionId,
+      name: "Recover health work",
+      instructions: "Add service sample-app to the health response",
+      expectedOutput: "Passing health metadata test",
+      priority: "normal",
+      riskLevel: "low",
+      timeoutSeconds: 120,
+    },
+  });
+  await handleMissionTransition({ actor, commandId: randomUUID(), missionId: mission.missionId, target: "planned" });
+  await handleMissionTransition({ actor, commandId: randomUUID(), missionId: mission.missionId, target: "running" });
+  const requested = await handleRequestExecution({
+    actor: executionActor,
+    commandId: randomUUID(),
+    taskId: task.taskId,
+    agentId,
+    repositoryId,
+    timeoutSeconds: 120,
+  });
+  const worker = { workspaceId, id: "lost-worker", type: "agent" };
+  await handleExecutionTransition({
+    actor: worker,
+    commandId: randomUUID(),
+    executionId: requested.executionId,
+    target: "accepted",
+  });
+  await handleExecutionTransition({
+    actor: worker,
+    commandId: randomUUID(),
+    executionId: requested.executionId,
+    target: "preparing",
+  });
+  const prepared = await createExecutionWorktree({
+    repositoryPath: repository,
+    repositoryRoot: root,
+    worktreeRoot: worktrees,
+    missionId: mission.missionId,
+    taskId: task.taskId,
+    executionId: requested.executionId,
+    baseRef: "main",
+  });
+  await handleExecutionFact({
+    actor: worker,
+    commandId: randomUUID(),
+    executionId: requested.executionId,
+    type: "execution.progress_reported",
+    payload: {
+      stage: "worktree_ready",
+      summary: "Worktree persisted before worker loss",
+      branchName: prepared.branchName,
+      worktreePath: prepared.worktreePath,
+    },
+  });
+  await handleExecutionTransition({
+    actor: worker,
+    commandId: randomUUID(),
+    executionId: requested.executionId,
+    target: "running",
+    details: { branchName: prepared.branchName, worktreePath: prepared.worktreePath },
+  });
+  const outcome = await executeCodex({ workspaceId, executionId: requested.executionId, workerId: "recovery-worker" });
+  assert.equal(outcome.status, "succeeded");
+  assert.equal(outcome.worktreePath, prepared.worktreePath);
+  const commits = Number(
+    (await exec("git", ["rev-list", "--count", "main..HEAD"], { cwd: prepared.worktreePath })).stdout.trim(),
+  );
+  assert.equal(commits, 1);
+});
+test("execution cancellation requests are durable and idempotent", async () => {
+  const mission = await handleCreateMission({
+    actor,
+    commandId: randomUUID(),
+    mission: {
+      name: "Cancellation",
+      objective: "Cancel bounded execution",
+      domain: "software_delivery",
+      priority: "normal",
+      riskLevel: "low",
+    },
+  });
+  const task = await handleCreateTask({
+    actor: executionActor,
+    commandId: randomUUID(),
+    task: {
+      missionId: mission.missionId,
+      name: "Cancellable work",
+      instructions: "Wait for cancellation",
+      priority: "normal",
+      riskLevel: "low",
+    },
+  });
+  await handleMissionTransition({ actor, commandId: randomUUID(), missionId: mission.missionId, target: "planned" });
+  await handleMissionTransition({ actor, commandId: randomUUID(), missionId: mission.missionId, target: "running" });
+  const requested = await handleRequestExecution({
+    actor: executionActor,
+    commandId: randomUUID(),
+    taskId: task.taskId,
+    agentId,
+    repositoryId,
+  });
+  const commandId = randomUUID();
+  const first = await handleExecutionCancellation({
+    actor: executionActor,
+    commandId,
+    executionId: requested.executionId,
+  });
+  const duplicate = await handleExecutionCancellation({
+    actor: executionActor,
+    commandId,
+    executionId: requested.executionId,
+  });
+  assert.equal(first.events.length, 1);
+  assert.equal(duplicate.events.length, 0);
+  assert.ok(
+    (
+      await getDatabasePool().query(
+        "SELECT cancellation_requested_at FROM execution_projections WHERE workspace_id=$1 AND execution_id=$2",
+        [workspaceId, requested.executionId],
+      )
+    ).rows[0].cancellation_requested_at,
   );
 });
