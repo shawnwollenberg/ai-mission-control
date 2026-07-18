@@ -12,7 +12,8 @@ async function main() {
     executionActor = { workspaceId: DEFAULT_WORKSPACE_ID, id: DEFAULT_OWNER_ID, type: "human" as const },
     agentId = stableUuid("phase3-genuine-codex-agent"),
     repositoryId = stableUuid("phase3-mission-control-repository"),
-    repository = process.cwd();
+    repository = process.cwd(),
+    executionBaseRef = process.env.PHASE3_BASE_REF ?? "main";
   await registerAgent({
     actor,
     agentId,
@@ -38,7 +39,7 @@ async function main() {
     repositoryId,
     name: "shawnwollenberg/ai-mission-control",
     localPath: repository,
-    defaultBranch: "main",
+    defaultBranch: executionBaseRef,
     allowedAgentIds: [agentId],
     readAllowed: true,
     writeAllowed: true,
@@ -78,7 +79,7 @@ async function main() {
       missionId: mission.missionId,
       name: "Add governed health metadata",
       instructions:
-        'In fixtures/codex-health-app, add policyVersion: "phase3.1" to the health response and update its test. Change only that fixture. Do not push, create a pull request, merge, or deploy.',
+        'In fixtures/codex-health-app, ensure health.mjs exports health() returning exactly { status: "ok", service: "sample-app", policyVersion: "phase3.1" }, and health.test.mjs verifies those fields with node:test. Create the two small files if this older base does not contain them. Change only that fixture. Do not push, create a pull request, merge, or deploy.',
       expectedOutput: "A local commit containing the minimal fixture change with its test passing",
       priority: "normal",
       riskLevel: "low",
