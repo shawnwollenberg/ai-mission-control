@@ -1,6 +1,6 @@
 # Mission Control — Production Architecture Proposal
 
-**Status:** Approved for Phase 1 — 2026-07-18
+**Status:** Approved through Phase 3 policy architecture — 2026-07-18
 
 **Date:** 2026-07-18
 
@@ -24,6 +24,10 @@ Phase 1 does not build every adapter, autonomous DeFi execution, a general workf
 ### Phase 2 controlled Codex execution decision — 2026-07-18
 
 Phase 2 instantiates the existing execution-plane boundary for one adapter. Agent and repository registries are workspace-scoped policy records; a versioned Execution aggregate is canonical for attempts; high-volume heartbeats use an operational table; Codex runs only in a separate leased worker and generated Git worktree; large/redacted evidence uses checksummed artifact storage. The web tier never spawns processes. Local commit is the maximum permitted side effect: push, merge, deployment, destructive commands, secrets access, public callbacks, and other adapters remain outside the boundary. Full lifecycle, safety, recovery, and deployment decisions are in `docs/PHASE_2_CODEX_EXECUTION.md`. 7. **Deterministic authority:** State machines, dependencies, policy decisions, and health signals are deterministic. Models may propose plans or explain evidence but cannot directly mutate authoritative state. 8. **DeFi analysis-only boundary:** Initial DeFi templates may retrieve, analyze, and simulate. Transaction signing and submission are prohibited.
+
+### Phase 3 policy and action decision — 2026-07-18
+
+Sensitive effects are represented by a vendor-neutral Action Request aggregate. A deterministic, versioned policy evaluator returns allow, require-approval, or deny before dispatch. Approvals bind one action ID to a canonical parameter hash, resource, execution, commit, and policy version; execution revalidates current policy and exact parameters. Push and pull-request creation run only in a separate leased action worker through Git credential/provider ports. Merge, deployment, secrets, infrastructure, destructive production changes, and financial actions are denied even with approval. Full decisions are in `docs/PHASE_3_POLICY_APPROVALS.md`.
 
 ## Four-layer architecture
 

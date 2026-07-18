@@ -1,6 +1,6 @@
 # Mission Control — Production Readiness Execution Plan
 
-**Status:** Phase 1 complete at `8ed85b1`; Phase 2 controlled Codex execution complete — 2026-07-18
+**Status:** Phase 2 complete at `c4ef0c7`; Phase 3 policy and approval enforcement authorized — 2026-07-18
 
 **Planning date:** 2026-07-18
 
@@ -275,6 +275,8 @@ Demonstrate worker termination/recovery and callback replay tests; stop for revi
 ## Phase 3 — Human identity, approvals, and policy
 
 **Goal:** Make human and agent authority enforceable and auditable.
+
+**Authorized vertical slice:** Deterministic versioned policy, durable parameter-bound action requests and approvals, approval-gated push of the exact generated execution branch, separately approved pull-request creation, operational budgets, approval inbox, and workspace audit history. Merge, deployment, secrets, destructive production changes, infrastructure modification, and financial/blockchain actions remain permanently denied. Detailed decisions: `docs/PHASE_3_POLICY_APPROVALS.md`.
 
 ### Proposed scope
 
