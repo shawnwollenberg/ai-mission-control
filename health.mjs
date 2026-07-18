@@ -1,3 +1,3 @@
 export function healthCheck() {
-  return { status: "ok" };
+  return { status: "ok", service: "sample-app" };
 }
