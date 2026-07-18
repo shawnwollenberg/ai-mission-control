@@ -119,6 +119,126 @@ export async function handleRequestExecution(input: {
   });
   return { executionId, events: result.events, duplicateCommand: result.duplicateCommand };
 }
+export async function handleRequestRemoteExecution(input: {
+  actor: ExecutionActor;
+  commandId: string;
+  executionId?: string;
+  taskId: string;
+  agentId: string;
+  timeoutSeconds?: number;
+}) {
+  const task = (
+    await getDatabasePool().query<
+      DispatchTaskRow & {
+        name: string;
+        instructions: string;
+        expected_output: string | null;
+        required_capabilities: string[];
+        domain: string;
+      }
+    >(
+      `SELECT t.mission_id,t.status,t.current_attempt,t.timeout_seconds,t.name,t.instructions,t.expected_output,t.required_capabilities,m.domain FROM task_projections t JOIN mission_projections m ON m.workspace_id=t.workspace_id AND m.mission_id=t.mission_id WHERE t.workspace_id=$1 AND t.task_id=$2`,
+      [input.actor.workspaceId, input.taskId],
+    )
+  ).rows[0];
+  if (!task) throw new NotFoundError("Task");
+  if (task.status !== "ready") throw new ValidationFailedError("Task must be ready for execution");
+  const agent = (
+    await getDatabasePool().query<{
+      adapter_type: string;
+      status: string;
+      capabilities: string[];
+      supported_domains: string[];
+      protocol_versions: string[];
+      concurrency_limit: number;
+      current_executions: number;
+      last_heartbeat_at: Date | null;
+    }>(
+      `SELECT a.*,count(e.*) FILTER(WHERE e.status NOT IN('succeeded','failed','timed_out','cancelled'))::int current_executions FROM agents a LEFT JOIN execution_projections e ON e.workspace_id=a.workspace_id AND e.agent_id=a.agent_id WHERE a.workspace_id=$1 AND a.agent_id=$2 GROUP BY a.workspace_id,a.agent_id`,
+      [input.actor.workspaceId, input.agentId],
+    )
+  ).rows[0];
+  if (!agent || agent.adapter_type !== "remote_http")
+    throw new ValidationFailedError("A registered remote HTTP agent is required");
+  if (agent.status !== "active" || !agent.last_heartbeat_at || Date.now() - agent.last_heartbeat_at.getTime() > 90_000)
+    throw new ValidationFailedError("Remote agent is not active with a fresh heartbeat");
+  if (
+    !agent.supported_domains.includes(task.domain) ||
+    task.required_capabilities.some((capability) => !agent.capabilities.includes(capability))
+  )
+    throw new ValidationFailedError("Remote agent is missing the task domain or required capabilities");
+  if (!agent.protocol_versions.includes("1.0") || agent.current_executions >= agent.concurrency_limit)
+    throw new ValidationFailedError("Remote agent is not eligible for another protocol 1.0 execution");
+  const executionId = input.executionId ?? randomUUID(),
+    attempt = task.current_attempt + 1,
+    timeoutSeconds = input.timeoutSeconds ?? task.timeout_seconds ?? 3600,
+    messageId = randomUUID();
+  const event = requestExecution({
+    missionId: task.mission_id,
+    taskId: input.taskId,
+    agentId: input.agentId,
+    attempt,
+    adapterType: "remote_http",
+    timeoutSeconds,
+    idempotencyKey: input.commandId,
+  });
+  const result = await appendEvents({
+    workspaceId: input.actor.workspaceId,
+    aggregateType: "execution",
+    aggregateId: executionId,
+    missionId: task.mission_id,
+    expectedVersion: 0,
+    commandId: input.commandId,
+    commandType: "RequestRemoteExecution",
+    correlationId: task.mission_id,
+    actor: { type: input.actor.type, id: input.actor.id },
+    events: [event],
+    outbox: [
+      {
+        eventIndex: 0,
+        messageId,
+        topic: "remote-agent.delivery",
+        idempotencyKey: `remote-execution:${executionId}`,
+        payload: {
+          messageId,
+          agentId: input.agentId,
+          messageType: "ExecutionRequested",
+          protocolVersion: "1.0",
+          executionId,
+          missionId: task.mission_id,
+          taskId: input.taskId,
+          attempt,
+          taskEnvelope: {
+            taskObjective: task.name,
+            instructions: task.instructions,
+            expectedOutput: task.expected_output,
+            allowedCapabilities: task.required_capabilities,
+            prohibitedActions: [
+              "merge",
+              "deploy",
+              "production.remediate",
+              "secret.access",
+              "transaction.sign",
+              "transaction.submit",
+            ],
+            timeoutSeconds,
+            heartbeatIntervalSeconds: 30,
+            artifactRequirements: ["structured-result"],
+          },
+        },
+      },
+    ],
+    applyProjections: applyExecutionProjection,
+  });
+  await handleTaskTransition({
+    actor: input.actor,
+    commandId: stableUuid(`execution-assignment:${executionId}`),
+    taskId: input.taskId,
+    target: "assigned",
+    details: { assignedExecutor: input.agentId },
+  });
+  return { executionId, messageId, events: result.events, duplicateCommand: result.duplicateCommand };
+}
 export async function handleExecutionTransition(input: {
   actor: ExecutionActor;
   commandId: string;

@@ -36,6 +36,15 @@ export async function processOneOutbox(workerId: string) {
         idempotencyKey: `outbox:${message.event_id}`,
         correlationId: message.correlation_id,
       });
+    if (message.topic === "remote-agent.delivery")
+      await enqueueJob({
+        workspaceId: message.workspace_id,
+        jobType: "deliver_remote_agent",
+        payload: message.payload,
+        idempotencyKey: `outbox:${message.event_id}`,
+        correlationId: message.correlation_id,
+        maxAttempts: 5,
+      });
     await getDatabasePool().query(
       "UPDATE outbox SET status='delivered',delivered_at=now(),locked_by=NULL,locked_until=NULL WHERE id=$1 AND locked_by=$2",
       [message.id, workerId],

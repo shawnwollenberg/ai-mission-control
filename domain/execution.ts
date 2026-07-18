@@ -21,7 +21,7 @@ export type ExecutionState = {
   taskId: string;
   agentId: string;
   attempt: number;
-  adapterType: "mock" | "codex";
+  adapterType: "mock" | "codex" | "remote_http";
   cancellationRequested: boolean;
 };
 const transitions: Record<ExecutionStatus, readonly ExecutionStatus[]> = {
@@ -53,9 +53,9 @@ export function requestExecution(input: {
   missionId: string;
   taskId: string;
   agentId: string;
-  repositoryId: string;
+  repositoryId?: string;
   attempt: number;
-  adapterType: "mock" | "codex";
+  adapterType: "mock" | "codex" | "remote_http";
   timeoutSeconds: number;
   idempotencyKey: string;
 }): NewDomainEvent {
@@ -75,7 +75,7 @@ export function rehydrateExecution(events: DomainEvent[]): ExecutionState | unde
         taskId: String(e.payload.taskId),
         agentId: String(e.payload.agentId),
         attempt: Number(e.payload.attempt),
-        adapterType: e.payload.adapterType as "mock" | "codex",
+        adapterType: e.payload.adapterType as "mock" | "codex" | "remote_http",
         cancellationRequested: false,
       };
     if (!state) continue;

@@ -25,7 +25,11 @@ export async function applyExecutionProjection(client: PoolClient, events: Domai
       await client.query("UPDATE mission_projections SET execution_mode=$3 WHERE workspace_id=$1 AND mission_id=$2", [
         e.workspaceId,
         e.missionId,
-        e.payload.adapterType === "codex" ? "live_codex" : "simulated",
+        e.payload.adapterType === "codex"
+          ? "live_codex"
+          : e.payload.adapterType === "remote_http"
+            ? "live_remote"
+            : "simulated",
       ]);
     } else {
       await client.query(
