@@ -1,7 +1,8 @@
 import type { PoolClient } from "pg";
 import { appendEvents, loadAggregateEvents, type DomainEvent } from "@/lib/postgres-event-store";
-import { NotFoundError } from "@/lib/application-errors";
+import { NotFoundError, ValidationFailedError } from "@/lib/application-errors";
 import { stableUuid } from "@/lib/stable-id";
+import { getDatabasePool } from "@/lib/database";
 export async function applyApprovalProjection(client: PoolClient, events: DomainEvent[]) {
   for (const e of events) {
     if (e.eventType === "approval.requested")
@@ -156,6 +157,16 @@ export async function decideApproval(input: {
   actorId: string;
   reason: string;
 }) {
+  const projection = (
+    await getDatabasePool().query(
+      "SELECT status,expires_at FROM approval_projections WHERE workspace_id=$1 AND approval_id=$2",
+      [input.workspaceId, input.approvalId],
+    )
+  ).rows[0];
+  if (projection?.status === "pending" && projection.expires_at && new Date(projection.expires_at) <= new Date()) {
+    await expireApproval({ workspaceId: input.workspaceId, approvalId: input.approvalId, actorId: "approval-expiry" });
+    throw new ValidationFailedError("Approval has expired");
+  }
   const events = await loadAggregateEvents({
     workspaceId: input.workspaceId,
     aggregateType: "approval",

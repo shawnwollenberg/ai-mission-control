@@ -50,6 +50,7 @@ export async function executeAction(
   ).rows[0];
   if (!row) throw new ValidationFailedError("Action execution context is incomplete");
   if (row.status === "succeeded") return row.result;
+  if (row.status === "failed" && row.retry_disposition === "requires-human-review") return row.result;
   if (row.status !== "approved" || row.approval_status !== "granted")
     throw new ValidationFailedError("Action and approval must both be approved");
   if (row.expires_at && new Date(row.expires_at) <= new Date())

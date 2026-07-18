@@ -25,6 +25,8 @@ The authenticated Phase 1 path now runs on PostgreSQL canonical events and rebui
 
 Phase 2 adds a separate `npm run worker:codex` process for an owner-registered, repository-allowlisted Codex agent. It runs only in generated Git worktrees, records live heartbeats, commands, tests, checksummed artifacts, and a local commit, and never pushes, merges, or deploys. See [the Phase 2 completion report](docs/PHASE_2_COMPLETION_REPORT.md) and [Phase 2 operations](docs/PHASE_2_OPERATIONS.md).
 
+Phase 3 adds deterministic policy, durable parameter-bound approvals, and a separate `npm run worker:actions` publication boundary. A generated branch push and pull-request creation require distinct approvals and execution-time revalidation. Merge, deployment, force push, protected-branch writes, secrets, infrastructure changes, and financial actions remain denied. See [the Phase 3 completion report](docs/PHASE_3_COMPLETION_REPORT.md) and [Phase 3 operations](docs/PHASE_3_OPERATIONS.md).
+
 ## Architectural constitution
 
 Mission Control has exactly one source of truth: the event log. Mission Plan, Mission Log, Mission Health, recommendations, approvals, artifacts, and the final debrief own no independent business state. Replaying a mission's events from an empty projection reconstructs every user-visible fact except ephemeral UI state.

@@ -38,6 +38,8 @@ const labels: Record<string, string> = {
   "approval.requested": "Approval requested",
   "approval.granted": "Approval granted",
   "approval.denied": "Approval denied",
+  "approval.expired": "Approval expired",
+  "approval.consumed": "Approval consumed",
   "execution.requested": "Execution requested",
   "execution.accepted": "Execution accepted",
   "execution.preparation_started": "Execution preparation started",
@@ -54,6 +56,17 @@ const labels: Record<string, string> = {
   "execution.timed_out": "Execution timed out",
   "execution.cancellation_requested": "Execution cancellation requested",
   "execution.cancelled": "Execution cancelled",
+  "action.requested": "Sensitive action requested",
+  "policy.evaluation_started": "Policy evaluation started",
+  "policy.evaluated": "Policy evaluated",
+  "action.approval_requested": "Action approval requested",
+  "action.approved": "Action approved",
+  "action.denied": "Action denied",
+  "action.execution_started": "Action execution started",
+  "action.execution_succeeded": "Action execution succeeded",
+  "action.execution_failed": "Action execution failed",
+  "action.expired": "Action expired",
+  "action.cancelled": "Action cancelled",
 };
 
 function safeSummary(event: DomainEvent): string {
@@ -61,6 +74,19 @@ function safeSummary(event: DomainEvent): string {
   if (typeof event.payload.summary === "string") return event.payload.summary.slice(0, 300);
   if (typeof event.payload.name === "string") return event.payload.name.slice(0, 300);
   if (typeof event.payload.reason === "string") return event.payload.reason.slice(0, 300);
+  if (typeof event.payload.outcome === "string") {
+    const reasons = Array.isArray(event.payload.reasons)
+      ? event.payload.reasons
+          .map((item) => (typeof item === "object" && item && "message" in item ? String(item.message) : ""))
+          .filter(Boolean)
+          .join(" ")
+      : "";
+    return `Policy outcome: ${event.payload.outcome}.${reasons ? ` ${reasons}` : ""}`.slice(0, 300);
+  }
+  if (event.eventType === "action.requested")
+    return `${String(event.payload.actionType)} requested for ${String(event.payload.targetResource)}`.slice(0, 300);
+  if (event.eventType === "action.execution_succeeded")
+    return "The approved external action was confirmed by its provider.";
   if (typeof event.payload.status === "string") return `Mission status changed to ${event.payload.status}`;
   return "This event type is not yet supported by the current timeline renderer.";
 }

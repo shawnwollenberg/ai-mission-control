@@ -10,7 +10,7 @@ Aegis smart accounts may provide spending controls and policy enforcement, but A
 
 ## Current phase
 
-The hackathon demo, Phase 1 durable core, and Phase 2 controlled Codex execution are complete through `c4ef0c7`. Phase 3 policy and human approval enforcement was approved on 2026-07-18.
+The hackathon demo, durable core, controlled Codex execution, and Phase 3 policy/human approval enforcement are complete. Stop before Phase 4 work unless explicitly approved.
 
 Implement only the approved Phase 3 scope in `PLANS.md` and `docs/PHASE_3_POLICY_APPROVALS.md`. Preserve the Phase 1 orchestration core and Phase 2 execution adapter. Push and pull-request creation require separate, parameter-bound approvals. Stop before merge, deployment, production remediation, secrets access, blockchain transactions, or unrestricted shell execution.
 

@@ -196,6 +196,28 @@ export async function resolveActionApproval(input: {
     ])
   ).rows[0];
   if (!approval?.action_request_id) throw new NotFoundError("Action approval");
+  if (approval.status === "pending" && approval.expires_at && new Date(approval.expires_at) <= new Date()) {
+    const { expireApproval } = await import("@/application/approval-commands");
+    await expireApproval({
+      workspaceId: input.actor.workspaceId,
+      approvalId: input.approvalId,
+      actorId: input.actor.id,
+    });
+    const expiredEvents = await loadAggregateEvents({
+        workspaceId: input.actor.workspaceId,
+        aggregateType: "action_request",
+        aggregateId: approval.action_request_id,
+      }),
+      expiredState = rehydrateAction(expiredEvents)!;
+    if (expiredState.status === "waiting_for_approval")
+      await appendAction(
+        input.actor,
+        expiredState.id,
+        transitionAction(expiredState, "expired", { approvalId: input.approvalId }),
+        "ExpireAction",
+      );
+    throw new ValidationFailedError("Approval has expired");
+  }
   const { decideApproval } = await import("@/application/approval-commands");
   const decision = await decideApproval({
     workspaceId: input.actor.workspaceId,

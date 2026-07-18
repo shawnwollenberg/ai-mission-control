@@ -19,6 +19,7 @@ const { createExecutionWorktree } = await import("../execution/worktree-manager.
 const { readExecutionArtifact } = await import("../execution/artifact-store.ts");
 const { requestSensitiveAction, resolveActionApproval } = await import("../application/action-commands.ts");
 const { executeAction } = await import("../application/action-executor.ts");
+const { expireDueApprovals } = await import("../application/governance-maintenance.ts");
 const workspaceId = randomUUID(),
   actor = { workspaceId, userId: "owner", role: "owner" },
   executionActor = { workspaceId, id: "owner", type: "human" };
@@ -299,6 +300,94 @@ test("denied publication changes no remote and approved publication pushes only 
     ).rows[0].merge_allowed,
     false,
   );
+});
+test("owner, expiry, commit binding, and current policy are revalidated before effects", async () => {
+  const parameters = { remote: "phase3", branch: completedExecution.outcome.branchName, force: false };
+  const expiring = await requestSensitiveAction({
+    actor: { ...executionActor, role: "owner" },
+    commandId: randomUUID(),
+    executionId: completedExecution.executionId,
+    actionType: "repository.push_branch",
+    parameters,
+    targetResource: `repository:${repositoryId}`,
+  });
+  await assert.rejects(
+    () =>
+      resolveActionApproval({
+        actor: { ...executionActor, role: "member" },
+        approvalId: expiring.approvalId,
+        granted: true,
+        reason: "member attempt",
+      }),
+    /owner permission/,
+  );
+  await getDatabasePool().query(
+    "UPDATE approval_projections SET expires_at=now()-interval '1 second' WHERE workspace_id=$1 AND approval_id=$2",
+    [workspaceId, expiring.approvalId],
+  );
+  assert.equal(await expireDueApprovals("integration-maintenance"), 1);
+  assert.equal(
+    (
+      await getDatabasePool().query(
+        "SELECT status FROM action_request_projections WHERE workspace_id=$1 AND action_request_id=$2",
+        [workspaceId, expiring.actionRequestId],
+      )
+    ).rows[0].status,
+    "expired",
+  );
+  const changed = await requestSensitiveAction({
+    actor: { ...executionActor, role: "owner" },
+    commandId: randomUUID(),
+    executionId: completedExecution.executionId,
+    actionType: "repository.push_branch",
+    parameters,
+    targetResource: `repository:${repositoryId}`,
+  });
+  await resolveActionApproval({
+    actor: { ...executionActor, role: "owner" },
+    approvalId: changed.approvalId,
+    granted: true,
+    reason: "binding test",
+  });
+  await getDatabasePool().query(
+    "UPDATE execution_projections SET commit_id=$3 WHERE workspace_id=$1 AND execution_id=$2",
+    [workspaceId, completedExecution.executionId, "0".repeat(40)],
+  );
+  await assert.rejects(
+    () => executeAction(workspaceId, changed.actionRequestId, "binding-worker"),
+    /commit or branch changed/,
+  );
+  await getDatabasePool().query(
+    "UPDATE execution_projections SET commit_id=$3 WHERE workspace_id=$1 AND execution_id=$2",
+    [workspaceId, completedExecution.executionId, completedExecution.outcome.commitId],
+  );
+  const policyChanged = await requestSensitiveAction({
+    actor: { ...executionActor, role: "owner" },
+    commandId: randomUUID(),
+    executionId: completedExecution.executionId,
+    actionType: "repository.push_branch",
+    parameters,
+    targetResource: `repository:${repositoryId}`,
+  });
+  await resolveActionApproval({
+    actor: { ...executionActor, role: "owner" },
+    approvalId: policyChanged.approvalId,
+    granted: true,
+    reason: "policy revalidation test",
+  });
+  const policyId = randomUUID();
+  await getDatabasePool().query(
+    "INSERT INTO policy_definitions(workspace_id,policy_id,policy_version,name,scope_type,scope_id,priority,rules) VALUES($1,$2,'test-change','Temporary deny','action','repository.push_branch',999,$3)",
+    [workspaceId, policyId, JSON.stringify({ deniedActions: ["repository.push_branch"] })],
+  );
+  await assert.rejects(
+    () => executeAction(workspaceId, policyChanged.actionRequestId, "policy-worker"),
+    /current policy/i,
+  );
+  await getDatabasePool().query("DELETE FROM policy_definitions WHERE workspace_id=$1 AND policy_id=$2", [
+    workspaceId,
+    policyId,
+  ]);
 });
 test("a recovered execution reuses its durable worktree and produces one commit", async () => {
   const mission = await handleCreateMission({
