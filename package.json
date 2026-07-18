@@ -14,6 +14,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:up": "docker compose up -d --wait postgres",
     "worker": "tsx scripts/worker.ts",
+    "worker:codex": "tsx scripts/codex-worker.ts",
+    "execution:run-codex": "tsx scripts/run-codex-execution.ts",
     "projections:rebuild": "tsx scripts/projections.ts",
     "projections:verify": "tsx scripts/projections.ts --verify",
     "legacy:import-dynamodb": "tsx scripts/import-dynamodb.ts",

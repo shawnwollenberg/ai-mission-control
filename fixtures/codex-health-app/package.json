@@ -1,0 +1,8 @@
+{
+  "name": "codex-health-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test health.test.mjs"
+  }
+}

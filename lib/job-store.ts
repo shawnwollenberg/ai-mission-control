@@ -63,7 +63,12 @@ export async function enqueueJob(
   return result.rows[0].job_id;
 }
 
-export async function claimJob(workerId: string, leaseSeconds = 30, workspaceId?: string): Promise<Job | undefined> {
+export async function claimJob(
+  workerId: string,
+  leaseSeconds = 30,
+  workspaceId?: string,
+  jobType?: string,
+): Promise<Job | undefined> {
   return withTransaction(async (client) => {
     await client.query(
       `UPDATE jobs SET status='pending',lease_owner=NULL,lease_expires_at=NULL WHERE status='processing' AND lease_expires_at<now()`,
@@ -71,8 +76,9 @@ export async function claimJob(workerId: string, leaseSeconds = 30, workspaceId?
     const result = await client.query<JobRow>(
       `SELECT job_id,workspace_id,job_type,payload,attempt_count,max_attempts,correlation_id FROM jobs
        WHERE status IN('pending','failed') AND available_at<=now() AND ($1::uuid IS NULL OR workspace_id=$1)
+         AND ($2::text IS NULL OR job_type=$2)
        ORDER BY priority DESC,id FOR UPDATE SKIP LOCKED LIMIT 1`,
-      [workspaceId ?? null],
+      [workspaceId ?? null, jobType ?? null],
     );
     if (!result.rowCount) return undefined;
     const row = result.rows[0];
@@ -83,6 +89,13 @@ export async function claimJob(workerId: string, leaseSeconds = 30, workspaceId?
     row.attempt_count += 1;
     return map(row);
   });
+}
+export async function renewJobLease(jobId: string, workerId: string, leaseSeconds = 30) {
+  const result = await getDatabasePool().query(
+    "UPDATE jobs SET lease_expires_at=now()+($3*interval '1 second'),updated_at=now() WHERE job_id=$1 AND lease_owner=$2 AND status='processing'",
+    [jobId, workerId, leaseSeconds],
+  );
+  return result.rowCount === 1;
 }
 export async function completeJob(jobId: string, workerId: string) {
   await getDatabasePool().query(
