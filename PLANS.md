@@ -1,6 +1,6 @@
 # Mission Control — Production Readiness Execution Plan
 
-**Status:** Phase 2 complete at `c4ef0c7`; Phase 3 policy and approval enforcement complete — 2026-07-18
+**Status:** Phase 3 complete at `76ea49b`; Phase 4 remote-agent integration approved — 2026-07-18
 
 **Planning date:** 2026-07-18
 
@@ -300,31 +300,43 @@ Demonstrate worker termination/recovery and callback replay tests; stop for revi
 
 Provide threat-model test evidence and policy matrix; stop for security review.
 
-## Phase 4 — First real Codex integration
+## Phase 4 — Generic authenticated remote agents
 
-**Goal:** Complete one real, bounded repository change through an isolated Codex worker.
+**Goal:** Coordinate Hermes and Codex through the same domain-neutral execution authority while adding no financial, production, merge, deployment, secret, or unrestricted-command authority.
 
-### Proposed scope
+**Architecture:** `docs/PHASE_4_REMOTE_AGENTS.md` defines the trust model, signed protocol 1.0, durable delivery, callbacks, capabilities, health, artifacts, approvals, recovery, Hermes bridge, deployment shape, threat model, and migration.
 
-1. Deploy/register a Codex worker outside the web tier.
-2. Create isolated branch/worktree execution with repository, path, tool, time, network, and resource constraints.
-3. Report acceptance, heartbeat, progress, sanitized failure, tests, usage, and immutable artifact metadata.
-4. Store diff/test/summary artifacts with checksum and provenance.
-5. Require approval before merge or deployment; do not automatically merge.
+### First reporting boundary
+
+1. Owner registers Hermes and receives a credential exactly once.
+2. Signed protocol messages pass schema, timestamp, nonce, message, credential, workspace, and constant-time signature validation.
+3. Hermes advertises capabilities and heartbeats.
+4. An execution request is committed with a durable outbox delivery.
+5. Hermes separately accepts, reports progress, submits one checksummed Markdown artifact, and completes.
+6. Duplicate messages are idempotent; nonce replay and changed-payload message reuse are rejected and audited.
+
+### Remaining Phase 4 slices
+
+1. Deterministic capability/resource/policy/concurrency assignment and health calculation.
+2. Remote approval request and decision delivery for analysis/workflow decisions only.
+3. Remote supervision and credential rotation UI.
+4. Genuine operational-health Hermes mission and restart recovery.
+5. Read-only DeFi analysis with signing/submission absent and denied.
+6. Mixed Hermes analysis and Codex implementation mission with separate push and PR approvals.
+7. Full security, recovery, projection rebuild, browser, and operational validation.
 
 ### Acceptance criteria
 
-- A user creates a small noncritical repository mission and a real Codex worker receives it.
-- Progress and heartbeats are real and visible.
-- Worker loss produces a recoverable timeout without duplicate repository effects.
-- Tests and resulting commit/diff/PR metadata are attached and checksum-verifiable.
-- Merge/deploy remains blocked until explicit policy-compliant approval.
-- Full timeline rebuilds after all services restart.
-- Replayed callbacks and jobs do not duplicate commits, artifacts, or actions.
+- At least one genuine Hermes execution and one mixed Hermes/Codex mission use the generic protocol and existing aggregates.
+- HTTP acknowledgement records delivery only; an authenticated protocol message records acceptance.
+- Restart and duplicate delivery/callback tests preserve one coherent execution and artifact set.
+- Agent availability is calculated by Mission Control from heartbeat, delivery, failure, saturation, credential, and disablement evidence.
+- All visible remote state and audit history rebuild from canonical events; operational rate/nonce/delivery records remain bounded infrastructure state.
+- DeFi tasks are analysis only, and transaction signing/submission remain structurally absent and policy denied.
 
 ### Stop report
 
-Label every result live/controlled/fallback, document repository credential boundaries, and stop before adding another runtime.
+Report at the first vertical-slice boundary, then complete DeFi, mixed-agent, UI, recovery, and full validation. Stop before transaction signing, production remediation, merge, deployment, or secret access.
 
 ## Phase 5 — Scheduling and operational workflows
 

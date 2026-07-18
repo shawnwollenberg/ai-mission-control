@@ -1,6 +1,6 @@
 # Mission Control — Production Architecture Proposal
 
-**Status:** Approved through Phase 3 policy architecture — 2026-07-18
+**Status:** Approved through Phase 4 remote-agent architecture — 2026-07-18
 
 **Date:** 2026-07-18
 
@@ -28,6 +28,10 @@ Phase 2 instantiates the existing execution-plane boundary for one adapter. Agen
 ### Phase 3 policy and action decision — 2026-07-18
 
 Sensitive effects are represented by a vendor-neutral Action Request aggregate. A deterministic, versioned policy evaluator returns allow, require-approval, or deny before dispatch. Approvals bind one action ID to a canonical parameter hash, resource, execution, commit, and policy version; execution revalidates current policy and exact parameters. Push and pull-request creation run only in a separate leased action worker through Git credential/provider ports. Merge, deployment, secrets, infrastructure, destructive production changes, and financial actions are denied even with approval. Full decisions are in `docs/PHASE_3_POLICY_APPROVALS.md`.
+
+### Phase 4 authenticated remote-agent decision — 2026-07-18
+
+Remote runtimes use protocol 1.0 through a generic HTTP adapter. Per-agent versioned HMAC credentials are hashed at rest; their secret is returned only at creation/rotation. Every transport request binds method, path, timestamp, nonce, message ID, body checksum, and protocol version. Canonical execution commands remain authoritative; delivery acknowledgement is not execution acceptance. A transactional outbox, bounded delivery worker, authenticated single callback endpoint, durable idempotency/replay records, checksummed artifact store, and deterministic health/capability filters support Hermes without runtime-specific coordinator branches. The first integration is a small restart-safe Hermes bridge process, not Discord. Full decisions are in `docs/PHASE_4_REMOTE_AGENTS.md`.
 
 ## Four-layer architecture
 
@@ -188,7 +192,7 @@ interface AgentAdapter {
 - `webhook`: signed outbound request, asynchronous signed callback, delivery history, idempotency, bounded retries.
 - `codex`: isolated worker/worktree, fixed executable/configuration, constrained repository scope, artifacts and tests reported through the protocol. It is not linked into the web server.
 
-Hermes, Lambda, polling, and MCP runtimes are future adapters, not branches in orchestration logic.
+Hermes uses the generic HTTP adapter through a small bridge process. Lambda, polling, and MCP runtimes remain future adapters, not branches in orchestration logic.
 
 ## Persistence and consistency
 
