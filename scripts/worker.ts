@@ -4,6 +4,7 @@ import { claimJob, completeJob, failJob } from "../lib/job-store";
 import { processOneOutbox } from "../lib/outbox-dispatcher";
 import { runSimulationJob } from "../application/simulated-executor";
 import { assertSupportedNodeVersion } from "../lib/runtime-version";
+import { expireDueApprovals } from "../application/governance-maintenance";
 
 assertSupportedNodeVersion();
 
@@ -22,6 +23,7 @@ async function main() {
   while (!stopping) {
     let worked = false;
     try {
+      if ((await expireDueApprovals(workerId)) > 0) worked = true;
       worked = await processOneOutbox(workerId);
       const job = await claimJob(workerId);
       if (job) {

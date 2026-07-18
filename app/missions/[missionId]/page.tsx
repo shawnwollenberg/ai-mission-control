@@ -19,6 +19,7 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
       initialTasks={execution.tasks}
       initialApprovals={execution.approvals}
       initialExecutions={execution.executions}
+      initialActions={execution.actions}
     />
   );
 }

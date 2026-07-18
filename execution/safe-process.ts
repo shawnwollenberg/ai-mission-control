@@ -42,6 +42,10 @@ export async function runSafeProcess(input: {
       LANG: input.env?.LANG ?? "C.UTF-8",
       LC_ALL: input.env?.LC_ALL ?? "C.UTF-8",
       ...(input.env?.CODEX_HOME ? { CODEX_HOME: input.env.CODEX_HOME } : {}),
+      ...(input.env?.HOME ? { HOME: input.env.HOME } : {}),
+      ...(input.env?.GH_CONFIG_DIR ? { GH_CONFIG_DIR: input.env.GH_CONFIG_DIR } : {}),
+      ...(input.env?.GIT_CONFIG_GLOBAL ? { GIT_CONFIG_GLOBAL: input.env.GIT_CONFIG_GLOBAL } : {}),
+      ...(input.env?.SSH_AUTH_SOCK ? { SSH_AUTH_SOCK: input.env.SSH_AUTH_SOCK } : {}),
     };
     const child = spawn(input.executable, input.args, {
       cwd,

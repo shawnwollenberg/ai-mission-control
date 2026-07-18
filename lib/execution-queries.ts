@@ -53,6 +53,19 @@ export type ExecutionReadModel = {
     createdAt: string;
   }>;
 };
+export type ActionReadModel = {
+  actionRequestId: string;
+  executionId?: string;
+  actionType: string;
+  status: string;
+  policyOutcome?: string;
+  policyVersion?: string;
+  policyReasons: Array<{ code: string; message: string }>;
+  approvalId?: string;
+  parameters: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  requestedAt: string;
+};
 type TaskRow = {
   task_id: string;
   mission_id: string;
@@ -125,6 +138,10 @@ export async function getMissionExecution(workspaceId: string, missionId: string
     "SELECT artifact_id,execution_id,kind,media_type,byte_size,checksum_sha256,created_at FROM artifacts WHERE workspace_id=$1 AND mission_id=$2 AND deleted_at IS NULL ORDER BY created_at",
     [workspaceId, missionId],
   );
+  const actions = await getDatabasePool().query(
+    `SELECT * FROM action_request_projections WHERE workspace_id=$1 AND mission_id=$2 ORDER BY requested_at`,
+    [workspaceId, missionId],
+  );
   return {
     tasks: tasks.rows.map((r) => ({
       taskId: r.task_id,
@@ -187,6 +204,19 @@ export async function getMissionExecution(workspaceId: string, missionId: string
           checksum: a.checksum_sha256,
           createdAt: a.created_at.toISOString(),
         })),
+    })),
+    actions: actions.rows.map((a) => ({
+      actionRequestId: a.action_request_id,
+      ...(a.execution_id ? { executionId: a.execution_id } : {}),
+      actionType: a.action_type,
+      status: a.status,
+      ...(a.policy_outcome ? { policyOutcome: a.policy_outcome } : {}),
+      ...(a.policy_version ? { policyVersion: a.policy_version } : {}),
+      policyReasons: a.policy_reasons,
+      ...(a.approval_id ? { approvalId: a.approval_id } : {}),
+      parameters: a.parameters_summary,
+      ...(a.result ? { result: a.result } : {}),
+      requestedAt: a.requested_at.toISOString(),
     })),
   };
 }

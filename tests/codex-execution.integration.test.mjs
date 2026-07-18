@@ -242,6 +242,63 @@ test("denied publication changes no remote and approved publication pushes only 
     approvals.rows.map((row) => row.status),
     ["denied", "consumed"],
   );
+  await getDatabasePool().query(
+    "UPDATE repositories SET pull_request_allowed=true WHERE workspace_id=$1 AND repository_id=$2",
+    [workspaceId, repositoryId],
+  );
+  let creations = 0;
+  const provider = {
+    pushBranch() {
+      throw new Error("unexpected push");
+    },
+    async createPullRequest(request) {
+      creations += 1;
+      return {
+        provider: "fixture",
+        number: 17,
+        url: "https://provider.example/pulls/17",
+        sourceBranch: request.sourceBranch,
+        targetBranch: request.targetBranch,
+        state: "open",
+      };
+    },
+  };
+  const pullRequest = await requestSensitiveAction({
+    actor: { ...executionActor, role: "owner" },
+    commandId: randomUUID(),
+    executionId: completedExecution.executionId,
+    actionType: "repository.create_pull_request",
+    parameters: {
+      sourceBranch: completedExecution.outcome.branchName,
+      targetBranch: "main",
+      title: "Health metadata",
+      description: "Validated Phase 3 acceptance",
+      providerRepository: "fixture/health",
+    },
+    targetResource: `repository:${repositoryId}`,
+  });
+  await resolveActionApproval({
+    actor: { ...executionActor, role: "owner" },
+    approvalId: pullRequest.approvalId,
+    granted: true,
+    reason: "Create separately approved pull request",
+  });
+  const prResult = await executeAction(workspaceId, pullRequest.actionRequestId, "integration-action-worker", provider);
+  assert.equal(prResult.url, "https://provider.example/pulls/17");
+  assert.equal(
+    (await executeAction(workspaceId, pullRequest.actionRequestId, "recovery-worker", provider)).url,
+    prResult.url,
+  );
+  assert.equal(creations, 1);
+  assert.equal(
+    (
+      await getDatabasePool().query(
+        "SELECT merge_allowed,deployment_allowed FROM repositories WHERE workspace_id=$1 AND repository_id=$2",
+        [workspaceId, repositoryId],
+      )
+    ).rows[0].merge_allowed,
+    false,
+  );
 });
 test("a recovered execution reuses its durable worktree and produces one commit", async () => {
   const mission = await handleCreateMission({

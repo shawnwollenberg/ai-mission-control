@@ -251,3 +251,34 @@ export async function consumeApproval(input: {
   });
   return { applied: true, event: result.events[0] };
 }
+export async function expireApproval(input: { workspaceId: string; approvalId: string; actorId: string }) {
+  const events = await loadAggregateEvents({
+    workspaceId: input.workspaceId,
+    aggregateType: "approval",
+    aggregateId: input.approvalId,
+  });
+  if (!events.length) throw new NotFoundError("Approval");
+  const last = events.at(-1)!;
+  if (last.eventType !== "approval.requested") return { applied: false, event: last };
+  const result = await appendEvents({
+    workspaceId: input.workspaceId,
+    aggregateType: "approval",
+    aggregateId: input.approvalId,
+    missionId: last.missionId,
+    expectedVersion: last.aggregateVersion,
+    commandId: stableUuid(`expire:${input.approvalId}`),
+    commandType: "ExpireApproval",
+    correlationId: last.correlationId,
+    causationId: last.eventId,
+    actor: { type: "system", id: input.actorId },
+    events: [
+      {
+        eventType: "approval.expired",
+        eventSchemaVersion: 1,
+        payload: { status: "expired", reason: "Approval validity window elapsed", taskId: last.payload.taskId },
+      },
+    ],
+    applyProjections: applyApprovalProjection,
+  });
+  return { applied: true, event: result.events[0] };
+}

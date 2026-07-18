@@ -4,6 +4,7 @@ export type PushBranchRequest = {
   remote: string;
   branch: string;
   commit: string;
+  credentialEnvironment?: Record<string, string>;
 };
 export type PushBranchResult = {
   remote: string;
@@ -20,6 +21,7 @@ export type CreatePullRequestRequest = {
   title: string;
   description: string;
   idempotencyKey: string;
+  credentialEnvironment?: Record<string, string>;
 };
 export type CreatePullRequestResult = {
   provider: string;

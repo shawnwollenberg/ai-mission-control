@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { evaluatePolicy, POLICY_VERSION } from "../policy/policy-engine.ts";
+import { classifyCommand, commandPolicy } from "../policy/command-classifier.ts";
+import { enforceExecutionBudget } from "../policy/execution-budget.ts";
 
 const base = {
   environment: "development",
@@ -27,6 +29,25 @@ test("policy deterministically gates exact generated branch publication", () => 
   assert.deepEqual(first, second);
   assert.equal(first.outcome, "require_approval");
   assert.equal(first.policyVersion, POLICY_VERSION);
+});
+test("command classification denies destructive, infrastructure, secret, and unknown execution", () => {
+  assert.equal(commandPolicy(classifyCommand(["node", "--test", "health.test.mjs"])), "allow");
+  for (const command of [
+    ["rm", "-rf", "build"],
+    ["terraform", "apply"],
+    ["cat", ".env"],
+    ["mystery-tool", "go"],
+  ])
+    assert.equal(commandPolicy(classifyCommand(command)), "deny");
+  assert.equal(commandPolicy(classifyCommand(["npm", "install", "left-pad"])), "require_approval");
+});
+test("hard execution budgets stop independently of the model", () => {
+  const budget = { maxDurationSeconds: 60, maxRetries: 2, maxCommands: 3, maxArtifactBytes: 100, maxLogBytes: 50 };
+  enforceExecutionBudget(budget, { commands: 3, artifactBytes: 100 });
+  assert.throws(
+    () => enforceExecutionBudget(budget, { commands: 4 }),
+    (error) => error?.code === "validation_failed",
+  );
 });
 test("policy denies permanent boundaries and scoped restrictions", () => {
   assert.equal(

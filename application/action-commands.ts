@@ -8,6 +8,7 @@ import { appendEvents, loadAggregateEvents, type ActorType, type NewDomainEvent 
 import { NotFoundError, ValidationFailedError } from "@/lib/application-errors";
 import { stableUuid } from "@/lib/stable-id";
 import { evaluatePolicy, type ActionType, type PolicyInput } from "@/policy/policy-engine";
+import { loadPolicyRestrictions } from "@/policy/policy-store";
 import { enqueueJob } from "@/lib/job-store";
 
 export type ActionActor = { workspaceId: string; id: string; type: ActorType; role?: "owner" | "member" };
@@ -93,7 +94,13 @@ export async function requestSensitiveAction(input: {
     ...input.parameters,
   };
   const actionHash = canonicalHash(bound);
-  const decision = evaluatePolicy(policyInput(row, input.actionType, bound));
+  const restrictions = await loadPolicyRestrictions(input.actor.workspaceId, {
+    repositoryId: row.repository_id,
+    agentId: row.agent_id,
+    environment: "development",
+    actionType: input.actionType,
+  });
+  const decision = evaluatePolicy({ ...policyInput(row, input.actionType, bound), restrictions });
   const requested = requestAction({
     actionType: input.actionType,
     targetResource: input.targetResource,

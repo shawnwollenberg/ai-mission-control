@@ -19,6 +19,7 @@ export class LocalGitProvider implements GitProvider {
       cwd: request.worktreePath,
       allowedRoot: request.worktreeRoot,
       timeoutMs: 10_000,
+      env: request.credentialEnvironment,
     });
     if (head.exitCode !== 0 || head.stdout.trim() !== request.commit)
       throw new ValidationFailedError("Worktree HEAD no longer matches the approved commit");
@@ -28,6 +29,7 @@ export class LocalGitProvider implements GitProvider {
       cwd: request.worktreePath,
       allowedRoot: request.worktreeRoot,
       timeoutMs: 20_000,
+      env: request.credentialEnvironment,
     });
     const existing = before.stdout.trim().split(/\s+/)[0];
     if (existing && existing !== request.commit)
@@ -40,6 +42,7 @@ export class LocalGitProvider implements GitProvider {
         allowedRoot: request.worktreeRoot,
         timeoutMs: 60_000,
         maxOutputBytes: 200_000,
+        env: request.credentialEnvironment,
       });
       if (pushed.exitCode !== 0) throw new Error(`Git push failed without force: ${pushed.stderr}`);
     }
@@ -49,6 +52,7 @@ export class LocalGitProvider implements GitProvider {
       cwd: request.worktreePath,
       allowedRoot: request.worktreeRoot,
       timeoutMs: 20_000,
+      env: request.credentialEnvironment,
     });
     if (after.stdout.trim().split(/\s+/)[0] !== request.commit)
       throw new Error("Provider did not confirm the approved remote commit");
@@ -60,7 +64,8 @@ export class LocalGitProvider implements GitProvider {
       alreadyExisted: Boolean(existing),
     };
   }
-  async createPullRequest(_request: CreatePullRequestRequest): Promise<CreatePullRequestResult> {
+  async createPullRequest(request: CreatePullRequestRequest): Promise<CreatePullRequestResult> {
+    void request;
     throw new ValidationFailedError("A confirmed pull-request provider is not configured");
   }
 }

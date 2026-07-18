@@ -1,5 +1,6 @@
 import { closeDatabasePool, withTransaction } from "../lib/database";
 import { DEFAULT_OWNER_ID, DEFAULT_WORKSPACE_ID, DEFAULT_WORKSPACE_SLUG } from "../lib/identity-constants";
+import { stableUuid } from "../lib/stable-id";
 
 export type SeedInput = { email: string; displayName: string; passwordHash: string };
 
@@ -36,6 +37,23 @@ export async function seedDatabase(input: SeedInput) {
        ON CONFLICT (workspace_id, user_id) DO NOTHING
        RETURNING user_id`,
       [DEFAULT_WORKSPACE_ID, DEFAULT_OWNER_ID],
+    );
+    await client.query(
+      `INSERT INTO policy_definitions(workspace_id,policy_id,policy_version,name,scope_type,priority,rules) VALUES($1,$2,'phase3.1','Phase 3 permanent safety boundary','workspace',100,$3) ON CONFLICT(workspace_id,policy_id,policy_version) DO NOTHING`,
+      [
+        DEFAULT_WORKSPACE_ID,
+        stableUuid("phase3-default-policy"),
+        JSON.stringify({
+          deniedActions: [
+            "repository.merge_pull_request",
+            "deployment.start",
+            "database.run_destructive_command",
+            "infrastructure.modify",
+            "secret.read",
+            "secret.modify",
+          ],
+        }),
+      ],
     );
     return {
       workspaceCreated: workspace.rowCount === 1,

@@ -19,6 +19,9 @@ export default async function MissionListPage() {
         <Link className="nav-link" href="/">
           New mission
         </Link>
+        <Link className="nav-link" href="/approvals">
+          Approvals
+        </Link>
         <a className="nav-link" href="/logout">
           Log out
         </a>

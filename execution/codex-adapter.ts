@@ -8,6 +8,8 @@ import { stableUuid } from "@/lib/stable-id";
 import { createExecutionWorktree } from "@/execution/worktree-manager";
 import { runSafeProcess, type ProcessResult } from "@/execution/safe-process";
 import { storeExecutionArtifact } from "@/execution/artifact-store";
+import { classifyCommand, commandPolicy } from "@/policy/command-classifier";
+import { enforceExecutionBudget, type ExecutionBudget } from "@/policy/execution-budget";
 import { validateExecutionRequest, type ExecutionRequest } from "@/execution/protocol";
 type Context = {
   execution_id: string;
@@ -26,6 +28,7 @@ type Context = {
   local_path: string;
   default_branch: string;
   validation_commands: string[][];
+  execution_budget: ExecutionBudget;
   commit_allowed: boolean;
   push_allowed: boolean;
   merge_allowed: boolean;
@@ -37,7 +40,7 @@ const actor = (workspaceId: string, workerId: string) => ({ workspaceId, id: wor
 const command = (executionId: string, action: string) => stableUuid(`codex:${executionId}:${action}`);
 async function context(workspaceId: string, executionId: string) {
   const result = await getDatabasePool().query<Context>(
-    `SELECT e.*,m.objective,t.name,t.instructions,t.expected_output,r.local_path,r.default_branch,r.validation_commands,r.commit_allowed,r.push_allowed,r.merge_allowed,r.deployment_allowed FROM execution_projections e JOIN mission_projections m ON m.workspace_id=e.workspace_id AND m.mission_id=e.mission_id JOIN task_projections t ON t.workspace_id=e.workspace_id AND t.task_id=e.task_id JOIN repositories r ON r.workspace_id=e.workspace_id AND r.repository_id=e.repository_id WHERE e.workspace_id=$1 AND e.execution_id=$2`,
+    `SELECT e.*,m.objective,t.name,t.instructions,t.expected_output,r.local_path,r.default_branch,r.validation_commands,r.commit_allowed,r.push_allowed,r.merge_allowed,r.deployment_allowed,r.execution_budget FROM execution_projections e JOIN mission_projections m ON m.workspace_id=e.workspace_id AND m.mission_id=e.mission_id JOIN task_projections t ON t.workspace_id=e.workspace_id AND t.task_id=e.task_id JOIN repositories r ON r.workspace_id=e.workspace_id AND r.repository_id=e.repository_id WHERE e.workspace_id=$1 AND e.execution_id=$2`,
     [workspaceId, executionId],
   );
   if (!result.rowCount) throw new Error("Execution context not found");
@@ -284,6 +287,10 @@ export async function executeCodex(input: {
   });
   for (let index = 0; index < row.validation_commands.length; index++) {
     const [executable, ...args] = row.validation_commands[index];
+    const classification = classifyCommand([executable, ...args]);
+    if (commandPolicy(classification) !== "allow")
+      throw new Error(`Validation command classification is not allowed: ${classification}`);
+    enforceExecutionBudget(row.execution_budget, { commands: index + 1 });
     const validation = await runSafeProcess({
       executable,
       args,
@@ -291,7 +298,7 @@ export async function executeCodex(input: {
       allowedRoot: process.env.CODEX_WORKTREE_ROOT!,
       env: { PATH: process.env.CODEX_RUNTIME_PATH ?? process.env.PATH ?? "" },
       timeoutMs: 300_000,
-      maxOutputBytes: 1_000_000,
+      maxOutputBytes: row.execution_budget.maxLogBytes,
       signal: input.signal,
       redact: (process.env.CODEX_REDACT_VALUES ?? "").split(",").filter(Boolean),
     });

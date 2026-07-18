@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BrandSprite } from "@/app/brand-assets";
 import type { MissionReadModel } from "@/lib/mission-projection-store";
 import type { MissionTimelineEntry } from "@/lib/mission-queries";
-import type { ApprovalReadModel, ExecutionReadModel, TaskReadModel } from "@/lib/execution-queries";
+import type { ActionReadModel, ApprovalReadModel, ExecutionReadModel, TaskReadModel } from "@/lib/execution-queries";
 
 const availableCommands: Record<string, Array<{ command: string; label: string }>> = {
   draft: [
@@ -32,18 +32,21 @@ export default function DurableMissionConsole({
   initialTasks,
   initialApprovals,
   initialExecutions,
+  initialActions,
 }: {
   initialMission: MissionReadModel;
   initialTimeline: MissionTimelineEntry[];
   initialTasks: TaskReadModel[];
   initialApprovals: ApprovalReadModel[];
   initialExecutions: ExecutionReadModel[];
+  initialActions: ActionReadModel[];
 }) {
   const [mission, setMission] = useState(initialMission);
   const [timeline, setTimeline] = useState(initialTimeline);
   const [tasks, setTasks] = useState(initialTasks);
   const [approvals, setApprovals] = useState(initialApprovals);
   const [executions, setExecutions] = useState(initialExecutions);
+  const [actions, setActions] = useState(initialActions);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
@@ -60,11 +63,13 @@ export default function DurableMissionConsole({
           tasks: TaskReadModel[];
           approvals: ApprovalReadModel[];
           executions: ExecutionReadModel[];
+          actions: ActionReadModel[];
         };
         setMission(body.mission);
         setTasks(body.tasks);
         setApprovals(body.approvals);
         setExecutions(body.executions);
+        setActions(body.actions);
       }
       if (timelineResponse.ok)
         setTimeline(((await timelineResponse.json()) as { timeline: MissionTimelineEntry[] }).timeline);
@@ -271,6 +276,41 @@ export default function DurableMissionConsole({
             ))}
           </section>
         )}
+        {actions.length > 0 && (
+          <section className="command-panel mission-summary">
+            <div className="panel-title">
+              <div>
+                <p className="section-label">Policy and publication</p>
+                <h2>Sensitive actions</h2>
+              </div>
+              <Link href="/approvals">Approval inbox</Link>
+            </div>
+            {actions.map((action) => (
+              <div className="approval-card" key={action.actionRequestId}>
+                <strong>
+                  {action.actionType} · {action.status}
+                </strong>
+                <p>
+                  Policy {action.policyVersion ?? "not evaluated"} · {action.policyOutcome ?? "pending"}
+                </p>
+                <ul>
+                  {action.policyReasons.map((reason) => (
+                    <li key={reason.code}>
+                      {reason.message} <code>{reason.code}</code>
+                    </li>
+                  ))}
+                </ul>
+                {action.result && (
+                  <p>
+                    {action.actionType === "repository.create_pull_request"
+                      ? `Provider-confirmed pull request: ${String(action.result.url)}`
+                      : `Remote branch: ${String(action.result.remoteRef)}`}
+                  </p>
+                )}
+              </div>
+            ))}
+          </section>
+        )}
         <section className="command-panel mission-summary">
           <div className="panel-title">
             <div>
@@ -342,6 +382,17 @@ export default function DurableMissionConsole({
                 )}{" "}
                 seconds. The recorded {mission.executionMode === "live_codex" ? "live Codex" : "simulation"} outcome is{" "}
                 {mission.status}.
+                {actions.some(
+                  (action) => action.actionType === "repository.push_branch" && action.status === "succeeded",
+                )
+                  ? " The exact approved branch was pushed."
+                  : " No branch push was recorded."}{" "}
+                {actions.some(
+                  (action) => action.actionType === "repository.create_pull_request" && action.status === "succeeded",
+                )
+                  ? " A provider-confirmed pull request was created."
+                  : " No pull request was created."}{" "}
+                No merge or deployment was performed.
               </p>
             </div>
           )}

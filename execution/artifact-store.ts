@@ -12,6 +12,7 @@ export async function storeExecutionArtifact(input: {
   mediaType: string;
   body: string | Buffer;
   metadata?: Record<string, unknown>;
+  maxBytes?: number;
 }) {
   const configured = process.env.ARTIFACT_STORAGE_ROOT;
   if (!configured) throw new Error("ARTIFACT_STORAGE_ROOT is required");
@@ -23,7 +24,16 @@ export async function storeExecutionArtifact(input: {
   await mkdir(path.dirname(target), { recursive: true });
   const body = Buffer.isBuffer(input.body) ? input.body : Buffer.from(input.body);
   const bytes = new Uint8Array(body);
-  if (body.byteLength > 10_000_000) throw new Error("Artifact exceeds Phase 2 size limit");
+  const budget = (
+    await getDatabasePool().query(
+      `SELECT COALESCE(sum(a.byte_size),0)::bigint used,r.execution_budget FROM execution_projections e JOIN repositories r ON r.workspace_id=e.workspace_id AND r.repository_id=e.repository_id LEFT JOIN artifacts a ON a.workspace_id=e.workspace_id AND a.execution_id=e.execution_id AND a.deleted_at IS NULL WHERE e.workspace_id=$1 AND e.execution_id=$2 GROUP BY r.execution_budget`,
+      [input.workspaceId, input.executionId],
+    )
+  ).rows[0];
+  const maximum = input.maxBytes ?? Number(budget?.execution_budget?.maxArtifactBytes ?? 10_000_000),
+    used = Number(budget?.used ?? 0);
+  if (body.byteLength > maximum || used + body.byteLength > maximum)
+    throw new Error("Artifact exceeds configured execution limit");
   await writeFile(target, bytes, { flag: "wx" });
   const checksum = createHash("sha256").update(bytes).digest("hex");
   await getDatabasePool().query(
