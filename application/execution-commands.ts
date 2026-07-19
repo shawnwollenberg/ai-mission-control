@@ -18,6 +18,7 @@ import { stableUuid } from "@/lib/stable-id";
 import { evaluateAgentEligibility, type RequiredResource } from "@/application/agent-eligibility";
 import { evaluateExecutionBudget, recordUsage } from "@/application/usage-budget";
 import { assertCapabilityEnabled } from "@/application/emergency-controls";
+import { createPullAssignment, completePullAssignment } from "@/application/pull-assignments";
 export type ExecutionActor = { workspaceId: string; id: string; type: ActorType };
 type DispatchTaskRow = { mission_id: string; status: string; current_attempt: number; timeout_seconds: number | null };
 async function append(
@@ -77,6 +78,7 @@ async function append(
         costConfidence: "unknown",
         source: "mission_control_execution",
       });
+    await completePullAssignment(actor.workspaceId, executionId);
   }
   return {
     executionId,
@@ -193,16 +195,48 @@ export async function handleRequestRemoteExecution(input: {
     attempt = task.current_attempt + 1,
     timeoutSeconds = input.timeoutSeconds ?? task.timeout_seconds ?? 3600,
     messageId = randomUUID();
+  const deliveryMode = (
+    await getDatabasePool().query<{ delivery_mode: "push" | "pull" }>(
+      "SELECT delivery_mode FROM agents WHERE workspace_id=$1 AND agent_id=$2",
+      [input.actor.workspaceId, input.agentId],
+    )
+  ).rows[0]?.delivery_mode;
+  if (!deliveryMode) throw new NotFoundError("Agent");
   await evaluateExecutionBudget({ workspaceId: input.actor.workspaceId, missionId: task.mission_id, executionId });
   const event = requestExecution({
     missionId: task.mission_id,
     taskId: input.taskId,
     agentId: input.agentId,
+    repositoryId: task.required_resources.find((resource) => resource.resourceType === "repository")?.resourceId,
     attempt,
     adapterType: "remote_http",
     timeoutSeconds,
     idempotencyKey: input.commandId,
   });
+  const taskEnvelope = {
+    taskObjective: task.name,
+    instructions: task.instructions,
+    expectedOutput: task.expected_output,
+    allowedCapabilities: task.required_capabilities,
+    allowedResources: task.required_resources,
+    prohibitedActions: [
+      "file.modify",
+      "package.install",
+      "git.commit",
+      "git.push",
+      "pull_request.create",
+      "merge",
+      "deploy",
+      "production.remediate",
+      "secret.access",
+      "transaction.sign",
+      "transaction.submit",
+    ],
+    constraints: ["read_only_repository_analysis"],
+    timeoutSeconds,
+    heartbeatIntervalSeconds: 30,
+    artifactRequirements: ["repository-analysis-markdown"],
+  };
   const result = await appendEvents({
     workspaceId: input.actor.workspaceId,
     aggregateType: "execution",
@@ -214,43 +248,41 @@ export async function handleRequestRemoteExecution(input: {
     correlationId: task.mission_id,
     actor: { type: input.actor.type, id: input.actor.id },
     events: [event],
-    outbox: [
-      {
-        eventIndex: 0,
-        messageId,
-        topic: "remote-agent.delivery",
-        idempotencyKey: `remote-execution:${executionId}`,
-        payload: {
-          messageId,
-          agentId: input.agentId,
-          messageType: "ExecutionRequested",
-          protocolVersion: "1.0",
+    outbox:
+      deliveryMode === "push"
+        ? [
+            {
+              eventIndex: 0,
+              messageId,
+              topic: "remote-agent.delivery",
+              idempotencyKey: `remote-execution:${executionId}`,
+              payload: {
+                messageId,
+                agentId: input.agentId,
+                messageType: "ExecutionRequested",
+                protocolVersion: "1.0",
+                executionId,
+                missionId: task.mission_id,
+                taskId: input.taskId,
+                attempt,
+                taskEnvelope,
+              },
+            },
+          ]
+        : [],
+    applyProjections: async (client, events) => {
+      await applyExecutionProjection(client, events);
+      if (deliveryMode === "pull")
+        await createPullAssignment(client, {
+          workspaceId: input.actor.workspaceId,
           executionId,
           missionId: task.mission_id,
           taskId: input.taskId,
+          agentId: input.agentId,
           attempt,
-          taskEnvelope: {
-            taskObjective: task.name,
-            instructions: task.instructions,
-            expectedOutput: task.expected_output,
-            allowedCapabilities: task.required_capabilities,
-            allowedResources: task.required_resources,
-            prohibitedActions: [
-              "merge",
-              "deploy",
-              "production.remediate",
-              "secret.access",
-              "transaction.sign",
-              "transaction.submit",
-            ],
-            timeoutSeconds,
-            heartbeatIntervalSeconds: 30,
-            artifactRequirements: ["structured-result"],
-          },
-        },
-      },
-    ],
-    applyProjections: applyExecutionProjection,
+          payload: taskEnvelope,
+        });
+    },
   });
   await handleTaskTransition({
     actor: input.actor,

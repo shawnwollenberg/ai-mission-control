@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
   ).rows[0];
   const agents = (
     await getDatabasePool().query(
-      "SELECT agent_id,name,adapter_type,status,last_heartbeat_at FROM agents WHERE workspace_id=$1 ORDER BY created_at",
+      "SELECT agent_id,name,adapter_type,status,last_heartbeat_at,pull_ready_at,mission_agent_version,mission_agent_adapter FROM agents WHERE workspace_id=$1 ORDER BY created_at",
       [identity.workspaceId],
     )
   ).rows;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -24,6 +24,7 @@ async function startServer() {
       DATABASE_URL: process.env.DATABASE_URL,
       MISSION_CONTROL_SESSION_SECRET: process.env.MISSION_CONTROL_SESSION_SECRET,
       PUBLIC_APP_URL: origin,
+      ARTIFACT_STORAGE_ROOT: process.env.ARTIFACT_STORAGE_ROOT ?? join(tmpdir(), "mission-control-e2e-artifacts"),
       HOSTNAME: "127.0.0.1",
       PORT: String(port),
     },
@@ -187,6 +188,10 @@ test("authenticated durable browser mission survives restart and enforces lifecy
     transition = await lifecycle(cookie, created.missionId, "resume", 4);
     assert.equal((await transition.json()).projection.status, "running");
     startWorker();
+    // Let the worker enter its processing loop before exercising restart recovery.
+    // An immediate SIGTERM can otherwise arrive during module bootstrap and test
+    // process startup rather than durable worker recovery.
+    await new Promise((resolve) => setTimeout(resolve, 150));
     await stopWorker();
     startWorker();
     let execution;
@@ -247,7 +252,7 @@ test("authenticated durable browser mission survives restart and enforces lifecy
   }
 });
 
-test("guided onboarding creates a credential and advances after the connector heartbeat", async () => {
+test("guided onboarding connects Mission Agent and completes a pulled repository-analysis mission", async () => {
   await startServer();
   try {
     const cookie = await login();
@@ -263,21 +268,71 @@ test("guided onboarding creates a credential and advances after the connector he
     assert.equal(response.status, 201);
     const connection = await response.json();
     assert.equal(connection.agentName, "Codex");
-    assert.match(connection.command, /^curl -fsSL .*\/connect-agent\.mjs \| node -- --install '/);
-    const encoded = connection.command.match(/--install '([^']+)'$/)?.[1];
+    assert.match(connection.command, /mission-agent-0\.1\.0\.mjs/);
+    assert.match(connection.command, /shasum -a 256 -c/);
+    const encoded = connection.command.match(/ connect '([^']+)'$/)?.[1];
     assert.ok(encoded);
-    const config = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
-    const directory = await mkdtemp(join(tmpdir(), "mc-e2e-connector-"));
-    const configPath = join(directory, "config.json");
-    await writeFile(configPath, JSON.stringify(config));
-    await run(process.execPath, ["public/connect-agent.mjs", "--run", configPath, "--once"]);
+    const directory = await mkdtemp(join(tmpdir(), "mc-e2e-mission-agent-"));
+    await run(
+      process.execPath,
+      ["public/mission-agent-0.1.0.mjs", "connect", encoded, "--repository", process.cwd(), "--no-start"],
+      { env: { ...process.env, MISSION_AGENT_HOME: directory, MISSION_AGENT_SECRET_STORE: "file" } },
+    );
 
     const agentsResponse = await fetch(`${origin}/api/agents`, { headers: browserHeaders(cookie) });
     assert.equal(agentsResponse.status, 200);
     const agents = (await agentsResponse.json()).agents;
     const connected = agents.find((agent) => agent.agent_id === connection.agentId);
     assert.ok(connected.last_heartbeat_at);
+    assert.ok(connected.pull_ready_at);
+    assert.equal(connected.mission_agent_version, "0.1.0");
     assert.equal(connected.credential_status, "active");
+
+    const stored = JSON.parse(await readFile(join(directory, "config.json"), "utf8"));
+    assert.match(await readFile(join(directory, "mission-agent-0.1.0.mjs"), "utf8"), /^#!\/usr\/bin\/env node/);
+    const repositoryId = Object.keys(stored.repositories)[0];
+    assert.ok(repositoryId);
+    const firstMissionPage = await fetch(`${origin}/?firstMission=1`, {
+      headers: browserHeaders(cookie, { "x-forwarded-host": "app.localhost" }),
+    });
+    assert.equal(firstMissionPage.status, 200);
+    assert.match(await firstMissionPage.text(), /Analyze this repository/);
+    const launched = await fetch(`${origin}/api/onboarding/first-mission`, {
+      method: "POST",
+      headers: browserHeaders(cookie, { "content-type": "application/json", "idempotency-key": crypto.randomUUID() }),
+      body: JSON.stringify({ agentId: connection.agentId, repositoryId }),
+    });
+    assert.equal(launched.status, 201);
+    const mission = await launched.json();
+
+    let agentPath = process.env.PATH;
+    if (process.env.MISSION_AGENT_REAL_CODEX !== "1") {
+      const bin = join(directory, "bin");
+      await (await import("node:fs/promises")).mkdir(bin, { recursive: true });
+      const fakeCodex = join(bin, "codex");
+      await writeFile(
+        fakeCodex,
+        `#!/bin/sh\nif [ "$1" = "--version" ]; then echo 'codex-test 1.0'; exit 0; fi\nwhile [ "$#" -gt 0 ]; do if [ "$1" = "-o" ]; then shift; output="$1"; fi; shift; done\nprintf '%s\\n' '# Repository analysis' '## Repository overview' 'A test repository.' '## Main technologies' 'Node.js.' '## Application structure' 'Application and tests.' '## Important commands' 'npm test.' '## Test setup' 'Node test runner.' '## Notable risks' 'Review dependencies.' '## Suggested next mission' 'Run the full validation suite.' > "$output"\n`,
+      );
+      await chmod(fakeCodex, 0o700);
+      agentPath = `${bin}:${process.env.PATH}`;
+    }
+    await run(process.execPath, ["public/mission-agent-0.1.0.mjs", "run", "--once"], {
+      env: {
+        ...process.env,
+        PATH: agentPath,
+        MISSION_AGENT_HOME: directory,
+        MISSION_AGENT_SECRET_STORE: "file",
+      },
+      timeout: process.env.MISSION_AGENT_REAL_CODEX === "1" ? 180_000 : 30_000,
+    });
+    const executionResponse = await fetch(`${origin}/api/missions/${mission.missionId}/execution`, {
+      headers: browserHeaders(cookie),
+    });
+    const execution = await executionResponse.json();
+    assert.equal(execution.mission.status, "completed");
+    assert.equal(execution.executions[0].status, "succeeded");
+    assert.equal(execution.executions[0].artifacts[0].kind, "repository_analysis");
   } finally {
     await stopServer();
   }

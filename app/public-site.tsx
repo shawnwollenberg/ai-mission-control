@@ -61,7 +61,7 @@ export const docGroups = [
   {
     title: "Getting Started",
     items: [
-      ["What is Mission Control?", "/docs"],
+      ["What is Mission Control?", "/docs/what-is-mission-control"],
       ["Quick Start (10 minutes)", "/quick-start"],
       ["Install", "/docs/install"],
       ["Architecture", "/architecture"],
@@ -85,6 +85,8 @@ export const docGroups = [
       ["Running Codex", "/docs/running-codex"],
       ["Running Hermes", "/docs/running-hermes"],
       ["Creating Agents", "/docs/creating-agents"],
+      ["Mission Agent CLI", "/docs/mission-agent"],
+      ["Agent Protocol 1.0", "/docs/agent-protocol"],
       ["Mission Templates", "/docs/mission-templates"],
       ["Scheduling", "/docs/scheduling"],
       ["Notifications", "/docs/notifications"],
@@ -100,6 +102,29 @@ export const docs: Record<
   string,
   { eyebrow: string; title: string; lede: string; sections: { title: string; body: string }[] }
 > = {
+  "what-is-mission-control": {
+    eyebrow: "Getting started",
+    title: "What is Mission Control?",
+    lede: "Mission Control is the durable control plane for an AI organization: one place to give agents an objective, supervise their work, review evidence, and retain human authority over consequential actions.",
+    sections: [
+      {
+        title: "The problem it solves",
+        body: "AI agents often work across separate terminals, repositories, model providers, schedulers, and dashboards. Mission Control turns that fragmented activity into missions, tasks, executions, approvals, and artifacts that a human can understand at a glance.",
+      },
+      {
+        title: "How it works",
+        body: "You launch a mission from a reusable template or a focused objective. Mission Control assigns bounded tasks to capable agents, records meaningful activity in an append-only event log, surfaces progress and evidence, and pauses whenever policy requires human judgment.",
+      },
+      {
+        title: "What makes it different",
+        body: "Mission Control manages outcomes rather than pretending every agent is trustworthy or autonomous. Codex, Hermes, Claude Code, and generic agents sit behind common execution boundaries, while deterministic policies and parameter-bound approvals keep authority with the human operator.",
+      },
+      {
+        title: "Start small",
+        body: "Create a personal workspace, connect one agent with the guided one-command flow, and launch the read-only repository-analysis mission. The goal is to reach a genuine heartbeat, execution, and artifact in under ten minutes without reading the rest of the documentation first.",
+      },
+    ],
+  },
   install: {
     eyebrow: "Getting started",
     title: "Install Mission Control",
@@ -223,6 +248,48 @@ export const docs: Record<
       {
         title: "Connection sequence",
         body: "Create an invite in the app, run the generated host command, receive a heartbeat, and review the declared capabilities before assignment.",
+      },
+    ],
+  },
+  "mission-agent": {
+    eyebrow: "Five-minute setup",
+    title: "Connect Mission Agent",
+    lede: "Connect a local Codex runtime, confirm its outbound pull channel, and complete a genuine read-only repository analysis without inbound networking.",
+    sections: [
+      {
+        title: "1. Connect",
+        body: "Create an account, choose Codex, open a terminal in a safe Git repository, and run the single versioned and checksummed command shown by Mission Control. The credential is stored in macOS Keychain when available or a protected 0600 file on Linux.",
+      },
+      {
+        title: "2. Verify",
+        body: "The onboarding page advances only after both the signed heartbeat and assignment pull capability are confirmed. Run mission-agent doctor for Node, Git, Codex, repository, credential-permission, reachability, signature, and heartbeat diagnostics.",
+      },
+      {
+        title: "3. Run",
+        body: "Select the registered repository and launch Analyze this repository. Mission Agent pulls the assignment over outbound HTTPS, renews its lease, reports bounded progress, uploads a checksummed Markdown artifact, and completes the mission.",
+      },
+      {
+        title: "Operations",
+        body: "Use mission-agent status, mission-agent run, mission-agent repository add /path, and mission-agent logout --yes. macOS and Linux are supported first; Windows remains experimental. Credentials never appear in status output.",
+      },
+    ],
+  },
+  "agent-protocol": {
+    eyebrow: "Protocol",
+    title: "Mission Control Agent Protocol 1.0",
+    lede: "A vendor-neutral, signed HTTPS protocol for identity, heartbeat, pull assignments, leases, progress, artifacts, completion, failure, and cancellation.",
+    sections: [
+      {
+        title: "Authentication",
+        body: "HMAC-SHA256 binds method, path, timestamp, nonce, message ID, body checksum, and protocol version. Credentials are workspace- and agent-scoped, displayed once, immediately revocable, and never included in events or examples.",
+      },
+      {
+        title: "Pull and leases",
+        body: "A bounded long poll returns only the authenticated agent’s eligible assignment. An opaque lease token is required for acknowledgement, renewal, execution messages, cancellation checks, release, artifacts, and completion.",
+      },
+      {
+        title: "Compatibility",
+        body: "Protocol additions preserve existing push-mode 1.0 agents. Independent Python, Go, or Rust clients can implement the documented canonical signature and JSON envelope without using Mission Control source code.",
       },
     ],
   },

@@ -3,15 +3,31 @@ import LaunchForm from "./launch-form";
 import { headers } from "next/headers";
 import AgentConnectWizard from "./agent-connect-wizard";
 import { PublicShell } from "./public-site";
+import FirstMissionForm from "./first-mission-form";
+import { getDatabasePool } from "@/lib/database";
 
 export const dynamic = "force-dynamic";
 
 export default async function LaunchPage({ searchParams }: { searchParams: Promise<{ firstMission?: string }> }) {
-  const host = (await headers()).get("host")?.split(":")[0];
+  const requestHeaders = await headers();
+  const host = (requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"))?.split(":")[0];
   if (host?.startsWith("app.")) {
-    await requirePageIdentity("/");
+    const identity = await requirePageIdentity("/");
     const query = await searchParams;
-    return <LaunchForm firstMission={query.firstMission === "1"} />;
+    if (query.firstMission === "1") {
+      const repositories = (
+        await getDatabasePool().query(
+          `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name FROM repositories r
+           JOIN agents a ON a.workspace_id=r.workspace_id AND r.allowed_agent_ids ? (a.agent_id::text)
+           WHERE r.workspace_id=$1 AND r.location_mode='mission_agent' AND r.disabled_at IS NULL
+             AND a.delivery_mode='pull' AND a.status='active' AND a.pull_ready_at>now()-interval '5 minutes'
+           ORDER BY r.updated_at DESC`,
+          [identity.workspaceId],
+        )
+      ).rows;
+      return <FirstMissionForm repositories={repositories} />;
+    }
+    return <LaunchForm />;
   }
   return (
     <PublicShell>

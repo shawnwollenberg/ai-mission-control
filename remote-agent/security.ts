@@ -8,6 +8,9 @@ const limits: Record<string, number> = {
   artifact: 10,
   approval: 10,
   authentication_failure: 20,
+  pull: 12,
+  lease: 60,
+  repository: 10,
 };
 export function rateCategory(message: ProtocolEnvelope) {
   if (message.messageType === "AgentHeartbeat" || message.messageType === "ExecutionHeartbeat") return "heartbeat";

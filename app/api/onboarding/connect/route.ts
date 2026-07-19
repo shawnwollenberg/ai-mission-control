@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { registerRemoteAgent } from "@/application/remote-agent-registry";
+import { getDatabasePool } from "@/lib/database";
+import { recordOnboardingEvent } from "@/application/onboarding-events";
 import { apiErrorResponse } from "@/lib/http-errors";
 import { requireApiIdentity, requireMutationOrigin, unauthenticatedResponse } from "@/lib/request-auth";
 
@@ -40,7 +42,14 @@ export async function POST(request: Request) {
     const profile = body.agentType ? profiles[body.agentType] : undefined;
     if (!profile) return NextResponse.json({ error: { message: "Choose a supported agent type." } }, { status: 400 });
 
-    const publicUrl = (process.env.MISSION_CONTROL_PUBLIC_URL ?? new URL(request.url).origin).replace(/\/$/, "");
+    const publicUrl = (
+      process.env.MISSION_CONTROL_PUBLIC_URL ??
+      process.env.PUBLIC_APP_URL ??
+      new URL(request.url).origin
+    ).replace(/\/$/, "");
+    const workspaceName = (
+      await getDatabasePool().query<{ name: string }>("SELECT name FROM workspaces WHERE id=$1", [identity.workspaceId])
+    ).rows[0]?.name;
     const registration = await registerRemoteAgent({
       actor: identity,
       name: profile.name,
@@ -49,6 +58,13 @@ export async function POST(request: Request) {
       capabilities: [...profile.capabilities],
       supportedDomains: [...profile.domains],
       concurrencyLimit: 1,
+      deliveryMode: "pull",
+      missionAgentAdapter:
+        body.agentType === "claude_code"
+          ? "claude-code"
+          : body.agentType === "generic_remote"
+            ? "generic"
+            : body.agentType,
     });
     const config = Buffer.from(
       JSON.stringify({
@@ -60,9 +76,24 @@ export async function POST(request: Request) {
         agentType: body.agentType,
         agentName: profile.name,
         capabilities: profile.capabilities,
+        workspaceName: workspaceName ?? "My Workspace",
       }),
     ).toString("base64url");
-    const command = `curl -fsSL ${publicUrl}/connect-agent.mjs | node -- --install '${config}'`;
+    const missionAgentVersion = "0.1.0";
+    const missionAgentChecksum = "b244caeaeae646069686aa4de1bbb555edc1d4cd487f415264a46e9083e61f61";
+    const command = `tmp=$(mktemp) && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && node "$tmp" connect '${config}'`;
+    await recordOnboardingEvent({
+      workspaceId: identity.workspaceId,
+      actorId: identity.userId,
+      eventType: "onboarding.agent_selected",
+      payload: { agentType: body.agentType, agentId: registration.agentId },
+    });
+    await recordOnboardingEvent({
+      workspaceId: identity.workspaceId,
+      actorId: identity.userId,
+      eventType: "onboarding.connection_command_generated",
+      payload: { agentId: registration.agentId, missionAgentVersion },
+    });
     return NextResponse.json(
       {
         agentId: registration.agentId,
@@ -71,6 +102,8 @@ export async function POST(request: Request) {
         endpoint: `${publicUrl}/api/agent-protocol/v1/messages`,
         credentialId: registration.credential.credentialId,
         protocolVersion: registration.credential.protocolVersion,
+        missionAgentVersion,
+        missionAgentChecksum,
       },
       { status: 201, headers: { "Cache-Control": "no-store" } },
     );

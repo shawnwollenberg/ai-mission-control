@@ -24,6 +24,16 @@ export default function Architecture() {
           <span>events · policy · orchestration</span>
         </div>
         <i>↓</i>
+        <div>
+          <strong>Durable control plane</strong>
+          <span>PostgreSQL events · workers · policies · approvals · artifact storage</span>
+        </div>
+        <i>↕ outbound HTTPS</i>
+        <div className="accent">
+          <strong>Mission Agent</strong>
+          <span>pull assignments · leases · progress · evidence</span>
+        </div>
+        <i>↓</i>
         <div className="arch-agents">
           <span>Codex</span>
           <span>Hermes</span>

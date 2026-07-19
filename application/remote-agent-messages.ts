@@ -25,8 +25,11 @@ async function executionRow(message: ProtocolEnvelope, workspaceId: string) {
       agent_id: string;
       attempt: number;
       status: string;
+      delivery_mode: string;
     }>(
-      "SELECT mission_id,task_id,agent_id,attempt,status FROM execution_projections WHERE workspace_id=$1 AND execution_id=$2",
+      `SELECT e.mission_id,e.task_id,e.agent_id,e.attempt,e.status,a.delivery_mode FROM execution_projections e
+       JOIN agents a ON a.workspace_id=e.workspace_id AND a.agent_id=e.agent_id
+       WHERE e.workspace_id=$1 AND e.execution_id=$2`,
       [workspaceId, message.executionId],
     )
   ).rows[0];
@@ -104,6 +107,7 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     });
     const eventType =
       message.messageType === "AgentHeartbeat" ? "agent.heartbeat_received" : "agent.capabilities_reported";
+    const pullReady = message.messageType === "AgentHeartbeat" && message.payload.assignmentPull === true;
     const credentialVerified =
       message.messageType === "AgentHeartbeat" && credential.credential_record_status === "pending_verification";
     await appendEvents({
@@ -118,6 +122,20 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       actor: { type: "agent", id: credential.agent_id },
       events: [
         { eventType, eventSchemaVersion: 1, occurredAt: message.sentAt, payload: message.payload },
+        ...(pullReady
+          ? [
+              {
+                eventType: "agent.pull_ready_confirmed",
+                eventSchemaVersion: 1,
+                occurredAt: message.sentAt,
+                payload: {
+                  missionAgentVersion: message.payload.missionAgentVersion,
+                  adapter: message.payload.adapter,
+                  protocolVersion: message.protocolVersion,
+                },
+              },
+            ]
+          : []),
         ...(credentialVerified
           ? [
               {
@@ -133,8 +151,19 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
         const last = appended.at(-1)!;
         if (eventType === "agent.heartbeat_received") {
           await client.query(
-            "UPDATE agents SET last_heartbeat_at=$3,status=CASE WHEN status='disabled' THEN status ELSE 'active' END,updated_at=$3 WHERE workspace_id=$1 AND agent_id=$2",
-            [credential.workspace_id, credential.agent_id, last.occurredAt],
+            `UPDATE agents SET last_heartbeat_at=$3,status=CASE WHEN status='disabled' THEN status ELSE 'active' END,
+             pull_ready_at=CASE WHEN $4 THEN $3 ELSE pull_ready_at END,
+             mission_agent_version=CASE WHEN $4 THEN $5 ELSE mission_agent_version END,
+             mission_agent_adapter=CASE WHEN $4 THEN $6 ELSE mission_agent_adapter END,updated_at=$3
+             WHERE workspace_id=$1 AND agent_id=$2`,
+            [
+              credential.workspace_id,
+              credential.agent_id,
+              last.occurredAt,
+              pullReady,
+              pullReady ? String(message.payload.missionAgentVersion ?? "unknown") : null,
+              pullReady ? String(message.payload.adapter ?? "generic") : null,
+            ],
           );
           await client.query(
             `INSERT INTO agent_heartbeats(workspace_id,agent_id,credential_id,protocol_version,received_at,reported_at) VALUES($1,$2,$3,'1.0',now(),$4) ON CONFLICT(workspace_id,agent_id) DO UPDATE SET credential_id=EXCLUDED.credential_id,protocol_version=EXCLUDED.protocol_version,received_at=EXCLUDED.received_at,reported_at=EXCLUDED.reported_at`,
@@ -312,6 +341,14 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       });
       return { status: "accepted" };
     case "ExecutionSucceeded": {
+      if (current.delivery_mode === "pull") {
+        const artifactCount = await getDatabasePool().query<{ count: number }>(
+          "SELECT count(*)::int count FROM artifacts WHERE workspace_id=$1 AND execution_id=$2 AND deleted_at IS NULL",
+          [credential.workspace_id, message.executionId],
+        );
+        if (!artifactCount.rows[0]?.count)
+          throw new ValidationFailedError("Pull execution cannot complete without a verified artifact");
+      }
       const latest = (
         await getDatabasePool().query<{ status: string }>(
           "SELECT status FROM execution_projections WHERE workspace_id=$1 AND execution_id=$2",
