@@ -30,7 +30,7 @@ export default function SignupForm() {
       });
       const result = (await response.json()) as { error?: string };
       if (!response.ok) return setError(result.error ?? "Mission Control could not create your account.");
-      window.location.assign("/missions");
+      window.location.assign("/onboarding");
     } catch {
       setError("Mission Control could not create your account.");
     } finally {
@@ -44,7 +44,7 @@ export default function SignupForm() {
         <BrandSprite asset="mark-compact" />
         <p className="section-label">Join Mission Control</p>
         <h1>Create your account.</h1>
-        <p>Start as a member of this Mission Control workspace.</p>
+        <p>Create a private AI organization that you own.</p>
         <form onSubmit={submit}>
           <label>Name<input autoComplete="name" name="displayName" required minLength={2} maxLength={80} /></label>
           <label>Email<input autoComplete="email" name="email" type="email" required /></label>

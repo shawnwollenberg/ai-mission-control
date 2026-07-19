@@ -101,7 +101,7 @@ aws --profile wallyweb --region us-east-1 secretsmanager get-secret-value \
   --output text
 ```
 
-The initial owner is `admin@wallyweb.com`. Self-service registrations receive the non-owner `member` role and append a structured registration event.
+The initial production workspace owner is `admin@wallyweb.com`. Every self-service registration creates an isolated personal workspace, assigns that user its `owner` role, seeds its starter Mission Templates, and appends structured workspace and owner-registration events.
 
 ## Rollback
 

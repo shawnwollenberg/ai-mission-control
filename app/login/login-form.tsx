@@ -39,7 +39,7 @@ export default function LoginForm({ next }: { next: string }) {
         <BrandSprite asset="mark-compact" />
         <p className="section-label">Secure command access</p>
         <h1>Enter Mission Control.</h1>
-        <p>Authenticate as the configured mission owner.</p>
+        <p>Sign in to your Mission Control workspace.</p>
         <form onSubmit={submit}>
           <label>
             Email
