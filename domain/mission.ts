@@ -22,6 +22,12 @@ export type CreateMissionInput = {
   budgetLimits?: Record<string, number>;
   deadline?: string;
   createdBy: string;
+  templateId?: string;
+  templateVersion?: number;
+  resolvedInputs?: Record<string, unknown>;
+  resolvedTaskPlan?: unknown[];
+  originScheduleId?: string;
+  intendedRunAt?: string;
 };
 
 const transitions: Record<MissionStatus, readonly MissionStatus[]> = {
@@ -59,6 +65,12 @@ export function createMissionEvent(input: CreateMissionInput): NewDomainEvent {
       budgetLimits: input.budgetLimits ?? {},
       deadline: input.deadline ?? null,
       createdBy: input.createdBy,
+      templateId: input.templateId ?? null,
+      templateVersion: input.templateVersion ?? null,
+      resolvedInputs: input.resolvedInputs ?? {},
+      resolvedTaskPlan: input.resolvedTaskPlan ?? [],
+      originScheduleId: input.originScheduleId ?? null,
+      intendedRunAt: input.intendedRunAt ?? null,
       status: "draft",
     },
   };

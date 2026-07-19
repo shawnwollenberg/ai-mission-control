@@ -358,6 +358,10 @@ Report at the first vertical-slice boundary, then complete DeFi, mixed-agent, UI
 6. Restart the scheduler and prove no duplicate mission or notification.
 7. Rebuild and verify template, schedule, mission, and notification projections.
 
+### First-boundary status
+
+Completed on 2026-07-19. Five published templates, immutable version snapshots, durable one-time and recurring schedules, leased deterministic schedule runs, the genuine scheduled Hermes health report, in-app completion notification, restart idempotency, and projection rebuild equality are demonstrated. See `docs/PHASE_5_FIRST_BOUNDARY.md`.
+
 ### Proposed scope
 
 1. Add immutable template versions for software delivery, DeFi analysis, and systems monitoring.

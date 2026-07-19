@@ -1,6 +1,8 @@
 import { closeDatabasePool, withTransaction } from "../lib/database";
 import { DEFAULT_OWNER_ID, DEFAULT_WORKSPACE_ID, DEFAULT_WORKSPACE_SLUG } from "../lib/identity-constants";
 import { stableUuid } from "../lib/stable-id";
+import { INITIAL_TEMPLATES } from "../templates/initial-templates";
+import { createTemplateVersion } from "../application/template-commands";
 
 export type SeedInput = { email: string; displayName: string; passwordHash: string };
 
@@ -69,6 +71,24 @@ async function main() {
     displayName: process.env.MISSION_CONTROL_OWNER_NAME ?? "",
     passwordHash: process.env.MISSION_CONTROL_OWNER_PASSWORD_HASH ?? "",
   });
+  for (const template of INITIAL_TEMPLATES) {
+    const exists = await (
+      await import("../lib/database")
+    )
+      .getDatabasePool()
+      .query("SELECT 1 FROM mission_template_projections WHERE workspace_id=$1 AND template_id=$2 AND version=1", [
+        DEFAULT_WORKSPACE_ID,
+        template.templateId,
+      ]);
+    if (!exists.rowCount)
+      await createTemplateVersion({
+        actor: { workspaceId: DEFAULT_WORKSPACE_ID, userId: DEFAULT_OWNER_ID, role: "owner" },
+        commandId: stableUuid(`seed-template:${template.templateId}:1`),
+        templateId: template.templateId,
+        definition: template.definition,
+        publish: true,
+      });
+  }
   console.log(JSON.stringify({ event: "database_seeded", ...result }));
 }
 

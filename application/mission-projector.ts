@@ -8,8 +8,8 @@ export async function applyMissionProjection(client: PoolClient, events: DomainE
         `INSERT INTO mission_projections (
            workspace_id, mission_id, aggregate_version, name, objective, description, domain, priority, risk_level,
            status, requested_outcome, success_criteria, constraints, budget_limits, deadline, created_by,
-           created_at, updated_at, last_event_position
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10, $11, $12, $13, $14, $15, $16, $16, $17)
+           created_at, updated_at, last_event_position, template_id, template_version, resolved_inputs, resolved_task_plan, origin_schedule_id, intended_run_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10, $11, $12, $13, $14, $15, $16, $16, $17, $18, $19, $20, $21, $22, $23)
          ON CONFLICT (workspace_id, mission_id) DO UPDATE SET
            aggregate_version = EXCLUDED.aggregate_version,
            name = EXCLUDED.name,
@@ -27,6 +27,12 @@ export async function applyMissionProjection(client: PoolClient, events: DomainE
            created_by = EXCLUDED.created_by,
            created_at = EXCLUDED.created_at,
            updated_at = EXCLUDED.updated_at,
+           template_id = EXCLUDED.template_id,
+           template_version = EXCLUDED.template_version,
+           resolved_inputs = EXCLUDED.resolved_inputs,
+           resolved_task_plan = EXCLUDED.resolved_task_plan,
+           origin_schedule_id = EXCLUDED.origin_schedule_id,
+           intended_run_at = EXCLUDED.intended_run_at,
            last_event_position = EXCLUDED.last_event_position`,
         [
           event.workspaceId,
@@ -46,6 +52,12 @@ export async function applyMissionProjection(client: PoolClient, events: DomainE
           event.payload.createdBy,
           event.occurredAt,
           event.position,
+          event.payload.templateId,
+          event.payload.templateVersion,
+          JSON.stringify(event.payload.resolvedInputs ?? {}),
+          JSON.stringify(event.payload.resolvedTaskPlan ?? []),
+          event.payload.originScheduleId,
+          event.payload.intendedRunAt,
         ],
       );
       continue;

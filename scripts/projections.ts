@@ -7,6 +7,9 @@ import { applyTaskProjection } from "../application/task-projector";
 import { applyApprovalProjection } from "../application/approval-commands";
 import { applyExecutionProjection } from "../application/execution-projector";
 import { applyActionProjection } from "../application/action-projector";
+import { applyTemplateProjection } from "../application/template-projector";
+import { applyScheduleProjection } from "../application/schedule-projector";
+import { applyNotificationProjection } from "../application/notification-projector";
 const args = process.argv.slice(2);
 const value = (flag: string) => {
   const i = args.indexOf(flag);
@@ -53,6 +56,10 @@ async function snapshot(client: PoolClient) {
     approval_projections: "1,2",
     execution_projections: "1,2",
     action_request_projections: "1,2",
+    mission_template_projections: "1,2,3",
+    schedule_projections: "1,2",
+    schedule_run_projections: "1,2",
+    notification_projections: "1,2",
   };
   const out: Record<string, unknown> = {};
   for (const [table, order] of Object.entries(tables))
@@ -70,6 +77,10 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
   await client.query(`DELETE FROM approval_projections${suffix}`, params);
   await client.query(`DELETE FROM action_request_projections${suffix}`, params);
   await client.query(`DELETE FROM execution_projections${suffix}`, params);
+  await client.query(`DELETE FROM notification_projections${suffix}`, params);
+  await client.query(`DELETE FROM schedule_run_projections${suffix}`, params);
+  await client.query(`DELETE FROM schedule_projections${suffix}`, params);
+  await client.query(`DELETE FROM mission_template_projections${suffix}`, params);
   await client.query(`DELETE FROM task_projections${suffix}`, params);
   await client.query(`DELETE FROM mission_projections${suffix}`, params);
   for (const event of stream) {
@@ -82,6 +93,9 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
     else if (event.aggregateType === "approval") await applyApprovalProjection(client, [event]);
     else if (event.aggregateType === "execution") await applyExecutionProjection(client, [event]);
     else if (event.aggregateType === "action_request") await applyActionProjection(client, [event]);
+    else if (event.aggregateType === "mission_template") await applyTemplateProjection(client, [event]);
+    else if (event.aggregateType === "schedule") await applyScheduleProjection(client, [event]);
+    else if (event.aggregateType === "notification") await applyNotificationProjection(client, [event]);
   }
 }
 async function main() {
