@@ -155,7 +155,10 @@ export default function OnboardingWizard({
           <div className="command-stage">
             <p className="section-label">Connect {connection.agentName}</p>
             <h2 className="onboarding-heading">Copy and run this command.</h2>
-            <p>Run it in the terminal on the computer where {connection.agentName} works.</p>
+            <p>
+              In your terminal, first <code>cd</code> into the Git repository you want {connection.agentName} to
+              analyze. Then copy and run this command.
+            </p>
             <div className="command-copy">
               <code>{safeDisplayedCommand}</code>
               <button onClick={copyCommand}>{copied ? "Copied ✓" : "Copy"}</button>
