@@ -59,7 +59,7 @@ body {
 .typed-wordmark {
   display: block;
   overflow: hidden;
-  width: 15ch;
+  width: 17ch;
   white-space: nowrap;
   border-right: 2px solid var(--black);
   font:
@@ -76,7 +76,7 @@ body {
     width: 0;
   }
   to {
-    width: 15ch;
+    width: 17ch;
   }
 }
 @keyframes wordmark-cursor {
@@ -805,8 +805,8 @@ select {
   border: 1px solid rgba(28, 224, 214, 0.2);
   border-radius: 10px;
   background-color: #030815;
-  background-size: 477px 318px;
-  background-position: -76px -226px;
+  background-size: cover;
+  background-position: center;
   box-shadow: 0 0 28px rgba(0, 174, 255, 0.08);
 }
 
@@ -1865,6 +1865,16 @@ select:focus {
   border: 1px solid var(--line);
   color: var(--ink);
   padding: 13px;
+}
+.auth-switch {
+  color: var(--muted);
+  font-size: 0.86rem;
+  margin: 22px 0 0;
+  text-align: center;
+}
+.auth-switch a {
+  color: var(--signal);
+  font-weight: 700;
 }
 .archive-header {
   align-items: end;

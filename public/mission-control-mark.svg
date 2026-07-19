@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mission Control">
+  <defs>
+    <linearGradient id="mc" x1="8" y1="8" x2="57" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#20f0b5"/>
+      <stop offset=".52" stop-color="#08cddc"/>
+      <stop offset="1" stop-color="#1677ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="#030815"/>
+  <path d="M32 5 55 18v7h-5v-4L32 11 14 21v22l18 10 18-10v-4h5v7L32 59 9 46V18Z" fill="url(#mc)"/>
+  <path d="M17 24v20h6V34l9 8 9-8v10h6V24L32 36Z" fill="url(#mc)"/>
+  <path d="M55 27h-7.5a9 9 0 1 0 0 18H55v-6h-7.5a3 3 0 1 1 0-6H55Z" fill="url(#mc)"/>
+</svg>
