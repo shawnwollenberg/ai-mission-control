@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import test from "node:test";
 
 const run = promisify(execFile);
-const script = resolve("public/mission-agent-0.1.0.mjs");
+const script = resolve("public/mission-agent-0.1.1.mjs");
 const baseConfig = {
   missionControlUrl: "https://app.missioncontrol.example",
   workspaceId: "3ae5d14a-f57a-4a8a-bc98-65d58b99a214",

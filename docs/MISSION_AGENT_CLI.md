@@ -8,7 +8,7 @@ Mission Agent is the outbound-only local runtime for Mission Control. The five-m
 4. Wait for **Heartbeat received** and **Assignment channel ready**.
 5. Select the registered repository and launch **Analyze this repository**.
 
-The generated command downloads `mission-agent-0.1.0.mjs`, verifies its published SHA-256 checksum before execution, stores the credential, registers the current repository by fingerprint, starts Mission Agent, sends a signed heartbeat, and begins bounded assignment polling. It does not require cloning this repository or exposing an inbound port.
+The generated command downloads `mission-agent-0.1.1.mjs`, verifies its published SHA-256 checksum before execution, stores the credential, registers the current repository by fingerprint, starts Mission Agent, sends a signed heartbeat, and begins bounded assignment polling. It does not require cloning this repository or exposing an inbound port. Published versions are immutable, so previously generated `0.1.0` commands remain verifiable.
 
 ## Commands
 

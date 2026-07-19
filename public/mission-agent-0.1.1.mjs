@@ -5,7 +5,7 @@ import { chmod, mkdir, readFile, realpath, rm, stat, writeFile } from "node:fs/p
 import { homedir, platform } from "node:os";
 import { basename, join } from "node:path";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 const root = process.env.MISSION_AGENT_HOME ?? join(homedir(), ".mission-agent");
 const configPath = join(root, "config.json");
 const statePath = join(root, "state.json");
@@ -18,7 +18,17 @@ const option = (name) => {
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const exec = (binary, args, cwd) => {
   const result = spawnSync(binary, args, { cwd, encoding: "utf8", timeout: 15_000 });
-  if (result.status !== 0) throw new Error(`${binary} is unavailable or returned an error.`);
+  if (result.status !== 0) {
+    if (binary === "git" && result.error?.code === "ENOENT") {
+      throw new Error("Git is not installed or is not available on PATH.");
+    }
+    if (binary === "git" && /not a git repository/i.test(result.stderr ?? "")) {
+      throw new Error(
+        "No Git repository was found. Run the connection command from inside the repository you want Mission Control to analyze, or append --repository /absolute/path/to/repository.",
+      );
+    }
+    throw new Error(`${binary} returned an error${result.stderr?.trim() ? `: ${result.stderr.trim()}` : "."}`);
+  }
   return result.stdout.trim();
 };
 
