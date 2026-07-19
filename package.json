@@ -31,6 +31,8 @@
     "phase4:acceptance:run": "tsx scripts/run-phase4-acceptance.ts",
     "phase4:acceptance:replay": "tsx scripts/verify-phase4-replay.ts",
     "phase5:acceptance:setup": "tsx scripts/setup-phase5-acceptance.ts",
+    "phase5:restore:validate": "tsx scripts/validate-restore.ts",
+    "test:phase5-operations": "node --import tsx --test tests/phase5-operations.integration.test.mjs",
     "projections:rebuild": "tsx scripts/projections.ts",
     "projections:verify": "tsx scripts/projections.ts --verify",
     "legacy:import-dynamodb": "tsx scripts/import-dynamodb.ts",

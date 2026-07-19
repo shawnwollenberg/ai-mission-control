@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { claimDueSchedule, runClaimedSchedule } from "../application/schedule-commands";
 import { closeDatabasePool } from "../lib/database";
 import { assertSupportedNodeVersion } from "../lib/runtime-version";
+import { startWorkerPresence } from "./worker-presence";
 assertSupportedNodeVersion();
 const workerId = process.env.WORKER_ID ?? `scheduler-${randomUUID().slice(0, 8)}`;
 let stopping = false;
@@ -10,6 +11,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const)
     stopping = true;
   });
 async function main() {
+  const stopPresence = await startWorkerPresence(workerId, "scheduler");
   console.log(JSON.stringify({ event: "scheduler_started", workerId }));
   while (!stopping) {
     const row = await claimDueSchedule(workerId);
@@ -35,6 +37,7 @@ async function main() {
     if (process.env.SCHEDULER_ONCE === "1") break;
   }
   console.log(JSON.stringify({ event: "scheduler_stopped", workerId }));
+  await stopPresence();
 }
 main()
   .catch((error) => {

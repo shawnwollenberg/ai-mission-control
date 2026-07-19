@@ -16,6 +16,7 @@ import { enqueueJob } from "@/lib/job-store";
 import { handleTaskTransition } from "@/application/task-commands";
 import { stableUuid } from "@/lib/stable-id";
 import { evaluateAgentEligibility, type RequiredResource } from "@/application/agent-eligibility";
+import { evaluateExecutionBudget, recordUsage } from "@/application/usage-budget";
 export type ExecutionActor = { workspaceId: string; id: string; type: ActorType };
 type DispatchTaskRow = { mission_id: string; status: string; current_attempt: number; timeout_seconds: number | null };
 async function append(
@@ -49,6 +50,33 @@ async function append(
     events: [event],
     applyProjections: applyExecutionProjection,
   });
+  if (
+    ["execution.succeeded", "execution.failed", "execution.timed_out", "execution.cancelled"].includes(event.eventType)
+  ) {
+    const execution = (
+      await getDatabasePool().query(
+        "SELECT mission_id,task_id,agent_id,adapter_type,started_at FROM execution_projections WHERE workspace_id=$1 AND execution_id=$2",
+        [actor.workspaceId, executionId],
+      )
+    ).rows[0];
+    if (execution)
+      await recordUsage({
+        workspaceId: actor.workspaceId,
+        commandId: stableUuid(`execution-operational-usage:${executionId}`),
+        actorId: "usage-recorder",
+        missionId: execution.mission_id,
+        taskId: execution.task_id,
+        executionId,
+        agentId: execution.agent_id,
+        provider: execution.adapter_type === "codex" ? "openai" : "remote_agent",
+        runtime: execution.adapter_type,
+        metricType: "duration",
+        quantity: execution.started_at ? Math.max(0, Date.now() - new Date(execution.started_at).getTime()) : undefined,
+        unit: "milliseconds",
+        costConfidence: "unknown",
+        source: "mission_control_execution",
+      });
+  }
   return {
     executionId,
     events: result.events,
@@ -78,6 +106,7 @@ export async function handleRequestExecution(input: {
   if (!task) throw new NotFoundError("Task");
   if (task.status !== "ready") throw new ValidationFailedError("Task must be ready for execution");
   const executionId = input.executionId ?? randomUUID();
+  await evaluateExecutionBudget({ workspaceId: input.actor.workspaceId, missionId: task.mission_id, executionId });
   const attempt = task.current_attempt + 1;
   const timeoutSeconds = input.timeoutSeconds ?? task.timeout_seconds ?? 3600;
   const event = requestExecution({
@@ -159,6 +188,7 @@ export async function handleRequestRemoteExecution(input: {
     attempt = task.current_attempt + 1,
     timeoutSeconds = input.timeoutSeconds ?? task.timeout_seconds ?? 3600,
     messageId = randomUUID();
+  await evaluateExecutionBudget({ workspaceId: input.actor.workspaceId, missionId: task.mission_id, executionId });
   const event = requestExecution({
     missionId: task.mission_id,
     taskId: input.taskId,

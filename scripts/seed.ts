@@ -3,6 +3,8 @@ import { DEFAULT_OWNER_ID, DEFAULT_WORKSPACE_ID, DEFAULT_WORKSPACE_SLUG } from "
 import { stableUuid } from "../lib/stable-id";
 import { INITIAL_TEMPLATES } from "../templates/initial-templates";
 import { createTemplateVersion } from "../application/template-commands";
+import { setNotificationPreferences } from "../application/notification-preferences";
+import { saveView, type MissionFilters } from "../application/mission-search";
 
 export type SeedInput = { email: string; displayName: string; passwordHash: string };
 
@@ -87,6 +89,71 @@ async function main() {
         templateId: template.templateId,
         definition: template.definition,
         publish: true,
+      });
+  }
+  const actor = { workspaceId: DEFAULT_WORKSPACE_ID, userId: DEFAULT_OWNER_ID, role: "owner" as const };
+  const preferences = await (
+    await import("../lib/database")
+  )
+    .getDatabasePool()
+    .query("SELECT 1 FROM notification_preferences WHERE workspace_id=$1", [DEFAULT_WORKSPACE_ID]);
+  if (!preferences.rowCount)
+    await setNotificationPreferences({
+      actor,
+      commandId: stableUuid("seed-notification-preferences"),
+      inAppEnabled: true,
+      emailEnabled: false,
+      outboundEnabled: false,
+      deliveryMode: "immediate",
+      minimumSeverity: "info",
+      categories: [
+        "approvals",
+        "mission_outcomes",
+        "failures",
+        "agent_status",
+        "worker_status",
+        "schedules",
+        "budgets",
+        "security",
+        "git_publication",
+        "defi_analysis",
+      ],
+      timeZone: "UTC",
+      dailyDigestTime: "09:00",
+      highSeverityOverride: true,
+    });
+  const views: { key: string; name: string; filters: MissionFilters }[] = [
+    { key: "needs_approval", name: "Needs my approval", filters: { approvalState: "pending" } },
+    { key: "failed_24h", name: "Failed in the last 24 hours", filters: { failed: true } },
+    { key: "active_coding", name: "Active coding work", filters: { status: "running", domain: "software_delivery" } },
+    { key: "hermes_reports", name: "Hermes reports", filters: { domain: "systems_monitoring" } },
+    {
+      key: "scheduled_defi",
+      name: "Scheduled DeFi reviews",
+      filters: { domain: "defi_analysis", origin: "scheduled" },
+    },
+    { key: "open_pr", name: "Open PR missions", filters: { hasOpenPr: true } },
+    { key: "unknown_cost", name: "Unknown cost", filters: { hasUnknownCost: true } },
+    { key: "offline", name: "Offline agents or workers", filters: {} },
+  ];
+  for (const view of views) {
+    const exists = await (
+      await import("../lib/database")
+    )
+      .getDatabasePool()
+      .query("SELECT 1 FROM saved_view_projections WHERE workspace_id=$1 AND system_key=$2", [
+        DEFAULT_WORKSPACE_ID,
+        view.key,
+      ]);
+    if (!exists.rowCount)
+      await saveView({
+        actor,
+        commandId: stableUuid(`seed-view:${view.key}`),
+        savedViewId: stableUuid(`saved-view:${view.key}`),
+        name: view.name,
+        filters: view.filters,
+        systemKey: view.key,
+        isDefault: view.key === "needs_approval",
       });
   }
   console.log(JSON.stringify({ event: "database_seeded", ...result }));

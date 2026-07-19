@@ -3,6 +3,7 @@ import { closeDatabasePool } from "../lib/database";
 import { claimJob, completeJob, failJob } from "../lib/job-store";
 import { assertSupportedNodeVersion } from "../lib/runtime-version";
 import { deliverRemoteMessage } from "../remote-agent/delivery";
+import { startWorkerPresence } from "./worker-presence";
 assertSupportedNodeVersion();
 const workerId = process.env.WORKER_ID ?? `remote-${randomUUID().slice(0, 8)}`;
 let stopping = false;
@@ -13,6 +14,7 @@ process.on("SIGINT", () => {
   stopping = true;
 });
 async function main() {
+  const stopPresence = await startWorkerPresence(workerId, "remote_delivery");
   while (!stopping) {
     const job = await claimJob(workerId, 30, undefined, "deliver_remote_agent");
     if (!job) {
@@ -27,6 +29,7 @@ async function main() {
     }
     if (process.env.REMOTE_AGENT_WORKER_ONCE === "1") stopping = true;
   }
+  await stopPresence();
 }
 main()
   .catch((error) => {

@@ -1163,6 +1163,27 @@ select:focus {
 .mission-table {
   border-block: 1px solid var(--line);
 }
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 2rem;
+}
+.metric-card {
+  border: 1px solid var(--line, #d7d9de);
+  border-radius: 12px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+.metric-card span {
+  color: var(--muted, #626976);
+  text-transform: capitalize;
+}
+.metric-card strong {
+  font-size: 1.8rem;
+}
 .mission-row {
   align-items: center;
   border-bottom: 1px solid var(--line);

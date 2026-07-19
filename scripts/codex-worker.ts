@@ -3,6 +3,7 @@ import { claimJob, completeJob, failJob, renewJobLease } from "../lib/job-store"
 import { closeDatabasePool, getDatabasePool } from "../lib/database";
 import { executeCodex } from "../execution/codex-adapter";
 import { assertSupportedNodeVersion } from "../lib/runtime-version";
+import { startWorkerPresence } from "./worker-presence";
 assertSupportedNodeVersion();
 const workerId = process.env.WORKER_ID ?? `codex-${randomUUID().slice(0, 8)}`;
 let stopping = false;
@@ -15,6 +16,7 @@ process.on("SIGINT", () => {
 const log = (event: string, data: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ event, workerId, ...data }));
 async function main() {
+  const stopPresence = await startWorkerPresence(workerId, "codex");
   log("codex_worker_started");
   const leaseSeconds = Number(process.env.CODEX_JOB_LEASE_SECONDS ?? 90);
   while (!stopping) {
@@ -81,6 +83,7 @@ async function main() {
     if (process.env.CODEX_WORKER_ONCE === "1") stopping = true;
   }
   log("codex_worker_stopped");
+  await stopPresence();
 }
 main()
   .catch((error) => {

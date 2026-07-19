@@ -382,6 +382,10 @@ Completed on 2026-07-19. Five published templates, immutable version snapshots, 
 
 Show all three templates on the same orchestration core; stop before broad adapter or marketplace expansion.
 
+### Completion status
+
+Phase 5 completed on 2026-07-19. Mission Control now provides bounded schedule concurrency/recovery, lifecycle and run-now controls, preferences and durable external notifications, evidence-classified usage/cost, deterministic budgets, worker health/readiness, dead-letter recovery, an attention-first operations dashboard, safe search and saved views, deterministic anomalies with remediation denial, bounded retention, restore validation, and production operations documentation. Full Node 22, PostgreSQL, worker restart, projection rebuild, and browser validation passed. See `docs/PHASE_5_COMPLETION_REPORT.md`.
+
 ## Cross-phase test matrix
 
 - Unit: transitions, dependency resolution, policy, health, retry classification, schemas, serialization.

@@ -10,9 +10,9 @@ Aegis smart accounts may provide spending controls and policy enforcement, but A
 
 ## Current phase
 
-Phase 4 and its provider-confirmed closeout are complete. Phase 5 daily-operations work is explicitly approved.
+Phase 5 daily operations are complete. Further production expansion requires a newly reviewed and explicitly approved phase.
 
-Implement only the approved Phase 5 scope in `PLANS.md` and `docs/PHASE_5_OPERATIONS.md`. Preserve the existing mission, task, execution, approval, policy, action-request, event, and projection authority. Templates and schedules create new mission instances through the existing command layer; they never bypass agent eligibility, resources, policy, or approvals. Stop before merge, deployment, production remediation, secrets access, infrastructure modification, blockchain transactions, wallet signing, asset movement, or unrestricted remote command execution.
+Preserve the completed Phase 5 scope in `PLANS.md` and `docs/PHASE_5_OPERATIONS.md`. Preserve the existing mission, task, execution, approval, policy, action-request, event, and projection authority. Templates and schedules create new mission instances through the existing command layer; they never bypass agent eligibility, resources, policy, or approvals. Stop before merge, deployment, production remediation, secrets access, infrastructure modification, blockchain transactions, wallet signing, asset movement, or unrestricted remote command execution.
 
 ## Source-of-truth documents
 

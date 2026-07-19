@@ -9,6 +9,7 @@ import { coordinateAfterTask } from "@/application/mission-coordinator";
 import type { ProtocolEnvelope } from "@/remote-agent/protocol";
 import { sha256 } from "@/remote-agent/protocol";
 import { applyApprovalProjection, requestRemoteApproval } from "@/application/approval-commands";
+import { recordUsage } from "@/application/usage-budget";
 
 type Credential = {
   workspace_id: string;
@@ -323,6 +324,60 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       } else if (latest === "preparing") await transition(message, credential, "running", "running");
       await transition(message, credential, "verifying", "verifying");
       await transition(message, credential, "succeeded", "succeeded");
+      const usage = message.payload.usage;
+      if (usage && typeof usage === "object" && !Array.isArray(usage)) {
+        const report = usage as Record<string, unknown>;
+        for (const [metricType, unit] of [
+          ["inputTokens", "tokens"],
+          ["outputTokens", "tokens"],
+          ["toolCalls", "calls"],
+          ["externalDataCalls", "calls"],
+          ["durationMs", "milliseconds"],
+        ] as const) {
+          const quantity = Number(report[metricType]);
+          if (Number.isFinite(quantity) && quantity >= 0)
+            await recordUsage({
+              workspaceId: credential.workspace_id,
+              commandId: stableUuid(`remote-usage:${message.messageId}:${metricType}`),
+              actorId: credential.agent_id,
+              actorType: "agent",
+              missionId: message.missionId,
+              taskId: message.taskId,
+              executionId: message.executionId,
+              agentId: message.agentId,
+              provider: "remote_agent",
+              runtime: String(report.runtime ?? "remote_http"),
+              model: report.model ? String(report.model) : undefined,
+              metricType,
+              quantity,
+              unit,
+              costConfidence: "provider_reported",
+              source: "authenticated_remote_agent",
+            });
+        }
+        const cost = Number(report.costAmount);
+        if (Number.isFinite(cost) && cost >= 0)
+          await recordUsage({
+            workspaceId: credential.workspace_id,
+            commandId: stableUuid(`remote-usage:${message.messageId}:cost`),
+            actorId: credential.agent_id,
+            actorType: "agent",
+            missionId: message.missionId,
+            taskId: message.taskId,
+            executionId: message.executionId,
+            agentId: message.agentId,
+            provider: "remote_agent",
+            runtime: String(report.runtime ?? "remote_http"),
+            model: report.model ? String(report.model) : undefined,
+            metricType: "cost",
+            quantity: cost,
+            unit: String(report.currency ?? "USD"),
+            costAmount: cost,
+            currency: String(report.currency ?? "USD"),
+            costConfidence: "provider_reported",
+            source: "authenticated_remote_agent",
+          });
+      }
       await handleTaskTransition({
         actor: actor(credential),
         commandId: stableUuid(`remote:${message.messageId}:task-verifying`),

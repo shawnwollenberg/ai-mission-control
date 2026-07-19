@@ -9,6 +9,7 @@ import {
   signProtocolRequest,
   type ProtocolEnvelope,
 } from "../../remote-agent/protocol";
+import { startWorkerPresence } from "../../scripts/worker-presence";
 
 type Ledger = { messages: Record<string, { status: string; executionId: string; updatedAt: string }> };
 const port = Number(process.env.HERMES_BRIDGE_PORT ?? 4100);
@@ -21,6 +22,8 @@ const ledgerPath = process.env.HERMES_LEDGER_PATH ?? "/tmp/mission-control-herme
 if (!agentId || !credentialId || !workspaceId || !secret)
   throw new Error("Hermes bridge credential environment is required");
 const key = deriveSigningKey(secret);
+const workerId = process.env.WORKER_ID ?? `hermes-${agentId.slice(0, 8)}`;
+let stopPresence: () => Promise<void> = async () => {};
 
 async function ledger(): Promise<Ledger> {
   try {
@@ -413,6 +416,7 @@ const server = createServer(async (request, response) => {
   }
 });
 server.listen(port, "127.0.0.1", async () => {
+  stopPresence = await startWorkerPresence(workerId, "hermes_bridge", workspaceId);
   console.log(JSON.stringify({ event: "hermes_bridge_started", port, agentId }));
   try {
     const advertisedCapabilities =
@@ -444,4 +448,5 @@ server.listen(port, "127.0.0.1", async () => {
     );
   }
 });
-for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => server.close(() => process.exit(0)));
+for (const signal of ["SIGINT", "SIGTERM"] as const)
+  process.on(signal, () => server.close(() => void stopPresence().finally(() => process.exit(0))));

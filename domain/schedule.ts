@@ -85,3 +85,13 @@ export function nextRun(rule: ScheduleRule, after: Date, timeZone = "UTC"): Date
   }
   return candidate;
 }
+
+export function dueOccurrences(rule: ScheduleRule, first: Date, through: Date, timeZone = "UTC", limit = 101): Date[] {
+  const occurrences: Date[] = [];
+  let cursor: Date | null = first;
+  while (cursor && cursor <= through && occurrences.length < limit) {
+    occurrences.push(cursor);
+    cursor = nextRun(rule, cursor, timeZone);
+  }
+  return occurrences;
+}

@@ -10,6 +10,11 @@ import { applyActionProjection } from "../application/action-projector";
 import { applyTemplateProjection } from "../application/template-projector";
 import { applyScheduleProjection } from "../application/schedule-projector";
 import { applyNotificationProjection } from "../application/notification-projector";
+import { applyNotificationPreferenceProjection } from "../application/notification-preferences";
+import { applyUsageProjection, applyBudgetProjection } from "../application/usage-budget";
+import { applyWorkerProjection } from "../application/worker-operations";
+import { applySavedViewProjection } from "../application/mission-search";
+import { applyAnomalyProjection } from "../application/anomaly-operations";
 const args = process.argv.slice(2);
 const value = (flag: string) => {
   const i = args.indexOf(flag);
@@ -60,6 +65,13 @@ async function snapshot(client: PoolClient) {
     schedule_projections: "1,2",
     schedule_run_projections: "1,2",
     notification_projections: "1,2",
+    notification_preferences: "1",
+    usage_records: "1,2",
+    budget_policies: "1,2",
+    budget_decisions: "1,2",
+    worker_projections: "1,2",
+    saved_view_projections: "1,2",
+    anomaly_projections: "1,2",
   };
   const out: Record<string, unknown> = {};
   for (const [table, order] of Object.entries(tables))
@@ -78,6 +90,13 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
   await client.query(`DELETE FROM action_request_projections${suffix}`, params);
   await client.query(`DELETE FROM execution_projections${suffix}`, params);
   await client.query(`DELETE FROM notification_projections${suffix}`, params);
+  await client.query(`DELETE FROM notification_preferences${suffix}`, params);
+  await client.query(`DELETE FROM budget_decisions${suffix}`, params);
+  await client.query(`DELETE FROM budget_policies${suffix}`, params);
+  await client.query(`DELETE FROM usage_records${suffix}`, params);
+  await client.query(`DELETE FROM worker_projections${suffix}`, params);
+  await client.query(`DELETE FROM saved_view_projections${suffix}`, params);
+  await client.query(`DELETE FROM anomaly_projections${suffix}`, params);
   await client.query(`DELETE FROM schedule_run_projections${suffix}`, params);
   await client.query(`DELETE FROM schedule_projections${suffix}`, params);
   await client.query(`DELETE FROM mission_template_projections${suffix}`, params);
@@ -96,6 +115,14 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
     else if (event.aggregateType === "mission_template") await applyTemplateProjection(client, [event]);
     else if (event.aggregateType === "schedule") await applyScheduleProjection(client, [event]);
     else if (event.aggregateType === "notification") await applyNotificationProjection(client, [event]);
+    else if (event.aggregateType === "notification_preferences")
+      await applyNotificationPreferenceProjection(client, [event]);
+    else if (event.aggregateType === "usage") await applyUsageProjection(client, [event]);
+    else if (["budget_policy", "budget_decision"].includes(event.aggregateType))
+      await applyBudgetProjection(client, [event]);
+    else if (event.aggregateType === "worker") await applyWorkerProjection(client, [event]);
+    else if (event.aggregateType === "saved_view") await applySavedViewProjection(client, [event]);
+    else if (event.aggregateType === "anomaly") await applyAnomalyProjection(client, [event]);
   }
 }
 async function main() {

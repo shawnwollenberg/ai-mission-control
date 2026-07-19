@@ -5,6 +5,7 @@ import { processOneOutbox } from "../lib/outbox-dispatcher";
 import { runSimulationJob } from "../application/simulated-executor";
 import { assertSupportedNodeVersion } from "../lib/runtime-version";
 import { expireDueApprovals } from "../application/governance-maintenance";
+import { startWorkerPresence } from "./worker-presence";
 
 assertSupportedNodeVersion();
 
@@ -19,6 +20,7 @@ process.on("SIGINT", () => {
 const log = (event: string, data: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ event, workerId, ...data }));
 async function main() {
+  const stopPresence = await startWorkerPresence(workerId, "generic");
   log("worker_started");
   while (!stopping) {
     let worked = false;
@@ -44,6 +46,7 @@ async function main() {
     if (!worked) await new Promise((resolve) => setTimeout(resolve, Number(process.env.WORKER_POLL_MS ?? 500)));
   }
   log("worker_stopped");
+  await stopPresence();
 }
 main()
   .catch((error) => {
