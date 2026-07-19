@@ -11,6 +11,7 @@ import { evaluatePolicy, type ActionType, type PolicyInput } from "@/policy/poli
 import { loadPolicyRestrictions } from "@/policy/policy-store";
 import { enqueueJob } from "@/lib/job-store";
 import { validatePublicationPreflight } from "@/git/publication-preflight";
+import { assertCapabilityEnabled } from "@/application/emergency-controls";
 
 export type ActionActor = { workspaceId: string; id: string; type: ActorType; role?: "owner" | "member" };
 
@@ -84,6 +85,8 @@ export async function requestSensitiveAction(input: {
   parameters: Record<string, unknown>;
   targetResource: string;
 }) {
+  if (["repository.push_branch", "repository.create_pull_request"].includes(input.actionType))
+    await assertCapabilityEnabled(input.actor.workspaceId, "stop_git_publication");
   const row = await context(input.actor.workspaceId, input.executionId);
   const actionId = input.actionRequestId ?? randomUUID();
   const bound: Record<string, unknown> = {

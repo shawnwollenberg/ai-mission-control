@@ -231,6 +231,7 @@ export async function claimDueSchedule(workerId: string, leaseSeconds = 30) {
       `WITH due AS (
         SELECT s.workspace_id,s.schedule_id FROM schedule_projections s
         WHERE s.enabled=true AND s.paused=false AND s.deleted_at IS NULL
+          AND NOT EXISTS(SELECT 1 FROM workspace_emergency_controls c WHERE c.workspace_id=s.workspace_id AND c.disable_all_schedules=true)
           AND (s.lease_expires_at IS NULL OR s.lease_expires_at<now())
           AND (s.next_run_at<=now() OR EXISTS(
             SELECT 1 FROM schedule_run_projections r

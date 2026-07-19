@@ -386,6 +386,18 @@ Show all three templates on the same orchestration core; stop before broad adapt
 
 Phase 5 completed on 2026-07-19. Mission Control now provides bounded schedule concurrency/recovery, lifecycle and run-now controls, preferences and durable external notifications, evidence-classified usage/cost, deterministic budgets, worker health/readiness, dead-letter recovery, an attention-first operations dashboard, safe search and saved views, deterministic anomalies with remediation denial, bounded retention, restore validation, and production operations documentation. Full Node 22, PostgreSQL, worker restart, projection rebuild, and browser validation passed. See `docs/PHASE_5_COMPLETION_REPORT.md`.
 
+## Phase 6 — Production launch and daily adoption
+
+**Goal:** Deploy the existing modular monolith as the owner's daily control plane without expanding agent authority.
+
+**Authorized topology:** Render web plus seven long-running workers, human-created Render PostgreSQL, Cloudflare R2 durable artifacts, one independent uptime monitor, and one approved external notification destination. Auto-deploy remains off; exact reviewed production commits are deployed manually. The Codex worker is isolated with temporary persistent worktrees, while durable output is copied to R2.
+
+**Pre-provider boundary status:** Production hardening, migration safeguards, owner provisioning, object storage, readiness, security headers, durable emergency controls, Blueprint, provider checklist, environment manifest, rollout/rollback procedure, runbooks, and acceptance log are implemented. Provider resources remain untouched pending human selections in `docs/PHASE_6_PROVIDER_INPUTS.md`.
+
+**Permanent authority boundary:** Mission Control agents cannot deploy, merge, remediate production autonomously, modify arbitrary infrastructure or secrets, sign/submit blockchain transactions, move assets, or modify DeFi positions. Git push and PR creation remain separately approval-gated.
+
+**Next boundary:** After human provider configuration, migrate production, provision owner, verify R2, deploy web/workers, validate login/Operations/monitoring/Hermes/emergency controls, then onboard one safe repository and begin the minimum seven-day acceptance period.
+
 ## Cross-phase test matrix
 
 - Unit: transitions, dependency resolution, policy, health, retry classification, schemas, serialization.

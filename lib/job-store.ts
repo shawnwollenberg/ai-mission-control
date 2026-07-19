@@ -77,6 +77,12 @@ export async function claimJob(
       `SELECT job_id,workspace_id,job_type,payload,attempt_count,max_attempts,correlation_id FROM jobs
        WHERE status IN('pending','failed') AND available_at<=now() AND ($1::uuid IS NULL OR workspace_id=$1)
          AND ($2::text IS NULL OR job_type=$2)
+         AND NOT EXISTS(SELECT 1 FROM workspace_emergency_controls c WHERE c.workspace_id=jobs.workspace_id AND (
+           (c.pause_new_executions AND jobs.job_type IN('execute_codex','deliver_remote_agent')) OR
+           (c.pause_codex_assignments AND jobs.job_type='execute_codex') OR
+           (c.pause_remote_assignments AND jobs.job_type='deliver_remote_agent') OR
+           (c.stop_git_publication AND jobs.job_type='execute_action')
+         ))
        ORDER BY priority DESC,id FOR UPDATE SKIP LOCKED LIMIT 1`,
       [workspaceId ?? null, jobType ?? null],
     );

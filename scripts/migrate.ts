@@ -2,10 +2,17 @@ import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { closeDatabasePool, getDatabasePool } from "../lib/database";
+import { pendingMigrations, validateProductionConfiguration } from "../lib/production-config";
 
 const migrationsDirectory = path.resolve(process.cwd(), "db/migrations");
 
 async function migrate() {
+  if (process.env.APP_ENV === "production") {
+    if (process.env.ALLOW_PRODUCTION_MIGRATIONS !== "MISSION_CONTROL_PRODUCTION")
+      throw new Error("Production migrations require ALLOW_PRODUCTION_MIGRATIONS=MISSION_CONTROL_PRODUCTION");
+    const validation = await validateProductionConfiguration("migration");
+    if (!validation.ready) throw new Error(`Production configuration failed: ${validation.failed.join(", ")}`);
+  }
   const pool = getDatabasePool();
   await pool.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -42,6 +49,9 @@ async function migrate() {
       client.release();
     }
   }
+  const pending = await pendingMigrations();
+  if (pending.length) throw new Error(`Schema health validation failed: ${pending.length} migrations remain pending`);
+  console.log(JSON.stringify({ event: "schema_health_validated", pendingMigrations: 0 }));
 }
 
 migrate()

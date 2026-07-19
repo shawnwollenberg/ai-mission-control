@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { checkDynamoEventStore } from "@/lib/dynamodb-event-store";
+import { getDatabasePool } from "@/lib/database";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    if (process.env.EVENT_STORE === "dynamodb") await checkDynamoEventStore();
-    return NextResponse.json({ status: "ok", eventStore: process.env.EVENT_STORE ?? "jsonl" });
+    await getDatabasePool().query("SELECT 1");
+    return NextResponse.json({ status: "ok", environment: process.env.APP_ENV ?? "unset", database: "reachable" });
   } catch (error) {
     console.error(
       JSON.stringify({

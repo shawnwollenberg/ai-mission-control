@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePageIdentity } from "@/lib/page-auth";
 import { operationsDashboard } from "@/application/operations-dashboard";
+import { updateEmergencyControl } from "./emergency-actions";
 export const dynamic = "force-dynamic";
 export default async function OperationsPage() {
   const identity = await requirePageIdentity("/operations");
@@ -31,6 +32,37 @@ export default async function OperationsPage() {
           <h1>What needs my attention right now?</h1>
         </div>
       </header>
+      <section className="panel">
+        <p className="section-label">Emergency controls · owner only</p>
+        <h2>New work safety boundary</h2>
+        {(
+          [
+            "pause_new_executions",
+            "pause_remote_assignments",
+            "pause_codex_assignments",
+            "disable_all_schedules",
+            "stop_git_publication",
+          ] as const
+        ).map((control) => {
+          const enabled = Boolean(dashboard.emergencyControls[control]);
+          return (
+            <form action={updateEmergencyControl} className="mission-row" key={control}>
+              <strong>{control.replaceAll("_", " ")}</strong>
+              <span>{enabled ? "PAUSED" : "available"}</span>
+              <input name="reason" required placeholder="Audit reason" aria-label={`${control} reason`} />
+              <input type="hidden" name="control" value={control} />
+              <input type="hidden" name="enabled" value={String(!enabled)} />
+              <button className={enabled ? "secondary" : "danger"}>{enabled ? "Resume" : "Pause"}</button>
+            </form>
+          );
+        })}
+        <form action={updateEmergencyControl} className="mission-row">
+          <strong>Revoke all remote-agent credentials</strong>
+          <input type="hidden" name="action" value="revoke_remote_agents" />
+          <input name="reason" required placeholder="Audit reason" aria-label="Revocation reason" />
+          <button className="danger">Revoke all</button>
+        </form>
+      </section>
       <section className="metric-grid">
         {Object.entries(dashboard.attention).map(([label, value]) => (
           <article className="metric-card" key={label}>

@@ -1,0 +1,133 @@
+# REVIEW-ONLY: syncing this Blueprint creates or changes eight services. Human selection of region and plans is required first.
+# It references an existing Render PostgreSQL database named mission-control-production; it does not create that database.
+previews: { generation: off }
+services:
+  - type: web
+    name: mission-control-web
+    runtime: node
+    branch: production
+    autoDeployTrigger: off
+    buildCommand: npm ci && npm run build
+    startCommand: npm run production:validate -- web && npm start
+    healthCheckPath: /api/readiness
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - { key: APP_ENV, value: production }
+      - { key: NODE_VERSION, value: 22.20.0 }
+      - { key: PROCESS_TYPE, value: web }
+      - key: DATABASE_URL
+        fromDatabase: { name: mission-control-production, property: connectionString }
+      - { key: PUBLIC_APP_URL, sync: false }
+      - { key: MISSION_CONTROL_SESSION_SECRET, sync: false }
+      - { key: SECURE_COOKIES, value: "true" }
+      - { key: SECRET_PROVIDER, value: render }
+      - { key: ARTIFACT_STORAGE_PROVIDER, value: s3 }
+      - { key: ARTIFACT_S3_BUCKET, sync: false }
+      - { key: ARTIFACT_S3_REGION, sync: false }
+      - { key: ARTIFACT_S3_ENDPOINT, sync: false }
+      - { key: ARTIFACT_S3_ACCESS_KEY_ID, sync: false }
+      - { key: ARTIFACT_S3_SECRET_ACCESS_KEY, sync: false }
+  - &generic
+    type: worker
+    name: mission-control-generic-worker
+    runtime: node
+    branch: production
+    autoDeployTrigger: off
+    buildCommand: npm ci
+    startCommand: npm run production:validate -- generic && npm run worker
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - { key: APP_ENV, value: production }
+      - { key: NODE_VERSION, value: 22.20.0 }
+      - { key: PROCESS_TYPE, value: generic }
+      - key: DATABASE_URL
+        fromDatabase: { name: mission-control-production, property: connectionString }
+      - { key: SECRET_PROVIDER, value: render }
+      - { key: WORKER_ID, value: mc-generic-1 }
+      - { key: WORKER_POLL_MS, value: "500" }
+  - <<: *generic
+    name: mission-control-action-worker
+    startCommand: npm run production:validate -- action && npm run worker:actions
+    envVars:
+      - { key: APP_ENV, value: production }
+      - { key: PROCESS_TYPE, value: action }
+      - { key: NODE_VERSION, value: 22.20.0 }
+      - key: DATABASE_URL
+        fromDatabase: { name: mission-control-production, property: connectionString }
+      - { key: SECRET_PROVIDER, value: render }
+      - { key: WORKER_ID, value: mc-action-1 }
+      - { key: GIT_PROVIDER, value: github }
+      - { key: GITHUB_TOKEN, sync: false }
+  - <<: *generic
+    name: mission-control-remote-worker
+    startCommand: npm run production:validate -- remote_delivery && npm run worker:remote-agents
+    envVars:
+      - { key: APP_ENV, value: production }
+      - { key: PROCESS_TYPE, value: remote_delivery }
+      - { key: NODE_VERSION, value: 22.20.0 }
+      - key: DATABASE_URL
+        fromDatabase: { name: mission-control-production, property: connectionString }
+      - { key: SECRET_PROVIDER, value: render }
+      - { key: WORKER_ID, value: mc-remote-1 }
+      - { key: AGENT_CREDENTIAL_PROVIDER, value: postgres-verifier }
+  - <<: *generic
+    name: mission-control-scheduler-worker
+    startCommand: npm run production:validate -- scheduler && npm run worker:scheduler
+    envVars:
+      - { key: APP_ENV, value: production }
+      - { key: PROCESS_TYPE, value: scheduler }
+      - { key: NODE_VERSION, value: 22.20.0 }
+      - key: DATABASE_URL
+        fromDatabase: { name: mission-control-production, property: connectionString }
+      - { key: SECRET_PROVIDER, value: render }
+      - { key: WORKER_ID, value: mc-scheduler-1 }
+  - <<: *generic
+    name: mission-control-notification-worker
+    startCommand: npm run production:validate -- notification && npm run worker:notifications
+    envVars:
+      - { key: APP_ENV, value: production }
+      - { key: PROCESS_TYPE, value: notification }
+      - { key: NODE_VERSION, value: 22.20.0 }
+      - key: DATABASE_URL
+        fromDatabase: { name: mission-control-production, property: connectionString }
+      - { key: SECRET_PROVIDER, value: render }
+      - { key: WORKER_ID, value: mc-notification-1 }
+      - { key: NOTIFICATION_PROVIDER, sync: false }
+      - { key: NOTIFICATION_WEBHOOK_URL, sync: false }
+  - <<: *generic
+    name: mission-control-hermes-bridge
+    startCommand: npm run production:validate -- hermes_bridge && npm run worker:hermes
+    envVars:
+      - { key: APP_ENV, value: production }
+      - { key: PROCESS_TYPE, value: hermes_bridge }
+      - { key: NODE_VERSION, value: 22.20.0 }
+      - key: DATABASE_URL
+        fromDatabase: { name: mission-control-production, property: connectionString }
+      - { key: SECRET_PROVIDER, value: render }
+      - { key: WORKER_ID, value: mc-hermes-1 }
+      - { key: AGENT_CREDENTIAL_PROVIDER, value: postgres-verifier }
+      - { key: HERMES_AGENT_SECRET, sync: false }
+  - <<: *generic
+    name: mission-control-codex-worker
+    startCommand: npm run production:validate -- codex && npm run worker:codex
+    maxShutdownDelaySeconds: 300
+    disk: { name: codex-worktrees, mountPath: /opt/render/project/src/storage/worktrees, sizeGB: 10 }
+    envVars:
+      - { key: APP_ENV, value: production }
+      - { key: PROCESS_TYPE, value: codex }
+      - { key: NODE_VERSION, value: 22.20.0 }
+      - key: DATABASE_URL
+        fromDatabase: { name: mission-control-production, property: connectionString }
+      - { key: SECRET_PROVIDER, value: render }
+      - { key: WORKER_ID, value: mc-codex-1 }
+      - { key: GIT_PROVIDER, value: github }
+      - { key: CODEX_EXECUTABLE, value: /opt/render/project/src/node_modules/.bin/codex }
+      - { key: CODEX_API_KEY, sync: false }
+      - { key: APPROVED_REPOSITORY_ROOTS, value: /opt/render/project/src/storage/repositories }
+      - { key: CODEX_WORKTREE_ROOT, value: /opt/render/project/src/storage/worktrees }
+      - { key: ARTIFACT_STORAGE_PROVIDER, value: s3 }
+      - { key: ARTIFACT_S3_BUCKET, sync: false }
+      - { key: ARTIFACT_S3_REGION, sync: false }
+      - { key: ARTIFACT_S3_ENDPOINT, sync: false }
+      - { key: ARTIFACT_S3_ACCESS_KEY_ID, sync: false }
+      - { key: ARTIFACT_S3_SECRET_ACCESS_KEY, sync: false }

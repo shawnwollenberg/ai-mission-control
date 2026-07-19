@@ -213,6 +213,8 @@ export async function executeCodex(input: {
           "workspace-write",
           "--ignore-user-config",
           "--ignore-rules",
+          "--config",
+          'shell_environment_policy.include_only=["PATH","HOME","LANG","LC_ALL"]',
           "--cd",
           worktree.worktreePath,
           "-",
@@ -226,12 +228,13 @@ export async function executeCodex(input: {
       env: {
         PATH: process.env.CODEX_RUNTIME_PATH ?? process.env.PATH ?? "",
         ...(process.env.CODEX_HOME ? { CODEX_HOME: process.env.CODEX_HOME } : {}),
+        ...(process.env.CODEX_API_KEY ? { CODEX_API_KEY: process.env.CODEX_API_KEY } : {}),
       },
       stdin: promptBody,
       timeoutMs: request.timeoutSeconds * 1000,
       maxOutputBytes: 2_000_000,
       signal: input.signal,
-      redact: (process.env.CODEX_REDACT_VALUES ?? "").split(",").filter(Boolean),
+      redact: [process.env.CODEX_API_KEY ?? "", ...(process.env.CODEX_REDACT_VALUES ?? "").split(",")].filter(Boolean),
     });
   await storeOnce({
     workspaceId: row.workspace_id,

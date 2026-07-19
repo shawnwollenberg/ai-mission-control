@@ -1,10 +1,11 @@
 import { getDatabasePool } from "@/lib/database";
 import { usageRollup } from "@/application/usage-budget";
 import { workerHealth } from "@/application/worker-operations";
+import { emergencyControlState } from "@/application/emergency-controls";
 
 export async function operationsDashboard(workspaceId: string) {
   const db = getDatabasePool();
-  const [counts, activity, upcoming, outcomes, usage, workers] = await Promise.all([
+  const [counts, activity, upcoming, outcomes, usage, workers, emergencyControls] = await Promise.all([
     db.query(
       `SELECT
       (SELECT count(*) FROM approval_projections WHERE workspace_id=$1 AND status='pending')::int pending_approvals,
@@ -31,6 +32,7 @@ export async function operationsDashboard(workspaceId: string) {
     ),
     usageRollup(workspaceId),
     workerHealth(workspaceId),
+    emergencyControlState(workspaceId),
   ]);
   const unhealthyWorkers = workers.filter((worker) => worker.calculated_status !== "active" || !worker.ready);
   return {
@@ -41,5 +43,6 @@ export async function operationsDashboard(workspaceId: string) {
     usage,
     workers,
     unhealthyWorkers,
+    emergencyControls,
   };
 }

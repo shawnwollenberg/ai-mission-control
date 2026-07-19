@@ -13,6 +13,7 @@ import { evaluatePolicy } from "@/policy/policy-engine";
 import { loadPolicyRestrictions } from "@/policy/policy-store";
 import { ValidationFailedError } from "@/lib/application-errors";
 import { validatePublicationPreflight } from "@/git/publication-preflight";
+import { assertCapabilityEnabled } from "@/application/emergency-controls";
 
 async function append(
   workspaceId: string,
@@ -50,6 +51,8 @@ export async function executeAction(
     )
   ).rows[0];
   if (!row) throw new ValidationFailedError("Action execution context is incomplete");
+  if (["repository.push_branch", "repository.create_pull_request"].includes(row.action_type))
+    await assertCapabilityEnabled(workspaceId, "stop_git_publication");
   if (row.status === "succeeded") return row.result;
   if (row.status === "failed" && row.retry_disposition === "requires-human-review") return row.result;
   if (row.status !== "approved" || row.approval_status !== "granted")

@@ -1,8 +1,25 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getDatabasePool } from "@/lib/database";
-type ArtifactRow = { storage_key: string; checksum_sha256: string; [key: string]: unknown };
+
+type ArtifactRow = { storage_provider: string; storage_key: string; checksum_sha256: string; [key: string]: unknown };
+const artifactProvider = () => process.env.ARTIFACT_STORAGE_PROVIDER ?? "local";
+function objectClient() {
+  return new S3Client({
+    region: process.env.ARTIFACT_S3_REGION!,
+    endpoint: process.env.ARTIFACT_S3_ENDPOINT,
+    forcePathStyle: process.env.ARTIFACT_S3_FORCE_PATH_STYLE === "true",
+    credentials: process.env.ARTIFACT_S3_ACCESS_KEY_ID
+      ? {
+          accessKeyId: process.env.ARTIFACT_S3_ACCESS_KEY_ID,
+          secretAccessKey: process.env.ARTIFACT_S3_SECRET_ACCESS_KEY!,
+        }
+      : undefined,
+  });
+}
+
 export async function storeExecutionArtifact(input: {
   workspaceId: string;
   missionId: string;
@@ -14,14 +31,9 @@ export async function storeExecutionArtifact(input: {
   metadata?: Record<string, unknown>;
   maxBytes?: number;
 }) {
-  const configured = process.env.ARTIFACT_STORAGE_ROOT;
-  if (!configured) throw new Error("ARTIFACT_STORAGE_ROOT is required");
-  await mkdir(configured, { recursive: true });
-  const root = await realpath(configured),
-    artifactId = randomUUID(),
-    relative = path.join(input.workspaceId, input.executionId, `${artifactId}.artifact`),
-    target = path.join(root, relative);
-  await mkdir(path.dirname(target), { recursive: true });
+  const provider = artifactProvider();
+  if (process.env.APP_ENV === "production" && provider !== "s3")
+    throw new Error("Production artifacts require object storage");
   const body = Buffer.isBuffer(input.body) ? input.body : Buffer.from(input.body);
   const bytes = new Uint8Array(body);
   const budget = (
@@ -34,10 +46,31 @@ export async function storeExecutionArtifact(input: {
     used = Number(budget?.used ?? 0);
   if (body.byteLength > maximum || used + body.byteLength > maximum)
     throw new Error("Artifact exceeds configured execution limit");
-  await writeFile(target, bytes, { flag: "wx" });
-  const checksum = createHash("sha256").update(bytes).digest("hex");
+  const artifactId = randomUUID(),
+    checksum = createHash("sha256").update(bytes).digest("hex");
+  const storageKey = `${process.env.APP_ENV ?? "local"}/${input.workspaceId}/${input.executionId}/${artifactId}.artifact`;
+  if (provider === "s3") {
+    if (!process.env.ARTIFACT_S3_BUCKET) throw new Error("ARTIFACT_S3_BUCKET is required");
+    await objectClient().send(
+      new PutObjectCommand({
+        Bucket: process.env.ARTIFACT_S3_BUCKET,
+        Key: storageKey,
+        Body: bytes,
+        ContentType: input.mediaType,
+        ServerSideEncryption: "AES256",
+        Metadata: { checksumSha256: checksum, workspaceId: input.workspaceId },
+      }),
+    );
+  } else {
+    if (!process.env.ARTIFACT_STORAGE_ROOT) throw new Error("ARTIFACT_STORAGE_ROOT is required");
+    await mkdir(process.env.ARTIFACT_STORAGE_ROOT, { recursive: true });
+    const root = await realpath(process.env.ARTIFACT_STORAGE_ROOT),
+      target = path.join(root, storageKey);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, bytes, { flag: "wx" });
+  }
   await getDatabasePool().query(
-    `INSERT INTO artifacts(workspace_id,artifact_id,mission_id,task_id,execution_id,kind,media_type,byte_size,checksum_sha256,storage_provider,storage_key,provenance,metadata) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'local',$10,'live',$11)`,
+    `INSERT INTO artifacts(workspace_id,artifact_id,mission_id,task_id,execution_id,kind,media_type,byte_size,checksum_sha256,storage_provider,storage_key,provenance,metadata) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'live',$12)`,
     [
       input.workspaceId,
       artifactId,
@@ -48,12 +81,14 @@ export async function storeExecutionArtifact(input: {
       input.mediaType,
       body.byteLength,
       checksum,
-      relative,
+      provider,
+      storageKey,
       JSON.stringify(input.metadata ?? {}),
     ],
   );
-  return { artifactId, kind: input.kind, byteSize: body.byteLength, checksum, storageKey: relative };
+  return { artifactId, kind: input.kind, byteSize: body.byteLength, checksum, storageKey };
 }
+
 export async function readExecutionArtifact(workspaceId: string, artifactId: string) {
   const row = (
     await getDatabasePool().query<ArtifactRow>(
@@ -62,9 +97,16 @@ export async function readExecutionArtifact(workspaceId: string, artifactId: str
     )
   ).rows[0];
   if (!row) return;
-  const root = await realpath(process.env.ARTIFACT_STORAGE_ROOT!);
-  const target = path.join(root, row.storage_key),
-    body = await readFile(target);
+  let body: Buffer;
+  if (row.storage_provider === "s3") {
+    const response = await objectClient().send(
+      new GetObjectCommand({ Bucket: process.env.ARTIFACT_S3_BUCKET!, Key: row.storage_key }),
+    );
+    body = Buffer.from(await response.Body!.transformToByteArray());
+  } else {
+    const root = await realpath(process.env.ARTIFACT_STORAGE_ROOT!);
+    body = await readFile(path.join(root, row.storage_key));
+  }
   if (createHash("sha256").update(new Uint8Array(body)).digest("hex") !== row.checksum_sha256)
     throw new Error("Artifact checksum mismatch");
   return { metadata: row, body };

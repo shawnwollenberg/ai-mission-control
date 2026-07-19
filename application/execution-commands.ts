@@ -17,6 +17,7 @@ import { handleTaskTransition } from "@/application/task-commands";
 import { stableUuid } from "@/lib/stable-id";
 import { evaluateAgentEligibility, type RequiredResource } from "@/application/agent-eligibility";
 import { evaluateExecutionBudget, recordUsage } from "@/application/usage-budget";
+import { assertCapabilityEnabled } from "@/application/emergency-controls";
 export type ExecutionActor = { workspaceId: string; id: string; type: ActorType };
 type DispatchTaskRow = { mission_id: string; status: string; current_attempt: number; timeout_seconds: number | null };
 async function append(
@@ -93,6 +94,8 @@ export async function handleRequestExecution(input: {
   repositoryId: string;
   timeoutSeconds?: number;
 }) {
+  await assertCapabilityEnabled(input.actor.workspaceId, "pause_new_executions");
+  await assertCapabilityEnabled(input.actor.workspaceId, "pause_codex_assignments");
   const policy = await getDispatchPolicy(input.actor.workspaceId, input.agentId, input.repositoryId);
   if (policy.adapter_type !== "codex") throw new ValidationFailedError("This command requires a Codex agent");
   if (!policy.read_allowed || !policy.write_allowed)
@@ -157,6 +160,8 @@ export async function handleRequestRemoteExecution(input: {
   agentId: string;
   timeoutSeconds?: number;
 }) {
+  await assertCapabilityEnabled(input.actor.workspaceId, "pause_new_executions");
+  await assertCapabilityEnabled(input.actor.workspaceId, "pause_remote_assignments");
   const task = (
     await getDatabasePool().query<
       DispatchTaskRow & {
