@@ -25,18 +25,24 @@ const availableCommands: Record<string, Array<{ command: string; label: string }
     { command: "cancel", label: "Cancel" },
   ],
 };
-const modeLabel = (mode: string) =>
-  mode === "live_codex"
-    ? "Live Codex execution"
-    : mode === "live_remote"
-      ? "Live Hermes execution"
-      : "Simulated execution";
-const modeDescription = (mode: string) =>
-  mode === "live_remote"
-    ? "Authenticated remote work is durably delivered and supervised."
+const hasMissionAgentCodex = (executions: ExecutionReadModel[]) =>
+  executions.some((execution) => execution.adapterType === "remote_http" && execution.agentName === "Codex");
+const modeLabel = (mode: string, executions: ExecutionReadModel[]) =>
+  hasMissionAgentCodex(executions)
+    ? "Live Mission Agent · Codex"
     : mode === "live_codex"
-      ? "Connected work is isolated and supervised."
-      : "No connected agent is running.";
+      ? "Live Codex execution"
+      : mode === "live_remote"
+        ? "Live Hermes execution"
+        : "Simulated execution";
+const modeDescription = (mode: string, executions: ExecutionReadModel[]) =>
+  hasMissionAgentCodex(executions)
+    ? "Local Codex work is pulled over outbound HTTPS and durably supervised."
+    : mode === "live_remote"
+      ? "Authenticated remote work is durably delivered and supervised."
+      : mode === "live_codex"
+        ? "Connected work is isolated and supervised."
+        : "No connected agent is running.";
 
 export default function DurableMissionConsole({
   initialMission,
@@ -167,8 +173,8 @@ export default function DurableMissionConsole({
       </header>
       <section className="execution-mode">
         <span>Execution mode</span>
-        <strong>{modeLabel(mission.executionMode)}</strong>
-        <small>{modeDescription(mission.executionMode)}</small>
+        <strong>{modeLabel(mission.executionMode, executions)}</strong>
+        <small>{modeDescription(mission.executionMode, executions)}</small>
       </section>
       <section className="durable-grid">
         <section className="command-panel mission-summary">
@@ -239,11 +245,13 @@ export default function DurableMissionConsole({
               <div>
                 <p className="section-label">Execution supervision</p>
                 <h2>
-                  {executions.some((e) => e.adapterType === "remote_http")
-                    ? "Live Hermes execution"
-                    : executions.some((e) => e.adapterType === "codex")
-                      ? "Live Codex execution"
-                      : "Simulated execution"}
+                  {hasMissionAgentCodex(executions)
+                    ? "Live Mission Agent · Codex"
+                    : executions.some((e) => e.adapterType === "remote_http")
+                      ? "Live Hermes execution"
+                      : executions.some((e) => e.adapterType === "codex")
+                        ? "Live Codex execution"
+                        : "Simulated execution"}
                 </h2>
               </div>
               <span>{executions.length} attempts</span>
@@ -336,7 +344,7 @@ export default function DurableMissionConsole({
             </span>
           </div>
           <p>
-            <strong>{modeLabel(mission.executionMode)}</strong> · {mission.readyTaskCount} ready ·{" "}
+            <strong>{modeLabel(mission.executionMode, executions)}</strong> · {mission.readyTaskCount} ready ·{" "}
             {mission.runningTaskCount} active · {mission.blockedTaskCount} blocked
           </p>
           <div className="log-list">
@@ -394,7 +402,7 @@ export default function DurableMissionConsole({
                   0,
                   Math.round((new Date(mission.updatedAt).getTime() - new Date(mission.createdAt).getTime()) / 1000),
                 )}{" "}
-                seconds. The recorded {mission.executionMode === "live_codex" ? "live Codex" : "simulation"} outcome is{" "}
+                seconds. The recorded {modeLabel(mission.executionMode, executions).toLowerCase()} outcome is{" "}
                 {mission.status}.
                 {actions.some(
                   (action) => action.actionType === "repository.push_branch" && action.status === "succeeded",
