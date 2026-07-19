@@ -62,43 +62,33 @@ The current low-cost public deployment uses:
 
 The application explicitly prohibits autonomous deployment, merge, infrastructure modification, secret modification, transaction signing, and transaction submission. Releasing Mission Control itself is a separate human-approved development activity.
 
-## How Codex and GPT-5.6 built Mission Control
+## How Codex and GPT-5.6 Were Used
 
-Mission Control was built end to end with **Codex powered by GPT-5.6**, used through both the Codex Desktop experience and the Codex CLI.
+Mission Control was developed using Codex and GPT-5.6 throughout the project lifecycle.
 
-Codex was not used only for isolated code completion. It operated as the engineering partner across the complete delivery lifecycle:
+### Codex
 
-- Inspected and translated the product brief into an event-sourced architecture and demo-oriented milestones.
-- Implemented the Next.js application, interaction states, Mission Log, Mission Health, recommendation, approval, debrief, and ServicePilot preview.
-- Built the canonical event model, projections, JSONL development store, and DynamoDB production adapter.
-- Wrote and ran projection-rebuild, refresh, idempotency, concurrency, and preview tests.
-- Iterated on the visual design using real browser screenshots and product feedback.
-- Created and rendered the HyperFrames submission video with ElevenLabs narration.
-- Inspected the existing WallyWeb AWS environment using the local AWS CLI profile.
-- Designed and deployed the production ECS, ALB, DynamoDB, Route 53, ACM, ECR, Secrets Manager, and CloudWatch stack.
-- Diagnosed failures discovered during real hosted rehearsals, shipped immutable container revisions, and verified persistence after terminating the running application task.
-- Maintained deployment documentation, rollback instructions, status reporting, Git commits, and the remote repository.
+- Implemented major application features.
+- Refactored and extended the architecture.
+- Built production-ready workflows.
+- Generated tests and ran the validation suite.
+- Assisted with debugging and production rehearsals.
+- Implemented infrastructure and deployment automation.
+- Built the Mission Agent onboarding and pull-based execution flow.
+- Helped create production and hackathon documentation.
 
-The two Codex surfaces served complementary roles:
+Codex was used through both Codex Desktop and the Codex CLI. Desktop supported the collaborative product loop, browser review, screenshots, and longer implementation sessions. The CLI provided the focused repository and terminal workflow for code inspection, tests, builds, Git operations, container publishing, deployment, and operational verification.
 
-- **Codex Desktop** provided the collaborative product-development loop: visual browser review, screenshots, design iteration, long-running implementation work, and demo-quality validation.
-- **Codex CLI** provided a focused repository and terminal workflow for code inspection, implementation, automated tests, builds, Git operations, AWS inspection, container publishing, deployment, and operational verification.
+### GPT-5.6
 
-The repository history and documentation preserve that process rather than presenting the project as a one-shot generated artifact.
+- Acted as the technical architect and design partner.
+- Helped design the event-sourced architecture.
+- Reviewed system design decisions.
+- Refined the Mission Control execution model.
+- Helped develop the product vision and user experience.
+- Assisted with technical writing, documentation, and the Devpost submission.
 
-## How ChatGPT shaped the product
-
-ChatGPT was the product-planning partner before and throughout implementation. It helped turn the initial command-center idea into the product judges see:
-
-- Reframed progress around demo capability instead of internal milestone completion.
-- Identified the Mission Log as the visible heartbeat of a living AI organization.
-- Established the event-sourcing rule that every screen is a projection of canonical history.
-- Prioritized the emotional demo arc: mission, organization, crisis, recommendation, human judgment, and payoff.
-- Refined product language such as **Mission Plan**, **Mission Log**, **Mission Health**, and **Approve Reorganization**.
-- Kept developer tooling and architecture subordinate to the audience-facing experience.
-- Helped define honest boundaries between live execution and a verified fallback artifact.
-
-That planning collaboration is encoded in the source-of-truth documents under [`docs/`](docs/) and in [`PLANS.md`](PLANS.md).
+Development was iterative: GPT-5.6 was used for architectural planning and design decisions, while Codex implemented, tested, and refined the production codebase under Mission Control's supervision. The repository history, source-of-truth documents under [`docs/`](docs/), and [`PLANS.md`](PLANS.md) preserve that process rather than presenting the project as a one-shot generated artifact.
 
 ## Honest execution boundary
 

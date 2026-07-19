@@ -61,7 +61,7 @@ export const docGroups = [
   {
     title: "Getting Started",
     items: [
-      ["What is Mission Control?", "/docs"],
+      ["What is Mission Control?", "/docs/what-is-mission-control"],
       ["Quick Start (10 minutes)", "/quick-start"],
       ["Install", "/docs/install"],
       ["Architecture", "/architecture"],
@@ -102,6 +102,29 @@ export const docs: Record<
   string,
   { eyebrow: string; title: string; lede: string; sections: { title: string; body: string }[] }
 > = {
+  "what-is-mission-control": {
+    eyebrow: "Getting started",
+    title: "What is Mission Control?",
+    lede: "Mission Control is the durable control plane for an AI organization: one place to give agents an objective, supervise their work, review evidence, and retain human authority over consequential actions.",
+    sections: [
+      {
+        title: "The problem it solves",
+        body: "AI agents often work across separate terminals, repositories, model providers, schedulers, and dashboards. Mission Control turns that fragmented activity into missions, tasks, executions, approvals, and artifacts that a human can understand at a glance.",
+      },
+      {
+        title: "How it works",
+        body: "You launch a mission from a reusable template or a focused objective. Mission Control assigns bounded tasks to capable agents, records meaningful activity in an append-only event log, surfaces progress and evidence, and pauses whenever policy requires human judgment.",
+      },
+      {
+        title: "What makes it different",
+        body: "Mission Control manages outcomes rather than pretending every agent is trustworthy or autonomous. Codex, Hermes, Claude Code, and generic agents sit behind common execution boundaries, while deterministic policies and parameter-bound approvals keep authority with the human operator.",
+      },
+      {
+        title: "Start small",
+        body: "Create a personal workspace, connect one agent with the guided one-command flow, and launch the read-only repository-analysis mission. The goal is to reach a genuine heartbeat, execution, and artifact in under ten minutes without reading the rest of the documentation first.",
+      },
+    ],
+  },
   install: {
     eyebrow: "Getting started",
     title: "Install Mission Control",
