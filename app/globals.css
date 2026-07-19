@@ -50,8 +50,8 @@ body {
 .public-logo .brand-mark-compact {
   width: 38px;
   height: 38px;
-  background-size: 412px 275px;
-  background-position: -66px -195px;
+  background-size: cover;
+  background-position: center;
   border-color: rgba(17, 20, 16, 0.35);
   border-radius: 0;
   box-shadow: none;
