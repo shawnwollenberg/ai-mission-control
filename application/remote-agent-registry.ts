@@ -50,7 +50,7 @@ async function projectRegistration(client: PoolClient, events: DomainEvent[], se
   const credential = events.find((event) => event.eventType === "agent.credential_created")!;
   const p = registered.payload;
   await client.query(
-    `INSERT INTO agents(workspace_id,agent_id,name,description,adapter_type,capabilities,supported_domains,trust_level,status,concurrency_limit,endpoint,protocol_versions,allowed_callback_actions,credential_status,credential_rotated_at) VALUES($1,$2,$3,$4,'remote_http',$5,$6,$7,'offline',$8,$9,$10,$11,'active',$12)`,
+    `INSERT INTO agents(workspace_id,agent_id,name,description,adapter_type,capabilities,supported_domains,trust_level,status,concurrency_limit,endpoint,protocol_versions,allowed_callback_actions,credential_status,credential_rotated_at,delivery_mode,mission_agent_adapter) VALUES($1,$2,$3,$4,'remote_http',$5,$6,$7,'offline',$8,$9,$10,$11,'active',$12,$13,$14)`,
     [
       registered.workspaceId,
       registered.aggregateId,
@@ -64,6 +64,8 @@ async function projectRegistration(client: PoolClient, events: DomainEvent[], se
       JSON.stringify(p.protocolVersions),
       JSON.stringify(p.allowedCallbackActions),
       credential.occurredAt,
+      p.deliveryMode ?? "push",
+      p.missionAgentAdapter ?? null,
     ],
   );
   await client.query(
@@ -89,6 +91,8 @@ export async function registerRemoteAgent(input: {
   concurrencyLimit?: number;
   trustLevel?: string;
   expiresAt?: string;
+  deliveryMode?: "push" | "pull";
+  missionAgentAdapter?: "codex" | "hermes" | "claude-code" | "generic";
 }) {
   requireOwner(input.actor);
   if (!input.name.trim()) throw new ValidationFailedError("Agent name is required");
@@ -130,6 +134,8 @@ export async function registerRemoteAgent(input: {
             "capabilities.report",
             "heartbeat.report",
           ],
+          deliveryMode: input.deliveryMode ?? "push",
+          missionAgentAdapter: input.missionAgentAdapter,
         },
       },
       {
@@ -157,8 +163,9 @@ export async function getRemoteAgentAuth(agentId: string, credentialId: string) 
       expires_at: Date | null;
       revoked_at: Date | null;
       allowed_protocol_versions: string[];
+      delivery_mode: "push" | "pull";
     }>(
-      `SELECT a.workspace_id,a.agent_id,a.endpoint,a.status,a.credential_status,c.credential_id,c.status credential_record_status,c.secret_verifier,c.expires_at,c.revoked_at,c.allowed_protocol_versions FROM agents a JOIN agent_credentials c ON c.workspace_id=a.workspace_id AND c.agent_id=a.agent_id WHERE a.agent_id=$1 AND c.credential_id=$2`,
+      `SELECT a.workspace_id,a.agent_id,a.endpoint,a.status,a.credential_status,a.delivery_mode,c.credential_id,c.status credential_record_status,c.secret_verifier,c.expires_at,c.revoked_at,c.allowed_protocol_versions FROM agents a JOIN agent_credentials c ON c.workspace_id=a.workspace_id AND c.agent_id=a.agent_id WHERE a.agent_id=$1 AND c.credential_id=$2`,
       [agentId, credentialId],
     )
   ).rows[0];

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NotFoundError, ValidationFailedError } from "@/lib/application-errors";
 import { getDatabasePool } from "@/lib/database";
+import { grantAgentResource } from "@/application/agent-eligibility";
 
 export type RegistryActor = { workspaceId: string; userId: string; role: "owner" | "member" };
 type DispatchPolicyRow = {
@@ -178,6 +179,58 @@ export async function listRepositories(workspaceId: string) {
   return (
     await getDatabasePool().query("SELECT * FROM repositories WHERE workspace_id=$1 ORDER BY created_at", [workspaceId])
   ).rows;
+}
+
+export async function registerMissionAgentRepository(input: {
+  workspaceId: string;
+  agentId: string;
+  name: string;
+  fingerprint: string;
+  defaultBranch: string;
+  remoteUrl?: string;
+  commit?: string;
+}) {
+  if (!input.name.trim() || !/^[a-f0-9]{64}$/.test(input.fingerprint) || !input.defaultBranch.trim())
+    throw new ValidationFailedError("Repository identity is invalid");
+  const agent = (
+    await getDatabasePool().query(
+      "SELECT 1 FROM agents WHERE workspace_id=$1 AND agent_id=$2 AND delivery_mode='pull' AND status<>'disabled'",
+      [input.workspaceId, input.agentId],
+    )
+  ).rows[0];
+  if (!agent) throw new NotFoundError("Mission Agent");
+  const repositoryId = randomUUID();
+  const result = await getDatabasePool().query(
+    `INSERT INTO repositories(workspace_id,repository_id,name,local_path,default_branch,allowed_agent_ids,read_allowed,write_allowed,
+      commit_allowed,push_allowed,merge_allowed,deployment_allowed,validation_commands,pull_request_allowed,protected_branches,
+      allowed_branch_prefixes,allowed_remotes,provider_type,location_mode,repository_fingerprint,observed_remote_url,observed_commit)
+     VALUES($1,$2,$3,$4,$5,$6,true,false,false,false,false,false,'[]',false,$7,'[]','[]','local_fixture','mission_agent',$8,$9,$10)
+     ON CONFLICT(workspace_id,repository_fingerprint) WHERE repository_fingerprint IS NOT NULL AND disabled_at IS NULL
+     DO UPDATE SET name=EXCLUDED.name,default_branch=EXCLUDED.default_branch,allowed_agent_ids=EXCLUDED.allowed_agent_ids,
+       observed_remote_url=EXCLUDED.observed_remote_url,observed_commit=EXCLUDED.observed_commit,updated_at=now()
+     RETURNING repository_id,name,default_branch,repository_fingerprint,observed_commit`,
+    [
+      input.workspaceId,
+      repositoryId,
+      input.name.trim().slice(0, 160),
+      `mission-agent://${input.fingerprint}`,
+      input.defaultBranch.trim().slice(0, 200),
+      JSON.stringify([input.agentId]),
+      JSON.stringify([input.defaultBranch.trim().slice(0, 200)]),
+      input.fingerprint,
+      input.remoteUrl?.slice(0, 500) ?? null,
+      input.commit?.slice(0, 80) ?? null,
+    ],
+  );
+  const repository = result.rows[0];
+  await grantAgentResource({
+    workspaceId: input.workspaceId,
+    agentId: input.agentId,
+    resourceType: "repository",
+    resourceId: repository.repository_id,
+    permissions: ["read"],
+  });
+  return repository;
 }
 export async function getDispatchPolicy(workspaceId: string, agentId: string, repositoryId: string) {
   const result = await getDatabasePool().query<DispatchPolicyRow>(

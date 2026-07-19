@@ -272,7 +272,9 @@ export default function DurableMissionConsole({
                 <ul>
                   {execution.artifacts.map((artifact) => (
                     <li key={artifact.artifactId}>
-                      {artifact.kind} · {artifact.byteSize} bytes · {artifact.checksum.slice(0, 12)}
+                      <Link href={`/artifacts/${artifact.artifactId}`}>
+                        {artifact.kind} · {artifact.byteSize} bytes · {artifact.checksum.slice(0, 12)} →
+                      </Link>
                     </li>
                   ))}
                 </ul>

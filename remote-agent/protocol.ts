@@ -17,6 +17,12 @@ export const inboundMessageTypes = [
   "AgentHeartbeat",
   "AgentCapabilitiesReported",
   "ApprovalDecisionAcknowledged",
+  "AgentAssignmentPullRequested",
+  "AgentAssignmentAcknowledged",
+  "AgentAssignmentLeaseRenewed",
+  "AgentAssignmentCancellationChecked",
+  "AgentAssignmentReleased",
+  "AgentRepositoryRegistered",
 ] as const;
 export const outboundMessageTypes = [
   "ExecutionRequested",

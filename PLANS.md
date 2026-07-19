@@ -417,6 +417,12 @@ Phase 5 completed on 2026-07-19. Mission Control now provides bounded schedule c
 
 **Deferred from the first boundary:** A distributable npm package, OS service management, inbound work polling for machines without public callbacks, and fully automatic Codex/Hermes/Claude execution. These must be delivered before claiming that the connected agent completed the first mission.
 
+### Pull-based Mission Agent boundary — approved 2026-07-19
+
+Mission Agent is the outbound-only local runtime. Pull assignments use bounded long polling and durable operational leases; canonical execution events remain business truth. Codex is the first complete adapter and is restricted to read-only repository analysis. Hermes, Claude Code, and generic adapters may connect but must clearly report that local execution is not yet supported. See `docs/MISSION_AGENT_PROTOCOL.md` for the protocol, threat model, recovery semantics, and rollback.
+
+Completion requires a fresh production user to connect behind NAT, confirm pull readiness, register a safe local repository, launch the starter analysis mission, observe live progress, receive a genuine Markdown artifact, restart without duplicate work, revoke access, and reconnect. The hackathon evidence package begins only after this acceptance succeeds.
+
 ## Cross-phase test matrix
 
 - Unit: transitions, dependency resolution, policy, health, retry classification, schemas, serialization.

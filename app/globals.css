@@ -2189,6 +2189,19 @@ select:focus {
   gap: 1rem;
   margin: 1rem 0 2rem;
 }
+.artifact-body {
+  background: #050b11;
+  border: 1px solid var(--line);
+  color: #d9e9f0;
+  font:
+    0.88rem/1.7 ui-monospace,
+    monospace;
+  margin-top: 22px;
+  max-height: 70vh;
+  overflow: auto;
+  padding: clamp(18px, 3vw, 34px);
+  white-space: pre-wrap;
+}
 .metric-card {
   border: 1px solid var(--line, #d7d9de);
   border-radius: 12px;

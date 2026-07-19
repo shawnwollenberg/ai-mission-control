@@ -5,7 +5,16 @@ import { useEffect, useMemo, useState } from "react";
 import { BrandSprite } from "@/app/brand-assets";
 
 type AgentType = "codex" | "hermes" | "claude_code" | "generic_remote";
-type Agent = { agent_id: string; name: string; adapter_type: string; status: string; last_heartbeat_at?: string };
+type Agent = {
+  agent_id: string;
+  name: string;
+  adapter_type: string;
+  status: string;
+  last_heartbeat_at?: string;
+  pull_ready_at?: string;
+  mission_agent_version?: string;
+  mission_agent_adapter?: string;
+};
 type Connection = {
   agentId: string;
   agentName: string;
@@ -13,6 +22,8 @@ type Connection = {
   endpoint: string;
   credentialId: string;
   protocolVersion: string;
+  missionAgentVersion: string;
+  missionAgentChecksum: string;
 };
 const choices: { id: AgentType; label: string; description: string }[] = [
   { id: "codex", label: "Codex", description: "Analyze and review a local repository." },
@@ -38,8 +49,9 @@ export default function OnboardingWizard({
   const [error, setError] = useState("");
   const connected = useMemo(
     () =>
-      agents.find((agent) => agent.agent_id === connection?.agentId && agent.last_heartbeat_at) ??
-      agents.find((agent) => agent.last_heartbeat_at),
+      agents.find(
+        (agent) => agent.agent_id === connection?.agentId && agent.last_heartbeat_at && agent.pull_ready_at,
+      ) ?? agents.find((agent) => agent.last_heartbeat_at && agent.pull_ready_at),
     [agents, connection],
   );
   const stage = connected ? 3 : 2;
@@ -77,6 +89,11 @@ export default function OnboardingWizard({
   async function copyCommand() {
     if (!connection) return;
     await navigator.clipboard.writeText(connection.command);
+    await fetch("/api/onboarding/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventType: "onboarding.connection_command_copied", agentId: connection.agentId }),
+    }).catch(() => undefined);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   }
@@ -142,8 +159,8 @@ export default function OnboardingWizard({
             <div className="heartbeat-wait">
               <span className="heartbeat-dot" />
               <div>
-                <strong>Waiting for heartbeat…</strong>
-                <small>This page will advance automatically.</small>
+                <strong>Waiting for heartbeat and assignment channel…</strong>
+                <small>This page advances only after signed pull readiness is confirmed.</small>
               </div>
             </div>
             {choice === "generic_remote" && (
@@ -174,6 +191,10 @@ export default function OnboardingWizard({
             <h2>Connected.</h2>
             <p>
               <strong>{connected.name}</strong> is ready in <strong>{workspaceName}</strong>.
+            </p>
+            <p>
+              Mission Agent {connected.mission_agent_version} · {connected.mission_agent_adapter} adapter · assignment
+              channel ready
             </p>
             <div className="first-mission-card">
               <div>

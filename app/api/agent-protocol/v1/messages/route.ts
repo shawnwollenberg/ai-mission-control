@@ -14,6 +14,7 @@ import {
   rateCategory,
   securityReason,
 } from "@/remote-agent/security";
+import { validateExecutionLease } from "@/application/pull-assignments";
 
 const path = "/api/agent-protocol/v1/messages";
 export async function POST(request: Request) {
@@ -24,6 +25,14 @@ export async function POST(request: Request) {
       workspaceId: authenticated.credential.workspace_id,
       messageId: authenticated.headers.messageId,
     });
+    if (message.executionId && authenticated.credential.delivery_mode === "pull")
+      await validateExecutionLease({
+        credential: authenticated.credential,
+        executionId: message.executionId,
+        assignmentId: request.headers.get("x-mc-assignment-id") ?? "",
+        leaseOwner: request.headers.get("x-mc-lease-owner") ?? "",
+        leaseToken: request.headers.get("x-mc-lease-token") ?? "",
+      });
     await enforceProtocolRateLimit(authenticated.credential.workspace_id, message.agentId, rateCategory(message));
     const receipt = await reserveProtocolMessage({
       credential: authenticated.credential,

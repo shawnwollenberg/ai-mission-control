@@ -85,6 +85,8 @@ export const docGroups = [
       ["Running Codex", "/docs/running-codex"],
       ["Running Hermes", "/docs/running-hermes"],
       ["Creating Agents", "/docs/creating-agents"],
+      ["Mission Agent CLI", "/docs/mission-agent"],
+      ["Agent Protocol 1.0", "/docs/agent-protocol"],
       ["Mission Templates", "/docs/mission-templates"],
       ["Scheduling", "/docs/scheduling"],
       ["Notifications", "/docs/notifications"],
@@ -223,6 +225,48 @@ export const docs: Record<
       {
         title: "Connection sequence",
         body: "Create an invite in the app, run the generated host command, receive a heartbeat, and review the declared capabilities before assignment.",
+      },
+    ],
+  },
+  "mission-agent": {
+    eyebrow: "Five-minute setup",
+    title: "Connect Mission Agent",
+    lede: "Connect a local Codex runtime, confirm its outbound pull channel, and complete a genuine read-only repository analysis without inbound networking.",
+    sections: [
+      {
+        title: "1. Connect",
+        body: "Create an account, choose Codex, open a terminal in a safe Git repository, and run the single versioned and checksummed command shown by Mission Control. The credential is stored in macOS Keychain when available or a protected 0600 file on Linux.",
+      },
+      {
+        title: "2. Verify",
+        body: "The onboarding page advances only after both the signed heartbeat and assignment pull capability are confirmed. Run mission-agent doctor for Node, Git, Codex, repository, credential-permission, reachability, signature, and heartbeat diagnostics.",
+      },
+      {
+        title: "3. Run",
+        body: "Select the registered repository and launch Analyze this repository. Mission Agent pulls the assignment over outbound HTTPS, renews its lease, reports bounded progress, uploads a checksummed Markdown artifact, and completes the mission.",
+      },
+      {
+        title: "Operations",
+        body: "Use mission-agent status, mission-agent run, mission-agent repository add /path, and mission-agent logout --yes. macOS and Linux are supported first; Windows remains experimental. Credentials never appear in status output.",
+      },
+    ],
+  },
+  "agent-protocol": {
+    eyebrow: "Protocol",
+    title: "Mission Control Agent Protocol 1.0",
+    lede: "A vendor-neutral, signed HTTPS protocol for identity, heartbeat, pull assignments, leases, progress, artifacts, completion, failure, and cancellation.",
+    sections: [
+      {
+        title: "Authentication",
+        body: "HMAC-SHA256 binds method, path, timestamp, nonce, message ID, body checksum, and protocol version. Credentials are workspace- and agent-scoped, displayed once, immediately revocable, and never included in events or examples.",
+      },
+      {
+        title: "Pull and leases",
+        body: "A bounded long poll returns only the authenticated agent’s eligible assignment. An opaque lease token is required for acknowledgement, renewal, execution messages, cancellation checks, release, artifacts, and completion.",
+      },
+      {
+        title: "Compatibility",
+        body: "Protocol additions preserve existing push-mode 1.0 agents. Independent Python, Go, or Rust clients can implement the documented canonical signature and JSON envelope without using Mission Control source code.",
       },
     ],
   },
