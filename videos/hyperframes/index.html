@@ -39,14 +39,16 @@
       .split { position: absolute; left: 72px; right: 72px; top: 245px; bottom: 82px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; z-index: 5; }
       .split .screen { position: relative; inset: auto; width: auto; height: auto; }
       .proof { position: absolute; left: 92px; bottom: 76px; z-index: 9; padding: 20px 27px; border: 2px solid rgba(244,189,98,.42); border-radius: 12px; background: rgba(35,25,10,.92); color: #f4bd62; font: 700 22px 'IBM Plex Mono', monospace; }
-      .attribution { position: absolute; left: 110px; right: 110px; top: 335px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; z-index: 7; }
-      .role { min-height: 480px; padding: 42px; border: 2px solid rgba(125,246,238,.3); border-radius: 22px; background: rgba(6,15,27,.95); box-shadow: 0 30px 80px rgba(0,0,0,.46); }
+      .attribution { position: absolute; left: 85px; right: 85px; top: 330px; display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; z-index: 7; }
+      .role { min-height: 430px; padding: 34px; border: 2px solid rgba(125,246,238,.3); border-radius: 22px; background: rgba(6,15,27,.95); box-shadow: 0 30px 80px rgba(0,0,0,.46); }
       .role.codex { border-color: rgba(244,189,98,.42); }
-      .role h3 { margin: 0 0 24px; font-size: 58px; }
+      .role.model { border-color: rgba(174,143,255,.42); }
+      .role h3 { margin: 0 0 22px; font-size: 46px; }
       .role ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 20px; }
-      .role li { font-size: 28px; line-height: 1.25; color: #d4dee5; }
+      .role li { font-size: 25px; line-height: 1.3; color: #d4dee5; }
       .role li::before { content: '•'; color: #1ce0d6; margin-right: 16px; }
       .role.codex li::before { color: #f4bd62; }
+      .role.model li::before { color: #ae8fff; }
       .center { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
       .center img { width: 170px; height: 170px; border-radius: 38px; box-shadow: 0 0 75px rgba(28,224,214,.3); }
       .center h1 { margin: 35px 0 0; font-size: 105px; letter-spacing: -.055em; }
@@ -66,7 +68,7 @@
       <audio data-hf-id="hf-0x0e" id="vo6" class="clip" data-start="81.8" data-duration="14.443" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-06.mp3"></audio>
       <audio data-hf-id="hf-tc6k" id="vo7" class="clip" data-start="97.2" data-duration="16.394" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-07.mp3"></audio>
       <audio data-hf-id="hf-uhsm" id="vo8" class="clip" data-start="114.6" data-duration="11.425" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-08.mp3"></audio>
-      <audio data-hf-id="hf-a9h8" id="vo9" class="clip" data-start="127" data-duration="32.741" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-09.mp3"></audio>
+      <audio data-hf-id="hf-a9h8" id="vo9" class="clip" data-start="127" data-duration="26.936" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-09.mp3"></audio>
       <audio data-hf-id="hf-pqep" id="vo10" class="clip" data-start="160.7" data-duration="11.053" data-track-index="2" data-volume="1" src="assets/audio/narration/scene-10.mp3"></audio>
 
       <section data-hf-id="hf-7oc6" id="s1" class="clip" data-start="0" data-duration="22.5" data-track-index="1">
@@ -125,8 +127,8 @@
 
       <section data-hf-id="hf-bkht" id="s9" class="clip" data-start="126.6" data-duration="33.7" data-track-index="1">
         <div data-hf-id="hf-pjru" class="texture"></div><div data-hf-id="hf-vtcb" class="glow" style="left:120px;top:150px"></div><div data-hf-id="hf-qjjw" class="glow amber" style="right:60px;top:150px"></div><div data-hf-id="hf-j8xh" class="meta">09 · How it was built</div><div data-hf-id="hf-bo8l" class="counter">02:07</div>
-        <div data-hf-id="hf-1akx" class="headline" style="top:100px;width:1500px"><h2 data-hf-id="hf-5s5x">GPT-5.6 designed the organization. <span data-hf-id="hf-tl0j" class="accent">Codex built it.</span></h2></div>
-        <div data-hf-id="hf-t5tz" class="attribution"><article data-hf-id="hf-dpgx" class="role"><h3 data-hf-id="hf-346h" class="accent">GPT-5.6</h3><ul data-hf-id="hf-ovcc"><li data-hf-id="hf-j9l8">Architecture + product strategy</li><li data-hf-id="hf-uv77">Event-sourced execution model</li><li data-hf-id="hf-orep">Safety boundaries + review</li><li data-hf-id="hf-mjzk">Phase-by-phase decisions</li></ul></article><article data-hf-id="hf-fxaw" class="role codex"><h3 data-hf-id="hf-j4mc" class="risk">Codex</h3><ul data-hf-id="hf-kqbo"><li data-hf-id="hf-jmyv">Implementation + refactoring</li><li data-hf-id="hf-hgn9">Tests + production debugging</li><li data-hf-id="hf-dth2">AWS deployment + validation</li><li data-hf-id="hf-1m82">Mission Agent + documentation</li></ul></article></div>
+        <div data-hf-id="hf-1akx" class="headline" style="top:100px;width:1600px"><h2 data-hf-id="hf-5s5x">Designed with ChatGPT. <span data-hf-id="hf-tl0j" class="accent">Built with Codex.</span></h2></div>
+        <div data-hf-id="hf-t5tz" class="attribution"><article data-hf-id="hf-dpgx" class="role"><h3 data-hf-id="hf-346h" class="accent">ChatGPT</h3><ul data-hf-id="hf-ovcc"><li data-hf-id="hf-j9l8">Architecture</li><li data-hf-id="hf-uv77">Product strategy</li><li data-hf-id="hf-orep">Safety + review</li></ul></article><article data-hf-id="hf-fxaw" class="role codex"><h3 data-hf-id="hf-j4mc" class="risk">Codex</h3><ul data-hf-id="hf-kqbo"><li data-hf-id="hf-jmyv">Implementation</li><li data-hf-id="hf-hgn9">Testing + debugging</li><li data-hf-id="hf-dth2">Deployment + validation</li></ul></article><article data-hf-id="hf-model" class="role model"><h3 data-hf-id="hf-model-title" style="color:#ae8fff">GPT-5.6</h3><ul data-hf-id="hf-model-list"><li data-hf-id="hf-model-item">Model powering Codex</li></ul></article></div>
         <div data-hf-id="hf-twep" class="proof" style="left:50%;transform:translateX(-50%);bottom:52px;color:#dce6ec;border-color:rgba(255,255,255,.22)">HUMANS SET DIRECTION · AGENTS PERFORM BOUNDED WORK</div>
       </section>
 

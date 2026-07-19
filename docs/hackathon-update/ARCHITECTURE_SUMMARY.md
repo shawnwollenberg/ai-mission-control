@@ -19,3 +19,7 @@ Background workers project events, dispatch outbox effects, evaluate schedules, 
 Workspace isolation is enforced at authentication, command validation, assignment selection, event projection, and artifact access. Every new account receives a private personal workspace and owner role. Credentials are scoped to the owner-created agent and workspace, may be rotated or revoked, and cannot discover work from another tenant.
 
 Production runs on a single low-cost AWS Graviton instance with the web application, workers, reverse proxy, and PostgreSQL containerized together, plus object storage for artifacts. This intentionally modest topology avoids a managed database, load balancer, or redundant instances while adoption is early. It can later be separated along existing boundaries without changing the event model or pull protocol.
+
+## Development Workflow
+
+ChatGPT acted as the technical architect, product strategist, design partner, and review partner for this architecture.  Codex acted as the primary implementation agent and used the phase plans to implement, test, deploy, and validate the system.  GPT-5.6 was the language model powering Codex during that implementation work.

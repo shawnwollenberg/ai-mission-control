@@ -62,39 +62,39 @@ The current low-cost public deployment uses:
 
 The application explicitly prohibits autonomous deployment, merge, infrastructure modification, secret modification, transaction signing, and transaction submission. Releasing Mission Control itself is a separate human-approved development activity.
 
-## How Codex and GPT-5.6 Were Used
+## How ChatGPT, Codex, and GPT-5.6 Were Used
 
-Mission Control was developed using Codex and GPT-5.6 throughout the project lifecycle.
+Mission Control was built through a repeated design-and-implementation workflow involving ChatGPT, Codex, and GPT-5.6.
 
-### Codex
+### ChatGPT: Architecture, Product Design, and Review
 
-- Implemented major application features.
-- Refactored and extended the architecture.
-- Built production-ready workflows.
-- Generated tests and ran the validation suite.
-- Assisted with debugging and production rehearsals.
-- Implemented infrastructure and deployment automation.
-- Built the Mission Agent onboarding and pull-based execution flow.
-- Helped create production and hackathon documentation.
+ChatGPT acted as my technical architect, product strategist, and design partner.  I used it to develop the product concept, design the event-sourced architecture, define the agent and execution model, establish safety and approval boundaries, review implementation progress, and turn each milestone into detailed instructions for Codex.
 
-Codex was used through both Codex Desktop and the Codex CLI. Desktop supported the collaborative product loop, browser review, screenshots, and longer implementation sessions. The CLI provided the focused repository and terminal workflow for code inspection, tests, builds, Git operations, container publishing, deployment, and operational verification.
+### Codex: Implementation, Testing, and Deployment
 
-### GPT-5.6
+Codex acted as the primary implementation agent.  It audited the repository, wrote and refactored the application, created tests, implemented production infrastructure, fixed deployment issues, built the Mission Agent onboarding flow, and validated the system through integration tests, restarts, replay, and projection verification.
 
-- Acted as the technical architect and design partner.
-- Helped design the event-sourced architecture.
-- Reviewed system design decisions.
-- Refined the Mission Control execution model.
-- Helped develop the product vision and user experience.
-- Assisted with technical writing, documentation, and the Devpost submission.
+Codex was used through both Codex Desktop and the Codex CLI.  Desktop supported the collaborative product loop, browser review, screenshots, and longer implementation sessions.  The CLI provided the focused repository and terminal workflow for code inspection, tests, builds, Git operations, container publishing, deployment, and operational verification.
 
-Development was iterative: GPT-5.6 was used for architectural planning and design decisions, while Codex implemented, tested, and refined the production codebase under Mission Control's supervision. The repository history, source-of-truth documents under [`docs/`](docs/), and [`PLANS.md`](PLANS.md) preserve that process rather than presenting the project as a one-shot generated artifact.
+### GPT-5.6: The Model Powering Codex
+
+GPT-5.6 was the language model used by Codex during implementation.  It powered Codex as it interpreted the implementation plans, inspected the codebase, wrote code, created tests, debugged failures, produced documentation, and assisted with deployment.
+
+The workflow was:
+
+1. I described the problem, goals, and constraints to ChatGPT.
+2. ChatGPT helped me design the system and produce a detailed implementation plan.
+3. I gave that plan to Codex.
+4. Codex, powered by GPT-5.6, implemented and validated the work.
+5. I reviewed the results with ChatGPT and planned the next phase.
+
+The repository history, source-of-truth documents under [`docs/`](docs/), and [`PLANS.md`](PLANS.md) preserve that process rather than presenting the project as a one-shot generated artifact.
 
 ## Honest execution boundary
 
 The AWS demo defaults to `ENABLE_LIVE_CODEX=false`. Its bounded Hermes workflow validates a known fallback artifact and records the provenance as `validated_fallback`; the UI never presents that artifact as live Codex execution. Agent-ingestion endpoints require a secret bearer token, and the public runtime exposes no shell, arbitrary prompt, or repository path.
 
-This distinction matters: Codex and GPT-5.6 built and deployed the product, while the reliable public demo explicitly labels whether an artifact inside a demonstrated mission was produced live or selected from the validated fallback.
+This distinction matters: ChatGPT helped design and plan Mission Control, while Codex, powered by GPT-5.6, built and deployed it.  The reliable public demo explicitly labels whether an artifact inside a demonstrated mission was produced live or selected from the validated fallback.
 
 ## Run locally
 

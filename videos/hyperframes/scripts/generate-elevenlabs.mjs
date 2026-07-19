@@ -26,7 +26,7 @@ const scenes = [
   "Mission Agent pulls and acknowledges the assignment, runs Codex against the approved repository, and reports progress. When analysis finishes, the task and mission complete from durable events—not browser simulation.",
   "This mission produced a genuine, checksummed analysis artifact. The same control model supports implementation work and tested commits. Publication requires separate approval; this real pull request remains open and unmerged.",
   "The operations dashboard restores the visibility I had managing engineers: what is running, what failed, which agents need attention, and what requires my approval.",
-  "I built Mission Control with GPT-5.6 and Codex. GPT-5.6 helped shape the product, event-sourced architecture, safety model, and each production phase. Codex audited the prototype, then implemented, tested, deployed, and refined the system—from durable events and real agent execution to onboarding, documentation, and AWS delivery. Humans set direction and remain accountable; agents perform bounded work with visible evidence.",
+  "I built Mission Control through repeated collaboration. Chat G P T helped me design and plan Mission Control, while Codex, powered by G P T five point six, implemented, tested, deployed, and refined the production system. That workflow inspired Mission Control itself: humans set direction and remain accountable, while specialized agents perform bounded work with visible evidence.",
   "The future is not one assistant doing everything. It is teams of specialized agents working together. Mission Control is the executive layer those teams will need.",
 ];
 
@@ -49,7 +49,7 @@ for (let index = 0; index < scenes.length; index += 1) {
           similarity_boost: 0.78,
           style: 0.08,
           use_speaker_boost: true,
-          speed: index === 4 ? 1.05 : 0.98,
+          speed: index === 4 || index === 8 ? 1.05 : 0.98,
         },
       }),
     },

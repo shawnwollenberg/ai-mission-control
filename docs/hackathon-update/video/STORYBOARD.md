@@ -1,0 +1,16 @@
+# Mission Control Production Update — Storyboard
+
+| Time          | Scene                   | Visual evidence                                               | On-screen message                                                                                                                               |
+| ------------- | ----------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0:00–0:22.5   | The problem             | Production landing page and agent roster                      | From managing engineers to coordinating AI agents                                                                                               |
+| 0:22.5–0:36.5 | The operating layer     | Production architecture page                                  | Mission → Tasks → Agents → Evidence → Human                                                                                                     |
+| 0:36.5–0:48.8 | Public onboarding       | Documentation, signup, and agent selection                    | Live, open source, and ready to try                                                                                                             |
+| 0:48.8–1:07.7 | Connect Codex           | Masked connection command and signed heartbeat                | One command; outbound HTTPS; no inbound tunnel                                                                                                  |
+| 1:07.7–1:21.4 | First mission           | Prefilled repository-analysis mission                         | Read-only, explicitly constrained, artifact required                                                                                            |
+| 1:21.4–1:36.8 | Genuine local execution | Mission Agent progress and durable completion                 | Real assignment; local Codex; live progress                                                                                                     |
+| 1:36.8–1:54.2 | Evidence, not claims    | Checksummed artifact and separate open, unmerged pull request | Publication remains approval-gated                                                                                                              |
+| 1:54.2–2:06.6 | Operations              | Production operations dashboard                               | What is running, failed, or waiting for a human?                                                                                                |
+| 2:06.6–2:40.3 | How it was built        | Three role cards                                              | ChatGPT: architecture, product strategy, safety, review. Codex: implementation, testing, deployment, validation. GPT-5.6: model powering Codex. |
+| 2:40.3–2:53   | Closing                 | Mission Control logo and public links                         | The executive layer for AI agent teams                                                                                                          |
+
+The evidence scenes use genuine production screenshots. The live execution and pull-request screenshots are separate workflows and are never presented as one run.

@@ -46,3 +46,9 @@ The original submission did not include public signup, personal workspaces, prod
 - Claude Code and Generic Remote Agent can be selected and connected, but do not yet have a production-complete local execution adapter equivalent to Codex.
 - Windows credential storage and service operation are not production-supported.
 - This evidence package does not include an honest single-run mixed Hermes/Codex screenshot, approval-gated publication screenshot, or live DeFi screenshot.
+
+## Development Attribution
+
+- ChatGPT provided architecture, product strategy, safety design, milestone planning, and review.
+- Codex was the primary implementation agent for application code, tests, debugging, documentation, deployment, and validation.
+- GPT-5.6 was the language model powering Codex during implementation.
