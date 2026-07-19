@@ -59,7 +59,7 @@ body {
 .typed-wordmark {
   display: block;
   overflow: hidden;
-  width: 17ch;
+  width: 18ch;
   white-space: nowrap;
   border-right: 2px solid var(--black);
   font:
@@ -76,7 +76,7 @@ body {
     width: 0;
   }
   to {
-    width: 17ch;
+    width: 18ch;
   }
 }
 @keyframes wordmark-cursor {
