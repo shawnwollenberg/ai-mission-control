@@ -2,10 +2,30 @@
 
 Mission Control is the executive layer for AI teams: a command center where a human can launch a mission, watch an AI organization assemble around the work, understand emerging risk, and approve consequential organizational changes.
 
-- **Live application:** [mission.wallyweb.com](https://mission.wallyweb.com)
+- **Product and documentation:** [missioncontrol.wallyweb.com](https://missioncontrol.wallyweb.com)
+- **Live application:** [app.missioncontrol.wallyweb.com](https://app.missioncontrol.wallyweb.com)
 - **Source repository:** [github.com/shawnwollenberg/ai-mission-control](https://github.com/shawnwollenberg/ai-mission-control)
 
-## The demo
+## What Mission Control does
+
+Mission Control gives an AI organization one durable operating surface:
+
+- Launch reusable **Mission Templates** instead of rebuilding prompts and task graphs.
+- Delegate work to Codex, Hermes, Claude Code, or generic remote agents.
+- Reconstruct mission state from an append-only event log.
+- Gate consequential actions through parameter-bound human approvals.
+- Enforce permanent policy boundaries around deployment, merges, infrastructure, secrets, and transactions.
+- Record execution evidence, artifacts, heartbeats, failures, retries, and final outcomes.
+
+Mission Control is free while it is evolving. It is used daily to manage a real AI organization, and feedback from people building their own agent teams is welcome.
+
+## Mission Templates
+
+Mission Templates are the fastest path from intent to coordinated execution. Pick a workflow, provide a few focused inputs, and Mission Control resolves the task graph, agent requirements, policies, evidence expectations, and approval boundaries.
+
+The durable template model and initial software, operations, research, DeFi, and mixed-agent workflows are implemented today. The product direction expands that catalog around recognizable jobs such as Software Feature, Production Bug, Security Review, PR Review, Research, Architecture Design, Customer Onboarding, Daily DeFi Review, and Weekly Health Report.
+
+## The original demo
 
 Launch the built-in Stripe Billing mission and Mission Control will:
 
@@ -31,15 +51,16 @@ Phase 3 adds deterministic policy, durable parameter-bound approvals, and a sepa
 
 Mission Control has exactly one source of truth: the event log. Mission Plan, Mission Log, Mission Health, recommendations, approvals, artifacts, and the final debrief own no independent business state. Replaying a mission's events from an empty projection reconstructs every user-visible fact except ephemeral UI state.
 
-The public deployment uses:
+The current low-cost public deployment uses:
 
 - Next.js 16, React 19, and TypeScript
-- AWS ECS Fargate behind an HTTPS Application Load Balancer
-- DynamoDB transactional appends for durable, ordered, idempotent mission events
-- Route 53, ACM, ECR, CloudWatch, and Secrets Manager
-- AWS CDK for reproducible infrastructure and immutable image rollback
+- PostgreSQL for durable, ordered, idempotent canonical events and rebuildable projections
+- One ARM-based AWS EC2 host running isolated web, PostgreSQL, and Caddy containers
+- Route 53, ECR, S3, Systems Manager, Secrets Manager, and encrypted gp3 storage
+- Automatic HTTPS through Caddy
+- AWS CDK for reproducible, intentionally small infrastructure
 
-Public demo sessions receive independent, unguessable mission IDs. A completed mission survives application replacement and reconstructs from DynamoDB without projection tables.
+The application explicitly prohibits autonomous deployment, merge, infrastructure modification, secret modification, transaction signing, and transaction submission. Releasing Mission Control itself is a separate human-approved development activity.
 
 ## How Codex and GPT-5.6 built Mission Control
 
@@ -106,3 +127,9 @@ npm run dev
 Configure the PostgreSQL and owner/session environment variables documented in [Durable Browser Mission Operations](docs/DURABLE_BROWSER_OPERATIONS.md), then open `http://localhost:3000`. New browser missions use PostgreSQL as their canonical event and projection store. JSONL and DynamoDB remain only for temporary legacy-demo/import compatibility; no AWS credentials are required locally.
 
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the production architecture, environment variables, deployment process, health checks, logs, rollback, persistence verification, limitations, and estimated cost.
+
+## Contributing and licensing
+
+Issues, design discussion, and focused pull requests are welcome; see [`CONTRIBUTING.md`](CONTRIBUTING.md). Please report vulnerabilities through the process in [`SECURITY.md`](SECURITY.md), not a public issue.
+
+The repository is publicly readable, but no open-source license has been selected yet. Copyright remains with the project owner until explicit license terms are added.

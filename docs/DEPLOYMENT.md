@@ -1,206 +1,116 @@
-# Mission Control AWS Deployment
+# Mission Control AWS deployment
 
-**Environment:** Production  
-**Region:** `us-east-1`  
-**Canonical URL:** `https://mission.wallyweb.com`  
+**Environment:** Production
+
+**Region:** `us-east-1`
+
+**Product URL:** `https://missioncontrol.wallyweb.com`
+
+**Application URL:** `https://app.missioncontrol.wallyweb.com`
+
 **Infrastructure:** AWS CDK
 
-## Existing WallyWeb infrastructure discovered
+## Architecture
 
-Read-only inspection found that the root WallyWeb site is an S3 origin behind CloudFront with Route 53 DNS. That static pattern cannot run Mission Control's Next.js server routes or preserve its canonical event stream. A separate WallyWeb application already uses the compatible dynamic pattern: ECS Fargate behind an internet-facing Application Load Balancer with Route 53 and ACM in `us-east-1`. The AWS account is already bootstrapped for CDK in that region.
+The current deployment intentionally favors low cost and operational clarity over horizontal scale:
 
-Mission Control does not modify the root website, its CloudFront distribution, its bucket, or any existing application service.
+- one ARM64 `t4g.small` EC2 instance;
+- a Next.js web container;
+- a PostgreSQL 16 container on encrypted persistent gp3 storage;
+- a Caddy container for automatic HTTPS and reverse proxying;
+- a versioned, encrypted S3 artifact bucket;
+- ECR for immutable application images;
+- Secrets Manager for the bootstrap owner credential;
+- Systems Manager for administration, with no SSH ingress;
+- Route 53 A records for the product and application domains.
 
-## Selected architecture
+There is no RDS database, load balancer, ECS service, or multi-instance application tier. The retained legacy DynamoDB table is not part of the current runtime authority.
 
-- Route 53 alias: `mission.wallyweb.com`
-- ACM regional certificate with DNS validation
-- Dedicated public Application Load Balancer with HTTP-to-HTTPS redirect
-- Dedicated ARM64 ECS Fargate cluster and one desired Next.js task
-- Versioned image in a dedicated ECR repository
-- DynamoDB on-demand table as the canonical append-only event log
-- Secrets Manager generated token for the authenticated Hermes ingestion boundary
-- CloudWatch Logs with seven-day retention
+PostgreSQL stores the canonical append-only event log, commands, projections, authentication state, jobs, schedules, notifications, and governance records. Application state must remain reconstructable from canonical events except for explicitly ephemeral UI state.
 
-This is the smallest architecture matching the existing WallyWeb container pattern while supporting Next.js 16, Node.js 22, API routes, durable events, restarts, HTTPS, health checks, and rollback.
+## Permanent safety boundary
 
-## Production verification — 2026-07-17
+Mission Control agents may not autonomously deploy, merge, modify infrastructure or secrets, sign transactions, or submit transactions. A human-approved release of Mission Control itself is a development activity outside that agent capability boundary.
 
-- CloudFormation deployment completed and ECS reached steady state with one healthy task.
-- HTTPS health returned `status: ok` with the DynamoDB adapter; HTTP redirects to HTTPS and the dedicated certificate is valid.
-- A hosted Stripe Billing mission completed with 20 ordered events, one approval, and honest `validated_fallback` artifact provenance.
-- Repeating approval did not append another approval event.
-- Two launches produced different unguessable mission IDs and independent event streams.
-- The only running ECS task was terminated and replaced. Reopening the completed mission returned the same 20 events, final state, approval count, and provenance.
-- TypeScript, seven automated tests, the production build, and the production critical-vulnerability audit passed.
-- Final visual browser QA is pending because no in-app browser instance was available to the deployment session. This is an explicit release gate, not an inferred pass.
+## Required local tools
 
-## Event-store constitution
+- Node.js 22
+- Docker with ARM64 build support
+- AWS CLI authenticated to the target account
+- AWS CDK
 
-The production table stores only canonical events, mission append metadata, and idempotency markers. Mission Plan, Mission Log, Mission Health, recommendations, approvals, artifacts, and completion remain projections rebuilt from ordered events.
+The examples below use the local `wallyweb` profile. Replace account-specific repository values when deploying elsewhere.
 
-Keys:
-
-```text
-PK = MISSION#<missionId>
-SK = EVENT#<zero-padded-sequence>#<eventId>
-```
-
-Each append uses a DynamoDB transaction containing:
-
-1. An optimistic, conditional mission sequence update.
-2. A conditional event put.
-3. A conditional mission-scoped idempotency marker.
-
-Concurrent writers retry after a sequence conflict. Repeated event IDs return the already-recorded event. Demo items receive a seven-day TTL; the table has point-in-time recovery and a retained deletion policy. JSONL remains the default local adapter.
-
-## Runtime configuration
-
-Non-secret ECS environment variables:
-
-```text
-NODE_ENV=production
-PUBLIC_APP_URL=https://mission.wallyweb.com
-INTERNAL_AGENT_URL=self
-DEMO_MODE=true
-EVENT_STORE=dynamodb
-MISSION_EVENTS_TABLE=mission-control-production-events
-ENABLE_LIVE_CODEX=false
-AWS_REGION=us-east-1
-DEMO_EVENT_TTL_DAYS=7
-```
-
-`MISSION_CONTROL_AGENT_TOKEN` is generated in Secrets Manager and injected into the task. It is never stored in source, a Docker layer, or CDK context.
-
-Production intentionally sets `ENABLE_LIVE_CODEX=false`. The bounded Hermes fixture selects the pre-validated fallback, validates it inside the isolated workspace, and publishes `validated_fallback` provenance. No public endpoint exposes a shell, repository path, or arbitrary prompt. Agent event, assignment, and claim endpoints require the secret bearer token.
-
-## Local workflow
+## Validate and build
 
 ```bash
 npm ci
+npm run runtime:check
 npm run typecheck
 npm test
 npm run build
-docker build -t mission-control:local .
-docker run --rm -p 3000:3000 -e EVENT_STORE=jsonl -e ENABLE_LIVE_CODEX=false -e MISSION_CONTROL_AGENT_TOKEN=local-development-only mission-control:local
+
+IMAGE_TAG=$(git rev-parse --short HEAD)
+AWS_PROFILE=wallyweb AWS_REGION=us-east-1 aws ecr get-login-password \
+  | docker login --username AWS --password-stdin <account>.dkr.ecr.us-east-1.amazonaws.com
+docker buildx build --platform linux/arm64 \
+  -t <account>.dkr.ecr.us-east-1.amazonaws.com/mission-control:${IMAGE_TAG} \
+  --push .
 ```
 
-The application remains available at `http://localhost:3000`; local events remain under `.mission-control/events` unless `MISSION_CONTROL_DATA_DIR` is set.
-
-## Initial deployment
-
-All AWS commands use the required local profile.
+## Deploy
 
 ```bash
-aws sts get-caller-identity --profile wallyweb
-npx cdk deploy MissionControlRegistry -c stage=registry --region us-east-1 --profile wallyweb --require-approval never
+AWS_PROFILE=wallyweb \
+AWS_REGION=us-east-1 \
+CDK_DEFAULT_ACCOUNT=<account> \
+CDK_DEFAULT_REGION=us-east-1 \
+npx cdk deploy MissionControlProduction \
+  -c imageTag=${IMAGE_TAG} \
+  --require-approval never
 ```
 
-Build and push an immutable Git commit tag:
+EC2 user data performs the initial database migration, owner provisioning, and container startup. Updating EC2 user data does not automatically replay it on an existing instance; the operator must explicitly run the current bootstrap through Systems Manager or replace the instance after reviewing the change.
+
+## Health and readiness
 
 ```bash
-IMAGE_TAG=$(git rev-parse --short=12 HEAD)
-aws ecr get-login-password --region us-east-1 --profile wallyweb | docker login --username AWS --password-stdin <repository-host>
-docker build --platform linux/arm64 -t mission-control:${IMAGE_TAG} .
-docker tag mission-control:${IMAGE_TAG} <repository-uri>:${IMAGE_TAG}
-docker push <repository-uri>:${IMAGE_TAG}
-npx cdk deploy MissionControlProduction -c stage=app -c imageTag=${IMAGE_TAG} --region us-east-1 --profile wallyweb --require-approval never
+curl --fail https://app.missioncontrol.wallyweb.com/api/health
+curl --fail https://app.missioncontrol.wallyweb.com/api/readiness
 ```
 
-The registry and application are separate stacks so the versioned image can exist before ECS starts the service.
+Health proves the web process can reach PostgreSQL. Readiness validates the production configuration, current schema, secret handling, and artifact configuration.
 
-## Deploying a new version
-
-Run checks, build and push a new commit tag, then deploy the application stack with that tag:
+Inspect the host without opening SSH:
 
 ```bash
-npm run typecheck
-npm test
-npm run build
-IMAGE_TAG=$(git rev-parse --short=12 HEAD)
-aws ecr get-login-password --region us-east-1 --profile wallyweb | docker login --username AWS --password-stdin <repository-host>
-docker build --platform linux/arm64 -t <repository-uri>:${IMAGE_TAG} .
-docker push <repository-uri>:${IMAGE_TAG}
-npx cdk deploy MissionControlProduction -c stage=app -c imageTag=${IMAGE_TAG} --region us-east-1 --profile wallyweb --require-approval never
+aws --profile wallyweb --region us-east-1 ssm send-command \
+  --instance-ids <instance-id> \
+  --document-name AWS-RunShellScript \
+  --parameters 'commands=["docker ps"]'
 ```
 
-## Health and logs
+## Owner access
 
-Public health:
+The generated bootstrap secret is never printed by the application or stored in source:
 
 ```bash
-curl --fail https://mission.wallyweb.com/api/health
+aws --profile wallyweb --region us-east-1 secretsmanager get-secret-value \
+  --secret-id mission-control/production/bootstrap \
+  --query SecretString \
+  --output text
 ```
 
-Service status and recent logs:
-
-```bash
-aws ecs describe-services --cluster mission-control-production --services mission-control-web --region us-east-1 --profile wallyweb
-aws logs tail /ecs/mission-control-production --since 30m --region us-east-1 --profile wallyweb
-```
-
-The health endpoint performs a DynamoDB read in production. ALB health checks require HTTP 200 from `/api/health`.
+The initial owner is `admin@wallyweb.com`. Self-service registrations receive the non-owner `member` role and append a structured registration event.
 
 ## Rollback
 
-List immutable images and identify the prior known-good tag:
+Application images are tagged with Git commit IDs. To roll back, choose a known-good ECR image tag, deploy the stack with that `imageTag`, then deliberately restart the web container using the reviewed bootstrap procedure. Database migrations are forward-only; review schema compatibility before rolling application code backward.
 
-```bash
-aws ecr describe-images --repository-name mission-control --region us-east-1 --profile wallyweb
-```
+The root EBS volume is encrypted and configured not to be deleted with the instance. The S3 artifact bucket is versioned and retained. These protections reduce accidental data loss but require intentional cleanup when retiring the environment.
 
-Redeploy that tag:
+## Cost posture
 
-```bash
-npx cdk deploy MissionControlProduction -c stage=app -c imageTag=<prior-tag> --region us-east-1 --profile wallyweb --require-approval never
-```
+The deployment is designed to remain in the low tens of US dollars per month at light traffic. The main recurring costs are the `t4g.small` instance, public IPv4 address, 24 GB gp3 volume, Route 53, and one Secrets Manager secret. S3, ECR, and Systems Manager usage should remain small until traffic or artifact volume grows.
 
-The ECS deployment circuit breaker rolls back failed task deployments automatically. DynamoDB is retained and is independent of application revisions.
-
-## Persistence verification
-
-1. Launch a mission and retain its unguessable mission URL.
-2. Refresh during planning, crisis, and post-approval phases.
-3. Force a new ECS deployment using the same or a new image tag.
-4. Reopen the retained URL and compare the ordered Mission Log and projected state.
-5. Submit the same approval twice and verify only one `recommendation.approved` event exists.
-6. Launch a second mission in a separate browser context and verify its URL and event stream are independent.
-
-## Hermes connection
-
-Hermes is not deployed as a public shell-execution service. A trusted Hermes runtime connects through HTTPS using the agent token:
-
-```text
-POST /api/agent-events
-GET  /api/agents/hermes/assignments?missionId=<id>
-POST /api/tasks/<taskId>/claim
-Authorization: Bearer <token>
-```
-
-The token should be retrieved from Secrets Manager only by an authorized operator or runtime. Browser users never receive it.
-
-## Forced fallback mode
-
-Fallback is the production default. Confirm the ECS task definition contains:
-
-```text
-ENABLE_LIVE_CODEX=false
-```
-
-The UI must display `Verified fallback artifact` for fallback artifacts. Do not change provenance to `live` unless a real AWS-compatible Codex worker has passed repeated rehearsals.
-
-## Video
-
-The promotional MP4 remains a repository artifact for now. It is not served from the application container. S3/CloudFront video delivery is intentionally deferred because it is not required for the reliable interactive deployment.
-
-## Known limitations
-
-- One Fargate task is used for hackathon reliability and cost. DynamoDB safely supports multiple tasks later.
-- There is no end-user authentication; isolation relies on unguessable mission IDs and mission-scoped commands.
-- Demo data expires after seven days.
-- Live Codex execution is disabled in the public runtime.
-- Replay remains hidden and is not part of this deployment.
-
-## Estimated recurring cost
-
-At continuous operation, the dedicated ALB and one small Fargate task are expected to dominate at roughly USD $30–$40 per month, depending on hours, region pricing, and traffic. DynamoDB, Route 53 queries, ECR storage, Secrets Manager, and CloudWatch should remain low for hackathon traffic. Stopping the ECS desired count after judging reduces compute cost, but the ALB continues to incur charges until the stack is removed.
+Scale only when observed load requires it. A future production tier can move PostgreSQL to a managed database and add multiple web instances without changing the event-sourced domain model.
