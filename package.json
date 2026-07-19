@@ -41,7 +41,7 @@
     "projections:verify": "tsx scripts/projections.ts --verify",
     "legacy:import-dynamodb": "tsx scripts/import-dynamodb.ts",
     "start": "next start",
-    "test": "node --import tsx --test tests/mission-outcome.test.mjs tests/task-state.test.mjs tests/execution-safety.test.mjs tests/policy-engine.test.mjs tests/remote-agent-protocol.test.mjs tests/agent-health.test.mjs tests/publication-preflight.test.mjs tests/schedule.test.mjs tests/registration.test.mjs",
+    "test": "node --import tsx --test tests/mission-outcome.test.mjs tests/task-state.test.mjs tests/execution-safety.test.mjs tests/policy-engine.test.mjs tests/remote-agent-protocol.test.mjs tests/agent-health.test.mjs tests/publication-preflight.test.mjs tests/schedule.test.mjs tests/registration.test.mjs tests/onboarding-connector.test.mjs",
     "test:integration": "node --import tsx --test tests/*.integration.test.mjs",
     "test:e2e": "node --test tests/*.e2e.test.mjs",
     "format": "prettier --write .",

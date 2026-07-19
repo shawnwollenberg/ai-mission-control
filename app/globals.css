@@ -1911,6 +1911,9 @@ select:focus {
   padding: 0;
   background: var(--line);
 }
+.onboarding-steps-five {
+  grid-template-columns: repeat(5, 1fr);
+}
 .onboarding-steps li {
   background: #07101a;
   color: var(--muted);
@@ -1921,6 +1924,9 @@ select:focus {
 }
 .onboarding-steps li.active {
   color: var(--signal);
+}
+.onboarding-steps li.complete {
+  color: #9ee7c4;
 }
 .onboarding-steps span {
   display: block;
@@ -1949,6 +1955,138 @@ select:focus {
 .agent-choice-grid button.selected {
   border-color: var(--signal);
   background: var(--signal-soft);
+}
+.agent-choice-grid strong,
+.agent-choice-grid small {
+  display: block;
+}
+.agent-choice-grid small {
+  color: var(--muted);
+  line-height: 1.45;
+  margin-top: 8px;
+}
+.onboarding-heading {
+  font-size: clamp(1.7rem, 3vw, 2.8rem);
+  margin: 10px 0 24px;
+}
+.onboarding-primary {
+  margin-left: auto;
+  max-width: 220px;
+}
+.command-stage > p:not(.section-label),
+.connected-stage > p:not(.section-label) {
+  color: var(--muted);
+}
+.command-copy {
+  align-items: stretch;
+  background: #050b11;
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  margin: 26px 0;
+}
+.command-copy code {
+  color: #d9e9f0;
+  overflow-x: auto;
+  padding: 22px;
+  white-space: nowrap;
+}
+.command-copy button {
+  background: var(--signal);
+  border: 0;
+  color: #031017;
+  cursor: pointer;
+  font-weight: 800;
+  min-width: 100px;
+}
+.heartbeat-wait {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 16px;
+  padding-top: 24px;
+}
+.heartbeat-wait small {
+  color: var(--muted);
+  display: block;
+  margin-top: 5px;
+}
+.heartbeat-dot {
+  animation: signal-pulse 1.4s ease-in-out infinite;
+  background: var(--signal);
+  border-radius: 50%;
+  box-shadow: 0 0 0 7px var(--signal-soft);
+  height: 10px;
+  width: 10px;
+}
+.connection-details {
+  border-top: 1px solid var(--line);
+  margin-top: 26px;
+  padding-top: 20px;
+}
+.connection-details summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.connection-details dl {
+  display: grid;
+  gap: 10px;
+}
+.connection-details dl div {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+}
+.connection-details dt {
+  color: var(--muted);
+}
+.connection-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.connected-stage {
+  text-align: center;
+}
+.connected-check {
+  align-items: center;
+  background: var(--signal-soft);
+  border: 1px solid var(--signal);
+  border-radius: 50%;
+  color: var(--signal);
+  display: flex;
+  font-size: 2rem;
+  height: 74px;
+  justify-content: center;
+  margin: 0 auto 24px;
+  width: 74px;
+}
+.connected-stage > h2 {
+  font-size: clamp(2.4rem, 5vw, 4.5rem);
+  margin: 8px 0;
+}
+.first-mission-card {
+  align-items: center;
+  background: #07101a;
+  border: 1px solid var(--line);
+  display: flex;
+  gap: 30px;
+  justify-content: space-between;
+  margin-top: 36px;
+  padding: 28px;
+  text-align: left;
+}
+.first-mission-card h3 {
+  font-size: 1.35rem;
+  margin: 8px 0;
+}
+.first-mission-card p:last-child {
+  color: var(--muted);
+  margin-bottom: 0;
+}
+@keyframes signal-pulse {
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
 }
 .choice-radio {
   color: var(--signal);
@@ -2017,6 +2155,19 @@ select:focus {
   .heartbeat-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .onboarding-steps-five {
+    grid-template-columns: 1fr;
+  }
+  .first-mission-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .command-copy {
+    grid-template-columns: 1fr;
+  }
+  .command-copy button {
+    min-height: 48px;
   }
 }
 .archive-header {

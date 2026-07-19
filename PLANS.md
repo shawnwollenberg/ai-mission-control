@@ -398,6 +398,25 @@ Phase 5 completed on 2026-07-19. Mission Control now provides bounded schedule c
 
 **Next boundary:** After human provider configuration, migrate production, provision owner, verify R2, deploy web/workers, validate login/Operations/monitoring/Hermes/emergency controls, then onboard one safe repository and begin the minimum seven-day acceptance period.
 
+## Adoption milestone — First agent to first mission
+
+**Goal:** Remove documentation and Agent Registry from the first-run path so a new owner can reach a verified agent heartbeat and a preselected first mission without product knowledge.
+
+**Authorized first boundary:** Guided onboarding creates a workspace-scoped remote identity and one-time credential, presents one copyable command, installs the credential locally with owner-only permissions, starts a signed protocol 1.0 heartbeat, detects that heartbeat in the browser, and advances directly to a small read-only first mission. The Agent Registry remains a post-connection management surface. The connector does not gain merge, deployment, infrastructure, secret, signing, submission, or other prohibited authority.
+
+**Canonical events and projections:** `agent.registered`, `agent.credential_created`, `agent.heartbeat_received`, and `agent.credential_verified` remain the canonical history. The existing agent projection supplies onboarding status; the wizard owns only ephemeral selection, copy, loading, and polling state. Replaying agent events must continue to reconstruct the visible connection state.
+
+**Acceptance criteria:**
+
+1. A new owner chooses Codex, Hermes, Claude Code, or Generic Remote Agent without opening documentation.
+2. One command stores the displayed-once credential with owner-only permissions and starts the connector heartbeat.
+3. The browser observes the authenticated heartbeat and advances automatically.
+4. Generic agents can reveal their prefilled endpoint, credential identifier, protocol version, and test command.
+5. The next primary action is a preselected, read-only first mission; the Agent Registry is secondary.
+6. Existing protocol signature, replay, workspace-isolation, capability, policy, and permanent action prohibitions remain enforced.
+
+**Deferred from the first boundary:** A distributable npm package, OS service management, inbound work polling for machines without public callbacks, and fully automatic Codex/Hermes/Claude execution. These must be delivered before claiming that the connected agent completed the first mission.
+
 ## Cross-phase test matrix
 
 - Unit: transitions, dependency resolution, policy, health, retry classification, schemas, serialization.

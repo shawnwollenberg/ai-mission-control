@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
+import { promisify } from "node:util";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for end-to-end tests");
 
@@ -9,6 +13,7 @@ const origin = `http://127.0.0.1:${port}`;
 let server;
 let serverOutput = "";
 let worker;
+const run = promisify(execFile);
 
 async function startServer() {
   serverOutput = "";
@@ -238,6 +243,42 @@ test("authenticated durable browser mission survives restart and enforces lifecy
     assert.equal(eventTypes.at(-1), "mission.completed");
   } finally {
     await stopWorker();
+    await stopServer();
+  }
+});
+
+test("guided onboarding creates a credential and advances after the connector heartbeat", async () => {
+  await startServer();
+  try {
+    const cookie = await login();
+    const onboarding = await fetch(`${origin}/onboarding`, { headers: browserHeaders(cookie) });
+    assert.equal(onboarding.status, 200);
+    assert.match(await onboarding.text(), /Let’s connect your first agent/);
+
+    const response = await fetch(`${origin}/api/onboarding/connect`, {
+      method: "POST",
+      headers: browserHeaders(cookie, { "content-type": "application/json" }),
+      body: JSON.stringify({ agentType: "codex" }),
+    });
+    assert.equal(response.status, 201);
+    const connection = await response.json();
+    assert.equal(connection.agentName, "Codex");
+    assert.match(connection.command, /^curl -fsSL .*\/connect-agent\.mjs \| node -- --install '/);
+    const encoded = connection.command.match(/--install '([^']+)'$/)?.[1];
+    assert.ok(encoded);
+    const config = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    const directory = await mkdtemp(join(tmpdir(), "mc-e2e-connector-"));
+    const configPath = join(directory, "config.json");
+    await writeFile(configPath, JSON.stringify(config));
+    await run(process.execPath, ["public/connect-agent.mjs", "--run", configPath, "--once"]);
+
+    const agentsResponse = await fetch(`${origin}/api/agents`, { headers: browserHeaders(cookie) });
+    assert.equal(agentsResponse.status, 200);
+    const agents = (await agentsResponse.json()).agents;
+    const connected = agents.find((agent) => agent.agent_id === connection.agentId);
+    assert.ok(connected.last_heartbeat_at);
+    assert.equal(connected.credential_status, "active");
+  } finally {
     await stopServer();
   }
 });

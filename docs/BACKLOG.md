@@ -87,3 +87,14 @@ Cut rule: implement only `Mission Control → Hermes → Codex → artifact → 
 - [ ] Route any advice-derived command through existing deterministic validation and approval.
 
 Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner, or effect dispatcher. Details: `docs/POST_MVP_EXECUTIVE_ADVISOR.md`.
+
+## Adoption: zero-documentation first run
+
+- [x] Replace Agent Registry onboarding with a guided agent chooser.
+- [x] Generate a workspace-scoped credential and one copyable install command.
+- [x] Detect a real signed heartbeat and advance the browser automatically.
+- [x] Put a preselected read-only first mission directly after connection.
+- [ ] Package the connector as a versioned, checksummed distribution.
+- [ ] Add durable pull delivery for agents behind NAT or localhost.
+- [ ] Execute and complete the preselected first mission through the newly connected agent.
+- [ ] Validate an unknown user reaching an artifact without assistance in under ten minutes.

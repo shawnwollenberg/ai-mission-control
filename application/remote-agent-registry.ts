@@ -40,7 +40,8 @@ function validateEndpoint(endpoint: string) {
   const url = new URL(endpoint);
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
     throw new ValidationFailedError("Remote endpoint must be HTTP(S) without embedded credentials");
-  if (process.env.NODE_ENV === "production" && url.protocol !== "https:")
+  const loopback = ["127.0.0.1", "localhost", "::1"].includes(url.hostname);
+  if (process.env.NODE_ENV === "production" && url.protocol !== "https:" && !loopback)
     throw new ValidationFailedError("Production remote endpoints require HTTPS");
   return url.toString();
 }

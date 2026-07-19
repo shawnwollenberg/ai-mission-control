@@ -20,8 +20,16 @@ const DEFAULT_MISSION: LaunchInput = {
   riskLevel: "unknown",
 };
 
-export default function LaunchForm() {
-  const [mission, setMission] = useState(DEFAULT_MISSION);
+const FIRST_MISSION: LaunchInput = {
+  name: "Analyze this repository",
+  objective: "Analyze this repository and produce a concise architecture, risk, and next-steps report",
+  domain: "software_delivery",
+  priority: "normal",
+  riskLevel: "low",
+};
+
+export default function LaunchForm({ firstMission = false }: { firstMission?: boolean }) {
+  const [mission, setMission] = useState(firstMission ? FIRST_MISSION : DEFAULT_MISSION);
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState("");
   const idempotencyKey = useRef(crypto.randomUUID());
@@ -68,8 +76,8 @@ export default function LaunchForm() {
 
       <section className="launch-grid">
         <div className="launch-copy">
-          <p className="section-label">New mission</p>
-          <h1>Give your organization an outcome.</h1>
+          <p className="section-label">{firstMission ? "Your first mission" : "New mission"}</p>
+          <h1>{firstMission ? "Start small. See the whole loop." : "Give your organization an outcome."}</h1>
           <p className="lede">Mission Control coordinates the work and returns when human judgment is required.</p>
           <div className="principle">Humans manage outcomes, not AI.</div>
         </div>

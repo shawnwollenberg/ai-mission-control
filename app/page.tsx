@@ -6,11 +6,12 @@ import { PublicShell } from "./public-site";
 
 export const dynamic = "force-dynamic";
 
-export default async function LaunchPage() {
+export default async function LaunchPage({ searchParams }: { searchParams: Promise<{ firstMission?: string }> }) {
   const host = (await headers()).get("host")?.split(":")[0];
   if (host?.startsWith("app.")) {
     await requirePageIdentity("/");
-    return <LaunchForm />;
+    const query = await searchParams;
+    return <LaunchForm firstMission={query.firstMission === "1"} />;
   }
   return (
     <PublicShell>
