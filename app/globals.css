@@ -1864,7 +1864,9 @@ select:focus {
   background: var(--panel);
   border: 1px solid var(--line);
   color: var(--ink);
-  padding: 13px;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  padding: 15px 14px;
 }
 .auth-switch {
   color: var(--muted);

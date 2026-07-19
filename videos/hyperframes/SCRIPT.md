@@ -1,51 +1,41 @@
-# Mission Control Hackathon Video — Locked Narration
+# Mission Control Production Update — Locked Narration
 
 ## Scene 1 — The Problem
 
-Today, AI writes code. Tomorrow, AI will build companies.
+Until recently, I led a team of thirteen engineers. Today, I coordinate Codex, Claude Code, Hermes, and other AI agents across terminals and tools. They make me productive, but without a shared plan, status, or accountability, managing them felt like running an invisible engineering organization.
 
-But AI work still happens everywhere, across disconnected tools, with no single place to understand what your AI organization is doing.
+## Scene 2 — What Mission Control Is
 
-## Scene 2 — The Mission
+Mission Control is the executive layer for AI agent teams. Give it an objective, and it structures the work, coordinates agents, records evidence, and pauses whenever human judgment is required.
 
-Mission Control changes that. Give your AI organization an objective, and watch the organization assemble itself around the work.
+## Scene 3 — Public Product and Onboarding
 
-## Scene 3 — Organization Comes Alive
+Mission Control is live, open source, and available to try. A new user creates an account, receives a private workspace, and chooses the first agent to connect.
 
-Every objective, assignment, and decision becomes part of a single organizational record. Instead of watching individual agents, you're supervising the organization itself.
+## Scene 4 — Connect Codex with One Command
 
-## Scene 4 — The Crisis
+For Codex, Mission Control generates one local command. Mission Agent stores the credential securely, sends a signed heartbeat, and opens a pull channel over outbound HTTPS. It works behind localhost, NAT, and normal firewalls without an inbound tunnel.
 
-Mission Control continuously evaluates the organization's progress. When it detects a better organizational structure, it doesn't simply report the problem. It recommends a safer, faster path forward.
+## Scene 5 — Launch the First Mission
 
-## Scene 5 — Human Judgment
+After the heartbeat and pull channel are confirmed, the user launches a prefilled mission: analyze this repository. It is read-only, with explicit constraints and a required Markdown artifact.
 
-Humans remain responsible for outcomes. Mission Control surfaces the evidence, proposes the change, and asks for judgment only when it matters.
+## Scene 6 — Genuine Local Execution
 
-## Scene 6 — Real Execution
+Mission Agent pulls and acknowledges the assignment, runs Codex against the approved repository, and reports progress. When analysis finishes, the task and mission complete from durable events—not browser simulation.
 
-Hermes coordinates execution. Codex performs the work.
+## Scene 7 — Evidence, Not Claims
 
-Every decision. Every artifact. Every outcome.
+This mission produced a genuine, checksummed analysis artifact. The same control model supports implementation work and tested commits. Publication requires separate approval; this real pull request remains open and unmerged.
 
-Mission Control records the organization's history.
+## Scene 8 — Operations and Governance
 
-## Scene 7 — Mission Debrief
+The operations dashboard restores the visibility I had managing engineers: what is running, what failed, which agents need attention, and what requires my approval.
 
-Every mission ends with a complete executive debrief, connecting organizational decisions to verifiable outcomes.
+## Scene 9 — How GPT-5.6 and Codex Were Used
 
-## Scene 8 — Closing
+I built Mission Control with GPT-5.6 and Codex. GPT-5.6 helped shape the product, event-sourced architecture, safety model, and each production phase. Codex audited the prototype, then implemented, tested, deployed, and refined the system—from durable events and real agent execution to onboarding, documentation, and AWS delivery. Humans set direction and remain accountable; agents perform bounded work with visible evidence.
 
-The future won't be one AI assistant.
+## Scene 10 — Closing
 
-It will be organizations of AI working together.
-
-Mission Control is the executive layer that keeps humans accountable while AI organizations execute.
-
-## Scene 9 — Built with Codex + GPT-5.6
-
-Mission Control itself was built with Codex powered by GPT-5.6.
-
-I used GPT-5.6 inside Codex as a product strategist, systems architect, and lead engineer—turning the initial concept into a product brief, event-sourced architecture, constrained optimizer, implementation plan, tested application, and AWS deployment.
-
-Codex also powers the live execution path, where Hermes assigns a bounded implementation task and Mission Control records the resulting lifecycle and artifact events.
+The future is not one assistant doing everything. It is teams of specialized agents working together. Mission Control is the executive layer those teams will need.

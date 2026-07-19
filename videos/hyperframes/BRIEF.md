@@ -2,40 +2,39 @@
 workflow: general-video
 flow: automation
 storyboard: no
-message: "Mission Control turns disconnected AI agents into an observable, governable organization"
+message: "Mission Control gives specialized AI agents a shared operating layer while humans retain direction and authority"
 destination: youtube
 aspect: 1920x1080
 language: en
 audience: "Hackathon judges, technical founders, and engineering leaders"
-length: 156s
+length: 172s
 narration: yes
 ---
 
 ## Intent
 
-Create a calm, executive two-minute hackathon film that introduces Mission Control as a new category: the executive layer for AI organizations. The arc moves from fragmentation to coordinated work, then through a believable critical-path crisis, one consequential human decision, real execution evidence, and a satisfying debrief.
+Create a professional but personal hackathon submission video from genuine production screenshots. Begin with the founder's transition from managing thirteen engineers to coordinating AI agents, then demonstrate the public onboarding journey, genuine pull-based local Codex execution, durable evidence, operational governance, and the distinct roles of GPT-5.6 and Codex.
 
-After the debrief, add a concise build-story epilogue showing how Codex powered by GPT-5.6 was used for product strategy, architecture, engineering, verification, and AWS delivery. Then return to the original closing vision and logo.
+The film must be honest about what is live and what was added after the original prototype. It must not imply that the live-execution and GitHub pull-request screenshots came from the same mission. It must not emphasize the unpopulated execution-heartbeat field in the running screenshot.
 
 ## Assets
 
-- `assets/screenshots/launch.png` — mission launch and intent.
-- `assets/screenshots/organization.png` — organization assembly and Mission Log.
-- `assets/screenshots/mission-health.png` — critical-path crisis.
-- `assets/screenshots/recommendation.png` — proactive recommendation and approval.
-- `assets/screenshots/debrief.png` — verified outcomes and mission completion.
-- `assets/logo.png` — Mission Control closing identity.
+- Production screenshots `01` through `11`, `14`, and `16` from `docs/hackathon-update/screenshots/`.
+- Existing Mission Control logo and cinematic music bed.
+- ElevenLabs narration using the existing approved voice configuration in `videos/.env`.
 
 ## Customizations
 
-- ElevenLabs narration using the voice ID supplied in `../.env`.
-- Modern cinematic electronic music with a gradual build.
-- Slow camera movement, gentle zooms, generous whitespace, and consistent soft easing.
-- One-second pause before Mission Debrief and one second after the closing sentence.
+- Ten scenes following the approved 0:00–2:52 structure.
+- Conversational narration at approximately normal speed, never above 1.05x.
+- Large editorial overlays so no small application text must be read.
+- Slow screenshot camera moves, restrained teal/amber accents, and controlled transitions.
+- Explicit side-by-side attribution: GPT-5.6 for architecture, product, safety, and review; Codex for implementation, testing, deployment, and refinement.
 
 ## Notes
 
-- Never show fake typing, fake terminals, or decorative activity presented as agent work.
-- Every product-state transition shown must correspond to a real Mission Control state represented in the supplied screenshots.
-- Remove browser chrome and crop tightly around consequential interactions.
-- The final render is user-gated after preview review.
+- Use genuine screenshots and evidence only.
+- Keep the masked credential masked.
+- Preserve explicit live-execution labels.
+- State that the GitHub pull request is open and unmerged.
+- Never claim autonomous merge, deployment, infrastructure, secret, or transaction authority.

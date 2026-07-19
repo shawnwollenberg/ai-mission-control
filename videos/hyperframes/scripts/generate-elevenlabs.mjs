@@ -18,15 +18,16 @@ const voiceId = env.ELEVENLABS_VOICE_ID || env.voice_id;
 if (!apiKey || !voiceId) throw new Error("Missing ElevenLabs API key or voice ID");
 
 const scenes = [
-  "Today, AI writes code. Tomorrow, AI will build companies. But AI work still happens everywhere, across disconnected tools, with no single place to understand what your AI organization is doing.",
-  "Mission Control changes that. Give your AI organization an objective, and watch the organization assemble itself around the work.",
-  "Every objective, assignment, and decision becomes part of a single organizational record. Instead of watching individual agents, you're supervising the organization itself.",
-  "Mission Control continuously evaluates the organization's progress. When it detects a better organizational structure, it doesn't simply report the problem. It recommends a safer, faster path forward.",
-  "Humans remain responsible for outcomes. Mission Control surfaces the evidence, proposes the change, and asks for judgment only when it matters.",
-  "Hermes coordinates execution. Codex performs the work. Every decision. Every artifact. Every outcome. Mission Control records the organization's history.",
-  "Every mission ends with a complete executive debrief, connecting organizational decisions to verifiable outcomes.",
-  "The future won't be one AI assistant. It will be organizations of AI working together. Mission Control is the executive layer that keeps humans accountable while AI organizations execute.",
-  "Mission Control itself was built with Codex powered by GPT-5.6. I used GPT-5.6 inside Codex as a product strategist, systems architect, and lead engineer—turning the initial concept into a product brief, event-sourced architecture, constrained optimizer, implementation plan, tested application, and AWS deployment. Codex also powers the live execution path, where Hermes assigns a bounded implementation task and Mission Control records the resulting lifecycle and artifact events.",
+  "Until recently, I led a team of thirteen engineers. Today, I coordinate Codex, Claude Code, Hermes, and other AI agents across terminals and tools. They make me productive, but without a shared plan, status, or accountability, managing them felt like running an invisible engineering organization.",
+  "Mission Control is the executive layer for AI agent teams. Give it an objective, and it structures the work, coordinates agents, re-cords evidence, and pauses whenever human judgment is required.",
+  "Mission Control is live, open source, and available to try. A new user creates an account, receives a private workspace, and chooses the first agent to connect.",
+  "For Codex, Mission Control generates one local command. Mission Agent stores the credential securely, sends a signed heartbeat, and opens a pull channel over outbound HTTPS. It works behind localhost, NAT, and normal firewalls without an inbound tunnel.",
+  "After the heartbeat and pull channel are confirmed, the user launches a prefilled mission: analyze this repository. It is reed-only, with explicit constraints and a required Markdown artifact.",
+  "Mission Agent pulls and acknowledges the assignment, runs Codex against the approved repository, and reports progress. When analysis finishes, the task and mission complete from durable events—not browser simulation.",
+  "This mission produced a genuine, checksummed analysis artifact. The same control model supports implementation work and tested commits. Publication requires separate approval; this real pull request remains open and unmerged.",
+  "The operations dashboard restores the visibility I had managing engineers: what is running, what failed, which agents need attention, and what requires my approval.",
+  "I built Mission Control with GPT-5.6 and Codex. GPT-5.6 helped shape the product, event-sourced architecture, safety model, and each production phase. Codex audited the prototype, then implemented, tested, deployed, and refined the system—from durable events and real agent execution to onboarding, documentation, and AWS delivery. Humans set direction and remain accountable; agents perform bounded work with visible evidence.",
+  "The future is not one assistant doing everything. It is teams of specialized agents working together. Mission Control is the executive layer those teams will need.",
 ];
 
 const outputDir = path.join(project, "assets/audio/narration");
@@ -48,7 +49,7 @@ for (let index = 0; index < scenes.length; index += 1) {
           similarity_boost: 0.78,
           style: 0.08,
           use_speaker_boost: true,
-          speed: index === 8 ? 1.08 : 0.94,
+          speed: index === 4 ? 1.05 : 0.98,
         },
       }),
     },

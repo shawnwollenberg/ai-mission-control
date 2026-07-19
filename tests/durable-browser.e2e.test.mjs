@@ -269,6 +269,7 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     const connection = await response.json();
     assert.equal(connection.agentName, "Codex");
     assert.match(connection.command, /mission-agent-0\.1\.0\.mjs/);
+    assert.match(connection.command, /tmp_dir\/mission-agent-0\.1\.0\.mjs/);
     assert.match(connection.command, /shasum -a 256 -c/);
     const encoded = connection.command.match(/ connect '([^']+)'$/)?.[1];
     assert.ok(encoded);
