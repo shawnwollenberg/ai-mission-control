@@ -42,7 +42,11 @@ export async function POST(request: Request) {
     const profile = body.agentType ? profiles[body.agentType] : undefined;
     if (!profile) return NextResponse.json({ error: { message: "Choose a supported agent type." } }, { status: 400 });
 
-    const publicUrl = (process.env.MISSION_CONTROL_PUBLIC_URL ?? new URL(request.url).origin).replace(/\/$/, "");
+    const publicUrl = (
+      process.env.MISSION_CONTROL_PUBLIC_URL ??
+      process.env.PUBLIC_APP_URL ??
+      new URL(request.url).origin
+    ).replace(/\/$/, "");
     const workspaceName = (
       await getDatabasePool().query<{ name: string }>("SELECT name FROM workspaces WHERE id=$1", [identity.workspaceId])
     ).rows[0]?.name;
