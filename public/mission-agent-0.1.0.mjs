@@ -389,6 +389,7 @@ async function run() {
       else await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 1000));
     } catch (error) {
       await updateState({ connected: false, lastError: error.message });
+      if (process.argv.includes("--once")) throw error;
       await new Promise((resolve) => setTimeout(resolve, 5000 + Math.random() * 5000));
     }
   }
