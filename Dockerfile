@@ -26,6 +26,17 @@ COPY --from=builder --chown=nextjs:nodejs /app/fixtures ./fixtures
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tsx ./node_modules/tsx
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/esbuild ./node_modules/esbuild
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@esbuild ./node_modules/@esbuild
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib
+COPY --from=builder --chown=nextjs:nodejs /app/application ./application
+COPY --from=builder --chown=nextjs:nodejs /app/domain ./domain
+COPY --from=builder --chown=nextjs:nodejs /app/templates ./templates
+COPY --from=builder --chown=nextjs:nodejs /app/policy ./policy
+COPY --from=builder --chown=nextjs:nodejs /app/execution ./execution
+COPY --from=builder --chown=nextjs:nodejs /app/git ./git
+COPY --from=builder --chown=nextjs:nodejs /app/db ./db
+COPY --from=builder --chown=nextjs:nodejs /app/agents ./agents
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]

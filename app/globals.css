@@ -47,15 +47,48 @@ body {
   font-size: 15px;
   letter-spacing: -0.02em;
 }
-.public-logo span {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  background: var(--black);
-  color: var(--acid);
-  font: 700 10px monospace;
+.public-logo .brand-mark-compact {
+  width: 38px;
+  height: 38px;
+  background-size: 412px 275px;
+  background-position: -66px -195px;
+  border-color: rgba(17, 20, 16, 0.35);
+  border-radius: 0;
+  box-shadow: none;
+}
+.typed-wordmark {
+  display: block;
+  overflow: hidden;
+  width: 15ch;
+  white-space: nowrap;
+  border-right: 2px solid var(--black);
+  font:
+    800 13px/1 "Courier New",
+    ui-monospace,
+    monospace;
   letter-spacing: 0.12em;
+  animation:
+    wordmark-type 1.35s steps(15, end) 0.15s both,
+    wordmark-cursor 0.7s step-end 4;
+}
+@keyframes wordmark-type {
+  from {
+    width: 0;
+  }
+  to {
+    width: 15ch;
+  }
+}
+@keyframes wordmark-cursor {
+  50% {
+    border-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .typed-wordmark {
+    animation: none;
+    border-right: 0;
+  }
 }
 .public-header nav {
   display: flex;

@@ -145,14 +145,8 @@ export async function validateProductionConfiguration(
         production ? "Production object storage provider is configured" : "Artifact provider is configured",
       ),
     );
-    if (provider === "s3")
-      for (const name of [
-        "ARTIFACT_S3_BUCKET",
-        "ARTIFACT_S3_REGION",
-        "ARTIFACT_S3_ENDPOINT",
-        "ARTIFACT_S3_ACCESS_KEY_ID",
-        "ARTIFACT_S3_SECRET_ACCESS_KEY",
-      ])
+    if (provider === "s3") {
+      for (const name of ["ARTIFACT_S3_BUCKET", "ARTIFACT_S3_REGION", "ARTIFACT_S3_ENDPOINT"])
         checks.push(
           check(
             `artifact_${name.toLowerCase()}`,
@@ -160,6 +154,15 @@ export async function validateProductionConfiguration(
             `${secretNames.has(name) ? "Credential" : "Setting"} ${name} is configured`,
           ),
         );
+      const iamRole = process.env.ARTIFACT_S3_USE_IAM_ROLE === "true";
+      checks.push(
+        check(
+          "artifact_credentials",
+          iamRole || (configured("ARTIFACT_S3_ACCESS_KEY_ID") && configured("ARTIFACT_S3_SECRET_ACCESS_KEY")),
+          iamRole ? "Artifact storage uses the workload IAM role" : "Artifact storage credentials are configured",
+        ),
+      );
+    }
   }
   checks.push(check("secret_provider", configured("SECRET_PROVIDER"), "Secret provider is explicitly identified"));
   if (["remote_delivery", "hermes_bridge"].includes(processType))

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandSprite } from "./brand-assets";
 
 export const publicNav = [
   ["Documentation", "/docs"],
@@ -14,8 +15,8 @@ export function PublicHeader() {
   return (
     <header className="public-header">
       <Link className="public-logo" href="/">
-        <span>MC</span>
-        <strong>Mission Control</strong>
+        <BrandSprite asset="mark-compact" />
+        <strong className="typed-wordmark">MISSION CONTROL</strong>
       </Link>
       <nav>
         {publicNav.map(([label, href]) => (
