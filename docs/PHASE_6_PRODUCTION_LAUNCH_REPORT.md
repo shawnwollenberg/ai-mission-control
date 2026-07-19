@@ -14,6 +14,8 @@ Status: **pre-launch; waiting for required human provider selections and resourc
 - Review-only Render Blueprint for one web service and seven isolated workers with manual deploys
 - Process-specific environment manifest, provider-input checklist, staged deployment/rollback procedure, and artifact smoke test
 - Codex CLI production dependency and single-run key injection with tool-subprocess environment filtering
+- Host-aware public landing and documentation site for `missioncontrol.wallyweb.com`, with the authenticated application retained at `app.missioncontrol.wallyweb.com`
+- Interactive first-agent walkthrough covering Codex, Hermes, Claude Code preview, and the generic signed-agent protocol
 
 ## Not yet deployed or validated
 

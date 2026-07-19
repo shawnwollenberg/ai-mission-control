@@ -10,6 +10,9 @@ services:
     buildCommand: npm ci && npm run build
     startCommand: npm run production:validate -- web && npm start
     healthCheckPath: /api/readiness
+    domains:
+      - missioncontrol.wallyweb.com
+      - app.missioncontrol.wallyweb.com
     maxShutdownDelaySeconds: 60
     envVars:
       - { key: APP_ENV, value: production }
