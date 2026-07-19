@@ -33,6 +33,10 @@ Sensitive effects are represented by a vendor-neutral Action Request aggregate. 
 
 Remote runtimes use protocol 1.0 through a generic HTTP adapter. Per-agent versioned HMAC credentials are hashed at rest; their secret is returned only at creation/rotation. Every transport request binds method, path, timestamp, nonce, message ID, body checksum, and protocol version. Canonical execution commands remain authoritative; delivery acknowledgement is not execution acceptance. A transactional outbox, bounded delivery worker, authenticated single callback endpoint, durable idempotency/replay records, checksummed artifact store, and deterministic health/capability filters support Hermes without runtime-specific coordinator branches. The first integration is a small restart-safe Hermes bridge process, not Discord. Full decisions are in `docs/PHASE_4_REMOTE_AGENTS.md`.
 
+### Phase 5 daily-operations decision — 2026-07-19
+
+Templates are immutable, workspace-scoped versioned specifications. A launch snapshots validated inputs, resolved tasks, dependencies, resource IDs, policies, limits, and the exact template version into a new mission. Schedules reference a published version and create a new mission for every intended occurrence through the same command layer as a human launch. A dedicated scheduler uses PostgreSQL row leases and the stable key `(schedule_id, intended_run_at, template_version)`; concurrency and missed-run policy are deterministic. Notifications and usage are derived operational projections and cannot change mission outcomes. The initial production shape remains a modular monolith: Next.js, PostgreSQL, object storage, secret provider, and separately scalable generic, Codex, action, remote-delivery, scheduler, notification, and Hermes processes.
+
 ## Four-layer architecture
 
 ```mermaid

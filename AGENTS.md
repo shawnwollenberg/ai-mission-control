@@ -10,9 +10,9 @@ Aegis smart accounts may provide spending controls and policy enforcement, but A
 
 ## Current phase
 
-The hackathon demo, durable core, controlled Codex execution, and Phase 3 policy/human approval enforcement are complete. Phase 4 remote-agent integration is explicitly approved.
+Phase 4 and its provider-confirmed closeout are complete. Phase 5 daily-operations work is explicitly approved.
 
-Implement only the approved Phase 4 scope in `PLANS.md` and `docs/PHASE_4_REMOTE_AGENTS.md`. Preserve the existing mission, task, execution, approval, policy, action-request, event, and projection authority. Codex and Hermes remain adapters behind one generic execution protocol. Stop before merge, deployment, production remediation, secrets access, blockchain transactions, wallet signing, or unrestricted remote command execution.
+Implement only the approved Phase 5 scope in `PLANS.md` and `docs/PHASE_5_OPERATIONS.md`. Preserve the existing mission, task, execution, approval, policy, action-request, event, and projection authority. Templates and schedules create new mission instances through the existing command layer; they never bypass agent eligibility, resources, policy, or approvals. Stop before merge, deployment, production remediation, secrets access, infrastructure modification, blockchain transactions, wallet signing, asset movement, or unrestricted remote command execution.
 
 ## Source-of-truth documents
 
@@ -27,6 +27,7 @@ Read these before proposing or implementing work:
 - `docs/PRODUCTION_ARCHITECTURE.md`
 - `docs/PHASE_2_CODEX_EXECUTION.md`
 - `docs/PHASE_4_REMOTE_AGENTS.md`
+- `docs/PHASE_5_OPERATIONS.md`
 - `PLANS.md`
 
 When decisions change, update the appropriate document.

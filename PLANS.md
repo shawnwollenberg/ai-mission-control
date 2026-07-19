@@ -346,6 +346,18 @@ Report at the first vertical-slice boundary, then complete DeFi, mixed-agent, UI
 
 **Goal:** Prove the core is domain-neutral through safe templates and scheduled mission instances.
 
+**Authorized scope:** Versioned immutable mission templates, timezone-aware one-time/recurring schedules, leased idempotent scheduler runs, durable notifications, evidence-based usage/cost, projection-backed daily operations, safe recovery controls, worker readiness, and production operations documentation. All scheduled and manual launches use the existing command, eligibility, resource, policy, approval, and audit paths. Detailed decisions: `docs/PHASE_5_OPERATIONS.md`.
+
+### First reporting boundary
+
+1. Publish five initial template version 1 definitions with registered-resource input validation.
+2. Launch immutable mission/task snapshots from an exact template version.
+3. Create one-time and recurring schedules with explicit timezone, concurrency, and missed-run policy.
+4. Run a dedicated leased scheduler using deterministic run keys.
+5. Complete one scheduled Hermes health report and produce an in-app notification.
+6. Restart the scheduler and prove no duplicate mission or notification.
+7. Rebuild and verify template, schedule, mission, and notification projections.
+
 ### Proposed scope
 
 1. Add immutable template versions for software delivery, DeFi analysis, and systems monitoring.
