@@ -55,6 +55,10 @@ export default function OnboardingWizard({
     [agents, connection],
   );
   const stage = connected ? 3 : 2;
+  const safeDisplayedCommand = connection?.command.replace(
+    / connect '[^']+'$/,
+    " connect '[secure one-time payload — use Copy]'",
+  );
 
   useEffect(() => {
     if (!connection || connected) return;
@@ -153,7 +157,7 @@ export default function OnboardingWizard({
             <h2 className="onboarding-heading">Copy and run this command.</h2>
             <p>Run it in the terminal on the computer where {connection.agentName} works.</p>
             <div className="command-copy">
-              <code>{connection.command}</code>
+              <code>{safeDisplayedCommand}</code>
               <button onClick={copyCommand}>{copied ? "Copied ✓" : "Copy"}</button>
             </div>
             <div className="heartbeat-wait">
