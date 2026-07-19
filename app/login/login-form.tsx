@@ -70,7 +70,9 @@ export default function LoginForm({ next }: { next: string }) {
             {pending ? "Authenticating…" : "Continue"}
           </button>
         </form>
-        <p className="auth-switch">New to Mission Control? <Link href="/signup">Create an account</Link></p>
+        <p className="auth-switch">
+          New to Mission Control? <Link href="/signup">Create an account</Link>
+        </p>
       </section>
     </main>
   );

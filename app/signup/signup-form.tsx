@@ -46,14 +46,34 @@ export default function SignupForm() {
         <h1>Create your account.</h1>
         <p>Create a private AI organization that you own.</p>
         <form onSubmit={submit}>
-          <label>Name<input autoComplete="name" name="displayName" required minLength={2} maxLength={80} /></label>
-          <label>Email<input autoComplete="email" name="email" type="email" required /></label>
-          <label>Password<input autoComplete="new-password" name="password" type="password" required minLength={12} /></label>
-          <label>Confirm password<input autoComplete="new-password" name="confirmation" type="password" required minLength={12} /></label>
-          {error && <p className="form-error" role="alert">{error}</p>}
-          <button className="launch-button" disabled={pending} type="submit">{pending ? "Creating account…" : "Create account"}</button>
+          <label>
+            Name
+            <input autoComplete="name" name="displayName" required minLength={2} maxLength={80} />
+          </label>
+          <label>
+            Email
+            <input autoComplete="email" name="email" type="email" required />
+          </label>
+          <label>
+            Password
+            <input autoComplete="new-password" name="password" type="password" required minLength={12} />
+          </label>
+          <label>
+            Confirm password
+            <input autoComplete="new-password" name="confirmation" type="password" required minLength={12} />
+          </label>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="launch-button" disabled={pending} type="submit">
+            {pending ? "Creating account…" : "Create account"}
+          </button>
         </form>
-        <p className="auth-switch">Already have an account? <Link href="/login">Sign in</Link></p>
+        <p className="auth-switch">
+          Already have an account? <Link href="/login">Sign in</Link>
+        </p>
       </section>
     </main>
   );

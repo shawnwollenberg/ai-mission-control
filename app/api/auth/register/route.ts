@@ -16,10 +16,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     if (error instanceof Error && error.message === "Invalid request origin")
       return NextResponse.json({ error: error.message }, { status: 403 });
-    const code = (error as { cause?: { code?: string }; code?: string })?.cause?.code ?? (error as { code?: string })?.code;
+    const code =
+      (error as { cause?: { code?: string }; code?: string })?.cause?.code ?? (error as { code?: string })?.code;
     if (code === "23505" || code === "concurrency_conflict")
       return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });
-    console.error(JSON.stringify({ level: "error", event: "registration_failed", message: "Registration service unavailable" }));
+    console.error(
+      JSON.stringify({ level: "error", event: "registration_failed", message: "Registration service unavailable" }),
+    );
     return NextResponse.json({ error: "Registration service unavailable" }, { status: 503 });
   }
 }

@@ -23,7 +23,9 @@ export function validateRegistration(input: { email?: string; displayName?: stri
 
 export function personalWorkspaceName(displayName: string) {
   const firstName = displayName.trim().split(/\s+/)[0] || "My";
-  return firstName.toLowerCase() === "my" ? "My Workspace" : `${firstName}${firstName.endsWith("s") ? "'" : "'s"} Workspace`;
+  return firstName.toLowerCase() === "my"
+    ? "My Workspace"
+    : `${firstName}${firstName.endsWith("s") ? "'" : "'s"} Workspace`;
 }
 
 async function seedPersonalWorkspace(identity: SessionIdentity) {
@@ -37,16 +39,21 @@ async function seedPersonalWorkspace(identity: SessionIdentity) {
     });
 }
 
-export async function registerMember(input: { email?: string; displayName?: string; password?: string }): Promise<SessionIdentity> {
+export async function registerMember(input: {
+  email?: string;
+  displayName?: string;
+  password?: string;
+}): Promise<SessionIdentity> {
   const registration = validateRegistration(input);
   const userId = randomUUID();
   const workspaceId = randomUUID();
   const commandId = randomUUID();
   const passwordHash = await hash(registration.password, 12);
-  await getDatabasePool().query(
-    `INSERT INTO workspaces (id, slug, name) VALUES ($1, $2, $3)`,
-    [workspaceId, `personal-${workspaceId}`, personalWorkspaceName(registration.displayName)],
-  );
+  await getDatabasePool().query(`INSERT INTO workspaces (id, slug, name) VALUES ($1, $2, $3)`, [
+    workspaceId,
+    `personal-${workspaceId}`,
+    personalWorkspaceName(registration.displayName),
+  ]);
   try {
     await appendEvents({
       workspaceId,
@@ -66,27 +73,44 @@ export async function registerMember(input: { email?: string; displayName?: stri
         {
           eventType: "workspace.owner.registered",
           eventSchemaVersion: 1,
-          payload: { userId, email: registration.email, role: "owner", authentication: "password_hash", secretRecorded: false },
+          payload: {
+            userId,
+            email: registration.email,
+            role: "owner",
+            authentication: "password_hash",
+            secretRecorded: false,
+          },
         },
       ],
       applyProjections: async (client) => {
-        await client.query(
-          `INSERT INTO users (id, email, display_name, password_hash) VALUES ($1, $2, $3, $4)`,
-          [userId, registration.email, registration.displayName, passwordHash],
-        );
-        await client.query(
-          `INSERT INTO workspace_memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`,
-          [workspaceId, userId],
-        );
+        await client.query(`INSERT INTO users (id, email, display_name, password_hash) VALUES ($1, $2, $3, $4)`, [
+          userId,
+          registration.email,
+          registration.displayName,
+          passwordHash,
+        ]);
+        await client.query(`INSERT INTO workspace_memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`, [
+          workspaceId,
+          userId,
+        ]);
       },
     });
   } catch (error) {
-    await getDatabasePool().query("DELETE FROM workspaces WHERE id=$1", [workspaceId]).catch(() => undefined);
+    await getDatabasePool()
+      .query("DELETE FROM workspaces WHERE id=$1", [workspaceId])
+      .catch(() => undefined);
     throw error;
   }
   const identity: SessionIdentity = { userId, workspaceId, role: "owner", email: registration.email, authVersion: 1 };
   await seedPersonalWorkspace(identity).catch((error) =>
-    console.error(JSON.stringify({ level: "error", event: "personal_workspace_template_seed_failed", workspaceId, message: error instanceof Error ? error.message : String(error) })),
+    console.error(
+      JSON.stringify({
+        level: "error",
+        event: "personal_workspace_template_seed_failed",
+        workspaceId,
+        message: error instanceof Error ? error.message : String(error),
+      }),
+    ),
   );
   return identity;
 }
