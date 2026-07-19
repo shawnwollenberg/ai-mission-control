@@ -10,6 +10,10 @@ export default async function ArtifactPage({ params }: { params: Promise<{ artif
   const artifact = await readExecutionArtifact(identity.workspaceId, artifactId);
   if (!artifact) notFound();
   const metadata = artifact.metadata as Record<string, unknown>;
+  const displayBody = artifact.body
+    .toString("utf8")
+    .replace(/\/(?:Users|home)\/[^)\s]+\/mission-control(?=\/|[)\s])/g, "[repository]")
+    .replace(/[A-Za-z]:\\Users\\[^)\s]+\\mission-control(?=\\|[)\s])/g, "[repository]");
   return (
     <main className="archive-shell">
       <nav className="brandbar">
@@ -33,7 +37,7 @@ export default async function ArtifactPage({ params }: { params: Promise<{ artif
         <p className="section-label">
           Checksum · {String(metadata.checksum_sha256).slice(0, 16)} · {String(metadata.byte_size)} bytes
         </p>
-        <pre className="artifact-body">{artifact.body.toString("utf8")}</pre>
+        <pre className="artifact-body">{displayBody}</pre>
       </section>
     </main>
   );
