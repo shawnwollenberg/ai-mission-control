@@ -22,6 +22,7 @@ RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 --gid nod
     && chown -R nextjs:nodejs /app/.mission-control
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/app/icon.png ./app/icon.png
 COPY --from=builder --chown=nextjs:nodejs /app/fixtures ./fixtures
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tsx ./node_modules/tsx
