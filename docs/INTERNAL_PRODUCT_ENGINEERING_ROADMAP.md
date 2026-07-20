@@ -21,6 +21,32 @@ Software engineering is the first vertical because it provides immediate value a
 7. Agents improve through experience.
 8. New capabilities should compose naturally with existing workflows.
 
+## Current product focus
+
+One outcome controls near-term prioritization:
+
+> Make Mission Control the best place to supervise AI software engineers.
+
+Everything else must directly improve an engineering manager's ability to understand repositories, turn findings into managed work, supervise execution, review evidence, and decide what happens next.
+
+## Mission Control 0.4 — Engineering Manager
+
+Mission Control currently executes missions. Version 0.4 should begin managing work: preserving repository context, turning evidence into follow-up work, decomposing objectives, and showing how missions relate.
+
+Priority order:
+
+1. **Create Change Mission from Recommendation.** A completed repository analysis presents discrete recommendations with one-click change-mission creation. The objective and acceptance criteria are prefilled from recorded recommendation evidence, and validation commands are suggested from detected repository tooling. The user reviews every field before launch.
+2. **Mission Templates.** Make Security Audit, Bug Fix, Performance Review, Dependency Upgrade, Documentation, Feature Implementation, and Code Review recognizable entry points with versioned prompts, validation expectations, and outputs.
+3. **Mission Planner.** Decompose an objective such as “Add OAuth” into proposed backend, frontend, tests, and documentation work. Planning remains reviewable and requires approval before execution begins.
+4. **Mission Graph.** Connect analysis, implementation, review, QA, publication, deployment, and monitoring missions through explicit evidence-backed relationships. The graph is a projection of canonical mission relationships, not an independent workflow database.
+5. **Repository Intelligence.** Detect architecture, frameworks, languages, CI, security posture, tests, dependencies, TODOs, technical debt, and potential defects. Produce an explainable repository-health projection with evidence and versioned scoring rules.
+
+The intended experience is repository-centered:
+
+- Home: Mission Health, Repository Health, open recommendations, pending approvals, and recent missions.
+- Repository: mission history, architecture, recommendations, knowledge, Mission Graph, and active missions.
+- Analysis result: architecture, risks, recommendations, and **Create Change Mission** actions.
+
 ## Phase 1 — Autonomous Software Engineering
 
 Mission Control's initial focus is becoming the safest way to supervise AI software engineers.
@@ -43,16 +69,18 @@ Potential engines include Codex, Claude Code, Gemini CLI, Cursor, Hermes, and fu
 
 Agents become long-lived workers with profiles containing expertise, supported capabilities, repository familiarity, success rate, average completion time, cost statistics, reliability metrics, and mission history. Mission planning uses this experience when assigning work.
 
-## Phase 4 — Agent Memory
+## Phase 4 — Repository Knowledge
 
-Memory exists at several levels:
+Do not make individual agents the durable owners of organizational memory. Store durable, evidence-backed Repository Knowledge that any compatible agent can consume.
 
-- Repository memory: architecture, conventions, historical decisions, and previous missions.
-- Project memory: active initiatives, milestones, recurring problems, and design documents.
-- Organization memory: standards, preferred technologies, deployment processes, and security requirements.
-- Personal memory: user preferences, review style, and approval tendencies.
+- Architecture and component boundaries
+- Languages, frameworks, build tools, CI, tests, and dependencies
+- Mission history and resulting artifacts
+- Known issues, risks, TODOs, and technical debt
+- Recorded architectural decisions
+- Repository standards and validation expectations
 
-Agents should become increasingly effective as they accumulate organizational knowledge.
+Repository Knowledge is reconstructed from canonical observations, decisions, mission relationships, and artifacts. Agents consume it as context but do not privately own or mutate the authoritative record. This keeps knowledge useful when execution engines change.
 
 ## Phase 5 — Capabilities and Skills
 
@@ -100,4 +128,3 @@ Before beginning any roadmap phase:
 4. Define deterministic policy, approval, recovery, and audit behavior.
 5. Identify migrations, compatibility risks, rollback, and operating cost.
 6. Obtain explicit product-owner approval before implementation.
-
