@@ -48,8 +48,8 @@ export default function AgentConnectWizard() {
           <p className="mono-kicker">Run on your agent host</p>
           <h2>Paste this command.</h2>
           <p className="connect-note">
-            Run this from your Mission Control installation after registering the agent in Launch App. Secret-bearing
-            values are displayed there once.
+            Run the generated app command from inside the first Git repository you want to register. This creates one
+            local agent for this machine; add more repositories to it later with mission-agent repository add.
           </p>
           <pre>
             <code>{agents[selected]}</code>
@@ -66,7 +66,7 @@ export default function AgentConnectWizard() {
           </div>
           <p className="mono-kicker">Heartbeat received</p>
           <h2>Congratulations.</h2>
-          <p>Your {selected} agent is ready for its first bounded mission.</p>
+          <p>Your {selected} agent is ready and can manage multiple repositories from this computer.</p>
           <a className="connect-next" href="https://app.missioncontrol.wallyweb.com/agents">
             Open agent roster <span>↗</span>
           </a>

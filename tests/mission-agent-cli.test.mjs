@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { chmod, mkdtemp, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 
 const run = promisify(execFile);
-const script = resolve("public/mission-agent-0.1.1.mjs");
+const script = resolve("public/mission-agent-0.2.0.mjs");
 const baseConfig = {
   missionControlUrl: "https://app.missioncontrol.example",
   workspaceId: "3ae5d14a-f57a-4a8a-bc98-65d58b99a214",
@@ -71,6 +71,40 @@ test("connect explains that it must run inside a Git repository", async () => {
         MISSION_AGENT_SECRET_STORE: "file",
       },
     }),
-    /Run the connection command from inside the repository.*--repository \/absolute\/path\/to\/repository/,
+    /Run this command from inside a Git repository.*--repository \/absolute\/path\/to\/repository/,
   );
+});
+
+test("repository list uses safe metadata and never prints local paths", async () => {
+  const home = await mkdtemp(join(tmpdir(), "mission-agent-repositories-"));
+  const config = {
+    ...baseConfig,
+    repositories: {
+      "repository-1": {
+        path: "/private/source/office-anywhere",
+        name: "office-anywhere",
+        remoteUrl: "git@github.com:example/office-anywhere.git",
+        branch: "main",
+      },
+    },
+  };
+  await writeFile(join(home, "config.json"), JSON.stringify(config), { mode: 0o600 });
+  const result = await run(process.execPath, [script, "repository", "list"], {
+    env: { ...process.env, MISSION_AGENT_HOME: home },
+  });
+  assert.match(result.stdout, /repository-1\toffice-anywhere\tgithub.com\/example\/office-anywhere\tmain/);
+  assert.doesNotMatch(result.stdout, /private\/source/);
+});
+
+test("stable launcher installation preserves credentials and repositories", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "mission-agent-install-"));
+  const home = join(directory, "home");
+  const bin = join(directory, "bin");
+  await mkdir(home, { recursive: true });
+  await writeFile(join(home, "config.json"), JSON.stringify(baseConfig), { mode: 0o600 });
+  await run(process.execPath, [script, "install"], {
+    env: { ...process.env, MISSION_AGENT_HOME: home, MISSION_AGENT_BIN_DIR: bin },
+  });
+  assert.deepEqual(JSON.parse(await readFile(join(home, "config.json"), "utf8")), baseConfig);
+  assert.match(await readFile(join(bin, "mission-agent"), "utf8"), /mission-agent-0\.2\.0\.mjs/);
 });

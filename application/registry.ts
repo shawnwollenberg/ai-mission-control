@@ -69,7 +69,7 @@ export async function setAgentEnabled(input: { actor: RegistryActor; agentId: st
 export async function listAgents(workspaceId: string) {
   return (
     await getDatabasePool().query(
-      `SELECT a.*,CASE WHEN a.status='active' AND a.last_heartbeat_at < now()-interval '3 minutes' THEN 'offline' WHEN a.status='active' AND a.last_heartbeat_at < now()-interval '90 seconds' THEN 'degraded' ELSE a.status END effective_status,count(e.*) FILTER(WHERE e.status NOT IN('succeeded','failed','timed_out','cancelled'))::int current_execution_count FROM agents a LEFT JOIN execution_projections e ON e.workspace_id=a.workspace_id AND e.agent_id=a.agent_id WHERE a.workspace_id=$1 GROUP BY a.workspace_id,a.agent_id ORDER BY a.created_at`,
+      `SELECT a.*,CASE WHEN a.status='active' AND a.last_heartbeat_at < now()-interval '3 minutes' THEN 'offline' WHEN a.status='active' AND a.last_heartbeat_at < now()-interval '90 seconds' THEN 'degraded' ELSE a.status END effective_status,count(e.*) FILTER(WHERE e.status NOT IN('succeeded','failed','timed_out','cancelled'))::int current_execution_count,(SELECT count(*)::int FROM repositories r WHERE r.workspace_id=a.workspace_id AND r.allowed_agent_ids ? a.agent_id::text AND r.disabled_at IS NULL) repository_count FROM agents a LEFT JOIN execution_projections e ON e.workspace_id=a.workspace_id AND e.agent_id=a.agent_id WHERE a.workspace_id=$1 GROUP BY a.workspace_id,a.agent_id ORDER BY a.created_at`,
       [workspaceId],
     )
   ).rows;
@@ -100,6 +100,12 @@ export async function getAgentDetail(workspaceId: string, agentId: string) {
       [workspaceId, agentId],
     )
   ).rows;
+  const repositories = (
+    await getDatabasePool().query(
+      `SELECT r.repository_id,r.name,r.observed_remote_url,r.default_branch,r.observed_commit,r.disabled_at,r.read_allowed,r.write_allowed,r.created_at,a.name agent_name,(SELECT ep.mission_id FROM execution_projections ep WHERE ep.workspace_id=r.workspace_id AND ep.repository_id=r.repository_id ORDER BY ep.created_at DESC LIMIT 1) last_used_mission_id,(SELECT ep.created_at FROM execution_projections ep WHERE ep.workspace_id=r.workspace_id AND ep.repository_id=r.repository_id ORDER BY ep.created_at DESC LIMIT 1) last_used_at FROM repositories r JOIN agents a ON a.workspace_id=r.workspace_id AND a.agent_id=$2 WHERE r.workspace_id=$1 AND r.allowed_agent_ids ? $2::text ORDER BY r.created_at`,
+      [workspaceId, agentId],
+    )
+  ).rows;
   const deliveries = (
     await getDatabasePool().query(
       "SELECT message_type,status,attempt_count,response_status,response_summary,created_at,delivered_at FROM webhook_deliveries WHERE workspace_id=$1 AND agent_id=$2 ORDER BY created_at DESC LIMIT 20",
@@ -118,7 +124,49 @@ export async function getAgentDetail(workspaceId: string, agentId: string) {
       [workspaceId, agentId],
     )
   ).rows;
-  return { agent, executions, credentials, resources, deliveries, artifacts, securityEvents };
+  return { agent, executions, credentials, resources, repositories, deliveries, artifacts, securityEvents };
+}
+
+export async function removeMissionAgentRepositoryAssociation(input: {
+  workspaceId: string;
+  agentId: string;
+  repositoryId: string;
+}) {
+  const client = await getDatabasePool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      `UPDATE repositories SET allowed_agent_ids=allowed_agent_ids-$3::text,updated_at=now() WHERE workspace_id=$1 AND repository_id=$2 AND allowed_agent_ids ? $3::text RETURNING repository_id,name`,
+      [input.workspaceId, input.repositoryId, input.agentId],
+    );
+    if (!result.rowCount) throw new NotFoundError("Repository association");
+    await client.query(
+      "UPDATE agent_resource_permissions SET revoked_at=now() WHERE workspace_id=$1 AND agent_id=$2 AND resource_type='repository' AND resource_id=$3 AND revoked_at IS NULL",
+      [input.workspaceId, input.agentId, input.repositoryId],
+    );
+    await client.query("COMMIT");
+    return result.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function setRepositoryEnabled(input: {
+  actor: RegistryActor;
+  agentId: string;
+  repositoryId: string;
+  enabled: boolean;
+}) {
+  owner(input.actor);
+  const result = await getDatabasePool().query(
+    `UPDATE repositories SET disabled_at=CASE WHEN $4 THEN NULL ELSE now() END,updated_at=now() WHERE workspace_id=$1 AND repository_id=$2 AND allowed_agent_ids ? $3::text RETURNING repository_id,disabled_at`,
+    [input.actor.workspaceId, input.repositoryId, input.agentId, input.enabled],
+  );
+  if (!result.rowCount) throw new NotFoundError("Repository association");
+  return result.rows[0];
 }
 export async function registerRepository(input: {
   actor: RegistryActor;

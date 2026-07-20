@@ -86,6 +86,7 @@ export const docGroups = [
       ["Running Hermes", "/docs/running-hermes"],
       ["Creating Agents", "/docs/creating-agents"],
       ["Mission Agent CLI", "/docs/mission-agent"],
+      ["Repositories", "/docs/repositories"],
       ["Agent Protocol 1.0", "/docs/agent-protocol"],
       ["Mission Templates", "/docs/mission-templates"],
       ["Scheduling", "/docs/scheduling"],
@@ -258,11 +259,11 @@ export const docs: Record<
     sections: [
       {
         title: "1. Connect",
-        body: "Create an account, choose Codex, open a terminal in a safe Git repository, and run the single versioned and checksummed command shown by Mission Control. The credential is stored in macOS Keychain when available or a protected 0600 file on Linux.",
+        body: "Create an account, choose Codex, and run the checksummed command inside the first Git repository you want to register—or append --repository /absolute/path. This creates one local agent for the machine, not one agent per repository.",
       },
       {
         title: "2. Verify",
-        body: "The onboarding page advances only after both the signed heartbeat and assignment pull capability are confirmed. Run mission-agent doctor for Node, Git, Codex, repository, credential-permission, reachability, signature, and heartbeat diagnostics.",
+        body: "The onboarding page advances only after a signed heartbeat, assignment pull readiness, and at least one eligible repository are confirmed. Run mission-agent doctor for local diagnostics.",
       },
       {
         title: "3. Run",
@@ -270,7 +271,26 @@ export const docs: Record<
       },
       {
         title: "Operations",
-        body: "Use mission-agent status, mission-agent run, mission-agent repository add /path, and mission-agent logout --yes. macOS and Linux are supported first; Windows remains experimental. Credentials never appear in status output.",
+        body: "Use the stable mission-agent command: status, doctor, repository list, repository add /path, repository inspect <id>, repository remove <id>, update, and logout --yes. Immutable versioned executables remain behind this command.",
+      },
+    ],
+  },
+  repositories: {
+    eyebrow: "Guides",
+    title: "Repositories",
+    lede: "One local Mission Agent can register and safely manage multiple repositories on the same computer.",
+    sections: [
+      {
+        title: "Add another repository",
+        body: "Run mission-agent repository add . from that Git repository, or mission-agent repository add /absolute/path/to/repository. It becomes available in the mission repository selector without creating another agent or credential.",
+      },
+      {
+        title: "The execution model",
+        body: "One local machine → one Mission Agent → multiple registered repositories → missions select the repository they need. Connect another agent only for another computer, server, or isolated execution environment.",
+      },
+      {
+        title: "Privacy and capabilities",
+        body: "Mission Control stores safe repository identity, branch, commit, fingerprint, and capability flags. The public UI does not display the full local filesystem path.",
       },
     ],
   },
@@ -351,6 +371,14 @@ export const docs: Record<
         body: "No. It coordinates and governs Codex, Hermes, Claude Code, and remote agents.",
       },
       { title: "Can agents deploy or merge?", body: "Not by default. Those authorities remain explicitly denied." },
+      {
+        title: "Do I need one Mission Agent for every repository?",
+        body: "No. One Mission Agent can manage multiple repositories on the same machine. The first repository is registered during connection. Add more with mission-agent repository add.",
+      },
+      {
+        title: "Do I need one agent per computer?",
+        body: "Usually, yes. A Mission Agent represents a local execution environment. Connect another for a different computer, server, or isolated execution environment.",
+      },
     ],
   },
 };

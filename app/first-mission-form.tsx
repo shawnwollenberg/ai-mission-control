@@ -68,8 +68,8 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
             </label>
           ) : (
             <div className="form-error">
-              No pull-ready Codex repository is registered. Run the generated Mission Agent connection command from a
-              Git repository.
+              This repository has not been registered with your Mission Agent. Add it from that computer with
+              <code>mission-agent repository add /path/to/repository</code>.
             </div>
           )}
           <label>

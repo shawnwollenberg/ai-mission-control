@@ -14,6 +14,7 @@ type Agent = {
   pull_ready_at?: string;
   mission_agent_version?: string;
   mission_agent_adapter?: string;
+  repository_count?: number;
 };
 type Connection = {
   agentId: string;
@@ -50,8 +51,12 @@ export default function OnboardingWizard({
   const connected = useMemo(
     () =>
       agents.find(
-        (agent) => agent.agent_id === connection?.agentId && agent.last_heartbeat_at && agent.pull_ready_at,
-      ) ?? agents.find((agent) => agent.last_heartbeat_at && agent.pull_ready_at),
+        (agent) =>
+          agent.agent_id === connection?.agentId &&
+          agent.last_heartbeat_at &&
+          agent.pull_ready_at &&
+          (agent.repository_count ?? 0) > 0,
+      ) ?? agents.find((agent) => agent.last_heartbeat_at && agent.pull_ready_at && (agent.repository_count ?? 0) > 0),
     [agents, connection],
   );
   const stage = connected ? 3 : 2;
@@ -156,13 +161,20 @@ export default function OnboardingWizard({
             <p className="section-label">Connect {connection.agentName}</p>
             <h2 className="onboarding-heading">Copy and run this command.</h2>
             <p>
-              In your terminal, first <code>cd</code> into the Git repository you want {connection.agentName} to
-              analyze. Then copy and run this command.
+              Connect Mission Agent from any Git repository you want to register first. This creates one local agent for
+              your machine. You can add more repositories to the same agent later.
             </p>
+            <p>
+              <strong>Run this command from inside a Git repository.</strong>
+            </p>
+            <p>Option 1 · Current directory</p>
+            <code>cd /path/to/repository</code>
             <div className="command-copy">
               <code>{safeDisplayedCommand}</code>
               <button onClick={copyCommand}>{copied ? "Copied ✓" : "Copy"}</button>
             </div>
+            <p>Option 2 · Explicit repository</p>
+            <code>{safeDisplayedCommand} --repository /absolute/path/to/repository</code>
             <div className="heartbeat-wait">
               <span className="heartbeat-dot" />
               <div>
@@ -198,6 +210,17 @@ export default function OnboardingWizard({
             <h2>Connected.</h2>
             <p>
               <strong>{connected.name}</strong> is ready in <strong>{workspaceName}</strong>.
+            </p>
+            <p>
+              <strong>
+                {connected.repository_count} {connected.repository_count === 1 ? "repository" : "repositories"}{" "}
+                registered
+              </strong>
+            </p>
+            <p>Your Mission Agent is connected. It can manage multiple repositories from this computer.</p>
+            <p>
+              You can launch your first mission now or add more repositories later using{" "}
+              <code>mission-agent repository add</code>.
             </p>
             <p>
               Mission Agent {connected.mission_agent_version} · {connected.mission_agent_adapter} adapter · assignment
