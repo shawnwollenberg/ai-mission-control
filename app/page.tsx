@@ -197,7 +197,7 @@ function RepositoryRequiredHome({ workspaceName }: { workspaceName: string }) {
       </section>
       <section className="onboarding-panel">
         <code>mission-agent repository add /path/to/repository</code>
-        <p>The page will unlock your first mission after the repository is registered.</p>
+        <p>The page will unlock live repository missions after the repository is registered.</p>
         <Link className="launch-button" href="/onboarding">
           View connection status →
         </Link>

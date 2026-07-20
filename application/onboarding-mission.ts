@@ -11,12 +11,19 @@ export async function launchFirstRepositoryMission(input: {
   commandId: string;
   agentId: string;
   repositoryId: string;
+  missionType?: "analysis" | "change";
   objective?: string;
+  acceptanceCriteria?: string;
+  validationInstructions?: string;
 }) {
+  const missionType = input.missionType ?? "analysis";
   const objective =
     input.objective?.trim() ||
     "Analyze this repository and produce a concise architecture, risk, and next-steps report";
-  if (objective.length > 1000) throw new ValidationFailedError("Analysis objective must be 1,000 characters or fewer");
+  if (!objective || objective.length > 1000)
+    throw new ValidationFailedError("Mission objective must be 1,000 characters or fewer");
+  const acceptanceCriteria = textLines(input.acceptanceCriteria, 20, 300);
+  const validationCommands = validationLines(input.validationInstructions);
   const resource = (
     await getDatabasePool().query(
       `SELECT r.repository_id,r.name,a.pull_ready_at,a.mission_agent_adapter
@@ -36,19 +43,27 @@ export async function launchFirstRepositoryMission(input: {
     commandId: stableUuid(`${input.commandId}:mission`),
     missionId,
     mission: {
-      name: "Analyze this repository",
+      name: missionType === "change" ? `Change ${resource.name}` : `Analyze ${resource.name}`,
       objective,
-      description: "A genuine read-only analysis executed by the locally connected Mission Agent Codex adapter.",
+      description:
+        missionType === "change"
+          ? "An approval-gated repository change executed in an isolated local Mission Agent worktree."
+          : "A genuine read-only analysis executed by the locally connected Mission Agent Codex adapter.",
       domain: "software_delivery",
       priority: "normal",
-      riskLevel: "low",
-      successCriteria: [
-        "A checksummed Markdown repository-analysis artifact is received",
-        "No repository files change",
-      ],
+      riskLevel: missionType === "change" ? "moderate" : "low",
+      successCriteria:
+        missionType === "change"
+          ? [
+              ...(acceptanceCriteria.length ? acceptanceCriteria : ["The requested change is implemented"]),
+              "Validation, diff, and local commit evidence are received",
+            ]
+          : ["A checksummed Markdown repository-analysis artifact is received", "No repository files change"],
       constraints: [
-        "Read-only repository access",
-        "No package installation, commit, push, pull request, merge, deployment, or secret access",
+        missionType === "change" ? "Write only after explicit approval in an isolated worktree" : "Read-only repository access",
+        missionType === "change"
+          ? "Local commit permitted; push, pull request, merge, deployment, infrastructure, and secret access prohibited"
+          : "No package installation, commit, push, pull request, merge, deployment, or secret access",
       ],
     },
   });
@@ -59,16 +74,28 @@ export async function launchFirstRepositoryMission(input: {
     taskId,
     task: {
       missionId,
-      name: "Analyze this repository",
-      instructions: `Inspect repository structure, configuration, commands, and tests; produce evidence-based Markdown findings. Analysis objective: ${objective}`,
+      name: missionType === "change" ? "Plan and implement approved repository change" : "Analyze this repository",
+      instructions:
+        missionType === "change"
+          ? `Plan the requested change, pause for write approval, then implement it in an isolated worktree. Objective: ${objective}`
+          : `Inspect repository structure, configuration, commands, and tests; produce evidence-based Markdown findings. Analysis objective: ${objective}`,
       expectedOutput:
-        "Markdown repository analysis with overview, technologies, structure, commands, tests, risks, and next mission.",
+        missionType === "change"
+          ? "Implementation plan, changed files, diff, validation evidence, and one local commit for human review."
+          : "Markdown repository analysis with overview, technologies, structure, commands, tests, risks, and next mission.",
       priority: "normal",
-      riskLevel: "low",
-      requiredCapabilities: ["repository.read", "code.review", "artifact.create"],
+      riskLevel: missionType === "change" ? "moderate" : "low",
+      requiredCapabilities: [
+        "repository.read",
+        "code.review",
+        "artifact.create",
+        ...(missionType === "change" ? ["test.run"] : []),
+      ],
       requiredResources: [{ resourceType: "repository", resourceId: input.repositoryId, permission: "read" }],
       maximumAttempts: 2,
       timeoutSeconds: 600,
+      approvalPolicy: { missionType, writeApprovalRequired: missionType === "change" },
+      verificationRequirements: validationCommands.map((command) => command.join(" ")),
     },
   });
   await handleMissionTransition({
@@ -91,4 +118,30 @@ export async function launchFirstRepositoryMission(input: {
     timeoutSeconds: 600,
   });
   return { missionId, taskId, executionId: execution.executionId };
+}
+
+function textLines(value: string | undefined, maximum: number, maximumLength: number) {
+  const result = (value ?? "")
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (result.length > maximum || result.some((item) => item.length > maximumLength))
+    throw new ValidationFailedError("Mission details exceed the supported limits");
+  return result;
+}
+
+const validationExecutables = new Set(["npm", "pnpm", "yarn", "bun", "npx", "node"]);
+function validationLines(value: string | undefined) {
+  const commands = textLines(value, 10, 300).map((line) => line.split(/\s+/));
+  if (
+    commands.some(
+      ([executable, ...args]) =>
+        !validationExecutables.has(executable) ||
+        args.some((argument) => !/^[A-Za-z0-9_./:@=,+-]+$/.test(argument) || argument.includes("..")),
+    )
+  )
+    throw new ValidationFailedError(
+      "Validation commands must use npm, pnpm, yarn, bun, npx, or node with simple repository-local arguments",
+    );
+  return commands;
 }

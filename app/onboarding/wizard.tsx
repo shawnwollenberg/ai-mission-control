@@ -142,7 +142,7 @@ export default function OnboardingWizard({
         </section>
       )}
       <ol className="onboarding-steps onboarding-steps-five">
-        {["Create account", "Create workspace", "Connect agent", "Launch first mission", "Watch execution"].map(
+        {["Create account", "Create workspace", "Connect agent", "Launch mission", "Watch execution"].map(
           (label, index) => (
             <li className={index < stage ? "complete" : index === stage ? "active" : ""} key={label}>
               <span>{index < stage ? "✓" : "○"}</span>
@@ -277,7 +277,7 @@ export default function OnboardingWizard({
               ✓ Mission Agent connected
               <br />✓ {connected.repository_count} {connected.repository_count === 1 ? "repository" : "repositories"}{" "}
               registered
-              <br />✓ Ready to launch your first mission
+              <br />✓ Ready to launch a repository mission
             </p>
             <p>Your Mission Agent can manage multiple repositories from this computer.</p>
             <details className="connection-details">

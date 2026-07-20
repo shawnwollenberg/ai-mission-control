@@ -423,6 +423,18 @@ Mission Agent is the outbound-only local runtime. Pull assignments use bounded l
 
 Completion requires a fresh production user to connect behind NAT, confirm pull readiness, register a safe local repository, launch the starter analysis mission, observe live progress, receive a genuine Markdown artifact, restart without duplicate work, revoke access, and reconnect. The hackathon evidence package begins only after this acceptance succeeds.
 
+### Repository Change Missions — approved 2026-07-20
+
+**Goal:** Turn the proven read-only repository analysis into an approval-gated implementation workflow without expanding Mission Control's permanent authority.
+
+**Boundary:** A user selects Change Repository, supplies an editable objective, acceptance criteria, and optional allowlisted validation commands. Codex first creates a read-only implementation plan. Mission Control then requires an explicit `repository.modify` approval before the local Mission Agent creates an isolated `mission/*` branch and Git worktree. Codex may modify only that worktree. The runtime gathers validation output and diff evidence, creates one local commit, and stops at human review.
+
+**Permanent prohibitions:** No automatic push, pull request, merge, deployment, infrastructure or secret modification, transaction signing, or transaction submission. The registered source branch and worktree must remain unchanged.
+
+**Canonical truth:** Existing mission, task, execution, approval, progress, artifact, and completion events remain authoritative. Worktree paths, lease tokens, and restart checkpoints are bounded operational state and cannot independently authorize or complete work.
+
+**Acceptance:** Demonstrate the plan before approval, prove no write occurs before approval, approve the exact repository/base/objective action, produce an isolated local branch and commit, show changed files/full diff/validation evidence, preserve the original branch, and recover safely from a restarted Mission Agent.
+
 ## Cross-phase test matrix
 
 - Unit: transitions, dependency resolution, policy, health, retry classification, schemas, serialization.

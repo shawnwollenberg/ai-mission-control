@@ -3,6 +3,7 @@ import test from "node:test";
 import { evaluatePolicy, POLICY_VERSION } from "../policy/policy-engine.ts";
 import { classifyCommand, commandPolicy } from "../policy/command-classifier.ts";
 import { enforceExecutionBudget } from "../policy/execution-budget.ts";
+import { evaluateRemoteApproval } from "../policy/remote-approval-policy.ts";
 
 const base = {
   environment: "development",
@@ -88,4 +89,18 @@ test("disabled agent and invalid pull request target are denied", () => {
       .outcome,
     "deny",
   );
+});
+
+test("repository modification requires approval while merge, deploy, infrastructure, secrets, and transactions remain denied", () => {
+  assert.equal(evaluateRemoteApproval("repository.modify").outcome, "require_approval");
+  for (const action of [
+    "repository.merge",
+    "deployment.start",
+    "infrastructure.modify",
+    "secret.access",
+    "transaction.sign",
+    "transaction.submit",
+  ]) {
+    assert.equal(evaluateRemoteApproval(action).outcome, "deny");
+  }
 });

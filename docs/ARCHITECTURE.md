@@ -151,6 +151,14 @@ Resource allocation: mission-scoped resources are required or consumed by object
 4. Fast perceived response
 5. Honest labeling of controlled or simulated behavior
 
+## Repository Change Mission boundary
+
+Repository changes reuse the existing mission/task/execution/approval/artifact architecture. The server issues a `repository_change` assignment only for a registered repository and compatible pull agent. Mission Agent creates a read-only plan, then emits `ExecutionApprovalRequested` for the exact `repository.modify` action. An approval decision is checked over the signed assignment channel and `ExecutionResumed` is appended only after a grant.
+
+Write execution occurs in a local Git worktree created from the recorded base commit on a `mission/*` branch. Codex receives `workspace-write` access only inside that worktree. Validation commands are parsed server-side and restricted to an allowlist; arbitrary shell evaluation is not used. The runtime collects a plan, execution log, patch, validation output, and review summary before one local commit. It verifies that the registered source branch and worktree did not change.
+
+Canonical mission, task, execution, approval, progress, artifact, and completion events supply user-visible truth. Pull leases, local worktree locations, and restart files are operational coordination only. No new independent product state is introduced. Push, PR creation, merge, deployment, infrastructure/secret changes, and transaction operations remain unavailable.
+
 ## Open questions
 
 - Where will the demo run and what network access can be assumed?

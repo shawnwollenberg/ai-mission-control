@@ -173,9 +173,11 @@ export async function handleRequestRemoteExecution(input: {
         required_capabilities: string[];
         domain: string;
         required_resources: RequiredResource[];
+        approval_requirements: { missionType?: string; writeApprovalRequired?: boolean };
+        verification_requirements: string[];
       }
     >(
-      `SELECT t.mission_id,t.status,t.current_attempt,t.timeout_seconds,t.name,t.instructions,t.expected_output,t.required_capabilities,t.required_resources,m.domain FROM task_projections t JOIN mission_projections m ON m.workspace_id=t.workspace_id AND m.mission_id=t.mission_id WHERE t.workspace_id=$1 AND t.task_id=$2`,
+      `SELECT t.mission_id,t.status,t.current_attempt,t.timeout_seconds,t.name,t.instructions,t.expected_output,t.required_capabilities,t.required_resources,t.approval_requirements,t.verification_requirements,m.domain FROM task_projections t JOIN mission_projections m ON m.workspace_id=t.workspace_id AND m.mission_id=t.mission_id WHERE t.workspace_id=$1 AND t.task_id=$2`,
       [input.actor.workspaceId, input.taskId],
     )
   ).rows[0];
@@ -213,29 +215,36 @@ export async function handleRequestRemoteExecution(input: {
     timeoutSeconds,
     idempotencyKey: input.commandId,
   });
+  const repositoryChange = task.approval_requirements?.missionType === "change";
   const taskEnvelope = {
+    missionType: repositoryChange ? "repository_change" : "repository_analysis",
     taskObjective: task.name,
     instructions: task.instructions,
     expectedOutput: task.expected_output,
     allowedCapabilities: task.required_capabilities,
     allowedResources: task.required_resources,
     prohibitedActions: [
-      "file.modify",
-      "package.install",
-      "git.commit",
+      ...(!repositoryChange ? ["file.modify", "package.install", "git.commit"] : []),
       "git.push",
       "pull_request.create",
-      "merge",
-      "deploy",
+      "repository.merge",
+      "deployment.execute",
       "production.remediate",
       "secret.access",
       "transaction.sign",
       "transaction.submit",
     ],
-    constraints: ["read_only_repository_analysis"],
+    constraints: repositoryChange
+      ? ["write_requires_approval", "isolated_worktree", "local_commit_only", "no_network_side_effects"]
+      : ["read_only_repository_analysis"],
+    validationCommands: repositoryChange
+      ? task.verification_requirements.map((command) => command.split(/\s+/))
+      : [],
     timeoutSeconds,
     heartbeatIntervalSeconds: 30,
-    artifactRequirements: ["repository-analysis-markdown"],
+    artifactRequirements: repositoryChange
+      ? ["implementation_plan", "git_patch", "validation_results", "change_summary"]
+      : ["repository_analysis"],
   };
   const result = await appendEvents({
     workspaceId: input.actor.workspaceId,

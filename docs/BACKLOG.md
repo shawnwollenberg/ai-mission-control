@@ -98,3 +98,14 @@ Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner,
 - [ ] Add durable pull delivery for agents behind NAT or localhost.
 - [ ] Execute and complete the preselected first mission through the newly connected agent.
 - [ ] Validate an unknown user reaching an artifact without assistance in under ten minutes.
+
+## Repository Change Missions
+
+- [x] Keep Analyze Repository explicitly read-only.
+- [x] Add Change Repository with editable objective, acceptance criteria, and validation instructions.
+- [x] Produce a read-only implementation-plan artifact before requesting write authority.
+- [x] Require a scoped human `repository.modify` approval.
+- [x] Execute approved changes on an isolated `mission/*` worktree and branch.
+- [x] Capture changed files, full diff, validation output, summary, branch, base commit, and local commit evidence.
+- [x] Preserve prohibitions on push, pull-request creation, merge, deploy, infrastructure, secrets, and transactions.
+- [ ] Validate the full workflow against a disposable production repository and fresh account.

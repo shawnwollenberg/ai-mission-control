@@ -1,6 +1,6 @@
 # Mission Control Agent Protocol 1.0 — Pull Transport
 
-**Status:** Approved implementation boundary — 2026-07-19
+**Status:** Approved implementation boundary — updated 2026-07-20
 
 Mission Agent is the outbound-only local runtime for Mission Control. Codex, Hermes, Claude Code, and generic command adapters sit behind this runtime. The first execution-capable adapter is Codex, limited to read-only repository analysis.
 
@@ -38,6 +38,8 @@ Assignment payloads contain correlation IDs, objective, bounded instructions, ex
 ## Codex adapter safety
 
 The initial adapter resolves the workspace repository ID only through Mission Agent’s protected local configuration. It validates real paths and symlink boundaries, records Git branch/commit evidence, snapshots the repository before and after execution, invokes Codex with a read-only prompt and timeout, and rejects any filesystem change. It cannot install packages, commit, push, create a pull request, merge, deploy, access secrets, or run an arbitrary server-supplied shell command.
+
+Mission Agent 0.3.0 adds the separately selected `repository_change` assignment. It plans in the source repository under the read-only sandbox, submits the plan with a `repository.modify` approval request, and polls the approval through the signed leased-assignment channel. Only a grant permits creation of an isolated `mission/*` worktree and a workspace-write Codex invocation. The runtime accepts only parsed allowlisted validation commands, uploads review evidence, creates one local commit, and verifies the source branch and worktree are unchanged. It never pushes, creates a pull request, merges, deploys, changes infrastructure or secrets, or signs/submits transactions.
 
 ## Recovery and cancellation
 

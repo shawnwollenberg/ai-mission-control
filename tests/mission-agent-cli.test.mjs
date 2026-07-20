@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import test from "node:test";
 
 const run = promisify(execFile);
-const script = resolve("public/mission-agent-0.2.3.mjs");
+const script = resolve("public/mission-agent-0.3.0.mjs");
 const baseConfig = {
   missionControlUrl: "https://app.missioncontrol.example",
   workspaceId: "3ae5d14a-f57a-4a8a-bc98-65d58b99a214",
@@ -106,5 +106,18 @@ test("stable launcher installation preserves credentials and repositories", asyn
     env: { ...process.env, MISSION_AGENT_HOME: home, MISSION_AGENT_BIN_DIR: bin },
   });
   assert.deepEqual(JSON.parse(await readFile(join(home, "config.json"), "utf8")), baseConfig);
-  assert.match(await readFile(join(bin, "mission-agent"), "utf8"), /mission-agent-0\.2\.3\.mjs/);
+  assert.match(await readFile(join(bin, "mission-agent"), "utf8"), /mission-agent-0\.3\.0\.mjs/);
+});
+
+test("change missions retain the approval, isolation, evidence, and no-push safety boundary", async () => {
+  const source = await readFile(script, "utf8");
+  assert.match(source, /ExecutionApprovalRequested/);
+  assert.match(source, /actionType: "repository\.modify"/);
+  assert.match(source, /"worktree", "add"/);
+  assert.match(source, /"workspace-write"/);
+  assert.match(source, /type: "git_patch"/);
+  assert.match(source, /type: "validation_results"/);
+  assert.match(source, /Local commit/);
+  assert.doesNotMatch(source, /spawn(?:Sync)?\("git", \["push"/);
+  assert.doesNotMatch(source, /spawn(?:Sync)?\("gh", \["pr"/);
 });

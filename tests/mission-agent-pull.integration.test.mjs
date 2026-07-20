@@ -27,7 +27,7 @@ test.before(async () => {
     actor,
     name: "Mission Agent Codex",
     endpoint: "https://pull.invalid/messages",
-    capabilities: ["repository.read", "code.review", "artifact.create"],
+    capabilities: ["repository.read", "code.review", "artifact.create", "test.run"],
     supportedDomains: ["software_delivery"],
     deliveryMode: "pull",
     missionAgentAdapter: "codex",
@@ -143,6 +143,59 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
     assignmentId: recovered.assignment.assignment_id,
     leaseOwner: "replacement-runtime",
     leaseToken: recovered.leaseToken,
+  });
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionFailed",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: { classification: "test_cleanup", summary: "Finish the analysis fixture before change-mission testing." },
+    },
+    credential,
+  );
+});
+
+test("change mission assignment carries bounded write approval, validation, evidence, and permanent prohibitions", async () => {
+  const launched = await launchFirstRepositoryMission({
+    actor,
+    commandId: randomUUID(),
+    agentId: registration.agentId,
+    repositoryId: repository.repository_id,
+    missionType: "change",
+    objective: "Add a small health-check helper with focused tests",
+    acceptanceCriteria: "Helper returns the expected status\nTests cover success and failure",
+    validationInstructions: "npm test\nnpm run lint",
+  });
+  const claimed = await claimNextAssignment({ credential, leaseOwner: "change-runtime" });
+  assert.ok(claimed);
+  assert.equal(claimed.assignment.execution_id, launched.executionId);
+  assert.equal(claimed.assignment.payload.missionType, "repository_change");
+  assert.ok(claimed.assignment.payload.constraints.includes("write_requires_approval"));
+  assert.ok(claimed.assignment.payload.constraints.includes("isolated_worktree"));
+  assert.ok(claimed.assignment.payload.constraints.includes("local_commit_only"));
+  assert.deepEqual(claimed.assignment.payload.validationCommands, [
+    ["npm", "test"],
+    ["npm", "run", "lint"],
+  ]);
+  assert.ok(claimed.assignment.payload.artifactRequirements.includes("git_patch"));
+  assert.ok(claimed.assignment.payload.prohibitedActions.includes("git.push"));
+  assert.ok(claimed.assignment.payload.prohibitedActions.includes("pull_request.create"));
+  assert.ok(claimed.assignment.payload.prohibitedActions.includes("deployment.execute"));
+  assert.ok(!claimed.assignment.payload.prohibitedActions.includes("file.modify"));
+  await releaseAssignment({
+    credential,
+    assignmentId: claimed.assignment.assignment_id,
+    leaseOwner: "change-runtime",
+    leaseToken: claimed.leaseToken,
   });
 });
 

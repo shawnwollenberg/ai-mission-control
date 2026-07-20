@@ -5,6 +5,7 @@ const allowed = new Set([
   "execution.extend_timeout",
   "resource.request_readonly",
   "mission.accept_reorganization",
+  "repository.modify",
 ]);
 const prohibited = new Set([
   "transaction.sign",

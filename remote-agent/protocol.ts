@@ -22,6 +22,7 @@ export const inboundMessageTypes = [
   "AgentAssignmentLeaseRenewed",
   "AgentAssignmentCancellationChecked",
   "AgentAssignmentReleased",
+  "AgentApprovalStatusChecked",
   "AgentRepositoryRegistered",
   "AgentRepositoryRemoved",
 ] as const;

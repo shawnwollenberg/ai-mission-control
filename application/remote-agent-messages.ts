@@ -330,7 +330,22 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     case "ExecutionPaused":
       await transition(message, credential, "paused");
       return { status: "accepted" };
-    case "ExecutionResumed":
+    case "ExecutionResumed": {
+      const approval = (
+        await getDatabasePool().query<{ approval_id: string; status: string; action_hash: string }>(
+          `SELECT approval_id,status,action_hash FROM approval_projections
+           WHERE workspace_id=$1 AND execution_id=$2 AND agent_id=$3 AND approval_type='remote_workflow'
+           ORDER BY created_at DESC LIMIT 1`,
+          [credential.workspace_id, message.executionId, credential.agent_id],
+        )
+      ).rows[0];
+      if (
+        !approval ||
+        approval.status !== "granted" ||
+        String(message.payload.approvalId ?? "") !== approval.approval_id ||
+        String(message.payload.actionHash ?? "") !== approval.action_hash
+      )
+        throw new ValidationFailedError("Execution cannot resume without the exact granted approval");
       await transition(message, credential, "running");
       await handleTaskTransition({
         actor: actor(credential),
@@ -340,6 +355,7 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
         details: { approvalDecision: "granted" },
       });
       return { status: "accepted" };
+    }
     case "ExecutionSucceeded": {
       if (current.delivery_mode === "pull") {
         const artifactCount = await getDatabasePool().query<{ count: number }>(

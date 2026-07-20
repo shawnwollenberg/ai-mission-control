@@ -176,3 +176,9 @@ Its first acceptance test appends `mission.created`, `plan.created`, `task.creat
 - What data proves the demo-environment promotion boundary could not be crossed before approval?
 - Which events must be persisted versus generated for presentation?
 - How are estimates calculated and revised without implying false precision?
+
+## Repository Change Mission event flow
+
+The workflow uses the existing canonical vocabulary: mission/task creation and assignment, execution request/accept/progress, `approval.requested`, `approval.granted|denied|expired`, execution resume/failure/success, artifact creation, and task/mission completion. Progress stages identify planning, approval wait, worktree preparation, validation, and review readiness; they do not grant authority.
+
+The approval action hash binds `repository.modify` to the registered repository, base branch, base commit, and objective. The implementation plan is evidence on the request. Subsequent artifacts record the patch, validation results, execution log, branch, and local commit. Replaying these events reconstructs the same visible result without recreating a worktree, rerunning Codex, committing, pushing, merging, or deploying.
