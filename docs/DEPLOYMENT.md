@@ -32,6 +32,8 @@ PostgreSQL stores the canonical append-only event log, commands, projections, au
 
 Mission Control agents may not autonomously deploy, merge, modify infrastructure or secrets, sign transactions, or submit transactions. A human-approved release of Mission Control itself is a development activity outside that agent capability boundary.
 
+Repository publication uses one explicit `Publish for Review` owner approval. The existing Mission Agent performs the exact evidence-bound branch push and PR creation with the owner's local GitHub authentication; Mission Control verifies the provider result. No GitHub token is added to the web or action-worker container. This approval never authorizes merge or deployment.
+
 ## Required local tools
 
 - Node.js 22
