@@ -95,6 +95,18 @@ test("a user-named Codex Mission Agent is not mislabeled as Hermes", async () =>
   assert.doesNotMatch(source, /agentName === "Codex"/);
 });
 
+test("mission status feels live while remaining accessible and explicit", async () => {
+  const source = await readFile("app/missions/[missionId]/durable-mission-console.tsx", "utf8");
+  const styles = await readFile("app/globals.css", "utf8");
+  assert.match(source, /status-symbol-running/);
+  assert.match(source, /status-symbol-completed/);
+  assert.match(source, /status-symbol-failed/);
+  assert.match(source, /role="status"/);
+  assert.match(source, /Mission status:/);
+  assert.match(styles, /mission-status-pulse 1\.8s ease-in-out infinite/);
+  assert.match(styles, /prefers-reduced-motion: reduce/);
+});
+
 test("recommendations expose traceable one-click Change Mission creation", async () => {
   const page = await readFile(new URL("../app/recommendations/[recommendationId]/page.tsx", import.meta.url), "utf8");
   const actions = await readFile(

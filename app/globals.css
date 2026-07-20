@@ -89,6 +89,10 @@ body {
     animation: none;
     border-right: 0;
   }
+  .status-symbol-running {
+    animation: none;
+    opacity: 1;
+  }
 }
 .public-header nav {
   display: flex;
@@ -1181,17 +1185,57 @@ select:focus {
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.14em;
+  align-items: center;
+  display: inline-flex;
+  gap: 9px;
+  justify-content: center;
 }
 .status-running {
-  color: var(--signal);
-  border-color: rgba(28, 224, 214, 0.35);
+  color: var(--amber);
+  border-color: rgba(244, 189, 98, 0.5);
 }
 .status-delayed {
   color: var(--amber);
   border-color: rgba(244, 189, 98, 0.5);
 }
-.status-complete {
-  color: #9aa39e;
+.status-completed {
+  color: #76e6a4;
+  border-color: rgba(118, 230, 164, 0.42);
+}
+.status-failed {
+  color: #ff7d7d;
+  border-color: rgba(255, 125, 125, 0.5);
+}
+.status-symbol {
+  display: inline-grid;
+  flex: 0 0 auto;
+  height: 14px;
+  place-items: center;
+  width: 14px;
+}
+.status-symbol-running {
+  animation: mission-status-pulse 1.8s ease-in-out infinite;
+  background: var(--amber);
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(244, 189, 98, 0.45);
+  height: 8px;
+  width: 8px;
+}
+.status-symbol-completed,
+.status-symbol-failed {
+  font-size: 15px;
+  line-height: 1;
+}
+@keyframes mission-status-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    box-shadow: 0 0 0 0 rgba(244, 189, 98, 0.42);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 0 5px rgba(244, 189, 98, 0);
+  }
 }
 .mission-facts {
   display: grid;

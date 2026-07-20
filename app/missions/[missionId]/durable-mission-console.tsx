@@ -47,6 +47,22 @@ const modeDescription = (mode: string, executions: ExecutionReadModel[]) =>
       : mode === "live_codex"
         ? "Connected work is isolated and supervised."
         : "No connected agent is running.";
+const missionStatusSymbol = (status: string) => {
+  if (status === "running") return <span className="status-symbol status-symbol-running" aria-hidden="true" />;
+  if (status === "completed")
+    return (
+      <span className="status-symbol status-symbol-completed" aria-hidden="true">
+        ✓
+      </span>
+    );
+  if (status === "failed")
+    return (
+      <span className="status-symbol status-symbol-failed" aria-hidden="true">
+        ×
+      </span>
+    );
+  return null;
+};
 
 export default function DurableMissionConsole({
   initialMission,
@@ -189,7 +205,14 @@ export default function DurableMissionConsole({
           <h1>{mission.name}</h1>
           <p>{mission.objective}</p>
         </div>
-        <div className={`status-pill status-${mission.status}`}>{mission.status}</div>
+        <div
+          className={`status-pill status-${mission.status}`}
+          role="status"
+          aria-label={`Mission status: ${mission.status}`}
+        >
+          {missionStatusSymbol(mission.status)}
+          <span>{mission.status}</span>
+        </div>
       </header>
       <section className="execution-mode">
         <span>Execution mode</span>
