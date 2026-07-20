@@ -229,12 +229,102 @@ test("change mission assignment carries bounded write approval, validation, evid
   assert.ok(claimed.assignment.payload.prohibitedActions.includes("pull_request.create"));
   assert.ok(claimed.assignment.payload.prohibitedActions.includes("deployment.execute"));
   assert.ok(!claimed.assignment.payload.prohibitedActions.includes("file.modify"));
-  await releaseAssignment({
+  const lease = {
     credential,
     assignmentId: claimed.assignment.assignment_id,
     leaseOwner: "change-runtime",
     leaseToken: claimed.leaseToken,
-  });
+  };
+  await acknowledgeAssignment(lease);
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionAccepted",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: { stage: "assignment_received", summary: "Change assignment accepted" },
+    },
+    credential,
+  );
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionProgressReported",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: { stage: "waiting_for_write_approval", summary: "Implementation plan ready", progressPercent: 20 },
+    },
+    credential,
+  );
+  const approval = await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionApprovalRequested",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: {
+        actionType: "repository.modify",
+        parameters: { repositoryId: repository.repository_id },
+        targetResource: `repository:${repository.repository_id}`,
+        riskExplanation: "Test the bounded write boundary.",
+        evidence: [{ artifactId: randomUUID(), kind: "implementation_plan" }],
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      },
+    },
+    credential,
+  );
+  assert.equal(approval.status, "approval_required");
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionFailed",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: { classification: "test_cleanup", summary: "Test terminal approval cleanup." },
+    },
+    credential,
+  );
+  assert.equal(
+    (
+      await getDatabasePool().query(
+        "SELECT status FROM approval_projections WHERE workspace_id=$1 AND approval_id=$2",
+        [workspaceId, approval.approvalId],
+      )
+    ).rows[0].status,
+    "expired",
+  );
 });
 
 test("disabled agents and emergency pause receive no work without cross-workspace leakage", async () => {

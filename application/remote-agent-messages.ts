@@ -8,7 +8,7 @@ import { stableUuid } from "@/lib/stable-id";
 import { coordinateAfterTask } from "@/application/mission-coordinator";
 import type { ProtocolEnvelope } from "@/remote-agent/protocol";
 import { sha256 } from "@/remote-agent/protocol";
-import { applyApprovalProjection, requestRemoteApproval } from "@/application/approval-commands";
+import { applyApprovalProjection, expireApproval, requestRemoteApproval } from "@/application/approval-commands";
 import { recordUsage } from "@/application/usage-budget";
 import { recordRepositoryRecommendations } from "@/application/recommendation-commands";
 import { recordRepositoryHealthAssessment } from "@/application/repository-health-commands";
@@ -507,6 +507,17 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     }
     case "ExecutionFailed":
       await transition(message, credential, "failed");
+      for (const row of (
+        await getDatabasePool().query<{ approval_id: string }>(
+          "SELECT approval_id FROM approval_projections WHERE workspace_id=$1 AND execution_id=$2 AND status='pending'",
+          [credential.workspace_id, message.executionId],
+        )
+      ).rows)
+        await expireApproval({
+          workspaceId: credential.workspace_id,
+          approvalId: row.approval_id,
+          actorId: "terminal-execution-cleanup",
+        });
       await handleTaskTransition({
         actor: actor(credential),
         commandId: stableUuid(`remote:${message.messageId}:task-failed`),
