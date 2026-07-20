@@ -125,8 +125,10 @@ Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner,
 - [x] Record Repository Intelligence as the next product milestone.
 - [x] Establish Repository Health, Timeline, Knowledge, trends, and action templates as the priority sequence.
 - [x] Require evidence-backed, versioned, rebuildable health claims.
-- [ ] Approve health dimensions, scoring weights, missing-data behavior, confidence, and freshness rules.
-- [ ] Define canonical repository observation and health-assessment events.
-- [ ] Define explicit mission/recommendation/validation/timeline relationship vocabulary.
+- [x] Approve health dimensions, scoring weights, missing-data behavior, confidence, and freshness rules.
+- [x] Define canonical repository observation and health-assessment events.
+- [x] Define explicit mission/recommendation/validation/timeline relationship vocabulary.
 - [ ] Define component identity, rename, merge, and stale-knowledge behavior.
-- [ ] Approve the smallest implementation slice and production acceptance test.
+- [x] Approve the smallest implementation slice and production acceptance test.
+- [x] Implement evidence-backed health assessments, history, repository dashboard, and timeline.
+- [ ] Validate two production analyses showing a comparable evidence-backed health trend.

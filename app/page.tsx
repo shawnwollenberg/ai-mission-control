@@ -31,8 +31,18 @@ export default async function LaunchPage() {
       );
     const repositories = (
       await getDatabasePool().query(
-        `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name FROM repositories r
+        `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name,
+          health.score health_score,health.confidence health_confidence,health.assessed_at health_assessed_at,
+          (SELECT count(*)::int FROM recommendation_projections recommendation
+           WHERE recommendation.workspace_id=r.workspace_id AND recommendation.repository_id=r.repository_id
+             AND recommendation.status IN ('open','accepted','in_progress')) actionable_recommendations
+         FROM repositories r
          JOIN agents a ON a.workspace_id=r.workspace_id AND r.allowed_agent_ids ? a.agent_id::text
+         LEFT JOIN LATERAL (
+           SELECT score,confidence,assessed_at FROM repository_health_assessments assessment
+           WHERE assessment.workspace_id=r.workspace_id AND assessment.repository_id=r.repository_id
+           ORDER BY assessed_at DESC LIMIT 1
+         ) health ON true
          WHERE r.workspace_id=$1 AND r.location_mode='mission_agent' AND r.disabled_at IS NULL AND a.status='active'
            AND a.last_heartbeat_at>now()-interval '5 minutes' AND a.pull_ready_at>now()-interval '5 minutes'
          ORDER BY r.updated_at DESC`,

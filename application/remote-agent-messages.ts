@@ -11,6 +11,8 @@ import { sha256 } from "@/remote-agent/protocol";
 import { applyApprovalProjection, requestRemoteApproval } from "@/application/approval-commands";
 import { recordUsage } from "@/application/usage-budget";
 import { recordRepositoryRecommendations } from "@/application/recommendation-commands";
+import { recordRepositoryHealthAssessment } from "@/application/repository-health-commands";
+import type { RepositoryObservation } from "@/domain/repository-health";
 
 type Credential = {
   workspace_id: string;
@@ -263,6 +265,8 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       const artifactKind = String(message.payload.artifactType ?? "report");
       const parsedRecommendations =
         artifactKind === "repository_recommendations" ? parseRepositoryRecommendations(body) : undefined;
+      const parsedHealth =
+        artifactKind === "repository_health_observations" ? parseRepositoryHealthObservations(body) : undefined;
       const artifact = await storeExecutionArtifact({
         workspaceId: credential.workspace_id,
         missionId: message.missionId!,
@@ -301,6 +305,21 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
           sourceExecutionId: message.executionId!,
           sourceArtifactId: artifact.artifactId,
           recommendations: parsedRecommendations!,
+        });
+      }
+      if (artifact.kind === "repository_health_observations") {
+        if (!current.repository_id) throw new ValidationFailedError("Repository health artifact requires a repository");
+        await recordRepositoryHealthAssessment({
+          actor: actor(credential),
+          commandId: stableUuid(`remote:${message.messageId}:repository-health`),
+          repositoryId: current.repository_id,
+          sourceMissionId: message.missionId!,
+          sourceExecutionId: message.executionId!,
+          sourceArtifactId: artifact.artifactId,
+          repositoryCommit: message.payload.repositoryCommit
+            ? String(message.payload.repositoryCommit).slice(0, 100)
+            : undefined,
+          observations: parsedHealth!,
         });
       }
       return { status: "accepted", artifactId: artifact.artifactId };
@@ -530,6 +549,56 @@ function parseRepositoryRecommendations(body: Buffer) {
       estimatedEffort: String(row.estimatedEffort ?? "Unknown").slice(0, 100),
       suggestedValidation: validation.slice(0, 10).map((x) => x.slice(0, 300)),
       acceptanceCriteria: acceptance.slice(0, 20).map((x) => x.slice(0, 300)),
+    };
+  });
+}
+
+function parseRepositoryHealthObservations(body: Buffer): RepositoryObservation[] {
+  let value: unknown;
+  try {
+    value = JSON.parse(body.toString("utf8"));
+  } catch {
+    throw new ValidationFailedError("Repository health artifact must be valid JSON");
+  }
+  if (!Array.isArray(value)) throw new ValidationFailedError("Repository health artifact must contain an array");
+  return value.slice(0, 70).map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item))
+      throw new ValidationFailedError("Repository health observation is invalid");
+    const row = item as Record<string, unknown>;
+    const dimension = String(row.dimension ?? "");
+    const status = String(row.status ?? "");
+    const severity = String(row.severity ?? "low");
+    if (
+      !(
+        ["architecture", "tests", "security", "technical_debt", "documentation", "dependencies", "ci"] as string[]
+      ).includes(dimension)
+    )
+      throw new ValidationFailedError("Repository health dimension is invalid");
+    if (!(["strength", "risk", "unknown"] as string[]).includes(status))
+      throw new ValidationFailedError("Repository health status is invalid");
+    if (!(["low", "medium", "high", "critical"] as string[]).includes(severity))
+      throw new ValidationFailedError("Repository health severity is invalid");
+    const evidence = Array.isArray(row.evidence)
+      ? row.evidence.slice(0, 20).map((entry) => {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry))
+            throw new ValidationFailedError("Repository health evidence is invalid");
+          const e = entry as Record<string, unknown>;
+          const path = String(e.path ?? "").trim();
+          if (!path || path.startsWith("/") || path.split("/").includes(".."))
+            throw new ValidationFailedError("Repository health evidence path is unsafe");
+          return {
+            path,
+            ...(Number.isInteger(e.line) && Number(e.line) > 0 ? { line: Number(e.line) } : {}),
+            ...(e.description ? { description: String(e.description).slice(0, 500) } : {}),
+          };
+        })
+      : [];
+    return {
+      dimension: dimension as RepositoryObservation["dimension"],
+      status: status as RepositoryObservation["status"],
+      severity: severity as RepositoryObservation["severity"],
+      summary: String(row.summary ?? "").slice(0, 500),
+      evidence,
     };
   });
 }

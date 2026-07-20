@@ -102,6 +102,15 @@ Whether all fields are needed in the MVP remains undecided.
 - `deployment.succeeded`
 - `deployment.failed`
 
+### Repository intelligence
+
+- `repository_health.assessed`
+- Existing `recommendation.created` and `recommendation.status_changed` events provide actionable health history.
+
+`repository_health.assessed` records repository, source mission/execution/artifact, observed commit, validated observations, deterministic dimension scores, overall score, confidence, and scoring version. Unknown dimensions carry a null score. Assessment history is immutable; a later analysis creates a new aggregate rather than rewriting an earlier score.
+
+Repository Timeline is derived from canonical repository-linked mission, recommendation, approval, artifact, and health events. It introduces no independent timeline event merely to duplicate existing facts.
+
 ## Core state machines
 
 Provisional only:

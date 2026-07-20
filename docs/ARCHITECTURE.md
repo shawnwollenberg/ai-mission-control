@@ -165,6 +165,10 @@ Repository Analysis may submit a bounded structured recommendation artifact. The
 
 Repository Health is the product abstraction for architecture quality, test posture, security findings, technical debt, open recommendations, CI, dependency freshness, documentation completeness, and recent mission activity. Health claims must be explainable projections citing canonical observations and artifacts. Individual agents consume Repository Knowledge and Health; they do not privately own authoritative memory.
 
+Repository Health 0.5 separates observation from calculation. Mission Agent may submit bounded, attributed observations for architecture, tests, security, technical debt, documentation, dependencies, and CI. The platform validates repository-relative evidence and applies the versioned deterministic `repository-health-v1` scoring function. Unknown dimensions remain unscored and lower confidence. A model cannot directly submit or modify a numeric health score.
+
+Each assessment is a canonical `repository_health` aggregate linked to the repository, source mission, execution, artifact, and observed commit. The disposable assessment projection retains comparable history rather than only the latest value. Repository Timeline is a read projection over repository-linked missions, recommendations, assessments, and approvals; it owns no separate timeline state and does not duplicate Git history.
+
 ## Open questions
 
 - Where will the demo run and what network access can be assumed?

@@ -17,6 +17,7 @@ import { applySavedViewProjection } from "../application/mission-search";
 import { applyAnomalyProjection } from "../application/anomaly-operations";
 import { applyEmergencyControlProjection } from "../application/emergency-controls";
 import { applyRecommendationProjection } from "../application/recommendation-projector";
+import { applyRepositoryHealthProjection } from "../application/repository-health-projector";
 const args = process.argv.slice(2);
 const value = (flag: string) => {
   const i = args.indexOf(flag);
@@ -76,6 +77,7 @@ async function snapshot(client: PoolClient) {
     anomaly_projections: "1,2",
     workspace_emergency_controls: "1",
     recommendation_projections: "1,2",
+    repository_health_assessments: "1,2",
   };
   const out: Record<string, unknown> = {};
   for (const [table, order] of Object.entries(tables))
@@ -92,6 +94,7 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
   const params = workspace ? [workspace] : [];
   await client.query(`DELETE FROM approval_projections${suffix}`, params);
   await client.query(`DELETE FROM recommendation_projections${suffix}`, params);
+  await client.query(`DELETE FROM repository_health_assessments${suffix}`, params);
   await client.query(`DELETE FROM action_request_projections${suffix}`, params);
   await client.query(`DELETE FROM execution_projections${suffix}`, params);
   await client.query(`DELETE FROM notification_projections${suffix}`, params);
@@ -132,6 +135,7 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
     else if (event.aggregateType === "workspace_emergency_controls")
       await applyEmergencyControlProjection(client, [event]);
     else if (event.aggregateType === "recommendation") await applyRecommendationProjection(client, [event]);
+    else if (event.aggregateType === "repository_health") await applyRepositoryHealthProjection(client, [event]);
   }
 }
 async function main() {

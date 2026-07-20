@@ -73,9 +73,13 @@ export async function launchFirstRepositoryMission(input: {
           ? "Local commit permitted; push, pull request, merge, deployment, infrastructure, and secret access prohibited"
           : "No package installation, commit, push, pull request, merge, deployment, or secret access",
       ],
-      resolvedInputs: input.sourceRecommendationId
-        ? { sourceRecommendationId: input.sourceRecommendationId, sourceEvidence: input.sourceEvidence ?? [] }
-        : {},
+      resolvedInputs: {
+        repositoryId: input.repositoryId,
+        missionType,
+        ...(input.sourceRecommendationId
+          ? { sourceRecommendationId: input.sourceRecommendationId, sourceEvidence: input.sourceEvidence ?? [] }
+          : {}),
+      },
     },
   });
   const taskId = randomUUID();

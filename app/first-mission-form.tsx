@@ -4,7 +4,17 @@ import { FormEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { BrandSprite } from "@/app/brand-assets";
 
-type Repository = { repository_id: string; name: string; default_branch: string; agent_id: string; agent_name: string };
+type Repository = {
+  repository_id: string;
+  name: string;
+  default_branch: string;
+  agent_id: string;
+  agent_name: string;
+  health_score: number | null;
+  health_confidence: number | null;
+  health_assessed_at: string | null;
+  actionable_recommendations: number;
+};
 export default function FirstMissionForm({ repositories }: { repositories: Repository[] }) {
   const [missionType, setMissionType] = useState<"analysis" | "change">("analysis");
   const [repositoryId, setRepositoryId] = useState(repositories[0]?.repository_id ?? "");
@@ -56,6 +66,34 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
           Run Demo
         </Link>
       </nav>
+      <section className="repository-dashboard">
+        <div className="panel-heading">
+          <div>
+            <p className="section-label">Daily control plane</p>
+            <h2>Repositories</h2>
+          </div>
+          <span>{repositories.length} connected</span>
+        </div>
+        <div className="repository-card-grid">
+          {repositories.map((repository) => (
+            <Link href={`/repositories/${repository.repository_id}`} key={repository.repository_id}>
+              <span>
+                {repository.name} · {repository.default_branch}
+              </span>
+              <strong>
+                {repository.health_score ?? "—"}
+                <small>/ 100</small>
+              </strong>
+              <p>{repository.actionable_recommendations} open recommendations</p>
+              <small>
+                {repository.health_assessed_at
+                  ? `${repository.health_confidence}% confidence · ${new Date(repository.health_assessed_at).toLocaleDateString()}`
+                  : "Run an analysis to establish health"}
+              </small>
+            </Link>
+          ))}
+        </div>
+      </section>
       <section className="launch-grid">
         <div className="launch-copy">
           <p className="section-label">Live repository mission</p>

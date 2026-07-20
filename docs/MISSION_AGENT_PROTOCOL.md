@@ -43,6 +43,8 @@ Mission Agent 0.3.1 adds the separately selected `repository_change` assignment.
 
 Mission Agent 0.4.0 adds a second read-only analysis pass that emits a bounded JSON recommendation artifact. Mission Control validates that artifact before creating canonical repository Recommendation aggregates. Invalid JSON, missing evidence, unsafe paths, unsupported impact/risk values, or oversized recommendation sets fail the analysis rather than persisting untrusted model text as product state.
 
+Mission Agent 0.5.0 extends that same read-only pass with bounded observations across architecture, tests, security, technical debt, documentation, dependencies, and CI. Mission Control validates repository-relative evidence and calculates the numeric Repository Health score itself using versioned deterministic rules. Missing dimensions remain unknown and reduce confidence; they are not treated as failures. Each assessment is a canonical event-derived snapshot linked to its source mission, execution, artifact, and repository commit.
+
 ## Recovery and cancellation
 
 Mission Agent persists only assignment identity, lease metadata, stage, artifact checksum, and acknowledgement state. On restart it heartbeats, reconciles the active assignment, renews a still-valid lease, and retransmits idempotent results. Expired leases become reclaimable; terminal results remain terminal. Cancellation polling stops new stages, asks the adapter to stop, preserves bounded evidence, acknowledges cancellation, and releases the lease.
