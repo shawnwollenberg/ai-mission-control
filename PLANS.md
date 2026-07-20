@@ -1,5 +1,7 @@
 # Mission Control — Production Readiness Execution Plan
 
+The long-term product direction is maintained in `docs/INTERNAL_PRODUCT_ENGINEERING_ROADMAP.md`. It guides architecture and phase sequencing but does not authorize implementation or expand agent authority; the approved boundaries in this plan remain controlling.
+
 **Status:** Phase 3 complete at `76ea49b`; Phase 4 remote-agent integration approved — 2026-07-18
 
 **Planning date:** 2026-07-18
