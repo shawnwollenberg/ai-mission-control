@@ -10,10 +10,11 @@ test("authenticated launch is not prefilled with the ServicePilot demo", async (
   assert.match(plan, /createObjectivePlan/);
 });
 
-test("a workspace without a connected pull agent enters onboarding", async () => {
+test("a workspace without a connected pull agent gets an explicit first-run home", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.match(page, /delivery_mode='pull'/);
-  assert.match(page, /redirect\("\/onboarding"\)/);
+  assert.match(page, /Connect your first agent/);
+  assert.match(page, /FirstRunHome/);
   assert.match(page, /last_heartbeat_at IS NOT NULL/);
   assert.match(page, /pull_ready_at IS NOT NULL/);
 });

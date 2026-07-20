@@ -54,13 +54,13 @@ test("onboarding requires heartbeat, pull readiness, and a repository", () => {
 test("connection UI keeps the payload masked and advanced setup collapsed", async () => {
   const source = await readFile(new URL("../app/onboarding/wizard.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(source, /secure one-time payload — use Copy/);
-  assert.match(source, /mission-control secure connect ••••••••••••/);
+  assert.match(source, /connect '\[protected credential hidden\]'/);
   assert.match(source, /Advanced: connect a repository by absolute path/);
   assert.doesNotMatch(source, /<details className="connection-details" open>/);
   assert.match(source, /navigator\.clipboard\.writeText\(command\)/);
   assert.match(source, /Copy connection command/);
   assert.match(source, /navigator\.clipboard\.writeText\("mission-agent doctor"\)/);
-  assert.match(source, /Still waiting for Mission Agent/);
+  assert.match(source, /Still waiting\?/);
   assert.match(
     source,
     /This page will advance automatically once Mission Agent is connected and ready to receive work\./,

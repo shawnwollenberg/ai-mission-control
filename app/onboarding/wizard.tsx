@@ -55,6 +55,7 @@ export default function OnboardingWizard({
   const stage = connected ? 3 : 2;
   const environmentName = connection?.agentName.split(" – ")[0] ?? "your computer";
   const adapterName = choices.find((item) => item.id === choice)?.label ?? "Agent";
+  const commandPreview = connection?.command.replace(/ connect '[^']+'/g, " connect '[protected credential hidden]'");
 
   useEffect(() => {
     if (!connection || connected) return;
@@ -121,7 +122,6 @@ export default function OnboardingWizard({
   }
 
   const statusItems = [
-    [progress.generated, "Connection command generated"],
     [progress.installed, "Mission Agent installed"],
     [progress.heartbeat, "Signed heartbeat received"],
     [progress.pullReady, "Assignment channel ready"],
@@ -199,7 +199,7 @@ export default function OnboardingWizard({
               <div>
                 <strong>Copy and run the command below.</strong>
                 <div className="command-copy">
-                  <code aria-label="Masked secure connection command">mission-control secure connect ••••••••••••</code>
+                  <code aria-label="Connection command with protected credential hidden">{commandPreview}</code>
                   <button aria-label="Copy complete connection command" onClick={() => copyCommand()}>
                     {copied === "default" ? "Copied" : "Copy connection command"}
                   </button>
@@ -231,7 +231,7 @@ export default function OnboardingWizard({
               <summary>Advanced: connect a repository by absolute path</summary>
               <p>Use this when you do not want to change directories before connecting.</p>
               <div className="command-copy">
-                <code>mission-agent connect --repository /absolute/path/to/repository</code>
+                <code>{commandPreview} --repository /absolute/path/to/repository</code>
                 <button
                   aria-label="Copy complete connection command with repository path"
                   onClick={() => copyCommand("advanced")}
@@ -240,29 +240,27 @@ export default function OnboardingWizard({
                 </button>
               </div>
             </details>
-            <details className="connection-details" open={waitingLonger}>
-              <summary>{waitingLonger ? "Still waiting for Mission Agent" : "Troubleshooting"}</summary>
-              <p>Make sure:</p>
-              <ul>
-                <li>You ran the command inside a Git repository.</li>
-                <li>Node.js and Git are installed.</li>
-                <li>Your computer can reach app.missioncontrol.wallyweb.com.</li>
-              </ul>
-              <div className="troubleshooting-actions">
-                <button onClick={() => copyCommand()}>Copy command again</button>
-                <button aria-label="Copy Mission Agent diagnostics command" onClick={copyDiagnostics}>
-                  {copied === "doctor" ? "Diagnostics command copied" : "Run connection diagnostics"}
-                </button>
-                <Link href="/docs/mission-agent">Open troubleshooting</Link>
-              </div>
-            </details>
-            <aside className="stable-command-note">
-              <strong>After setup</strong>
-              <p>The long command is only needed for the initial installation. After setup, use:</p>
-              <code>mission-agent status</code>
-              <code>mission-agent repository add /path/to/another/repository</code>
-              <code>mission-agent doctor</code>
-            </aside>
+            {waitingLonger && (
+              <details className="connection-details">
+                <summary>Still waiting?</summary>
+                <p>Make sure:</p>
+                <ul>
+                  <li>You ran the command inside a Git repository.</li>
+                  <li>Node.js and Git are installed.</li>
+                  <li>Your computer can reach app.missioncontrol.wallyweb.com.</li>
+                </ul>
+                <div className="troubleshooting-actions">
+                  <button onClick={() => copyCommand()}>Copy command again</button>
+                  {progress.installed && (
+                    <button aria-label="Copy Mission Agent diagnostics command" onClick={copyDiagnostics}>
+                      {copied === "doctor" ? "Diagnostics command copied" : "Run connection diagnostics"}
+                    </button>
+                  )}
+                  <Link href="/docs/mission-agent">Open troubleshooting</Link>
+                  <button onClick={createConnection}>Regenerate connection command</button>
+                </div>
+              </details>
+            )}
             {error && (
               <p className="form-error" role="alert">
                 {error}
@@ -282,6 +280,12 @@ export default function OnboardingWizard({
               <br />✓ Ready to launch your first mission
             </p>
             <p>Your Mission Agent can manage multiple repositories from this computer.</p>
+            <details className="connection-details">
+              <summary>Useful Mission Agent commands</summary>
+              <code>mission-agent status</code>
+              <code>mission-agent repository add /path/to/another/repository</code>
+              <code>mission-agent doctor</code>
+            </details>
             <div className="first-mission-card">
               <div>
                 <p className="section-label">Next</p>

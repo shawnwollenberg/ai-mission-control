@@ -5,7 +5,7 @@ import AgentConnectWizard from "./agent-connect-wizard";
 import { PublicShell } from "./public-site";
 import FirstMissionForm from "./first-mission-form";
 import { getDatabasePool } from "@/lib/database";
-import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -15,25 +15,31 @@ export default async function LaunchPage({ searchParams }: { searchParams: Promi
   if (host?.startsWith("app.")) {
     const identity = await requirePageIdentity("/");
     const query = await searchParams;
-    const connectedAgents = await getDatabasePool().query(
-      `SELECT 1 FROM agents WHERE workspace_id=$1 AND delivery_mode='pull' AND status='active'
-       AND last_heartbeat_at IS NOT NULL AND pull_ready_at IS NOT NULL LIMIT 1`,
-      [identity.workspaceId],
-    );
-    if (!connectedAgents.rowCount) redirect("/onboarding");
+    const state = (
+      await getDatabasePool().query(
+        `SELECT w.name,
+          (SELECT count(*)::int FROM agents a WHERE a.workspace_id=w.id AND a.delivery_mode='pull' AND a.status='active' AND a.last_heartbeat_at IS NOT NULL AND a.pull_ready_at IS NOT NULL) ready_agents,
+          (SELECT count(*)::int FROM repositories r WHERE r.workspace_id=w.id AND r.location_mode='mission_agent' AND r.disabled_at IS NULL) repositories,
+          (SELECT count(*)::int FROM mission_projections m WHERE m.workspace_id=w.id AND m.status='completed') completed_missions
+         FROM workspaces w WHERE w.id=$1`,
+        [identity.workspaceId],
+      )
+    ).rows[0];
+    if (!state.ready_agents) return <FirstRunHome workspaceName={state.name} />;
+    const repositories = (
+      await getDatabasePool().query(
+        `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name FROM repositories r
+         JOIN agents a ON a.workspace_id=r.workspace_id AND r.allowed_agent_ids ? a.agent_id::text
+         WHERE r.workspace_id=$1 AND r.location_mode='mission_agent' AND r.disabled_at IS NULL AND a.status='active' AND a.pull_ready_at>now()-interval '5 minutes'
+         ORDER BY r.updated_at DESC`,
+        [identity.workspaceId],
+      )
+    ).rows;
+    if (!repositories.length) return <RepositoryRequiredHome workspaceName={state.name} />;
     if (query.firstMission === "1") {
-      const repositories = (
-        await getDatabasePool().query(
-          `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name FROM repositories r
-           JOIN agents a ON a.workspace_id=r.workspace_id AND r.allowed_agent_ids ? (a.agent_id::text)
-           WHERE r.workspace_id=$1 AND r.location_mode='mission_agent' AND r.disabled_at IS NULL
-             AND a.delivery_mode='pull' AND a.status='active' AND a.pull_ready_at>now()-interval '5 minutes'
-           ORDER BY r.updated_at DESC`,
-          [identity.workspaceId],
-        )
-      ).rows;
       return <FirstMissionForm repositories={repositories} />;
     }
+    if (!state.completed_missions) return <FirstMissionForm repositories={repositories} />;
     return <LaunchForm />;
   }
   return (
@@ -124,5 +130,58 @@ export default async function LaunchPage({ searchParams }: { searchParams: Promi
         </a>
       </section>
     </PublicShell>
+  );
+}
+
+function FirstRunHome({ workspaceName }: { workspaceName: string }) {
+  const firstName = workspaceName.replace(/['’]s Workspace$/, "");
+  return (
+    <main className="onboarding-shell">
+      <section className="onboarding-intro">
+        <p className="section-label">Your workspace is ready</p>
+        <h1>Welcome, {firstName}.</h1>
+        <p>Connect your first agent to launch a mission.</p>
+      </section>
+      <section className="onboarding-panel">
+        <h2>Connect your first agent</h2>
+        <div className="agent-choice-grid">
+          {[
+            ["Codex", "codex"],
+            ["Hermes", "hermes"],
+            ["Claude Code", "claude_code"],
+            ["Generic Agent", "generic_remote"],
+          ].map(([label, id]) => (
+            <Link className="first-run-agent" href={`/onboarding?agent=${id}`} key={id}>
+              {label}
+              <span>→</span>
+            </Link>
+          ))}
+        </div>
+        <div className="troubleshooting-actions">
+          <Link href="/docs/what-is-mission-control">What is Mission Control?</Link>
+          <Link href="/quick-start">View Quick Start</Link>
+          <a href="/logout">Log out</a>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function RepositoryRequiredHome({ workspaceName }: { workspaceName: string }) {
+  return (
+    <main className="onboarding-shell">
+      <section className="onboarding-intro">
+        <p className="section-label">{workspaceName}</p>
+        <h1>Register your first repository.</h1>
+        <p>Your agent is connected, but it needs a repository before it can receive work.</p>
+      </section>
+      <section className="onboarding-panel">
+        <code>mission-agent repository add /path/to/repository</code>
+        <p>The page will unlock your first mission after the repository is registered.</p>
+        <Link className="launch-button" href="/onboarding">
+          View connection status →
+        </Link>
+      </section>
+    </main>
   );
 }

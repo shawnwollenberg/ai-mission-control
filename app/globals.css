@@ -1954,6 +1954,18 @@ select:focus {
   padding: 18px;
   cursor: pointer;
 }
+.first-run-agent {
+  align-items: center;
+  background: #07101a;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  display: flex;
+  font-weight: 700;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 18px;
+  text-decoration: none;
+}
 .agent-choice-grid button.selected {
   border-color: var(--signal);
   background: var(--signal-soft);

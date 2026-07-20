@@ -4,7 +4,7 @@ import OnboardingWizard from "./wizard";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ agent?: string }> }) {
   const identity = await requirePageIdentity("/onboarding");
   const workspace = (
     await getDatabasePool().query(
@@ -23,7 +23,10 @@ export default async function OnboardingPage() {
   return (
     <OnboardingWizard
       workspaceName={workspace.name}
-      initialAgentType={workspace.onboarding_agent_type}
+      initialAgentType={
+        ((await searchParams).agent ?? workspace.onboarding_agent_type) as
+          "codex" | "hermes" | "claude_code" | "generic_remote" | undefined
+      }
       agents={agents.map((agent) => ({
         ...agent,
         last_heartbeat_at: agent.last_heartbeat_at?.toISOString?.() ?? agent.last_heartbeat_at,
