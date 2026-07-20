@@ -25,6 +25,114 @@ Mission Templates are the fastest path from intent to coordinated execution. Pic
 
 The durable template model and initial software, operations, research, DeFi, and mixed-agent workflows are implemented today. The product direction expands that catalog around recognizable jobs such as Software Feature, Production Bug, Security Review, PR Review, Research, Architecture Design, Customer Onboarding, Daily DeFi Review, and Weekly Health Report.
 
+## The Future of Mission Control
+
+Today, Mission Control helps you supervise AI coding agents.
+
+Tomorrow, it becomes the operating system for your entire AI workforce.
+
+### Today
+
+Mission Control provides a secure environment for AI software engineering.
+
+- Connect a repository.
+- Launch an analysis or change mission.
+- Review architecture and implementation plans.
+- Approve implementation before files are modified.
+- Inspect diffs, validation results, artifacts, and local commits.
+- Stay in control.
+
+Every mission is transparent, auditable, and human-supervised. Repository Change Missions operate in isolated worktrees and stop at a local commit; they do not push, create pull requests, merge, or deploy automatically.
+
+### Next
+
+Mission Control will connect repository analysis directly to focused follow-up work and separately approved publication actions.
+
+Agents will be able to:
+
+- Turn recommendations into change missions.
+- Implement features and fix bugs.
+- Run tests and produce complete diffs.
+- Propose a branch push.
+- Prepare a pull request after a separate human approval.
+
+Approval to modify files will not imply approval to push, and approval to push will not imply approval to create a pull request. Merge and deployment remain outside this boundary.
+
+### Soon
+
+Mission Control will coordinate teams of specialized AI workers. Imagine assigning work to:
+
+- Backend Engineer
+- Frontend Engineer
+- QA Engineer
+- Documentation Specialist
+- Security Reviewer
+
+Mission Control will select the best execution engine, coordinate collaboration, and present a unified mission timeline.
+
+### Smarter Every Day
+
+Future agents will not start from zero. They will remember:
+
+- Your repositories
+- Previous missions
+- Coding standards
+- Architectural decisions
+- Organizational preferences
+
+Over time, your AI workforce becomes more effective because it learns alongside your organization.
+
+### Capabilities Instead of Monoliths
+
+Agents will install capabilities just as developers install software packages. Examples include:
+
+- AWS
+- GitHub
+- Kubernetes
+- Stripe
+- Slack
+- Terraform
+- PostgreSQL
+- Twilio
+- Solidity
+- React
+
+Mission Control will automatically assign work to agents with the right expertise and explicitly granted permissions.
+
+### Beyond Software
+
+The Mission lifecycle is not limited to engineering. The same platform can supervise:
+
+- Customer support
+- Finance
+- Marketing
+- Cybersecurity
+- Infrastructure
+- Business operations
+- Autonomous trading
+- AI receptionists
+
+Every AI worker follows the same secure approval, policy, audit, and evidence model.
+
+### Executive Control Anywhere
+
+Mission Control is designed to support remote workers from day one. In the future, a dedicated mobile application will allow you to:
+
+- Review missions
+- Approve changes
+- Monitor organizational health
+- Respond to alerts
+- Pause or stop agents
+- Supervise your AI workforce from anywhere
+
+### Our Vision
+
+We believe organizations will soon employ both humans and autonomous AI workers.
+
+Mission Control is being built to manage that future—not by replacing human judgment, but by making autonomous work transparent, secure, accountable, and collaborative.
+
+Our goal is not to build another coding assistant. Our goal is to build **Mission Control for AI organizations**.
+
 ## The original demo
 
 Launch the built-in Stripe Billing mission and Mission Control will:
@@ -68,17 +176,17 @@ Mission Control was built through a repeated design-and-implementation workflow 
 
 ### ChatGPT: Architecture, Product Design, and Review
 
-ChatGPT acted as my technical architect, product strategist, and design partner.  I used it to develop the product concept, design the event-sourced architecture, define the agent and execution model, establish safety and approval boundaries, review implementation progress, and turn each milestone into detailed instructions for Codex.
+ChatGPT acted as my technical architect, product strategist, and design partner. I used it to develop the product concept, design the event-sourced architecture, define the agent and execution model, establish safety and approval boundaries, review implementation progress, and turn each milestone into detailed instructions for Codex.
 
 ### Codex: Implementation, Testing, and Deployment
 
-Codex acted as the primary implementation agent.  It audited the repository, wrote and refactored the application, created tests, implemented production infrastructure, fixed deployment issues, built the Mission Agent onboarding flow, and validated the system through integration tests, restarts, replay, and projection verification.
+Codex acted as the primary implementation agent. It audited the repository, wrote and refactored the application, created tests, implemented production infrastructure, fixed deployment issues, built the Mission Agent onboarding flow, and validated the system through integration tests, restarts, replay, and projection verification.
 
-Codex was used through both Codex Desktop and the Codex CLI.  Desktop supported the collaborative product loop, browser review, screenshots, and longer implementation sessions.  The CLI provided the focused repository and terminal workflow for code inspection, tests, builds, Git operations, container publishing, deployment, and operational verification.
+Codex was used through both Codex Desktop and the Codex CLI. Desktop supported the collaborative product loop, browser review, screenshots, and longer implementation sessions. The CLI provided the focused repository and terminal workflow for code inspection, tests, builds, Git operations, container publishing, deployment, and operational verification.
 
 ### GPT-5.6: The Model Powering Codex
 
-GPT-5.6 was the language model used by Codex during implementation.  It powered Codex as it interpreted the implementation plans, inspected the codebase, wrote code, created tests, debugged failures, produced documentation, and assisted with deployment.
+GPT-5.6 was the language model used by Codex during implementation. It powered Codex as it interpreted the implementation plans, inspected the codebase, wrote code, created tests, debugged failures, produced documentation, and assisted with deployment.
 
 The workflow was:
 
@@ -94,7 +202,7 @@ The repository history, source-of-truth documents under [`docs/`](docs/), and [`
 
 The AWS demo defaults to `ENABLE_LIVE_CODEX=false`. Its bounded Hermes workflow validates a known fallback artifact and records the provenance as `validated_fallback`; the UI never presents that artifact as live Codex execution. Agent-ingestion endpoints require a secret bearer token, and the public runtime exposes no shell, arbitrary prompt, or repository path.
 
-This distinction matters: ChatGPT helped design and plan Mission Control, while Codex, powered by GPT-5.6, built and deployed it.  The reliable public demo explicitly labels whether an artifact inside a demonstrated mission was produced live or selected from the validated fallback.
+This distinction matters: ChatGPT helped design and plan Mission Control, while Codex, powered by GPT-5.6, built and deployed it. The reliable public demo explicitly labels whether an artifact inside a demonstrated mission was produced live or selected from the validated fallback.
 
 ## Run locally
 
