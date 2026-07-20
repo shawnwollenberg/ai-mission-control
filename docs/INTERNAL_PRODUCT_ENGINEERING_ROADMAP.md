@@ -47,6 +47,26 @@ The intended experience is repository-centered:
 - Repository: mission history, architecture, recommendations, knowledge, Mission Graph, and active missions.
 - Analysis result: architecture, risks, recommendations, and **Create Change Mission** actions.
 
+## Mission Control 0.5 — Repository Intelligence
+
+Version 0.5 should make Mission Control worth checking every morning by turning accumulated mission evidence into an explainable view of repository condition and next actions.
+
+Priority order:
+
+1. **Repository Health dashboard.** Show an overall versioned score alongside evidence-backed dimensions for tests, architecture, security, technical debt, documentation, dependencies, CI, and recent mission outcomes. Display freshness, confidence, and unknown inputs; never disguise missing evidence as precision.
+2. **Repository Timeline.** Show the lifecycle of analyses, recommendations, change missions, validations, approvals, commits, pull requests, deployments, incidents, and audits using canonical mission relationships rather than duplicating Git history.
+3. **Repository Knowledge.** Build component pages connecting architecture, files, tests, risks, recommendations, decisions, ownership observations, and mission history. Repository Knowledge belongs to the platform and remains useful when execution engines change.
+4. **Health trends.** Preserve comparable health assessments over time and explain which verified changes affected each dimension. Mission completion alone does not imply improvement; evidence must support the new assessment.
+5. **Action templates.** Attach versioned mission templates to common findings so users can move from evidence to supervised action without losing provenance or bypassing approval.
+
+The target loop is:
+
+`Repository Health → Recommendation → Change Mission → Validation → Follow-up Assessment → Explainable Health Change`
+
+Repository Intelligence also establishes the foundation for an evidence-backed semantic layer. Natural-language questions may retrieve and summarize repository history, but every answer must cite durable missions, recommendations, approvals, artifacts, decisions, and outcomes. The generated answer is not authoritative memory by itself.
+
+This milestone does not authorize implementation by itself. Health formulas, observation schemas, timeline relationships, component identity, staleness, backfill, rebuild behavior, compatibility, rollback, cost, and the first vertical slice require explicit approval.
+
 ## Phase 1 — Autonomous Software Engineering
 
 Mission Control's initial focus is becoming the safest way to supervise AI software engineers.

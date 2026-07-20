@@ -119,3 +119,14 @@ Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner,
 - [x] Inherit objective, evidence, acceptance criteria, and allowlisted validation suggestions.
 - [x] Rebuild recommendation projections from the canonical event log.
 - [ ] Validate the full recommendation-to-approved-change workflow against a disposable production repository.
+
+## Mission Control 0.5 — Repository Intelligence planning
+
+- [x] Record Repository Intelligence as the next product milestone.
+- [x] Establish Repository Health, Timeline, Knowledge, trends, and action templates as the priority sequence.
+- [x] Require evidence-backed, versioned, rebuildable health claims.
+- [ ] Approve health dimensions, scoring weights, missing-data behavior, confidence, and freshness rules.
+- [ ] Define canonical repository observation and health-assessment events.
+- [ ] Define explicit mission/recommendation/validation/timeline relationship vocabulary.
+- [ ] Define component identity, rename, merge, and stale-knowledge behavior.
+- [ ] Approve the smallest implementation slice and production acceptance test.

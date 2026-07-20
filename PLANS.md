@@ -451,6 +451,28 @@ Completion requires a fresh production user to connect behind NAT, confirm pull 
 
 **First-slice acceptance:** Recommendation projections must rebuild from canonical events; source mission, execution, artifact, and evidence remain traceable; generated validation commands pass a strict allowlist; retries cannot create duplicate missions; terminal lifecycle states cannot reopen; existing Mission Agent installations remain compatible; and no recommendation can independently authorize repository modification.
 
+## Mission Control 0.5 — Repository Intelligence (proposed)
+
+**Controlling outcome:** Make the repository—not an individual agent—the durable, explainable system of record for what happened, why it happened, and what should happen next. This roadmap entry is product direction, not implementation authorization.
+
+**Priority 1 — Repository Health:** Promote Repository Health into the primary daily dashboard. A versioned deterministic scoring projection may summarize test posture, architecture, security, technical debt, documentation, dependency freshness, CI, mission outcomes, and recommendation lifecycle. Every score and subscore must expose its calculation version, freshness, confidence, contributing observations, and evidence. Unknown data lowers confidence or remains unknown; it must not silently become a failing score.
+
+**Priority 2 — Repository Timeline:** Project repository activity as mission history rather than Git history: analyses, recommendations, accepted work, change missions, validations, approvals, commits, publication, deployments, incidents, and audits. Timeline relationships must come from canonical causation, provenance, and explicit mission links. Git commits may be evidence, but are not the timeline's source of truth.
+
+**Priority 3 — Repository Knowledge:** Create evidence-backed pages for major components such as Authentication. Knowledge connects architecture, files, tests, risks, recommendations, decisions, ownership observations, and related missions. Model-generated summaries remain attributed observations; accepted human decisions and verified execution outcomes remain distinguishable facts.
+
+**Priority 4 — Health trends:** Record immutable, versioned health assessments so users can compare like-for-like scores over time and see which completed recommendations changed which dimensions. A completed mission does not automatically improve health: new repository evidence and the scoring rules must justify the change.
+
+**Priority 5 — Action templates:** Offer versioned mission templates at actionable findings so common work can begin with evidence, objective, acceptance criteria, and validation already linked. Template selection cannot bypass planning, policy, or approval boundaries.
+
+**Semantic layer direction:** Queries such as “Why is authentication designed this way?”, “Which recommendations have been ignored for 90 days?”, and “Which components generate the most technical debt?” should traverse evidence-backed repository relationships. Semantic retrieval may locate relevant records and draft an answer, but citations must resolve to canonical events, artifacts, recommendations, decisions, and outcomes. Generated prose is never an independent source of truth.
+
+**First implementation gate:** Before coding, approve the health dimensions and weights; missing-data behavior; observation and assessment schemas; timeline relationship vocabulary; component identity and rename rules; freshness/staleness behavior; model-versus-deterministic responsibilities; migrations; backfill; rebuild tests; compatibility; rollback; production acceptance; and the smallest demonstrable vertical slice.
+
+**Recommended smallest slice:** One repository receives a versioned explainable health assessment after analysis, a mission-and-recommendation timeline, and a before/after trend only after an evidence-producing follow-up analysis. Repository Knowledge and natural-language semantic queries should follow after those foundations are proven.
+
+**Authority boundary:** Repository Intelligence is read, projection, and planning capability. It grants no autonomous push, pull-request, merge, deployment, infrastructure or secret modification, transaction signing, or transaction submission authority.
+
 ## Cross-phase test matrix
 
 - Unit: transitions, dependency resolution, policy, health, retry classification, schemas, serialization.
