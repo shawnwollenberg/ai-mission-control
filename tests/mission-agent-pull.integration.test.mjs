@@ -94,6 +94,24 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
     leaseToken: claimed.leaseToken,
   };
   await acknowledgeAssignment(lease);
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionAccepted",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: { stage: "assignment_received", summary: "Assignment accepted" },
+    },
+    credential,
+  );
   const renewed = await renewAssignmentLease(lease);
   assert.ok(new Date(renewed.lease_expires_at).getTime() > Date.now());
   assert.equal(
@@ -112,6 +130,18 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
     )
   ).rows[0];
   assert.deepEqual(row, { status: "available", lease_token_hash: null });
+
+  const recovered = await claimNextAssignment({ credential, leaseOwner: "replacement-runtime" });
+  assert.ok(recovered);
+  assert.equal(recovered.assignment.assignment_id, claimed.assignment.assignment_id);
+  assert.equal(recovered.resumed, true);
+  assert.ok(recovered.leaseToken.startsWith("mc_lease_"));
+  await releaseAssignment({
+    credential,
+    assignmentId: recovered.assignment.assignment_id,
+    leaseOwner: "replacement-runtime",
+    leaseToken: recovered.leaseToken,
+  });
 });
 
 test("disabled agents and emergency pause receive no work without cross-workspace leakage", async () => {
