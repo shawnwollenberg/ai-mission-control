@@ -49,7 +49,7 @@ test.before(async () => {
       sentAt: now,
       messageType: "AgentHeartbeat",
       correlationId: registration.agentId,
-      payload: { assignmentPull: true, missionAgentVersion: "0.1.0", adapter: "codex" },
+      payload: { assignmentPull: true, missionAgentVersion: "0.3.1", adapter: "codex" },
     },
     credential,
   );

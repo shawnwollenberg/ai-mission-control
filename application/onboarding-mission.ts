@@ -26,7 +26,7 @@ export async function launchFirstRepositoryMission(input: {
   const validationCommands = validationLines(input.validationInstructions);
   const resource = (
     await getDatabasePool().query(
-      `SELECT r.repository_id,r.name,a.pull_ready_at,a.mission_agent_adapter
+      `SELECT r.repository_id,r.name,a.pull_ready_at,a.mission_agent_adapter,a.mission_agent_version
        FROM repositories r JOIN agents a ON a.workspace_id=r.workspace_id AND a.agent_id=$2
        WHERE r.workspace_id=$1 AND r.repository_id=$3 AND r.location_mode='mission_agent' AND r.disabled_at IS NULL
          AND a.delivery_mode='pull' AND a.status='active' AND a.pull_ready_at>now()-interval '5 minutes'
@@ -37,6 +37,10 @@ export async function launchFirstRepositoryMission(input: {
   if (!resource) throw new NotFoundError("Ready Mission Agent repository");
   if (resource.mission_agent_adapter !== "codex")
     throw new ValidationFailedError("This adapter can connect but cannot execute the first local mission yet");
+  if (missionType === "change" && !supportsRepositoryChanges(resource.mission_agent_version))
+    throw new ValidationFailedError(
+      "Repository Change Missions require Mission Agent 0.3.1 or newer. Run mission-agent update, then try again.",
+    );
   const missionId = randomUUID();
   await handleCreateMission({
     actor: input.actor,
@@ -118,6 +122,13 @@ export async function launchFirstRepositoryMission(input: {
     timeoutSeconds: 600,
   });
   return { missionId, taskId, executionId: execution.executionId };
+}
+
+function supportsRepositoryChanges(version: unknown) {
+  const match = String(version ?? "").match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!match) return false;
+  const [, major, minor, patch] = match.map(Number);
+  return major > 0 || minor > 3 || (minor === 3 && patch >= 1);
 }
 
 function textLines(value: string | undefined, maximum: number, maximumLength: number) {
