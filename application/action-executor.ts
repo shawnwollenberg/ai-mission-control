@@ -223,15 +223,10 @@ export async function executeAction(
   }
 }
 
-export async function finalizeMissionAgentPublication(
-  workspaceId: string,
-  actionId: string,
-  workerId: string,
-  providerOverride?: GitProvider,
-) {
+export async function finalizeMissionAgentPublication(workspaceId: string, actionId: string, workerId: string) {
   const row = (
     await getDatabasePool().query(
-      `SELECT ar.*,r.name repository_name,r.provider_type,r.provider_configuration_reference
+      `SELECT ar.*,r.name repository_name,pa.result publication_result
      FROM action_request_projections ar JOIN repositories r ON r.workspace_id=ar.workspace_id AND r.repository_id=ar.repository_id
      JOIN publication_assignments pa ON pa.workspace_id=ar.workspace_id AND pa.action_request_id=ar.action_request_id
      WHERE ar.workspace_id=$1 AND ar.action_request_id=$2 AND ar.status='executing' AND pa.status='pushed'`,
@@ -241,21 +236,36 @@ export async function finalizeMissionAgentPublication(
   if (!row) throw new ValidationFailedError("Publication is not ready for pull-request creation");
   const parameters = row.parameters_summary as Record<string, unknown>;
   if (canonicalHash(parameters) !== row.action_hash) throw new ValidationFailedError("Publication evidence changed");
-  const provider = providerOverride ?? (row.provider_type === "github" ? new GitHubProvider() : new LocalGitProvider());
-  const credentialEnvironment = await new LocalGitCredentialProvider().environment(
-    row.provider_configuration_reference ?? undefined,
-  );
   try {
-    const pullRequest = await provider.createPullRequest({
-      repository: String(parameters.providerRepository ?? row.repository_name),
-      sourceBranch: String(parameters.branch),
-      targetBranch: String(parameters.targetBranch),
-      commit: String(parameters.commit),
-      title: String(parameters.title),
-      description: String(parameters.description),
-      idempotencyKey: row.idempotency_key,
-      credentialEnvironment,
+    const reported = row.publication_result as Record<string, unknown>;
+    const repository = String(parameters.providerRepository);
+    const number = Number(reported.pullRequestNumber);
+    const response = await fetch(`https://api.github.com/repos/${repository}/pulls/${number}`, {
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "Mission-Control" },
+      signal: AbortSignal.timeout(15_000),
     });
+    if (!response.ok) throw new ValidationFailedError("GitHub did not confirm the pull request");
+    const confirmed = (await response.json()) as {
+      html_url: string;
+      state: string;
+      head: { ref: string; sha: string };
+      base: { ref: string };
+    };
+    if (
+      confirmed.head.sha !== parameters.commit ||
+      confirmed.head.ref !== parameters.branch ||
+      confirmed.base.ref !== parameters.targetBranch
+    )
+      throw new ValidationFailedError("GitHub pull request does not match the approved branch, target, and commit");
+    const pullRequest = {
+      provider: "github",
+      number,
+      url: confirmed.html_url,
+      sourceBranch: confirmed.head.ref,
+      targetBranch: confirmed.base.ref,
+      state: confirmed.state,
+      headSha: confirmed.head.sha,
+    };
     const result = {
       remoteBranch: {
         remote: parameters.remote,

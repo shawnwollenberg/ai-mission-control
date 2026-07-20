@@ -880,11 +880,70 @@ async function publishForReview(config, publication) {
     resolved,
   ).split(/\s+/)[0];
   if (confirmed !== publication.commit) throw new Error("The remote did not confirm the exact approved commit.");
+  if (spawnSync("gh", ["--version"], { stdio: "ignore" }).status !== 0)
+    throw new Error(
+      "GitHub CLI is required to create the approved pull request. Install gh, authenticate it, and retry.",
+    );
+  const existingPullRequests = spawnSync(
+    "gh",
+    [
+      "pr",
+      "list",
+      "--repo",
+      publication.providerRepository,
+      "--head",
+      publication.branch,
+      "--base",
+      publication.targetBranch,
+      "--state",
+      "all",
+      "--json",
+      "number,url,headRefOid",
+    ],
+    { cwd: resolved, encoding: "utf8", timeout: 60_000 },
+  );
+  if (existingPullRequests.status !== 0)
+    throw new Error(`GitHub pull-request lookup failed: ${existingPullRequests.stderr?.trim() ?? "unknown error"}`);
+  let pullRequest = JSON.parse(existingPullRequests.stdout)[0];
+  if (!pullRequest) {
+    const created = spawnSync(
+      "gh",
+      [
+        "pr",
+        "create",
+        "--repo",
+        publication.providerRepository,
+        "--head",
+        publication.branch,
+        "--base",
+        publication.targetBranch,
+        "--title",
+        publication.title,
+        "--body",
+        publication.description,
+      ],
+      { cwd: resolved, encoding: "utf8", timeout: 60_000 },
+    );
+    if (created.status !== 0)
+      throw new Error(`GitHub pull-request creation failed: ${created.stderr?.trim() ?? "unknown error"}`);
+    const viewed = spawnSync(
+      "gh",
+      ["pr", "view", publication.branch, "--repo", publication.providerRepository, "--json", "number,url,headRefOid"],
+      { cwd: resolved, encoding: "utf8", timeout: 60_000 },
+    );
+    if (viewed.status !== 0) throw new Error("GitHub did not confirm pull-request creation.");
+    pullRequest = JSON.parse(viewed.stdout);
+  }
+  if (pullRequest.headRefOid !== publication.commit)
+    throw new Error("GitHub pull-request head does not match the approved commit.");
   await signedRequest(config, "/api/agent-protocol/v1/publications/complete", "AgentPublicationPushCompleted", {
     actionRequestId: publication.actionRequestId,
     branch: publication.branch,
     commit: publication.commit,
     remoteCommit: confirmed,
+    pullRequestNumber: pullRequest.number,
+    pullRequestUrl: pullRequest.url,
+    pullRequestHeadSha: pullRequest.headRefOid,
   });
   await updateState({ stage: "pull_request_open", lastPublication: publication.actionRequestId, lastError: null });
 }

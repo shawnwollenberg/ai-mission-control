@@ -19,6 +19,9 @@ export async function POST(request: Request) {
       branch: String(auth.message.payload.branch ?? ""),
       commit: String(auth.message.payload.commit ?? ""),
       remoteCommit: String(auth.message.payload.remoteCommit ?? ""),
+      pullRequestNumber: Number(auth.message.payload.pullRequestNumber),
+      pullRequestUrl: String(auth.message.payload.pullRequestUrl ?? ""),
+      pullRequestHeadSha: String(auth.message.payload.pullRequestHeadSha ?? ""),
     });
     const publication = await finalizeMissionAgentPublication(
       auth.credential.workspace_id,

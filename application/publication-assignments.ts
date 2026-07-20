@@ -55,6 +55,9 @@ export async function recordPublicationPush(input: {
   branch: string;
   commit: string;
   remoteCommit: string;
+  pullRequestNumber: number;
+  pullRequestUrl: string;
+  pullRequestHeadSha: string;
 }) {
   const row = (
     await getDatabasePool().query(
@@ -65,7 +68,14 @@ export async function recordPublicationPush(input: {
   if (!row) throw new NotFoundError("Publication assignment");
   const expected = row.payload as Record<string, unknown>;
   if (row.status === "completed") return row;
-  if (input.branch !== expected.branch || input.commit !== expected.commit || input.remoteCommit !== expected.commit)
+  if (
+    input.branch !== expected.branch ||
+    input.commit !== expected.commit ||
+    input.remoteCommit !== expected.commit ||
+    input.pullRequestHeadSha !== expected.commit ||
+    !Number.isInteger(input.pullRequestNumber) ||
+    input.pullRequestNumber < 1
+  )
     throw new ValidationFailedError("Published branch does not match the exact approved commit");
   await getDatabasePool().query(
     `UPDATE publication_assignments SET status='pushed',result=$4,updated_at=now() WHERE workspace_id=$1 AND action_request_id=$2 AND agent_id=$3`,
