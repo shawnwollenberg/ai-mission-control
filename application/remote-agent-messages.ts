@@ -232,6 +232,27 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
         payload: { ...message.payload, heartbeat: true },
       });
       await getDatabasePool().query(
+        `INSERT INTO execution_heartbeats(
+          workspace_id,execution_id,agent_id,worker_id,stage,command_summary,
+          progress_percent,progress_message,received_at,lease_expires_at
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,now(),now()+interval '90 seconds')
+        ON CONFLICT(workspace_id,execution_id) DO UPDATE SET
+          agent_id=excluded.agent_id,worker_id=excluded.worker_id,stage=excluded.stage,
+          command_summary=excluded.command_summary,progress_percent=excluded.progress_percent,
+          progress_message=excluded.progress_message,received_at=excluded.received_at,
+          lease_expires_at=excluded.lease_expires_at`,
+        [
+          credential.workspace_id,
+          message.executionId,
+          credential.agent_id,
+          String(message.payload.workerId ?? credential.agent_id).slice(0, 200),
+          String(message.payload.stage ?? current.status ?? "running").slice(0, 100),
+          message.payload.commandSummary ? String(message.payload.commandSummary).slice(0, 500) : null,
+          Number.isInteger(message.payload.progressPercent) ? Number(message.payload.progressPercent) : null,
+          message.payload.summary ? String(message.payload.summary).slice(0, 1000) : null,
+        ],
+      );
+      await getDatabasePool().query(
         "UPDATE execution_projections SET last_heartbeat_at=now() WHERE workspace_id=$1 AND execution_id=$2",
         [credential.workspace_id, message.executionId],
       );
@@ -503,7 +524,7 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
   }
 }
 
-function parseRepositoryRecommendations(body: Buffer) {
+export function parseRepositoryRecommendations(body: Buffer) {
   let value: unknown;
   try {
     value = JSON.parse(body.toString("utf8"));
@@ -515,21 +536,24 @@ function parseRepositoryRecommendations(body: Buffer) {
     if (!item || typeof item !== "object" || Array.isArray(item))
       throw new ValidationFailedError("Recommendation entry is invalid");
     const row = item as Record<string, unknown>;
-    const evidence = Array.isArray(row.evidence)
-      ? row.evidence.map((entry) => {
-          if (!entry || typeof entry !== "object" || Array.isArray(entry))
-            throw new ValidationFailedError("Recommendation evidence is invalid");
-          const e = entry as Record<string, unknown>;
-          const path = String(e.path ?? "").trim();
-          if (!path || path.startsWith("/") || path.includes(".."))
-            throw new ValidationFailedError("Recommendation evidence path is unsafe");
-          return {
-            path,
-            ...(Number.isInteger(e.line) && Number(e.line) > 0 ? { line: Number(e.line) } : {}),
-            ...(e.description ? { description: String(e.description).slice(0, 500) } : {}),
-          };
-        })
-      : [];
+    const evidenceEntries = Array.isArray(row.evidence)
+      ? row.evidence
+      : row.evidence && typeof row.evidence === "object"
+        ? [row.evidence]
+        : [];
+    const evidence = evidenceEntries.map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry))
+        throw new ValidationFailedError("Recommendation evidence is invalid");
+      const e = entry as Record<string, unknown>;
+      const path = String(e.path ?? "").trim();
+      if (!path || path.startsWith("/") || path.includes(".."))
+        throw new ValidationFailedError("Recommendation evidence path is unsafe");
+      return {
+        path,
+        ...(Number.isInteger(e.line) && Number(e.line) > 0 ? { line: Number(e.line) } : {}),
+        ...(e.description ? { description: String(e.description).slice(0, 500) } : {}),
+      };
+    });
     const validation = Array.isArray(row.suggestedValidation) ? row.suggestedValidation.map(String) : [];
     const acceptance = Array.isArray(row.acceptanceCriteria) ? row.acceptanceCriteria.map(String) : [];
     const impact = String(row.estimatedImpact ?? "medium");

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { parseRepositoryRecommendations } from "../application/remote-agent-messages.ts";
 import { createRecommendation, rehydrateRecommendation, transitionRecommendation } from "../domain/recommendation.ts";
 
 const input = {
@@ -22,6 +23,21 @@ test("recommendations require structured evidence, acceptance criteria, and safe
   assert.throws(() => createRecommendation({ ...input, suggestedValidation: ["rm -rf ."] }), /not allowed/);
   assert.throws(() => createRecommendation({ ...input, suggestedValidation: ["npm test ../other"] }), /not allowed/);
   assert.doesNotThrow(() => createRecommendation({ ...input, suggestedValidation: ["go test ./..."] }));
+});
+test("recommendation ingestion normalizes one structured evidence object without weakening validation", () => {
+  const [parsed] = parseRepositoryRecommendations(
+    Buffer.from(JSON.stringify([{ ...input, evidence: input.evidence[0] }])),
+  );
+  assert.deepEqual(parsed.evidence, input.evidence);
+  assert.throws(
+    () =>
+      parseRepositoryRecommendations(
+        Buffer.from(JSON.stringify([{ ...input, evidence: { path: "../outside", line: 1 } }])),
+      ),
+    /path is unsafe/,
+  );
+  const [missing] = parseRepositoryRecommendations(Buffer.from(JSON.stringify([{ ...input, evidence: null }])));
+  assert.throws(() => createRecommendation({ ...input, evidence: missing.evidence }), /evidence is required/);
 });
 test("recommendation lifecycle is explicit and terminal states cannot reopen", () => {
   const events = [{ aggregateId: "rec", aggregateVersion: 1, payload: { status: "open" } }];

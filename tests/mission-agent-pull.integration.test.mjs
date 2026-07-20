@@ -114,6 +114,41 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
     },
     credential,
   );
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionHeartbeat",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: {
+        workerId: "test-runtime",
+        stage: "inspecting_repository",
+        summary: "Codex is analyzing the repository",
+        progressPercent: 50,
+      },
+    },
+    credential,
+  );
+  const heartbeat = (
+    await getDatabasePool().query(
+      "SELECT worker_id,stage,progress_percent,progress_message FROM execution_heartbeats WHERE workspace_id=$1 AND execution_id=$2",
+      [workspaceId, launched.executionId],
+    )
+  ).rows[0];
+  assert.deepEqual(heartbeat, {
+    worker_id: "test-runtime",
+    stage: "inspecting_repository",
+    progress_percent: 50,
+    progress_message: "Codex is analyzing the repository",
+  });
   const renewed = await renewAssignmentLease(lease);
   assert.ok(new Date(renewed.lease_expires_at).getTime() > Date.now());
   assert.equal(
