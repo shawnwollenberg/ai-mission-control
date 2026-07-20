@@ -282,9 +282,20 @@ export default function OnboardingWizard({
             <p>Your Mission Agent can manage multiple repositories from this computer.</p>
             <details className="connection-details">
               <summary>Useful Mission Agent commands</summary>
-              <code>mission-agent status</code>
-              <code>mission-agent repository add /path/to/another/repository</code>
-              <code>mission-agent doctor</code>
+              <ul className="mission-agent-command-list">
+                <li>
+                  <code>mission-agent status</code>
+                  <span>Check the connection, heartbeat, active assignment, and installed version.</span>
+                </li>
+                <li>
+                  <code>mission-agent repository add /path/to/another/repository</code>
+                  <span>Add another Git repository for this Mission Agent to manage.</span>
+                </li>
+                <li>
+                  <code>mission-agent doctor</code>
+                  <span>Run connection and dependency diagnostics.</span>
+                </li>
+              </ul>
             </details>
             <div className="first-mission-card">
               <div>

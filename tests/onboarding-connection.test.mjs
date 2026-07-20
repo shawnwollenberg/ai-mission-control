@@ -61,6 +61,10 @@ test("connection UI keeps the payload masked and advanced setup collapsed", asyn
   assert.match(source, /Copy connection command/);
   assert.match(source, /navigator\.clipboard\.writeText\("mission-agent doctor"\)/);
   assert.match(source, /Still waiting\?/);
+  assert.match(source, /mission-agent-command-list/);
+  assert.match(source, /Check the connection, heartbeat, active assignment/);
+  assert.match(source, /Add another Git repository/);
+  assert.match(source, /Run connection and dependency diagnostics/);
   assert.match(
     source,
     /This page will advance automatically once Mission Agent is connected and ready to receive work\./,

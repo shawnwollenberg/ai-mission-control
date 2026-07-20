@@ -2134,6 +2134,33 @@ select:focus {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.mission-agent-command-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  text-align: left;
+}
+.mission-agent-command-list li {
+  background: #050b11;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+}
+.mission-agent-command-list code {
+  color: #d9e9f0;
+  display: block;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  white-space: nowrap;
+}
+.mission-agent-command-list span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
 .connected-stage {
   text-align: center;
 }
