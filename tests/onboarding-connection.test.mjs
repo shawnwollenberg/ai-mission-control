@@ -66,3 +66,10 @@ test("connection UI keeps the payload masked and advanced setup collapsed", asyn
     /This page will advance automatically once Mission Agent is connected and ready to receive work\./,
   );
 });
+
+test("Mission Agent maintains pull readiness with periodic signed heartbeats", async () => {
+  const source = await readFile(new URL("../public/mission-agent-0.2.2.mjs", import.meta.url), "utf8");
+  assert.match(source, /const heartbeatTimer = setInterval/);
+  assert.match(source, /60_000/);
+  assert.match(source, /heartbeatTimer\.unref\(\)/);
+});

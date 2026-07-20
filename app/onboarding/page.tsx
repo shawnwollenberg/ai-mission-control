@@ -14,7 +14,10 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   ).rows[0];
   const agents = (
     await getDatabasePool().query(
-      `SELECT a.agent_id,a.name,a.adapter_type,a.status,a.last_heartbeat_at,a.pull_ready_at,a.mission_agent_version,a.mission_agent_adapter,
+      `SELECT a.agent_id,a.name,a.adapter_type,a.status,
+        CASE WHEN a.last_heartbeat_at>now()-interval '5 minutes' THEN a.last_heartbeat_at END last_heartbeat_at,
+        CASE WHEN a.pull_ready_at>now()-interval '5 minutes' THEN a.pull_ready_at END pull_ready_at,
+        a.mission_agent_version,a.mission_agent_adapter,
         (SELECT count(*)::int FROM repositories r WHERE r.workspace_id=a.workspace_id AND r.allowed_agent_ids ? a.agent_id::text AND r.disabled_at IS NULL) repository_count
        FROM agents a WHERE a.workspace_id=$1 ORDER BY a.created_at`,
       [identity.workspaceId],

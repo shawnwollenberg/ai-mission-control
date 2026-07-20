@@ -18,19 +18,26 @@ export default async function LaunchPage({ searchParams }: { searchParams: Promi
     const state = (
       await getDatabasePool().query(
         `SELECT w.name,
-          (SELECT count(*)::int FROM agents a WHERE a.workspace_id=w.id AND a.delivery_mode='pull' AND a.status='active' AND a.last_heartbeat_at IS NOT NULL AND a.pull_ready_at IS NOT NULL) ready_agents,
+          (SELECT count(*)::int FROM agents a WHERE a.workspace_id=w.id AND a.delivery_mode='pull' AND a.status='active') configured_agents,
+          (SELECT count(*)::int FROM agents a WHERE a.workspace_id=w.id AND a.delivery_mode='pull' AND a.status='active' AND a.last_heartbeat_at>now()-interval '5 minutes' AND a.pull_ready_at>now()-interval '5 minutes') ready_agents,
           (SELECT count(*)::int FROM repositories r WHERE r.workspace_id=w.id AND r.location_mode='mission_agent' AND r.disabled_at IS NULL) repositories,
           (SELECT count(*)::int FROM mission_projections m WHERE m.workspace_id=w.id AND m.status='completed') completed_missions
          FROM workspaces w WHERE w.id=$1`,
         [identity.workspaceId],
       )
     ).rows[0];
-    if (!state.ready_agents) return <FirstRunHome workspaceName={state.name} />;
+    if (!state.ready_agents)
+      return state.configured_agents ? (
+        <ReconnectAgentHome workspaceName={state.name} />
+      ) : (
+        <FirstRunHome workspaceName={state.name} />
+      );
     const repositories = (
       await getDatabasePool().query(
         `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name FROM repositories r
          JOIN agents a ON a.workspace_id=r.workspace_id AND r.allowed_agent_ids ? a.agent_id::text
-         WHERE r.workspace_id=$1 AND r.location_mode='mission_agent' AND r.disabled_at IS NULL AND a.status='active' AND a.pull_ready_at>now()-interval '5 minutes'
+         WHERE r.workspace_id=$1 AND r.location_mode='mission_agent' AND r.disabled_at IS NULL AND a.status='active'
+           AND a.last_heartbeat_at>now()-interval '5 minutes' AND a.pull_ready_at>now()-interval '5 minutes'
          ORDER BY r.updated_at DESC`,
         [identity.workspaceId],
       )
@@ -40,7 +47,7 @@ export default async function LaunchPage({ searchParams }: { searchParams: Promi
       return <FirstMissionForm repositories={repositories} />;
     }
     if (!state.completed_missions) return <FirstMissionForm repositories={repositories} />;
-    return <LaunchForm />;
+    return <LaunchForm liveRepositoryMissionAvailable />;
   }
   return (
     <PublicShell>
@@ -162,6 +169,26 @@ function FirstRunHome({ workspaceName }: { workspaceName: string }) {
           <Link href="/quick-start">View Quick Start</Link>
           <a href="/logout">Log out</a>
         </div>
+      </section>
+    </main>
+  );
+}
+
+function ReconnectAgentHome({ workspaceName }: { workspaceName: string }) {
+  return (
+    <main className="onboarding-shell">
+      <section className="onboarding-intro">
+        <p className="section-label">{workspaceName}</p>
+        <h1>Reconnect your Mission Agent.</h1>
+        <p>Your agent and repositories are still registered, but its recent heartbeat has expired.</p>
+      </section>
+      <section className="onboarding-panel">
+        <code>mission-agent status</code>
+        <code>mission-agent service install</code>
+        <p>Once a fresh heartbeat arrives, the live repository mission will unlock automatically.</p>
+        <Link className="launch-button onboarding-action" href="/onboarding">
+          View connection status →
+        </Link>
       </section>
     </main>
   );
