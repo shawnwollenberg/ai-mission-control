@@ -4,7 +4,6 @@ import { completeProtocolMessage, releaseProtocolMessage } from "@/application/r
 import { apiErrorResponse } from "@/lib/http-errors";
 import { getDatabasePool } from "@/lib/database";
 import { authenticatePullRequest } from "@/remote-agent/pull-request";
-import { NotFoundError } from "@/lib/application-errors";
 
 export async function POST(request: Request, { params }: { params: Promise<{ assignmentId: string }> }) {
   const { assignmentId } = await params;
@@ -28,15 +27,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ ass
         [auth.credential.workspace_id, lease.execution_id, auth.credential.agent_id],
       )
     ).rows[0];
-    if (!approval) throw new NotFoundError("Execution approval");
     const response = {
       protocolVersion: "1.0",
       messageId: auth.message.messageId,
-      approvalId: approval.approval_id,
-      status: approval.status,
-      actionHash: approval.action_hash,
-      decidedAt: approval.decided_at,
-      decisionReason: approval.decision_reason,
+      approvalId: approval?.approval_id,
+      status: approval?.status ?? "not_requested",
+      actionHash: approval?.action_hash,
+      decidedAt: approval?.decided_at,
+      decisionReason: approval?.decision_reason,
     };
     await completeProtocolMessage(auth.credential, auth.message.messageId, response);
     return NextResponse.json(response);
