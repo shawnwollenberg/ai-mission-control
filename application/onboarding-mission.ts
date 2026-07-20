@@ -11,7 +11,12 @@ export async function launchFirstRepositoryMission(input: {
   commandId: string;
   agentId: string;
   repositoryId: string;
+  objective?: string;
 }) {
+  const objective =
+    input.objective?.trim() ||
+    "Analyze this repository and produce a concise architecture, risk, and next-steps report";
+  if (objective.length > 1000) throw new ValidationFailedError("Analysis objective must be 1,000 characters or fewer");
   const resource = (
     await getDatabasePool().query(
       `SELECT r.repository_id,r.name,a.pull_ready_at,a.mission_agent_adapter
@@ -32,7 +37,7 @@ export async function launchFirstRepositoryMission(input: {
     missionId,
     mission: {
       name: "Analyze this repository",
-      objective: `Analyze ${resource.name} and produce a concise architecture, risk, and next-steps report`,
+      objective,
       description: "A genuine read-only analysis executed by the locally connected Mission Agent Codex adapter.",
       domain: "software_delivery",
       priority: "normal",
@@ -55,8 +60,7 @@ export async function launchFirstRepositoryMission(input: {
     task: {
       missionId,
       name: "Analyze this repository",
-      instructions:
-        "Inspect repository structure, configuration, commands, and tests; produce evidence-based Markdown findings.",
+      instructions: `Inspect repository structure, configuration, commands, and tests; produce evidence-based Markdown findings. Analysis objective: ${objective}`,
       expectedOutput:
         "Markdown repository analysis with overview, technologies, structure, commands, tests, risks, and next mission.",
       priority: "normal",

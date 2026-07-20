@@ -303,8 +303,8 @@ export default function OnboardingWizard({
                 <h3>Analyze this repository</h3>
                 <p>Start with a small, read-only mission and watch its execution become an artifact.</p>
               </div>
-              <Link className="launch-button onboarding-action" href="/?firstMission=1">
-                Launch first mission →
+              <Link className="launch-button onboarding-action" href="/">
+                Launch repository mission →
               </Link>
             </div>
           </div>

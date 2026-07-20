@@ -75,11 +75,13 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
     commandId: randomUUID(),
     agentId: registration.agentId,
     repositoryId: repository.repository_id,
+    objective: "Focus on authentication boundaries and recommend the safest next change",
   });
   const claimed = await claimNextAssignment({ credential, leaseOwner: "test-runtime" });
   assert.ok(claimed);
   assert.equal(claimed.assignment.execution_id, launched.executionId);
   assert.equal(claimed.assignment.payload.constraints[0], "read_only_repository_analysis");
+  assert.match(claimed.assignment.payload.instructions, /Focus on authentication boundaries/);
   assert.ok(!JSON.stringify(claimed.assignment.payload).includes("mission-agent://"));
   assert.ok(claimed.leaseToken.startsWith("mc_lease_"));
 

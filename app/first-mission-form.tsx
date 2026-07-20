@@ -7,6 +7,9 @@ import { BrandSprite } from "@/app/brand-assets";
 type Repository = { repository_id: string; name: string; default_branch: string; agent_id: string; agent_name: string };
 export default function FirstMissionForm({ repositories }: { repositories: Repository[] }) {
   const [repositoryId, setRepositoryId] = useState(repositories[0]?.repository_id ?? "");
+  const [objective, setObjective] = useState(
+    "Analyze this repository and produce a concise architecture, risk, and next-steps report",
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const commandId = useRef(crypto.randomUUID());
@@ -19,7 +22,7 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
     const response = await fetch("/api/onboarding/first-mission", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Idempotency-Key": commandId.current },
-      body: JSON.stringify({ repositoryId, agentId: selected.agent_id }),
+      body: JSON.stringify({ repositoryId, agentId: selected.agent_id, objective }),
     });
     const body = (await response.json()) as { missionId?: string; error?: { message?: string } };
     if (response.ok && body.missionId) window.location.assign(`/missions/${body.missionId}`);
@@ -39,11 +42,14 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
         <Link className="nav-link" href="/agents">
           Agent Registry
         </Link>
+        <Link className="nav-link" href="/preview/servicepilot">
+          Run Demo
+        </Link>
       </nav>
       <section className="launch-grid">
         <div className="launch-copy">
-          <p className="section-label">Your first mission</p>
-          <h1>Analyze this repository.</h1>
+          <p className="section-label">Live repository mission</p>
+          <h1>Direct a repository analysis.</h1>
           <p className="lede">
             Your local Codex adapter will pull this assignment over outbound HTTPS and return a genuine Markdown
             artifact.
@@ -73,12 +79,14 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
             </div>
           )}
           <label>
-            Objective
+            Analysis objective
             <textarea
-              value="Analyze this repository and produce a concise architecture, risk, and next-steps report"
-              readOnly
+              value={objective}
+              maxLength={1000}
+              onChange={(event) => setObjective(event.target.value)}
               rows={3}
             />
+            <small>This Mission Agent version can investigate and recommend changes, but it cannot modify files.</small>
           </label>
           <ul>
             <li>Inspect files and configuration</li>
@@ -91,7 +99,7 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
               {error}
             </p>
           )}
-          <button className="launch-button" disabled={!selected || pending} type="submit">
+          <button className="launch-button" disabled={!selected || !objective.trim() || pending} type="submit">
             {pending ? "Creating durable assignment…" : "Launch first mission"}
             <span>→</span>
           </button>

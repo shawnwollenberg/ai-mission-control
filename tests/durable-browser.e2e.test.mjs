@@ -293,7 +293,7 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     assert.match(await readFile(join(directory, "mission-agent-0.1.1.mjs"), "utf8"), /^#!\/usr\/bin\/env node/);
     const repositoryId = Object.keys(stored.repositories)[0];
     assert.ok(repositoryId);
-    const firstMissionPage = await fetch(`${origin}/?firstMission=1`, {
+    const firstMissionPage = await fetch(`${origin}/`, {
       headers: browserHeaders(cookie, { "x-forwarded-host": "app.localhost" }),
     });
     assert.equal(firstMissionPage.status, 200);

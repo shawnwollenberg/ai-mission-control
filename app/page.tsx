@@ -1,5 +1,4 @@
 import { requirePageIdentity } from "@/lib/page-auth";
-import LaunchForm from "./launch-form";
 import { headers } from "next/headers";
 import AgentConnectWizard from "./agent-connect-wizard";
 import { PublicShell } from "./public-site";
@@ -9,19 +8,17 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function LaunchPage({ searchParams }: { searchParams: Promise<{ firstMission?: string }> }) {
+export default async function LaunchPage() {
   const requestHeaders = await headers();
   const host = (requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"))?.split(":")[0];
   if (host?.startsWith("app.")) {
     const identity = await requirePageIdentity("/");
-    const query = await searchParams;
     const state = (
       await getDatabasePool().query(
         `SELECT w.name,
           (SELECT count(*)::int FROM agents a WHERE a.workspace_id=w.id AND a.delivery_mode='pull' AND a.status='active') configured_agents,
           (SELECT count(*)::int FROM agents a WHERE a.workspace_id=w.id AND a.delivery_mode='pull' AND a.status='active' AND a.last_heartbeat_at>now()-interval '5 minutes' AND a.pull_ready_at>now()-interval '5 minutes') ready_agents,
-          (SELECT count(*)::int FROM repositories r WHERE r.workspace_id=w.id AND r.location_mode='mission_agent' AND r.disabled_at IS NULL) repositories,
-          (SELECT count(*)::int FROM mission_projections m WHERE m.workspace_id=w.id AND m.status='completed') completed_missions
+          (SELECT count(*)::int FROM repositories r WHERE r.workspace_id=w.id AND r.location_mode='mission_agent' AND r.disabled_at IS NULL) repositories
          FROM workspaces w WHERE w.id=$1`,
         [identity.workspaceId],
       )
@@ -43,11 +40,7 @@ export default async function LaunchPage({ searchParams }: { searchParams: Promi
       )
     ).rows;
     if (!repositories.length) return <RepositoryRequiredHome workspaceName={state.name} />;
-    if (query.firstMission === "1") {
-      return <FirstMissionForm repositories={repositories} />;
-    }
-    if (!state.completed_missions) return <FirstMissionForm repositories={repositories} />;
-    return <LaunchForm liveRepositoryMissionAvailable />;
+    return <FirstMissionForm repositories={repositories} />;
   }
   return (
     <PublicShell>
