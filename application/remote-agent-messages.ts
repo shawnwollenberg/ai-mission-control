@@ -10,6 +10,7 @@ import type { ProtocolEnvelope } from "@/remote-agent/protocol";
 import { sha256 } from "@/remote-agent/protocol";
 import { applyApprovalProjection, requestRemoteApproval } from "@/application/approval-commands";
 import { recordUsage } from "@/application/usage-budget";
+import { recordRepositoryRecommendations } from "@/application/recommendation-commands";
 
 type Credential = {
   workspace_id: string;
@@ -26,8 +27,9 @@ async function executionRow(message: ProtocolEnvelope, workspaceId: string) {
       attempt: number;
       status: string;
       delivery_mode: string;
+      repository_id: string | null;
     }>(
-      `SELECT e.mission_id,e.task_id,e.agent_id,e.attempt,e.status,a.delivery_mode FROM execution_projections e
+      `SELECT e.mission_id,e.task_id,e.agent_id,e.attempt,e.status,e.repository_id,a.delivery_mode FROM execution_projections e
        JOIN agents a ON a.workspace_id=e.workspace_id AND a.agent_id=e.agent_id
        WHERE e.workspace_id=$1 AND e.execution_id=$2`,
       [workspaceId, message.executionId],
@@ -258,12 +260,15 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
         throw new ValidationFailedError("Inline artifact is missing or oversized");
       if (message.payload.checksum !== sha256(new Uint8Array(body)))
         throw new ValidationFailedError("Submitted artifact checksum does not match content");
+      const artifactKind = String(message.payload.artifactType ?? "report");
+      const parsedRecommendations =
+        artifactKind === "repository_recommendations" ? parseRepositoryRecommendations(body) : undefined;
       const artifact = await storeExecutionArtifact({
         workspaceId: credential.workspace_id,
         missionId: message.missionId!,
         taskId: message.taskId!,
         executionId: message.executionId!,
-        kind: String(message.payload.artifactType ?? "report"),
+        kind: artifactKind,
         mediaType: String(message.payload.mediaType ?? "text/markdown"),
         body,
         maxBytes: 128 * 1024,
@@ -286,6 +291,18 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
           checksum: artifact.checksum,
         },
       });
+      if (artifact.kind === "repository_recommendations") {
+        if (!current.repository_id) throw new ValidationFailedError("Recommendation artifact requires a repository");
+        await recordRepositoryRecommendations({
+          actor: actor(credential),
+          commandId: stableUuid(`remote:${message.messageId}:recommendations`),
+          repositoryId: current.repository_id,
+          sourceMissionId: message.missionId!,
+          sourceExecutionId: message.executionId!,
+          sourceArtifactId: artifact.artifactId,
+          recommendations: parsedRecommendations!,
+        });
+      }
       return { status: "accepted", artifactId: artifact.artifactId };
     }
     case "ExecutionApprovalRequested": {
@@ -465,6 +482,56 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     default:
       throw new ValidationFailedError(`${message.messageType} is not enabled in the first remote-agent slice`);
   }
+}
+
+function parseRepositoryRecommendations(body: Buffer) {
+  let value: unknown;
+  try {
+    value = JSON.parse(body.toString("utf8"));
+  } catch {
+    throw new ValidationFailedError("Recommendation artifact must be valid JSON");
+  }
+  if (!Array.isArray(value)) throw new ValidationFailedError("Recommendation artifact must contain an array");
+  return value.map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item))
+      throw new ValidationFailedError("Recommendation entry is invalid");
+    const row = item as Record<string, unknown>;
+    const evidence = Array.isArray(row.evidence)
+      ? row.evidence.map((entry) => {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry))
+            throw new ValidationFailedError("Recommendation evidence is invalid");
+          const e = entry as Record<string, unknown>;
+          const path = String(e.path ?? "").trim();
+          if (!path || path.startsWith("/") || path.includes(".."))
+            throw new ValidationFailedError("Recommendation evidence path is unsafe");
+          return {
+            path,
+            ...(Number.isInteger(e.line) && Number(e.line) > 0 ? { line: Number(e.line) } : {}),
+            ...(e.description ? { description: String(e.description).slice(0, 500) } : {}),
+          };
+        })
+      : [];
+    const validation = Array.isArray(row.suggestedValidation) ? row.suggestedValidation.map(String) : [];
+    const acceptance = Array.isArray(row.acceptanceCriteria) ? row.acceptanceCriteria.map(String) : [];
+    const impact = String(row.estimatedImpact ?? "medium");
+    const risk = String(row.estimatedRisk ?? "medium");
+    if (
+      !(["low", "medium", "high", "critical"] as string[]).includes(impact) ||
+      !(["low", "medium", "high"] as string[]).includes(risk)
+    )
+      throw new ValidationFailedError("Recommendation impact or risk is invalid");
+    return {
+      title: String(row.title ?? "").slice(0, 200),
+      description: String(row.description ?? "").slice(0, 2000),
+      reasoning: String(row.reasoning ?? "").slice(0, 3000),
+      evidence,
+      estimatedImpact: impact as "low" | "medium" | "high" | "critical",
+      estimatedRisk: risk as "low" | "medium" | "high",
+      estimatedEffort: String(row.estimatedEffort ?? "Unknown").slice(0, 100),
+      suggestedValidation: validation.slice(0, 10).map((x) => x.slice(0, 300)),
+      acceptanceCriteria: acceptance.slice(0, 20).map((x) => x.slice(0, 300)),
+    };
+  });
 }
 
 export async function reserveProtocolMessage(input: {

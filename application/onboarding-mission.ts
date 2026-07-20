@@ -15,6 +15,8 @@ export async function launchFirstRepositoryMission(input: {
   objective?: string;
   acceptanceCriteria?: string;
   validationInstructions?: string;
+  sourceRecommendationId?: string;
+  sourceEvidence?: Array<{ path: string; line?: number; description?: string }>;
 }) {
   const missionType = input.missionType ?? "analysis";
   const objective =
@@ -64,11 +66,16 @@ export async function launchFirstRepositoryMission(input: {
             ]
           : ["A checksummed Markdown repository-analysis artifact is received", "No repository files change"],
       constraints: [
-        missionType === "change" ? "Write only after explicit approval in an isolated worktree" : "Read-only repository access",
+        missionType === "change"
+          ? "Write only after explicit approval in an isolated worktree"
+          : "Read-only repository access",
         missionType === "change"
           ? "Local commit permitted; push, pull request, merge, deployment, infrastructure, and secret access prohibited"
           : "No package installation, commit, push, pull request, merge, deployment, or secret access",
       ],
+      resolvedInputs: input.sourceRecommendationId
+        ? { sourceRecommendationId: input.sourceRecommendationId, sourceEvidence: input.sourceEvidence ?? [] }
+        : {},
     },
   });
   const taskId = randomUUID();
@@ -141,18 +148,20 @@ function textLines(value: string | undefined, maximum: number, maximumLength: nu
   return result;
 }
 
-const validationExecutables = new Set(["npm", "pnpm", "yarn", "bun", "npx", "node"]);
+const validationExecutables = new Set(["npm", "pnpm", "yarn", "bun", "npx", "node", "go", "cargo", "pytest"]);
 function validationLines(value: string | undefined) {
   const commands = textLines(value, 10, 300).map((line) => line.split(/\s+/));
   if (
     commands.some(
       ([executable, ...args]) =>
         !validationExecutables.has(executable) ||
-        args.some((argument) => !/^[A-Za-z0-9_./:@=,+-]+$/.test(argument) || argument.includes("..")),
+        args.some(
+          (argument) => !/^[A-Za-z0-9_./:@=,+-]+$/.test(argument) || (argument.includes("..") && argument !== "./..."),
+        ),
     )
   )
     throw new ValidationFailedError(
-      "Validation commands must use npm, pnpm, yarn, bun, npx, or node with simple repository-local arguments",
+      "Validation commands must use an approved repository-local test or build executable with simple arguments",
     );
   return commands;
 }

@@ -182,3 +182,9 @@ Its first acceptance test appends `mission.created`, `plan.created`, `task.creat
 The workflow uses the existing canonical vocabulary: mission/task creation and assignment, execution request/accept/progress, `approval.requested`, `approval.granted|denied|expired`, execution resume/failure/success, artifact creation, and task/mission completion. Progress stages identify planning, approval wait, worktree preparation, validation, and review readiness; they do not grant authority.
 
 The approval action hash binds `repository.modify` to the registered repository, base branch, base commit, and objective. The implementation plan is evidence on the request. Subsequent artifacts record the patch, validation results, execution log, branch, and local commit. Replaying these events reconstructs the same visible result without recreating a worktree, rerunning Codex, committing, pushing, merging, or deploying.
+
+## Repository Recommendation aggregate
+
+Repository recommendations are first-class aggregates, distinct from the legacy demo optimizer recommendation. `recommendation.created` records repository, originating analysis mission/execution/artifact, title, description, reasoning, file evidence, estimated impact/risk/effort, suggested validation, and acceptance criteria. `recommendation.status_changed` records lifecycle movement through `open`, `accepted`, `in_progress`, `completed`, `stale`, or `dismissed`, including the linked change mission where applicable.
+
+The projection owns no independent facts. Rebuild consumes recommendation events and joins repository/mission/artifact projections for display. Creating a Change Mission appends the normal mission/task/execution events and then links that mission through the recommendation aggregate. Model text alone is not a Recommendation until validated structured evidence is canonically appended.

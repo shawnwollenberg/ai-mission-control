@@ -2,6 +2,7 @@ import { getDatabasePool } from "@/lib/database";
 import { stableUuid } from "@/lib/stable-id";
 import { handleMissionTransition, type CommandActor } from "@/application/mission-commands";
 import { handleTaskTransition, type TaskCommandActor } from "@/application/task-commands";
+import { changeRecommendationStatus } from "@/application/recommendation-commands";
 
 const systemActor = (workspaceId: string): TaskCommandActor => ({
   workspaceId,
@@ -58,13 +59,27 @@ export async function coordinateAfterTask(workspaceId: string, missionId: string
       missionId,
       target: "failed",
     });
-  else if (Number(row.total) > 0 && Number(row.total) === Number(row.completed))
+  else if (Number(row.total) > 0 && Number(row.total) === Number(row.completed)) {
     await handleMissionTransition({
       actor,
       commandId: stableUuid(`mission-complete:${missionId}`),
       missionId,
       target: "completed",
     });
+    const recommendations = await getDatabasePool().query<{ recommendation_id: string }>(
+      "SELECT recommendation_id FROM recommendation_projections WHERE workspace_id=$1 AND linked_mission_id=$2 AND status='in_progress'",
+      [workspaceId, missionId],
+    );
+    for (const recommendation of recommendations.rows)
+      await changeRecommendationStatus({
+        actor: { workspaceId, id: "mission-coordinator", type: "system" },
+        commandId: stableUuid(`recommendation-complete:${recommendation.recommendation_id}:${missionId}`),
+        recommendationId: recommendation.recommendation_id,
+        target: "completed",
+        reason: "Linked change mission completed",
+        linkedMissionId: missionId,
+      });
+  }
 }
 
 export async function cancelMissionTasks(workspaceId: string, missionId: string, causation: string) {

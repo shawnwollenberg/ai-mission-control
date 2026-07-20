@@ -59,7 +59,9 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
       <section className="launch-grid">
         <div className="launch-copy">
           <p className="section-label">Live repository mission</p>
-          <h1>{missionType === "change" ? "Prepare a controlled repository change." : "Direct a repository analysis."}</h1>
+          <h1>
+            {missionType === "change" ? "Prepare a controlled repository change." : "Direct a repository analysis."}
+          </h1>
           <p className="lede">
             {missionType === "change"
               ? "Codex will plan first, pause for your approval, then work in an isolated local branch and return diff, validation, and commit evidence."
@@ -172,7 +174,11 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
             </p>
           )}
           <button className="launch-button" disabled={!selected || !objective.trim() || pending} type="submit">
-            {pending ? "Creating durable assignment…" : missionType === "change" ? "Launch change mission" : "Launch analysis mission"}
+            {pending
+              ? "Creating durable assignment…"
+              : missionType === "change"
+                ? "Launch change mission"
+                : "Launch analysis mission"}
             <span>→</span>
           </button>
         </form>

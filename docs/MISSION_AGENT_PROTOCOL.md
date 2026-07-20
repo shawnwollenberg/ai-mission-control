@@ -41,6 +41,8 @@ The initial adapter resolves the workspace repository ID only through Mission Ag
 
 Mission Agent 0.3.1 adds the separately selected `repository_change` assignment. It plans in the source repository under the read-only sandbox, submits the plan with a `repository.modify` approval request, and polls the approval through the signed leased-assignment channel. Only a grant permits creation of an isolated `mission/*` worktree and a workspace-write Codex invocation. The runtime accepts only parsed allowlisted validation commands, uploads review evidence, creates one local commit, and verifies the source branch and worktree are unchanged. It never pushes, creates a pull request, merges, deploys, changes infrastructure or secrets, or signs/submits transactions.
 
+Mission Agent 0.4.0 adds a second read-only analysis pass that emits a bounded JSON recommendation artifact. Mission Control validates that artifact before creating canonical repository Recommendation aggregates. Invalid JSON, missing evidence, unsafe paths, unsupported impact/risk values, or oversized recommendation sets fail the analysis rather than persisting untrusted model text as product state.
+
 ## Recovery and cancellation
 
 Mission Agent persists only assignment identity, lease metadata, stage, artifact checksum, and acknowledgement state. On restart it heartbeats, reconciles the active assignment, renews a still-valid lease, and retransmits idempotent results. Expired leases become reclaimable; terminal results remain terminal. Cancellation polling stops new stages, asks the adapter to stop, preserves bounded evidence, acknowledges cancellation, and releases the lease.

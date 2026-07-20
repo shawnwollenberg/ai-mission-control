@@ -159,6 +159,12 @@ Write execution occurs in a local Git worktree created from the recorded base co
 
 Canonical mission, task, execution, approval, progress, artifact, and completion events supply user-visible truth. Pull leases, local worktree locations, and restart files are operational coordination only. No new independent product state is introduced. Push, PR creation, merge, deployment, infrastructure/secret changes, and transaction operations remain unavailable.
 
+## Repository Recommendations and Health
+
+Repository Analysis may submit a bounded structured recommendation artifact. The server validates its schema, repository-relative evidence paths, impact/risk vocabulary, acceptance criteria, and validation suggestions before appending one canonical Recommendation aggregate per item. Recommendation projections are workspace- and repository-scoped and rebuild entirely from those events.
+
+Repository Health is the product abstraction for architecture quality, test posture, security findings, technical debt, open recommendations, CI, dependency freshness, documentation completeness, and recent mission activity. Health claims must be explainable projections citing canonical observations and artifacts. Individual agents consume Repository Knowledge and Health; they do not privately own authoritative memory.
+
 ## Open questions
 
 - Where will the demo run and what network access can be assumed?

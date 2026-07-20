@@ -35,7 +35,7 @@ export default function RepositoryControls({
       <button className="secondary-button" onClick={copy}>
         {copied ? "Copied ✓" : "Copy repository add command"}
       </button>
-      <a className="secondary-button" href={`#repository-${repositoryId}`}>
+      <a className="secondary-button" href={`/repositories/${repositoryId}`}>
         View repository
       </a>
       <button className="secondary-button" onClick={() => setEnabled(disabled)}>

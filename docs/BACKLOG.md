@@ -109,3 +109,13 @@ Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner,
 - [x] Capture changed files, full diff, validation output, summary, branch, base commit, and local commit evidence.
 - [x] Preserve prohibitions on push, pull-request creation, merge, deploy, infrastructure, secrets, and transactions.
 - [ ] Validate the full workflow against a disposable production repository and fresh account.
+
+## Mission Control 0.4 — Engineering Manager
+
+- [x] Persist evidence-backed recommendations as canonical lifecycle entities.
+- [x] Emit structured recommendations from Repository Analysis without granting new authority.
+- [x] Expose recommendations in mission and Repository Health views.
+- [x] Create one idempotently linked Repository Change Mission from a recommendation.
+- [x] Inherit objective, evidence, acceptance criteria, and allowlisted validation suggestions.
+- [x] Rebuild recommendation projections from the canonical event log.
+- [ ] Validate the full recommendation-to-approved-change workflow against a disposable production repository.

@@ -237,9 +237,7 @@ export async function handleRequestRemoteExecution(input: {
     constraints: repositoryChange
       ? ["write_requires_approval", "isolated_worktree", "local_commit_only", "no_network_side_effects"]
       : ["read_only_repository_analysis"],
-    validationCommands: repositoryChange
-      ? task.verification_requirements.map((command) => command.split(/\s+/))
-      : [],
+    validationCommands: repositoryChange ? task.verification_requirements.map((command) => command.split(/\s+/)) : [],
     timeoutSeconds,
     heartbeatIntervalSeconds: 30,
     artifactRequirements: repositoryChange

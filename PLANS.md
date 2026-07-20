@@ -437,19 +437,19 @@ Completion requires a fresh production user to connect behind NAT, confirm pull 
 
 **Acceptance:** Demonstrate the plan before approval, prove no write occurs before approval, approve the exact repository/base/objective action, produce an isolated local branch and commit, show changed files/full diff/validation evidence, preserve the original branch, and recover safely from a restarted Mission Agent.
 
-## Mission Control 0.4 — Engineering Manager (proposed)
+## Mission Control 0.4 — Engineering Manager
 
-**Controlling outcome:** Make Mission Control the best place to supervise AI software engineers. This is a proposed milestone, not yet an approved implementation boundary.
+**Controlling outcome:** Make Mission Control the best place to supervise AI software engineers.
 
-**Recommended first slice:** Create Change Mission from Recommendation. Parse a completed Repository Analysis into structured, evidence-linked recommendations; render one action per recommendation; prefill a reviewable change objective, acceptance criteria, and repository-derived validation suggestions; launch through the existing approval-gated Repository Change Mission path.
+**Approved first slice — 2026-07-20:** Recommendations are canonical, persistent, evidence-linked entities with Open, Accepted, In Progress, Completed, Stale, and Dismissed lifecycle states. Repository Analysis emits structured recommendations, repository and mission views expose them, and one action creates an idempotently linked, approval-gated Repository Change Mission inheriting objective, evidence, acceptance criteria, and allowlisted validation suggestions.
 
-**Sequence after the first slice:** Expand versioned engineering Mission Templates, add a review-before-execution Mission Planner, project an evidence-backed Mission Graph, and deepen Repository Intelligence and health.
+**Sequence after the first slice:** Expand versioned engineering Mission Templates, add a review-before-execution Mission Planner, project an evidence-backed Mission Graph, and deepen Repository Health.
 
 **Architecture direction:** Build Repository Knowledge rather than private Agent Memory. Repository architecture, tooling, standards, decisions, known issues, mission history, and recommendations remain durable platform knowledge that interchangeable agents consume. Every visible recommendation, graph relationship, and health claim must cite canonical evidence and rebuild from the event log and durable artifacts.
 
 **Authority boundary:** Version 0.4 does not weaken existing approval separation. File modification, branch push, and pull-request creation remain distinct actions; merge, deployment, infrastructure/secret modification, and transaction signing/submission remain prohibited unless separately authorized in a later phase.
 
-**Approval gate:** Before implementation, define the recommendation schema, canonical events consumed and produced, prefill provenance, stale-recommendation behavior, validation-command safety, UI acceptance criteria, migrations, compatibility, rollback, and production acceptance test.
+**First-slice acceptance:** Recommendation projections must rebuild from canonical events; source mission, execution, artifact, and evidence remain traceable; generated validation commands pass a strict allowlist; retries cannot create duplicate missions; terminal lifecycle states cannot reopen; existing Mission Agent installations remain compatible; and no recommendation can independently authorize repository modification.
 
 ## Cross-phase test matrix
 

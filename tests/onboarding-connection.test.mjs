@@ -72,7 +72,7 @@ test("connection UI keeps the payload masked and advanced setup collapsed", asyn
 });
 
 test("Mission Agent maintains pull readiness with periodic signed heartbeats", async () => {
-  const source = await readFile(new URL("../public/mission-agent-0.3.1.mjs", import.meta.url), "utf8");
+  const source = await readFile(new URL("../public/mission-agent-0.4.0.mjs", import.meta.url), "utf8");
   assert.match(source, /const heartbeatTimer = setInterval/);
   assert.match(source, /60_000/);
   assert.match(source, /heartbeatTimer\.unref\(\)/);
@@ -87,4 +87,22 @@ test("live mission form makes analysis and change objectives explicit and editab
   assert.match(source, /validationInstructions/);
   assert.match(source, /setObjective/);
   assert.match(source, /No push, pull request, merge, deployment, or secrets/);
+});
+
+test("recommendations expose traceable one-click Change Mission creation", async () => {
+  const page = await readFile(new URL("../app/recommendations/[recommendationId]/page.tsx", import.meta.url), "utf8");
+  const actions = await readFile(
+    new URL("../app/recommendations/[recommendationId]/recommendation-actions.tsx", import.meta.url),
+    "utf8",
+  );
+  const route = await readFile(
+    new URL("../app/api/recommendations/[recommendationId]/change-mission/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(page, /Repository Recommendation/);
+  assert.match(page, /Evidence/);
+  assert.match(actions, /Create Change Mission/);
+  assert.match(route, /sourceRecommendationId/);
+  assert.match(route, /acceptanceCriteria/);
+  assert.match(route, /suggestedValidation/);
 });

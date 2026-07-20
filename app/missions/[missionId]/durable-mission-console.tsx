@@ -6,6 +6,7 @@ import { BrandSprite } from "@/app/brand-assets";
 import type { MissionReadModel } from "@/lib/mission-projection-store";
 import type { MissionTimelineEntry } from "@/lib/mission-queries";
 import type { ActionReadModel, ApprovalReadModel, ExecutionReadModel, TaskReadModel } from "@/lib/execution-queries";
+import type { RecommendationReadModel } from "@/application/recommendation-queries";
 
 const availableCommands: Record<string, Array<{ command: string; label: string }>> = {
   draft: [
@@ -51,6 +52,7 @@ export default function DurableMissionConsole({
   initialApprovals,
   initialExecutions,
   initialActions,
+  initialRecommendations,
 }: {
   initialMission: MissionReadModel;
   initialTimeline: MissionTimelineEntry[];
@@ -58,6 +60,7 @@ export default function DurableMissionConsole({
   initialApprovals: ApprovalReadModel[];
   initialExecutions: ExecutionReadModel[];
   initialActions: ActionReadModel[];
+  initialRecommendations: RecommendationReadModel[];
 }) {
   const [mission, setMission] = useState(initialMission);
   const [timeline, setTimeline] = useState(initialTimeline);
@@ -65,6 +68,7 @@ export default function DurableMissionConsole({
   const [approvals, setApprovals] = useState(initialApprovals);
   const [executions, setExecutions] = useState(initialExecutions);
   const [actions, setActions] = useState(initialActions);
+  const [recommendations, setRecommendations] = useState(initialRecommendations);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
@@ -82,12 +86,14 @@ export default function DurableMissionConsole({
           approvals: ApprovalReadModel[];
           executions: ExecutionReadModel[];
           actions: ActionReadModel[];
+          recommendations: RecommendationReadModel[];
         };
         setMission(body.mission);
         setTasks(body.tasks);
         setApprovals(body.approvals);
         setExecutions(body.executions);
         setActions(body.actions);
+        setRecommendations(body.recommendations);
       }
       if (timelineResponse.ok)
         setTimeline(((await timelineResponse.json()) as { timeline: MissionTimelineEntry[] }).timeline);
@@ -331,6 +337,35 @@ export default function DurableMissionConsole({
                 )}
               </div>
             ))}
+          </section>
+        )}
+        {recommendations.length > 0 && (
+          <section className="command-panel mission-summary">
+            <div className="panel-title">
+              <div>
+                <p className="section-label">Repository Health</p>
+                <h2>Recommendations</h2>
+              </div>
+              <span>{recommendations.filter((r) => r.status === "open").length} open</span>
+            </div>
+            <div className="log-list">
+              {recommendations.map((recommendation) => (
+                <Link
+                  className="log-item"
+                  href={`/recommendations/${recommendation.recommendationId}`}
+                  key={recommendation.recommendationId}
+                >
+                  <span className="log-sequence">{recommendation.estimatedImpact.slice(0, 2).toUpperCase()}</span>
+                  <div>
+                    <strong>{recommendation.title}</strong>
+                    <small>
+                      {recommendation.status} · {recommendation.estimatedRisk} risk · {recommendation.estimatedEffort}
+                    </small>
+                    <p>{recommendation.description}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </section>
         )}
         <section className="command-panel mission-summary">

@@ -39,7 +39,7 @@ Priority order:
 2. **Mission Templates.** Make Security Audit, Bug Fix, Performance Review, Dependency Upgrade, Documentation, Feature Implementation, and Code Review recognizable entry points with versioned prompts, validation expectations, and outputs.
 3. **Mission Planner.** Decompose an objective such as “Add OAuth” into proposed backend, frontend, tests, and documentation work. Planning remains reviewable and requires approval before execution begins.
 4. **Mission Graph.** Connect analysis, implementation, review, QA, publication, deployment, and monitoring missions through explicit evidence-backed relationships. The graph is a projection of canonical mission relationships, not an independent workflow database.
-5. **Repository Intelligence.** Detect architecture, frameworks, languages, CI, security posture, tests, dependencies, TODOs, technical debt, and potential defects. Produce an explainable repository-health projection with evidence and versioned scoring rules.
+5. **Repository Health.** Detect architecture, frameworks, languages, CI, security posture, tests, dependencies, TODOs, technical debt, and potential defects. Produce an explainable health projection with evidence and versioned scoring rules.
 
 The intended experience is repository-centered:
 

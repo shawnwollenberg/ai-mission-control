@@ -158,7 +158,10 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
       taskId: launched.taskId,
       executionId: launched.executionId,
       attempt: 1,
-      payload: { classification: "test_cleanup", summary: "Finish the analysis fixture before change-mission testing." },
+      payload: {
+        classification: "test_cleanup",
+        summary: "Finish the analysis fixture before change-mission testing.",
+      },
     },
     credential,
   );
