@@ -31,6 +31,28 @@ test("policy deterministically gates exact generated branch publication", () => 
   assert.equal(first.outcome, "require_approval");
   assert.equal(first.policyVersion, POLICY_VERSION);
 });
+test("Publish for Review is one approval while merge and deployment remain denied", () => {
+  const input = {
+    ...base,
+    repository: { ...base.repository, allowedBranchPrefixes: ["mission/"] },
+    actionType: "repository.publish_for_review",
+    parameters: {
+      branch: "mission/abc-change",
+      sourceBranch: "mission/abc-change",
+      remote: "origin",
+      targetBranch: "main",
+      commit: "abc",
+      force: false,
+    },
+  };
+  const decision = evaluatePolicy(input);
+  assert.equal(decision.outcome, "require_approval");
+  assert.equal(decision.approvalType, "publish_for_review");
+  assert.equal(evaluatePolicy({ ...input, parameters: { ...input.parameters, force: true } }).outcome, "deny");
+  assert.equal(evaluatePolicy({ ...input, parameters: { ...input.parameters, branch: "main" } }).outcome, "deny");
+  assert.equal(evaluatePolicy({ ...input, actionType: "repository.merge_pull_request" }).outcome, "deny");
+  assert.equal(evaluatePolicy({ ...input, actionType: "deployment.start" }).outcome, "deny");
+});
 test("command classification denies destructive, infrastructure, secret, and unknown execution", () => {
   assert.equal(commandPolicy(classifyCommand(["node", "--test", "health.test.mjs"])), "allow");
   for (const command of [

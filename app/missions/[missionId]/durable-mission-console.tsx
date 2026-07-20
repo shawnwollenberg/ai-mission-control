@@ -73,7 +73,6 @@ export default function DurableMissionConsole({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (["completed", "failed", "cancelled"].includes(mission.status)) return;
     const timer = window.setInterval(async () => {
       const [executionResponse, timelineResponse] = await Promise.all([
         fetch(`/api/missions/${mission.missionId}/execution`, { cache: "no-store" }),
@@ -119,6 +118,18 @@ export default function DurableMissionConsole({
       body: "{}",
     });
     if (!response.ok) setError("Execution cancellation could not be requested.");
+    setPending(false);
+  }
+  async function publishForReview(executionId: string) {
+    setPending(true);
+    setError("");
+    const response = await fetch(`/api/executions/${executionId}/actions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({ actionType: "repository.publish_for_review", parameters: {}, targetResource: "derived" }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) setError(body.error?.message ?? "Publication approval could not be requested.");
     setPending(false);
   }
 
@@ -278,9 +289,28 @@ export default function DurableMissionConsole({
                   {execution.commandsCompleted} commands · {execution.artifacts.length} artifacts
                 </small>
                 {execution.commitId && (
-                  <p>
-                    Local commit: <code>{execution.commitId}</code>
-                  </p>
+                  <>
+                    <p>
+                      Local commit: <code>{execution.commitId}</code>
+                    </p>
+                    {execution.status === "succeeded" &&
+                      execution.artifacts.some((artifact) => artifact.kind === "git_patch") &&
+                      !actions.some(
+                        (action) =>
+                          action.executionId === execution.executionId &&
+                          action.actionType === "repository.publish_for_review",
+                      ) && (
+                        <div className="mission-actions">
+                          <button disabled={pending} onClick={() => publishForReview(execution.executionId)}>
+                            Publish for Review
+                          </button>
+                          <small>
+                            Push this exact commit and open an evidence-rich pull request. Merge and deployment stay
+                            disabled.
+                          </small>
+                        </div>
+                      )}
+                  </>
                 )}
                 {execution.failureClassification && <p>Failure: {execution.failureClassification}</p>}
                 <ul>
@@ -316,7 +346,16 @@ export default function DurableMissionConsole({
             {actions.map((action) => (
               <div className="approval-card" key={action.actionRequestId}>
                 <strong>
-                  {action.actionType} · {action.status}
+                  {action.actionType === "repository.publish_for_review" ? "Publish for Review" : action.actionType} ·{" "}
+                  {action.status === "waiting_for_approval"
+                    ? "Publication Approval Required"
+                    : action.status === "executing"
+                      ? "Publishing"
+                      : action.status === "succeeded"
+                        ? "Pull Request Open"
+                        : action.status === "failed"
+                          ? "Publication Failed"
+                          : action.status}
                 </strong>
                 <p>
                   Policy {action.policyVersion ?? "not evaluated"} · {action.policyOutcome ?? "pending"}
@@ -330,9 +369,11 @@ export default function DurableMissionConsole({
                 </ul>
                 {action.result && (
                   <p>
-                    {action.actionType === "repository.create_pull_request"
-                      ? `Provider-confirmed pull request: ${String(action.result.url)}`
-                      : `Remote branch: ${String(action.result.remoteRef)}`}
+                    {action.actionType === "repository.publish_for_review"
+                      ? `Provider-confirmed pull request: ${String((action.result.pullRequest as Record<string, unknown> | undefined)?.url ?? "pending")}`
+                      : action.actionType === "repository.create_pull_request"
+                        ? `Provider-confirmed pull request: ${String(action.result.url)}`
+                        : `Remote branch: ${String(action.result.remoteRef)}`}
                   </p>
                 )}
               </div>
@@ -414,7 +455,13 @@ export default function DurableMissionConsole({
               {approval.status === "pending" && (
                 <div className="mission-actions">
                   <button disabled={pending} onClick={() => decide(approval.approvalId, "grant")}>
-                    Grant and continue
+                    {actions.some(
+                      (action) =>
+                        action.approvalId === approval.approvalId &&
+                        action.actionType === "repository.publish_for_review",
+                    )
+                      ? "Publish for Review"
+                      : "Grant and continue"}
                   </button>
                   <button disabled={pending} onClick={() => decide(approval.approvalId, "deny")}>
                     Deny
@@ -445,7 +492,9 @@ export default function DurableMissionConsole({
                   ? " The exact approved branch was pushed."
                   : " No branch push was recorded."}{" "}
                 {actions.some(
-                  (action) => action.actionType === "repository.create_pull_request" && action.status === "succeeded",
+                  (action) =>
+                    ["repository.create_pull_request", "repository.publish_for_review"].includes(action.actionType) &&
+                    action.status === "succeeded",
                 )
                   ? " A provider-confirmed pull request was created."
                   : " No pull request was created."}{" "}

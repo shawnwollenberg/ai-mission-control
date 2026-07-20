@@ -252,7 +252,7 @@ export async function registerMissionAgentRepository(input: {
     `INSERT INTO repositories(workspace_id,repository_id,name,local_path,default_branch,allowed_agent_ids,read_allowed,write_allowed,
       commit_allowed,push_allowed,merge_allowed,deployment_allowed,validation_commands,pull_request_allowed,protected_branches,
       allowed_branch_prefixes,allowed_remotes,provider_type,location_mode,repository_fingerprint,observed_remote_url,observed_commit)
-     VALUES($1,$2,$3,$4,$5,$6,true,false,false,false,false,false,'[]',false,$7,'[]','[]','local_fixture','mission_agent',$8,$9,$10)
+     VALUES($1,$2,$3,$4,$5,$6,true,false,false,$11,false,false,'[]',$11,$7,$12,'["origin"]',$13,'mission_agent',$8,$9,$10)
      ON CONFLICT(workspace_id,repository_fingerprint) WHERE repository_fingerprint IS NOT NULL AND disabled_at IS NULL
      DO UPDATE SET name=EXCLUDED.name,default_branch=EXCLUDED.default_branch,allowed_agent_ids=EXCLUDED.allowed_agent_ids,
        observed_remote_url=EXCLUDED.observed_remote_url,observed_commit=EXCLUDED.observed_commit,updated_at=now()
@@ -268,6 +268,9 @@ export async function registerMissionAgentRepository(input: {
       input.fingerprint,
       input.remoteUrl?.slice(0, 500) ?? null,
       input.commit?.slice(0, 80) ?? null,
+      Boolean(input.remoteUrl && /github\.com[:/]/i.test(input.remoteUrl)),
+      JSON.stringify(input.remoteUrl && /github\.com[:/]/i.test(input.remoteUrl) ? ["mission/"] : []),
+      input.remoteUrl && /github\.com[:/]/i.test(input.remoteUrl) ? "github" : "local_fixture",
     ],
   );
   const repository = result.rows[0];

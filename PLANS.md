@@ -475,6 +475,18 @@ Completion requires a fresh production user to connect behind NAT, confirm pull 
 
 ## Cross-phase test matrix
 
+## Mission Control 0.5 — Delivery Authority Expansion
+
+**Approved first boundary:** `Publish for Review` combines the exact approved mission-branch push and evidence-rich pull-request creation into one human approval. The binding includes repository/remote identity, base branch/commit, mission branch, local commit, diff evidence, objective, acceptance criteria, validation evidence, and action hash. Any mismatch stops publication; force push and protected-branch push are prohibited.
+
+**Execution topology:** Mission Agent 0.6 performs only the exact commit push from its retained isolated worktree over its signed outbound pull channel. Mission Control keeps provider credentials server-side, creates/confirms the pull request, and records branch, PR number/URL, head SHA, and evidence checksum in the event-backed action result.
+
+**Still disabled:** Merge, deployment, infrastructure/secret modification, transaction signing/submission, CI/review bypass, and any additional repository modification. Review agents may recommend a merge but cannot authorize it. Merge and deployment schemas are documented architecture only.
+
+**Acceptance:** Use a disposable GitHub repository to prove one approval, exact branch/commit publication, complete PR evidence, stale/mismatched approval invalidation, no-force/no-default-branch enforcement, retry/restart idempotency, and projection rebuild.
+
+## Cross-phase test matrix
+
 - Unit: transitions, dependency resolution, policy, health, retry classification, schemas, serialization.
 - Integration: append/projection, command idempotency, dispatch/outbox, callback auth/replay, approvals, rebuild.
 - End to end: success, retry, heartbeat timeout, approve, deny, reassign, DeFi stop boundary, scheduled monitoring run.

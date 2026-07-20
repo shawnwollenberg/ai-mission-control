@@ -30,6 +30,7 @@ export type CreatePullRequestResult = {
   sourceBranch: string;
   targetBranch: string;
   state: string;
+  headSha?: string;
 };
 export interface GitProvider {
   pushBranch(request: PushBranchRequest): Promise<PushBranchResult>;

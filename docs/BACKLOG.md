@@ -132,3 +132,13 @@ Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner,
 - [x] Approve the smallest implementation slice and production acceptance test.
 - [x] Implement evidence-backed health assessments, history, repository dashboard, and timeline.
 - [ ] Validate two production analyses showing a comparable evidence-backed health trend.
+
+## Mission Control 0.5 — Delivery Authority Expansion
+
+- [x] Add one exact, evidence-bound `Publish for Review` approval.
+- [x] Route the approved push to the repository-owning Mission Agent without provider credentials.
+- [x] Create and confirm the PR server-side with complete mission/evidence traceability.
+- [x] Project Local Changes Ready, Publication Approval Required, Publishing, Pull Request Open, and Publication Failed from canonical execution/action events.
+- [x] Keep force push, default/protected-branch push, merge, deployment, infrastructure/secrets, and transactions denied.
+- [x] Document independent review, merge authority, deployment mission, and repository autonomy policy boundaries without enabling them.
+- [ ] Validate the complete boundary against a disposable production GitHub repository and rebuild projections after restart.

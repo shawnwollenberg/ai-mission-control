@@ -169,6 +169,18 @@ Repository Health 0.5 separates observation from calculation. Mission Agent may 
 
 Each assessment is a canonical `repository_health` aggregate linked to the repository, source mission, execution, artifact, and observed commit. The disposable assessment projection retains comparable history rather than only the latest value. Repository Timeline is a read projection over repository-linked missions, recommendations, assessments, and approvals; it owns no separate timeline state and does not duplicate Git history.
 
+## Delivery authority progression
+
+`Publish for Review` is the first delivery-authority boundary. One owner approval binds repository and remote identity, base branch and commit, generated mission branch, exact local commit, diff and validation evidence, objective, acceptance criteria, and the canonical action hash. The approved effect is only: push that commit without force and create its evidence-rich pull request. Mission Agent performs the push from its retained isolated worktree; the server-side provider creates and confirms the PR. Agent credentials never receive GitHub provider credentials.
+
+The action aggregate provides the rebuildable publication lifecycle: a successful local execution is **Local Changes Ready**; `waiting_for_approval` is **Publication Approval Required**; `executing` is **Publishing**; success with provider evidence is **Pull Request Open**; and failure is **Publication Failed**. CI, review, ready-to-merge, changes-requested, merged, and closed are reserved provider-backed states for later boundaries.
+
+Independent review agents may emit findings and a merge recommendation, but neither is authority. A future merge action must bind the current PR head SHA, target branch, required CI checks, required review decisions, unresolved findings, repository merge policy, and a fresh human approval. Merge remains permanently denied in the current policy engine.
+
+Deployment is a separate future mission. It must bind an exact merged commit, target environment, immutable build artifact, deployment plan, rollback plan, health checks, and deployment-specific approval. Publication approval cannot authorize it; deployment remains denied.
+
+Future autonomy settings are repository policy (`manual`, `publish-after-approval`, `merge-after-checks-and-approval`, and narrowly bounded higher modes), never vague “full autonomy.” Every mode preserves protected-branch controls, evidence requirements, emergency stops, credential isolation, and independent merge/deployment boundaries.
+
 ## Open questions
 
 - Where will the demo run and what network access can be assumed?
