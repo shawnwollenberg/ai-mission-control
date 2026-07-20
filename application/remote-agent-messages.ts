@@ -554,8 +554,24 @@ export function parseRepositoryRecommendations(body: Buffer) {
         ...(e.description ? { description: String(e.description).slice(0, 500) } : {}),
       };
     });
-    const validation = Array.isArray(row.suggestedValidation) ? row.suggestedValidation.map(String) : [];
-    const acceptance = Array.isArray(row.acceptanceCriteria) ? row.acceptanceCriteria.map(String) : [];
+    const validationEntries = Array.isArray(row.suggestedValidation)
+      ? row.suggestedValidation
+      : typeof row.suggestedValidation === "string"
+        ? [row.suggestedValidation]
+        : [];
+    const acceptanceEntries = Array.isArray(row.acceptanceCriteria)
+      ? row.acceptanceCriteria
+      : typeof row.acceptanceCriteria === "string"
+        ? [row.acceptanceCriteria]
+        : [];
+    const validation = validationEntries
+      .map(String)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    const acceptance = acceptanceEntries
+      .map(String)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
     const impact = String(row.estimatedImpact ?? "medium");
     const risk = String(row.estimatedRisk ?? "medium");
     if (

@@ -39,6 +39,27 @@ test("recommendation ingestion normalizes one structured evidence object without
   const [missing] = parseRepositoryRecommendations(Buffer.from(JSON.stringify([{ ...input, evidence: null }])));
   assert.throws(() => createRecommendation({ ...input, evidence: missing.evidence }), /evidence is required/);
 });
+test("recommendation ingestion normalizes singular criteria and validation without accepting blanks", () => {
+  const [parsed] = parseRepositoryRecommendations(
+    Buffer.from(
+      JSON.stringify([
+        {
+          ...input,
+          acceptanceCriteria: "All authentication paths use the shared service",
+          suggestedValidation: "npm test",
+        },
+      ]),
+    ),
+  );
+  assert.deepEqual(parsed.acceptanceCriteria, ["All authentication paths use the shared service"]);
+  assert.deepEqual(parsed.suggestedValidation, ["npm test"]);
+  assert.doesNotThrow(() => createRecommendation({ ...input, ...parsed }));
+
+  const [blank] = parseRepositoryRecommendations(
+    Buffer.from(JSON.stringify([{ ...input, acceptanceCriteria: "   " }])),
+  );
+  assert.throws(() => createRecommendation({ ...input, ...blank }), /acceptance criteria are required/);
+});
 test("recommendation lifecycle is explicit and terminal states cannot reopen", () => {
   const events = [{ aggregateId: "rec", aggregateVersion: 1, payload: { status: "open" } }];
   const state = rehydrateRecommendation(events);
