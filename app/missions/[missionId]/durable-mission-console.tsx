@@ -27,7 +27,10 @@ const availableCommands: Record<string, Array<{ command: string; label: string }
   ],
 };
 const hasMissionAgentCodex = (executions: ExecutionReadModel[]) =>
-  executions.some((execution) => execution.adapterType === "remote_http" && execution.agentName === "Codex");
+  executions.some(
+    (execution) =>
+      execution.adapterType === "remote_http" && execution.agentName?.toLocaleLowerCase().includes("codex"),
+  );
 const modeLabel = (mode: string, executions: ExecutionReadModel[]) =>
   hasMissionAgentCodex(executions)
     ? "Live Mission Agent · Codex"

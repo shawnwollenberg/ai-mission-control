@@ -89,6 +89,12 @@ test("live mission form makes analysis and change objectives explicit and editab
   assert.match(source, /No push, pull request, merge, deployment, or secrets/);
 });
 
+test("a user-named Codex Mission Agent is not mislabeled as Hermes", async () => {
+  const source = await readFile("app/missions/[missionId]/durable-mission-console.tsx", "utf8");
+  assert.match(source, /agentName\?\.toLocaleLowerCase\(\)\.includes\("codex"\)/);
+  assert.doesNotMatch(source, /agentName === "Codex"/);
+});
+
 test("recommendations expose traceable one-click Change Mission creation", async () => {
   const page = await readFile(new URL("../app/recommendations/[recommendationId]/page.tsx", import.meta.url), "utf8");
   const actions = await readFile(
