@@ -42,10 +42,14 @@ export default function OnboardingWizard({
   const [agents, setAgents] = useState(initialAgents);
   const [connection, setConnection] = useState<Connection>();
   const [creating, setCreating] = useState(false);
-  const [copied, setCopied] = useState<"default" | "advanced">();
+  const [copied, setCopied] = useState<"default" | "advanced" | "doctor">();
   const [error, setError] = useState("");
   const [waitingLonger, setWaitingLonger] = useState(false);
-  const currentAgent = agents.find((agent) => agent.agent_id === connection?.agentId);
+  const currentAgent =
+    agents.find((agent) => agent.agent_id === connection?.agentId) ??
+    (!connection
+      ? agents.find((agent) => agent.last_heartbeat_at && agent.pull_ready_at && (agent.repository_count ?? 0) > 0)
+      : undefined);
   const progress = connectionProgress(Boolean(connection), currentAgent);
   const connected = progress.heartbeat && progress.pullReady && progress.repository ? currentAgent : undefined;
   const stage = connected ? 3 : 2;
@@ -103,6 +107,16 @@ export default function OnboardingWizard({
       window.setTimeout(() => setCopied(undefined), 1800);
     } catch {
       setError("The command could not be copied. Check your browser’s clipboard permission and try again.");
+    }
+  }
+
+  async function copyDiagnostics() {
+    try {
+      await navigator.clipboard.writeText("mission-agent doctor");
+      setCopied("doctor");
+      window.setTimeout(() => setCopied(undefined), 1800);
+    } catch {
+      setError("The diagnostics command could not be copied. Check your browser’s clipboard permission and try again.");
     }
   }
 
@@ -187,7 +201,7 @@ export default function OnboardingWizard({
                 <div className="command-copy">
                   <code aria-label="Masked secure connection command">mission-control secure connect ••••••••••••</code>
                   <button aria-label="Copy complete connection command" onClick={() => copyCommand()}>
-                    {copied === "default" ? "Copied" : "Copy"}
+                    {copied === "default" ? "Copied" : "Copy connection command"}
                   </button>
                 </div>
                 <small>
@@ -236,7 +250,9 @@ export default function OnboardingWizard({
               </ul>
               <div className="troubleshooting-actions">
                 <button onClick={() => copyCommand()}>Copy command again</button>
-                <code>mission-agent doctor</code>
+                <button aria-label="Copy Mission Agent diagnostics command" onClick={copyDiagnostics}>
+                  {copied === "doctor" ? "Diagnostics command copied" : "Run connection diagnostics"}
+                </button>
                 <Link href="/docs/mission-agent">Open troubleshooting</Link>
               </div>
             </details>

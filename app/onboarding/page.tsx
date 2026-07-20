@@ -14,7 +14,9 @@ export default async function OnboardingPage() {
   ).rows[0];
   const agents = (
     await getDatabasePool().query(
-      "SELECT agent_id,name,adapter_type,status,last_heartbeat_at,pull_ready_at,mission_agent_version,mission_agent_adapter FROM agents WHERE workspace_id=$1 ORDER BY created_at",
+      `SELECT a.agent_id,a.name,a.adapter_type,a.status,a.last_heartbeat_at,a.pull_ready_at,a.mission_agent_version,a.mission_agent_adapter,
+        (SELECT count(*)::int FROM repositories r WHERE r.workspace_id=a.workspace_id AND r.allowed_agent_ids ? a.agent_id::text AND r.disabled_at IS NULL) repository_count
+       FROM agents a WHERE a.workspace_id=$1 ORDER BY a.created_at`,
       [identity.workspaceId],
     )
   ).rows;

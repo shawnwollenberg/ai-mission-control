@@ -21,6 +21,27 @@ test("onboarding requires heartbeat, pull readiness, and a repository", () => {
     Object.values(
       connectionProgress(Boolean(connection), {
         mission_agent_version: "0.2.0",
+        pull_ready_at: "now",
+        repository_count: 1,
+      }),
+    ).every(Boolean),
+    false,
+  );
+  assert.equal(
+    Object.values(
+      connectionProgress(Boolean(connection), {
+        mission_agent_version: "0.2.0",
+        last_heartbeat_at: "now",
+        pull_ready_at: "now",
+        repository_count: 0,
+      }),
+    ).every(Boolean),
+    false,
+  );
+  assert.equal(
+    Object.values(
+      connectionProgress(Boolean(connection), {
+        mission_agent_version: "0.2.0",
         last_heartbeat_at: "now",
         pull_ready_at: "now",
         repository_count: 1,
@@ -37,6 +58,8 @@ test("connection UI keeps the payload masked and advanced setup collapsed", asyn
   assert.match(source, /Advanced: connect a repository by absolute path/);
   assert.doesNotMatch(source, /<details className="connection-details" open>/);
   assert.match(source, /navigator\.clipboard\.writeText\(command\)/);
+  assert.match(source, /Copy connection command/);
+  assert.match(source, /navigator\.clipboard\.writeText\("mission-agent doctor"\)/);
   assert.match(source, /Still waiting for Mission Agent/);
   assert.match(
     source,
