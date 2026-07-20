@@ -84,13 +84,13 @@ async function schedule(overrides = {}) {
 
 test("schedule concurrency, run-now, disabled controls, and recovery are bounded and idempotent", async () => {
   const first = await schedule();
-  const claimed = await claimDueSchedule("policy-worker");
+  const claimed = await claimDueSchedule("policy-worker", 30, workspaceId);
   await runClaimedSchedule(claimed, "policy-worker");
   await getDatabasePool().query(
     "UPDATE schedule_projections SET next_run_at=now()-interval '1 second',schedule_rule=$3 WHERE workspace_id=$1 AND schedule_id=$2",
     [workspaceId, first.scheduleId, { type: "hourly" }],
   );
-  const skipClaim = await claimDueSchedule("skip-worker");
+  const skipClaim = await claimDueSchedule("skip-worker", 30, workspaceId);
   const skipped = await runClaimedSchedule(skipClaim, "skip-worker");
   assert.equal(skipped.status, "skipped");
   assert.equal(
@@ -104,19 +104,19 @@ test("schedule concurrency, run-now, disabled controls, and recovery are bounded
   );
 
   const queuedSchedule = await schedule({ concurrencyPolicy: "queue_next" });
-  const q1 = await claimDueSchedule("queue-a");
+  const q1 = await claimDueSchedule("queue-a", 30, workspaceId);
   const q1Result = await runClaimedSchedule(q1, "queue-a");
   await getDatabasePool().query(
     "UPDATE schedule_projections SET next_run_at=now()-interval '1 second',schedule_rule=$3 WHERE workspace_id=$1 AND schedule_id=$2",
     [workspaceId, queuedSchedule.scheduleId, { type: "hourly" }],
   );
-  const q2 = await claimDueSchedule("queue-b");
+  const q2 = await claimDueSchedule("queue-b", 30, workspaceId);
   assert.equal((await runClaimedSchedule(q2, "queue-b")).status, "queued");
   await getDatabasePool().query(
     "UPDATE schedule_projections SET next_run_at=now()-interval '1 second' WHERE workspace_id=$1 AND schedule_id=$2",
     [workspaceId, queuedSchedule.scheduleId],
   );
-  const q3 = await claimDueSchedule("queue-c");
+  const q3 = await claimDueSchedule("queue-c", 30, workspaceId);
   await runClaimedSchedule(q3, "queue-c");
   assert.equal(
     (
@@ -133,7 +133,7 @@ test("schedule concurrency, run-now, disabled controls, and recovery are bounded
     missionId: q1Result.missionIds[0],
     target: "cancelled",
   });
-  const release = await claimDueSchedule("queue-release");
+  const release = await claimDueSchedule("queue-release", 30, workspaceId);
   const released = await runClaimedSchedule(release, "queue-release");
   assert.equal(released.status, "created");
   assert.equal(
@@ -166,7 +166,7 @@ test("schedule concurrency, run-now, disabled controls, and recovery are bounded
     missedRunPolicy: "run_all_with_limit",
     maximumRecoveryRuns: 3,
   });
-  const r = await claimDueSchedule("recovery");
+  const r = await claimDueSchedule("recovery", 30, workspaceId);
   await runClaimedSchedule(r, "recovery");
   const history = (
     await getDatabasePool().query(

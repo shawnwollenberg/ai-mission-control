@@ -131,7 +131,7 @@ test("recurring schedules persist their rule and advance after a run", async () 
     concurrencyPolicy: "allow_parallel",
     missedRunPolicy: "run_once_on_recovery",
   });
-  const claimed = await claimDueSchedule("scheduler-recurring");
+  const claimed = await claimDueSchedule("scheduler-recurring", 30, workspaceId);
   assert.equal(claimed.schedule_id, schedule.scheduleId);
   await runClaimedSchedule(claimed, "scheduler-recurring");
   const persisted = (
@@ -158,7 +158,10 @@ test("leased scheduler creates one mission and notification under duplicate work
     concurrencyPolicy: "skip_if_running",
     missedRunPolicy: "run_once_on_recovery",
   });
-  const [one, two] = await Promise.all([claimDueSchedule("scheduler-a"), claimDueSchedule("scheduler-b")]);
+  const [one, two] = await Promise.all([
+    claimDueSchedule("scheduler-a", 30, workspaceId),
+    claimDueSchedule("scheduler-b", 30, workspaceId),
+  ]);
   assert.equal([one, two].filter(Boolean).length, 1);
   const claimed = one ?? two;
   const worker = one ? "scheduler-a" : "scheduler-b";
@@ -184,5 +187,5 @@ test("leased scheduler creates one mission and notification under duplicate work
     1,
   );
   await setScheduleEnabled({ actor, commandId: randomUUID(), scheduleId: schedule.scheduleId, enabled: false });
-  assert.equal(await claimDueSchedule("scheduler-c"), undefined);
+  assert.equal(await claimDueSchedule("scheduler-c", 30, workspaceId), undefined);
 });
