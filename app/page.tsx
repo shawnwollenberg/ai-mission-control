@@ -5,6 +5,7 @@ import AgentConnectWizard from "./agent-connect-wizard";
 import { PublicShell } from "./public-site";
 import FirstMissionForm from "./first-mission-form";
 import { getDatabasePool } from "@/lib/database";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,12 @@ export default async function LaunchPage({ searchParams }: { searchParams: Promi
   if (host?.startsWith("app.")) {
     const identity = await requirePageIdentity("/");
     const query = await searchParams;
+    const connectedAgents = await getDatabasePool().query(
+      `SELECT 1 FROM agents WHERE workspace_id=$1 AND delivery_mode='pull' AND status='active'
+       AND last_heartbeat_at IS NOT NULL AND pull_ready_at IS NOT NULL LIMIT 1`,
+      [identity.workspaceId],
+    );
+    if (!connectedAgents.rowCount) redirect("/onboarding");
     if (query.firstMission === "1") {
       const repositories = (
         await getDatabasePool().query(

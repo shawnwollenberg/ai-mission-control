@@ -1,4 +1,4 @@
-import { createServicePilotPlan } from "@/application/demo-plan";
+import { createObjectivePlan } from "@/application/objective-plan";
 import { handleMissionLifecycleRequest } from "@/application/mission-http";
 import { requireApiIdentity, requireMutationOrigin, unauthenticatedResponse } from "@/lib/request-auth";
 
@@ -8,6 +8,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ mis
   const identity = await requireApiIdentity();
   if (!identity) return unauthenticatedResponse();
   const { missionId } = await params;
-  await createServicePilotPlan(identity.workspaceId, identity.userId, missionId);
+  await createObjectivePlan(identity.workspaceId, identity.userId, missionId);
   return handleMissionLifecycleRequest(request, params, "planned");
 }

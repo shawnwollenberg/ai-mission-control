@@ -13,7 +13,7 @@ const availableCommands: Record<string, Array<{ command: string; label: string }
     { command: "cancel", label: "Cancel" },
   ],
   planned: [
-    { command: "start", label: "Start simulated execution" },
+    { command: "start", label: "Start execution" },
     { command: "cancel", label: "Cancel" },
   ],
   running: [
@@ -21,7 +21,7 @@ const availableCommands: Record<string, Array<{ command: string; label: string }
     { command: "cancel", label: "Cancel" },
   ],
   paused: [
-    { command: "resume", label: "Resume simulated execution" },
+    { command: "resume", label: "Resume execution" },
     { command: "cancel", label: "Cancel" },
   ],
 };

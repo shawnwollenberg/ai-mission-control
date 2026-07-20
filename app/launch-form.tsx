@@ -13,8 +13,8 @@ type LaunchInput = {
 };
 
 const DEFAULT_MISSION: LaunchInput = {
-  name: "Integrate Stripe Billing",
-  objective: "Launch Stripe Billing for ServicePilot",
+  name: "",
+  objective: "",
   domain: "software_delivery",
   priority: "high",
   riskLevel: "unknown",
@@ -69,6 +69,9 @@ export default function LaunchForm({ firstMission = false }: { firstMission?: bo
         <Link className="nav-link" href="/missions">
           Mission archive
         </Link>
+        <Link className="nav-link" href="/onboarding">
+          Connect agent
+        </Link>
         <a className="nav-link" href="/logout">
           Log out
         </a>
@@ -89,12 +92,17 @@ export default function LaunchForm({ firstMission = false }: { firstMission?: bo
           </div>
           <label>
             Name
-            <input value={mission.name} onChange={(event) => setMission({ ...mission, name: event.target.value })} />
+            <input
+              placeholder="Give this mission a clear name"
+              value={mission.name}
+              onChange={(event) => setMission({ ...mission, name: event.target.value })}
+            />
           </label>
           <label>
             Objective
             <textarea
               autoFocus
+              placeholder="What outcome should your AI organization deliver?"
               value={mission.objective}
               onChange={(event) => setMission({ ...mission, objective: event.target.value })}
               rows={3}
