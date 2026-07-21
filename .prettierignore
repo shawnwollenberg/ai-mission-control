@@ -4,6 +4,7 @@ cdk.out/
 node_modules/
 package-lock.json
 videos/
+public/mission-agent-*.mjs
 MCImages.png
 *.mp3
 *.m4a

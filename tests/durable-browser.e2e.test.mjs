@@ -88,7 +88,7 @@ async function lifecycle(cookie, missionId, command, expectedVersion, idempotenc
   });
 }
 
-test("authenticated durable browser mission survives restart and enforces lifecycle authority", async () => {
+test("authenticated durable browser mission survives restart and preserves lifecycle authority", async () => {
   await startServer();
   try {
     const protectedPage = await fetch(`${origin}/missions`, { redirect: "manual" });
@@ -195,23 +195,7 @@ test("authenticated durable browser mission survives restart and enforces lifecy
     await stopWorker();
     startWorker();
     let execution;
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const response = await fetch(`${origin}/api/missions/${created.missionId}/execution`, {
-        headers: browserHeaders(cookie),
-      });
-      execution = await response.json();
-      if (execution.approvals?.some((item) => item.status === "pending")) break;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    const approval = execution.approvals.find((item) => item.status === "pending");
-    assert.ok(approval, "simulated execution should reach its approval boundary");
-    const decision = await fetch(`${origin}/api/approvals/${approval.approvalId}/decision`, {
-      method: "POST",
-      headers: browserHeaders(cookie, { "content-type": "application/json" }),
-      body: JSON.stringify({ decision: "grant", reason: "E2E evidence accepted" }),
-    });
-    assert.equal(decision.status, 200);
-    for (let attempt = 0; attempt < 50; attempt++) {
+    for (let attempt = 0; attempt < 300; attempt++) {
       const response = await fetch(`${origin}/api/missions/${created.missionId}/execution`, {
         headers: browserHeaders(cookie),
       });
@@ -220,7 +204,8 @@ test("authenticated durable browser mission survives restart and enforces lifecy
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     assert.equal(execution.mission.status, "completed");
-    assert.equal(execution.tasks.filter((item) => item.status === "completed").length, 7);
+    assert.equal(execution.tasks.filter((item) => item.status === "completed").length, 1);
+    assert.equal(execution.approvals.length, 0);
 
     const terminal = await lifecycle(cookie, created.missionId, "resume", 6);
     assert.equal(terminal.status, 409);
@@ -243,8 +228,9 @@ test("authenticated durable browser mission survives restart and enforces lifecy
     const finalTimeline = (await finalTimelineResponse.json()).timeline;
     const eventTypes = finalTimeline.map((entry) => entry.eventType);
     assert.equal(eventTypes[0], "mission.created");
-    assert.ok(eventTypes.includes("task.dependency_added"));
-    assert.ok(eventTypes.includes("approval.granted"));
+    assert.ok(eventTypes.includes("task.created"));
+    assert.ok(eventTypes.includes("task.completed"));
+    assert.ok(!eventTypes.includes("approval.granted"));
     assert.equal(eventTypes.at(-1), "mission.completed");
   } finally {
     await stopWorker();
@@ -267,16 +253,16 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     });
     assert.equal(response.status, 201);
     const connection = await response.json();
-    assert.equal(connection.agentName, "Codex");
-    assert.match(connection.command, /mission-agent-0\.1\.0\.mjs/);
-    assert.match(connection.command, /tmp_dir\/mission-agent-0\.1\.0\.mjs/);
+    assert.equal(connection.agentName, "My Computer – Codex");
+    assert.match(connection.command, /mission-agent-0\.5\.0\.mjs/);
+    assert.match(connection.command, /tmp_dir\/mission-agent-0\.5\.0\.mjs/);
     assert.match(connection.command, /shasum -a 256 -c/);
     const encoded = connection.command.match(/ connect '([^']+)'$/)?.[1];
     assert.ok(encoded);
     const directory = await mkdtemp(join(tmpdir(), "mc-e2e-mission-agent-"));
     await run(
       process.execPath,
-      ["public/mission-agent-0.1.0.mjs", "connect", encoded, "--repository", process.cwd(), "--no-start"],
+      ["public/mission-agent-0.1.1.mjs", "connect", encoded, "--repository", process.cwd(), "--no-start"],
       { env: { ...process.env, MISSION_AGENT_HOME: directory, MISSION_AGENT_SECRET_STORE: "file" } },
     );
 
@@ -286,14 +272,14 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     const connected = agents.find((agent) => agent.agent_id === connection.agentId);
     assert.ok(connected.last_heartbeat_at);
     assert.ok(connected.pull_ready_at);
-    assert.equal(connected.mission_agent_version, "0.1.0");
+    assert.equal(connected.mission_agent_version, "0.1.1");
     assert.equal(connected.credential_status, "active");
 
     const stored = JSON.parse(await readFile(join(directory, "config.json"), "utf8"));
-    assert.match(await readFile(join(directory, "mission-agent-0.1.0.mjs"), "utf8"), /^#!\/usr\/bin\/env node/);
+    assert.match(await readFile(join(directory, "mission-agent-0.1.1.mjs"), "utf8"), /^#!\/usr\/bin\/env node/);
     const repositoryId = Object.keys(stored.repositories)[0];
     assert.ok(repositoryId);
-    const firstMissionPage = await fetch(`${origin}/?firstMission=1`, {
+    const firstMissionPage = await fetch(`${origin}/`, {
       headers: browserHeaders(cookie, { "x-forwarded-host": "app.localhost" }),
     });
     assert.equal(firstMissionPage.status, 200);
@@ -318,7 +304,7 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
       await chmod(fakeCodex, 0o700);
       agentPath = `${bin}:${process.env.PATH}`;
     }
-    await run(process.execPath, ["public/mission-agent-0.1.0.mjs", "run", "--once"], {
+    await run(process.execPath, ["public/mission-agent-0.1.1.mjs", "run", "--once"], {
       env: {
         ...process.env,
         PATH: agentPath,

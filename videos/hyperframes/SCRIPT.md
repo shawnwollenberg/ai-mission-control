@@ -32,9 +32,9 @@ This mission produced a genuine, checksummed analysis artifact. The same control
 
 The operations dashboard restores the visibility I had managing engineers: what is running, what failed, which agents need attention, and what requires my approval.
 
-## Scene 9 — How GPT-5.6 and Codex Were Used
+## Scene 9 — How ChatGPT, Codex, and GPT-5.6 Were Used
 
-I built Mission Control with GPT-5.6 and Codex. GPT-5.6 helped shape the product, event-sourced architecture, safety model, and each production phase. Codex audited the prototype, then implemented, tested, deployed, and refined the system—from durable events and real agent execution to onboarding, documentation, and AWS delivery. Humans set direction and remain accountable; agents perform bounded work with visible evidence.
+I built Mission Control through repeated collaboration.  ChatGPT helped me design and plan Mission Control, while Codex, powered by GPT-5.6, implemented, tested, deployed, and refined the production system.  That workflow inspired Mission Control itself: humans set direction and remain accountable, while specialized agents perform bounded work with visible evidence.
 
 ## Scene 10 — Closing
 

@@ -6,6 +6,7 @@ import { BrandSprite } from "@/app/brand-assets";
 import type { MissionReadModel } from "@/lib/mission-projection-store";
 import type { MissionTimelineEntry } from "@/lib/mission-queries";
 import type { ActionReadModel, ApprovalReadModel, ExecutionReadModel, TaskReadModel } from "@/lib/execution-queries";
+import type { RecommendationReadModel } from "@/application/recommendation-queries";
 
 const availableCommands: Record<string, Array<{ command: string; label: string }>> = {
   draft: [
@@ -13,7 +14,7 @@ const availableCommands: Record<string, Array<{ command: string; label: string }
     { command: "cancel", label: "Cancel" },
   ],
   planned: [
-    { command: "start", label: "Start simulated execution" },
+    { command: "start", label: "Start execution" },
     { command: "cancel", label: "Cancel" },
   ],
   running: [
@@ -21,12 +22,15 @@ const availableCommands: Record<string, Array<{ command: string; label: string }
     { command: "cancel", label: "Cancel" },
   ],
   paused: [
-    { command: "resume", label: "Resume simulated execution" },
+    { command: "resume", label: "Resume execution" },
     { command: "cancel", label: "Cancel" },
   ],
 };
 const hasMissionAgentCodex = (executions: ExecutionReadModel[]) =>
-  executions.some((execution) => execution.adapterType === "remote_http" && execution.agentName === "Codex");
+  executions.some(
+    (execution) =>
+      execution.adapterType === "remote_http" && execution.agentName?.toLocaleLowerCase().includes("codex"),
+  );
 const modeLabel = (mode: string, executions: ExecutionReadModel[]) =>
   hasMissionAgentCodex(executions)
     ? "Live Mission Agent · Codex"
@@ -43,6 +47,22 @@ const modeDescription = (mode: string, executions: ExecutionReadModel[]) =>
       : mode === "live_codex"
         ? "Connected work is isolated and supervised."
         : "No connected agent is running.";
+const missionStatusSymbol = (status: string) => {
+  if (status === "running") return <span className="status-symbol status-symbol-running" aria-hidden="true" />;
+  if (status === "completed")
+    return (
+      <span className="status-symbol status-symbol-completed" aria-hidden="true">
+        ✓
+      </span>
+    );
+  if (status === "failed")
+    return (
+      <span className="status-symbol status-symbol-failed" aria-hidden="true">
+        ×
+      </span>
+    );
+  return null;
+};
 
 export default function DurableMissionConsole({
   initialMission,
@@ -51,6 +71,7 @@ export default function DurableMissionConsole({
   initialApprovals,
   initialExecutions,
   initialActions,
+  initialRecommendations,
 }: {
   initialMission: MissionReadModel;
   initialTimeline: MissionTimelineEntry[];
@@ -58,6 +79,7 @@ export default function DurableMissionConsole({
   initialApprovals: ApprovalReadModel[];
   initialExecutions: ExecutionReadModel[];
   initialActions: ActionReadModel[];
+  initialRecommendations: RecommendationReadModel[];
 }) {
   const [mission, setMission] = useState(initialMission);
   const [timeline, setTimeline] = useState(initialTimeline);
@@ -65,11 +87,11 @@ export default function DurableMissionConsole({
   const [approvals, setApprovals] = useState(initialApprovals);
   const [executions, setExecutions] = useState(initialExecutions);
   const [actions, setActions] = useState(initialActions);
+  const [recommendations, setRecommendations] = useState(initialRecommendations);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (["completed", "failed", "cancelled"].includes(mission.status)) return;
     const timer = window.setInterval(async () => {
       const [executionResponse, timelineResponse] = await Promise.all([
         fetch(`/api/missions/${mission.missionId}/execution`, { cache: "no-store" }),
@@ -82,12 +104,14 @@ export default function DurableMissionConsole({
           approvals: ApprovalReadModel[];
           executions: ExecutionReadModel[];
           actions: ActionReadModel[];
+          recommendations: RecommendationReadModel[];
         };
         setMission(body.mission);
         setTasks(body.tasks);
         setApprovals(body.approvals);
         setExecutions(body.executions);
         setActions(body.actions);
+        setRecommendations(body.recommendations);
       }
       if (timelineResponse.ok)
         setTimeline(((await timelineResponse.json()) as { timeline: MissionTimelineEntry[] }).timeline);
@@ -113,6 +137,18 @@ export default function DurableMissionConsole({
       body: "{}",
     });
     if (!response.ok) setError("Execution cancellation could not be requested.");
+    setPending(false);
+  }
+  async function publishForReview(executionId: string) {
+    setPending(true);
+    setError("");
+    const response = await fetch(`/api/executions/${executionId}/actions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({ actionType: "repository.publish_for_review", parameters: {}, targetResource: "derived" }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) setError(body.error?.message ?? "Publication approval could not be requested.");
     setPending(false);
   }
 
@@ -169,7 +205,14 @@ export default function DurableMissionConsole({
           <h1>{mission.name}</h1>
           <p>{mission.objective}</p>
         </div>
-        <div className={`status-pill status-${mission.status}`}>{mission.status}</div>
+        <div
+          className={`status-pill status-${mission.status}`}
+          role="status"
+          aria-label={`Mission status: ${mission.status}`}
+        >
+          {missionStatusSymbol(mission.status)}
+          <span>{mission.status}</span>
+        </div>
       </header>
       <section className="execution-mode">
         <span>Execution mode</span>
@@ -272,9 +315,28 @@ export default function DurableMissionConsole({
                   {execution.commandsCompleted} commands · {execution.artifacts.length} artifacts
                 </small>
                 {execution.commitId && (
-                  <p>
-                    Local commit: <code>{execution.commitId}</code>
-                  </p>
+                  <>
+                    <p>
+                      Local commit: <code>{execution.commitId}</code>
+                    </p>
+                    {execution.status === "succeeded" &&
+                      execution.artifacts.some((artifact) => artifact.kind === "git_patch") &&
+                      !actions.some(
+                        (action) =>
+                          action.executionId === execution.executionId &&
+                          action.actionType === "repository.publish_for_review",
+                      ) && (
+                        <div className="mission-actions">
+                          <button disabled={pending} onClick={() => publishForReview(execution.executionId)}>
+                            Publish for Review
+                          </button>
+                          <small>
+                            Push this exact commit and open an evidence-rich pull request. Merge and deployment stay
+                            disabled.
+                          </small>
+                        </div>
+                      )}
+                  </>
                 )}
                 {execution.failureClassification && <p>Failure: {execution.failureClassification}</p>}
                 <ul>
@@ -310,7 +372,16 @@ export default function DurableMissionConsole({
             {actions.map((action) => (
               <div className="approval-card" key={action.actionRequestId}>
                 <strong>
-                  {action.actionType} · {action.status}
+                  {action.actionType === "repository.publish_for_review" ? "Publish for Review" : action.actionType} ·{" "}
+                  {action.status === "waiting_for_approval"
+                    ? "Publication Approval Required"
+                    : action.status === "executing"
+                      ? "Publishing"
+                      : action.status === "succeeded"
+                        ? "Pull Request Open"
+                        : action.status === "failed"
+                          ? "Publication Failed"
+                          : action.status}
                 </strong>
                 <p>
                   Policy {action.policyVersion ?? "not evaluated"} · {action.policyOutcome ?? "pending"}
@@ -324,13 +395,44 @@ export default function DurableMissionConsole({
                 </ul>
                 {action.result && (
                   <p>
-                    {action.actionType === "repository.create_pull_request"
-                      ? `Provider-confirmed pull request: ${String(action.result.url)}`
-                      : `Remote branch: ${String(action.result.remoteRef)}`}
+                    {action.actionType === "repository.publish_for_review"
+                      ? `Provider-confirmed pull request: ${String((action.result.pullRequest as Record<string, unknown> | undefined)?.url ?? "pending")}`
+                      : action.actionType === "repository.create_pull_request"
+                        ? `Provider-confirmed pull request: ${String(action.result.url)}`
+                        : `Remote branch: ${String(action.result.remoteRef)}`}
                   </p>
                 )}
               </div>
             ))}
+          </section>
+        )}
+        {recommendations.length > 0 && (
+          <section className="command-panel mission-summary">
+            <div className="panel-title">
+              <div>
+                <p className="section-label">Repository Health</p>
+                <h2>Recommendations</h2>
+              </div>
+              <span>{recommendations.filter((r) => r.status === "open").length} open</span>
+            </div>
+            <div className="log-list">
+              {recommendations.map((recommendation) => (
+                <Link
+                  className="log-item"
+                  href={`/recommendations/${recommendation.recommendationId}`}
+                  key={recommendation.recommendationId}
+                >
+                  <span className="log-sequence">{recommendation.estimatedImpact.slice(0, 2).toUpperCase()}</span>
+                  <div>
+                    <strong>{recommendation.title}</strong>
+                    <small>
+                      {recommendation.status} · {recommendation.estimatedRisk} risk · {recommendation.estimatedEffort}
+                    </small>
+                    <p>{recommendation.description}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </section>
         )}
         <section className="command-panel mission-summary">
@@ -379,7 +481,13 @@ export default function DurableMissionConsole({
               {approval.status === "pending" && (
                 <div className="mission-actions">
                   <button disabled={pending} onClick={() => decide(approval.approvalId, "grant")}>
-                    Grant and continue
+                    {actions.some(
+                      (action) =>
+                        action.approvalId === approval.approvalId &&
+                        action.actionType === "repository.publish_for_review",
+                    )
+                      ? "Publish for Review"
+                      : "Grant and continue"}
                   </button>
                   <button disabled={pending} onClick={() => decide(approval.approvalId, "deny")}>
                     Deny
@@ -410,7 +518,9 @@ export default function DurableMissionConsole({
                   ? " The exact approved branch was pushed."
                   : " No branch push was recorded."}{" "}
                 {actions.some(
-                  (action) => action.actionType === "repository.create_pull_request" && action.status === "succeeded",
+                  (action) =>
+                    ["repository.create_pull_request", "repository.publish_for_review"].includes(action.actionType) &&
+                    action.status === "succeeded",
                 )
                   ? " A provider-confirmed pull request was created."
                   : " No pull request was created."}{" "}

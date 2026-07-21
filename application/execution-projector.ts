@@ -33,7 +33,7 @@ export async function applyExecutionProjection(client: PoolClient, events: Domai
       ]);
     } else {
       await client.query(
-        `UPDATE execution_projections SET status=COALESCE($3,status),aggregate_version=$4,stage=COALESCE($5,stage),progress_summary=COALESCE($6,progress_summary),worker_id=COALESCE($7,worker_id),external_execution_id=COALESCE($8,external_execution_id),branch_name=COALESCE($9,branch_name),worktree_path=COALESCE($10,worktree_path),commit_id=COALESCE($11,commit_id),failure_classification=COALESCE($12,failure_classification),retry_disposition=COALESCE($13,retry_disposition),started_at=CASE WHEN $14 THEN COALESCE(started_at,$15) ELSE started_at END,completed_at=CASE WHEN $16 THEN $15 ELSE completed_at END,cancellation_requested_at=CASE WHEN $17 THEN $15 ELSE cancellation_requested_at END,updated_at=$15,last_event_position=$18 WHERE workspace_id=$1 AND execution_id=$2`,
+        `UPDATE execution_projections SET status=COALESCE($3,status),aggregate_version=$4,stage=COALESCE($5,stage),progress_summary=COALESCE($6,progress_summary),worker_id=COALESCE($7,worker_id),external_execution_id=COALESCE($8,external_execution_id),branch_name=COALESCE($9,branch_name),worktree_path=COALESCE($10,worktree_path),commit_id=COALESCE($11,commit_id),failure_classification=COALESCE($12,failure_classification),retry_disposition=COALESCE($13,retry_disposition),started_at=CASE WHEN $14 THEN COALESCE(started_at,$15) ELSE started_at END,completed_at=CASE WHEN $16 THEN $15 ELSE completed_at END,cancellation_requested_at=CASE WHEN $17 THEN $15 ELSE cancellation_requested_at END,updated_at=$15,last_event_position=$18,base_branch=COALESCE($19,base_branch),base_commit=COALESCE($20,base_commit) WHERE workspace_id=$1 AND execution_id=$2`,
         [
           e.workspaceId,
           e.aggregateId,
@@ -55,6 +55,8 @@ export async function applyExecutionProjection(client: PoolClient, events: Domai
           ),
           e.eventType === "execution.cancellation_requested",
           e.position,
+          e.payload.baseBranch ?? null,
+          e.payload.baseCommit ?? null,
         ],
       );
     }

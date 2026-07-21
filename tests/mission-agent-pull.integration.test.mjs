@@ -27,7 +27,7 @@ test.before(async () => {
     actor,
     name: "Mission Agent Codex",
     endpoint: "https://pull.invalid/messages",
-    capabilities: ["repository.read", "code.review", "artifact.create"],
+    capabilities: ["repository.read", "code.review", "artifact.create", "test.run"],
     supportedDomains: ["software_delivery"],
     deliveryMode: "pull",
     missionAgentAdapter: "codex",
@@ -49,7 +49,7 @@ test.before(async () => {
       sentAt: now,
       messageType: "AgentHeartbeat",
       correlationId: registration.agentId,
-      payload: { assignmentPull: true, missionAgentVersion: "0.1.0", adapter: "codex" },
+      payload: { assignmentPull: true, missionAgentVersion: "0.3.1", adapter: "codex" },
     },
     credential,
   );
@@ -75,11 +75,13 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
     commandId: randomUUID(),
     agentId: registration.agentId,
     repositoryId: repository.repository_id,
+    objective: "Focus on authentication boundaries and recommend the safest next change",
   });
   const claimed = await claimNextAssignment({ credential, leaseOwner: "test-runtime" });
   assert.ok(claimed);
   assert.equal(claimed.assignment.execution_id, launched.executionId);
   assert.equal(claimed.assignment.payload.constraints[0], "read_only_repository_analysis");
+  assert.match(claimed.assignment.payload.instructions, /Focus on authentication boundaries/);
   assert.ok(!JSON.stringify(claimed.assignment.payload).includes("mission-agent://"));
   assert.ok(claimed.leaseToken.startsWith("mc_lease_"));
 
@@ -94,6 +96,59 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
     leaseToken: claimed.leaseToken,
   };
   await acknowledgeAssignment(lease);
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionAccepted",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: { stage: "assignment_received", summary: "Assignment accepted" },
+    },
+    credential,
+  );
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionHeartbeat",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: {
+        workerId: "test-runtime",
+        stage: "inspecting_repository",
+        summary: "Codex is analyzing the repository",
+        progressPercent: 50,
+      },
+    },
+    credential,
+  );
+  const heartbeat = (
+    await getDatabasePool().query(
+      "SELECT worker_id,stage,progress_percent,progress_message FROM execution_heartbeats WHERE workspace_id=$1 AND execution_id=$2",
+      [workspaceId, launched.executionId],
+    )
+  ).rows[0];
+  assert.deepEqual(heartbeat, {
+    worker_id: "test-runtime",
+    stage: "inspecting_repository",
+    progress_percent: 50,
+    progress_message: "Codex is analyzing the repository",
+  });
   const renewed = await renewAssignmentLease(lease);
   assert.ok(new Date(renewed.lease_expires_at).getTime() > Date.now());
   assert.equal(
@@ -112,6 +167,164 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
     )
   ).rows[0];
   assert.deepEqual(row, { status: "available", lease_token_hash: null });
+
+  const recovered = await claimNextAssignment({ credential, leaseOwner: "replacement-runtime" });
+  assert.ok(recovered);
+  assert.equal(recovered.assignment.assignment_id, claimed.assignment.assignment_id);
+  assert.equal(recovered.resumed, true);
+  assert.ok(recovered.leaseToken.startsWith("mc_lease_"));
+  await releaseAssignment({
+    credential,
+    assignmentId: recovered.assignment.assignment_id,
+    leaseOwner: "replacement-runtime",
+    leaseToken: recovered.leaseToken,
+  });
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionFailed",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: {
+        classification: "test_cleanup",
+        summary: "Finish the analysis fixture before change-mission testing.",
+      },
+    },
+    credential,
+  );
+});
+
+test("change mission assignment carries bounded write approval, validation, evidence, and permanent prohibitions", async () => {
+  const launched = await launchFirstRepositoryMission({
+    actor,
+    commandId: randomUUID(),
+    agentId: registration.agentId,
+    repositoryId: repository.repository_id,
+    missionType: "change",
+    objective: "Add a small health-check helper with focused tests",
+    acceptanceCriteria: "Helper returns the expected status\nTests cover success and failure",
+    validationInstructions: "npm test\nnpm run lint",
+  });
+  const claimed = await claimNextAssignment({ credential, leaseOwner: "change-runtime" });
+  assert.ok(claimed);
+  assert.equal(claimed.assignment.execution_id, launched.executionId);
+  assert.equal(claimed.assignment.payload.missionType, "repository_change");
+  assert.ok(claimed.assignment.payload.constraints.includes("write_requires_approval"));
+  assert.ok(claimed.assignment.payload.constraints.includes("isolated_worktree"));
+  assert.ok(claimed.assignment.payload.constraints.includes("local_commit_only"));
+  assert.deepEqual(claimed.assignment.payload.validationCommands, [
+    ["npm", "test"],
+    ["npm", "run", "lint"],
+  ]);
+  assert.ok(claimed.assignment.payload.artifactRequirements.includes("git_patch"));
+  assert.ok(claimed.assignment.payload.prohibitedActions.includes("git.push"));
+  assert.ok(claimed.assignment.payload.prohibitedActions.includes("pull_request.create"));
+  assert.ok(claimed.assignment.payload.prohibitedActions.includes("deployment.execute"));
+  assert.ok(!claimed.assignment.payload.prohibitedActions.includes("file.modify"));
+  const lease = {
+    credential,
+    assignmentId: claimed.assignment.assignment_id,
+    leaseOwner: "change-runtime",
+    leaseToken: claimed.leaseToken,
+  };
+  await acknowledgeAssignment(lease);
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionAccepted",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: { stage: "assignment_received", summary: "Change assignment accepted" },
+    },
+    credential,
+  );
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionProgressReported",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: { stage: "waiting_for_write_approval", summary: "Implementation plan ready", progressPercent: 20 },
+    },
+    credential,
+  );
+  const approval = await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionApprovalRequested",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: {
+        actionType: "repository.modify",
+        parameters: { repositoryId: repository.repository_id },
+        targetResource: `repository:${repository.repository_id}`,
+        riskExplanation: "Test the bounded write boundary.",
+        evidence: [{ artifactId: randomUUID(), kind: "implementation_plan" }],
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      },
+    },
+    credential,
+  );
+  assert.equal(approval.status, "approval_required");
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionFailed",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: { classification: "test_cleanup", summary: "Test terminal approval cleanup." },
+    },
+    credential,
+  );
+  assert.equal(
+    (
+      await getDatabasePool().query(
+        "SELECT status FROM approval_projections WHERE workspace_id=$1 AND approval_id=$2",
+        [workspaceId, approval.approvalId],
+      )
+    ).rows[0].status,
+    "expired",
+  );
 });
 
 test("disabled agents and emergency pause receive no work without cross-workspace leakage", async () => {

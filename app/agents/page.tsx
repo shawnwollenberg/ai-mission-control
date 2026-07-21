@@ -16,6 +16,10 @@ export default async function AgentsPage() {
           Missions
         </Link>
       </nav>
+      <section className="principle">
+        Your Mission Agent can now manage multiple repositories. Add another project with{" "}
+        <code>mission-agent repository add</code>.
+      </section>
       <AgentRegistry initialAgents={await listAgents(identity.workspaceId)} />
     </main>
   );

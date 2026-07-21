@@ -1,6 +1,7 @@
-export const POLICY_VERSION = "phase3.1";
+export const POLICY_VERSION = "delivery-authority.1";
 
 export const actionTypes = [
+  "repository.publish_for_review",
   "repository.push_branch",
   "repository.create_pull_request",
   "repository.merge_pull_request",
@@ -74,7 +75,7 @@ export function evaluatePolicy(input: PolicyInput): PolicyDecision {
       policyVersion: POLICY_VERSION,
       reasons: [reason("scope.restriction", "A scoped policy explicitly denies this action.")],
     };
-  if (input.actionType === "repository.push_branch") {
+  if (input.actionType === "repository.push_branch" || input.actionType === "repository.publish_for_review") {
     const repository = input.repository;
     const branch = String(input.parameters.branch ?? "");
     const remote = String(input.parameters.remote ?? "");
@@ -109,14 +110,31 @@ export function evaluatePolicy(input: PolicyInput): PolicyDecision {
         policyVersion: POLICY_VERSION,
         reasons: [reason("git.remote", "The remote is not approved for this repository.")],
       };
+    if (input.actionType === "repository.publish_for_review" && !repository.pullRequestAllowed)
+      return {
+        outcome: "deny",
+        policyVersion: POLICY_VERSION,
+        reasons: [reason("repository.pull_request_disabled", "Pull-request creation is disabled.")],
+      };
+    if (
+      input.actionType === "repository.publish_for_review" &&
+      String(input.parameters.targetBranch ?? "") !== repository.defaultBranch
+    )
+      return {
+        outcome: "deny",
+        policyVersion: POLICY_VERSION,
+        reasons: [reason("git.invalid_target", "Pull requests must target the configured default branch.")],
+      };
     return {
       outcome: "require_approval",
       policyVersion: POLICY_VERSION,
-      approvalType: "repository_push",
+      approvalType: input.actionType === "repository.publish_for_review" ? "publish_for_review" : "repository_push",
       reasons: [
         reason(
           "external.code_publication",
-          "Approval required because this action publishes code to an external repository.",
+          input.actionType === "repository.publish_for_review"
+            ? "One approval is required to push the exact evidence-bound commit and open its pull request."
+            : "Approval required because this action publishes code to an external repository.",
         ),
       ],
     };

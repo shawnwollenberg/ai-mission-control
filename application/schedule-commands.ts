@@ -225,12 +225,13 @@ export async function updateSchedule(input: {
   });
 }
 
-export async function claimDueSchedule(workerId: string, leaseSeconds = 30) {
+export async function claimDueSchedule(workerId: string, leaseSeconds = 30, workspaceId?: string) {
   return withTransaction(async (client) => {
     const result = await client.query(
       `WITH due AS (
         SELECT s.workspace_id,s.schedule_id FROM schedule_projections s
         WHERE s.enabled=true AND s.paused=false AND s.deleted_at IS NULL
+          AND ($3::uuid IS NULL OR s.workspace_id=$3)
           AND NOT EXISTS(SELECT 1 FROM workspace_emergency_controls c WHERE c.workspace_id=s.workspace_id AND c.disable_all_schedules=true)
           AND (s.lease_expires_at IS NULL OR s.lease_expires_at<now())
           AND (s.next_run_at<=now() OR EXISTS(
@@ -241,7 +242,7 @@ export async function claimDueSchedule(workerId: string, leaseSeconds = 30) {
         ORDER BY s.next_run_at NULLS LAST FOR UPDATE SKIP LOCKED LIMIT 1
       ) UPDATE schedule_projections s SET lease_owner=$1,lease_expires_at=now()+($2*interval '1 second')
         FROM due WHERE s.workspace_id=due.workspace_id AND s.schedule_id=due.schedule_id RETURNING s.*`,
-      [workerId, leaseSeconds],
+      [workerId, leaseSeconds, workspaceId ?? null],
     );
     return result.rows[0] as ScheduleRow | undefined;
   });

@@ -94,7 +94,51 @@ Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner,
 - [x] Generate a workspace-scoped credential and one copyable install command.
 - [x] Detect a real signed heartbeat and advance the browser automatically.
 - [x] Put a preselected read-only first mission directly after connection.
-- [ ] Package the connector as a versioned, checksummed distribution.
-- [ ] Add durable pull delivery for agents behind NAT or localhost.
-- [ ] Execute and complete the preselected first mission through the newly connected agent.
+- [x] Package the connector as a versioned, checksummed distribution.
+- [x] Add durable pull delivery for agents behind NAT or localhost.
+- [x] Execute and complete the preselected first mission through the newly connected agent.
 - [ ] Validate an unknown user reaching an artifact without assistance in under ten minutes.
+
+## Repository Change Missions
+
+- [x] Keep Analyze Repository explicitly read-only.
+- [x] Add Change Repository with editable objective, acceptance criteria, and validation instructions.
+- [x] Produce a read-only implementation-plan artifact before requesting write authority.
+- [x] Require a scoped human `repository.modify` approval.
+- [x] Execute approved changes on an isolated `mission/*` worktree and branch.
+- [x] Capture changed files, full diff, validation output, summary, branch, base commit, and local commit evidence.
+- [x] Preserve prohibitions on push, pull-request creation, merge, deploy, infrastructure, secrets, and transactions.
+- [ ] Validate the full workflow against a disposable production repository and fresh account.
+
+## Mission Control 0.4 — Engineering Manager
+
+- [x] Persist evidence-backed recommendations as canonical lifecycle entities.
+- [x] Emit structured recommendations from Repository Analysis without granting new authority.
+- [x] Expose recommendations in mission and Repository Health views.
+- [x] Create one idempotently linked Repository Change Mission from a recommendation.
+- [x] Inherit objective, evidence, acceptance criteria, and allowlisted validation suggestions.
+- [x] Rebuild recommendation projections from the canonical event log.
+- [ ] Validate the full recommendation-to-approved-change workflow against a disposable production repository.
+
+## Mission Control 0.5 — Repository Intelligence planning
+
+- [x] Record Repository Intelligence as the next product milestone.
+- [x] Establish Repository Health, Timeline, Knowledge, trends, and action templates as the priority sequence.
+- [x] Require evidence-backed, versioned, rebuildable health claims.
+- [x] Approve health dimensions, scoring weights, missing-data behavior, confidence, and freshness rules.
+- [x] Define canonical repository observation and health-assessment events.
+- [x] Define explicit mission/recommendation/validation/timeline relationship vocabulary.
+- [ ] Define component identity, rename, merge, and stale-knowledge behavior.
+- [x] Approve the smallest implementation slice and production acceptance test.
+- [x] Implement evidence-backed health assessments, history, repository dashboard, and timeline.
+- [ ] Validate two production analyses showing a comparable evidence-backed health trend.
+
+## Mission Control 0.5 — Delivery Authority Expansion
+
+- [x] Add one exact, evidence-bound `Publish for Review` approval.
+- [x] Route the approved push to the repository-owning Mission Agent without provider credentials.
+- [x] Create and confirm the PR server-side with complete mission/evidence traceability.
+- [x] Project Local Changes Ready, Publication Approval Required, Publishing, Pull Request Open, and Publication Failed from canonical execution/action events.
+- [x] Keep force push, default/protected-branch push, merge, deployment, infrastructure/secrets, and transactions denied.
+- [x] Document independent review, merge authority, deployment mission, and repository autonomy policy boundaries without enabling them.
+- [ ] Validate the complete boundary against a disposable production GitHub repository and rebuild projections after restart.

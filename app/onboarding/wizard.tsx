@@ -1,29 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { BrandSprite } from "@/app/brand-assets";
+import { connectionProgress } from "./connection-progress";
 
 type AgentType = "codex" | "hermes" | "claude_code" | "generic_remote";
 type Agent = {
   agent_id: string;
   name: string;
-  adapter_type: string;
-  status: string;
   last_heartbeat_at?: string;
   pull_ready_at?: string;
   mission_agent_version?: string;
   mission_agent_adapter?: string;
+  repository_count?: number;
 };
 type Connection = {
   agentId: string;
   agentName: string;
   command: string;
   endpoint: string;
-  credentialId: string;
   protocolVersion: string;
-  missionAgentVersion: string;
-  missionAgentChecksum: string;
 };
 const choices: { id: AgentType; label: string; description: string }[] = [
   { id: "codex", label: "Codex", description: "Analyze and review a local repository." },
@@ -45,35 +42,41 @@ export default function OnboardingWizard({
   const [agents, setAgents] = useState(initialAgents);
   const [connection, setConnection] = useState<Connection>();
   const [creating, setCreating] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"default" | "advanced" | "doctor">();
   const [error, setError] = useState("");
-  const connected = useMemo(
-    () =>
-      agents.find(
-        (agent) => agent.agent_id === connection?.agentId && agent.last_heartbeat_at && agent.pull_ready_at,
-      ) ?? agents.find((agent) => agent.last_heartbeat_at && agent.pull_ready_at),
-    [agents, connection],
-  );
+  const [waitingLonger, setWaitingLonger] = useState(false);
+  const currentAgent =
+    agents.find((agent) => agent.agent_id === connection?.agentId) ??
+    (!connection
+      ? agents.find((agent) => agent.last_heartbeat_at && agent.pull_ready_at && (agent.repository_count ?? 0) > 0)
+      : undefined);
+  const progress = connectionProgress(Boolean(connection), currentAgent);
+  const connected = progress.heartbeat && progress.pullReady && progress.repository ? currentAgent : undefined;
   const stage = connected ? 3 : 2;
-  const safeDisplayedCommand = connection?.command.replace(
-    / connect '[^']+'$/,
-    " connect '[secure one-time payload — use Copy]'",
-  );
+  const environmentName = connection?.agentName.split(" – ")[0] ?? "your computer";
+  const adapterName = choices.find((item) => item.id === choice)?.label ?? "Agent";
+  const commandPreview = connection?.command.replace(/ connect '[^']+'/g, " connect '[protected credential hidden]'");
 
   useEffect(() => {
     if (!connection || connected) return;
     const poll = window.setInterval(async () => {
       const response = await fetch("/api/agents", { cache: "no-store" });
       if (!response.ok) return;
-      const body = (await response.json()) as { agents: Agent[] };
-      setAgents(body.agents);
+      setAgents(((await response.json()) as { agents: Agent[] }).agents);
     }, 2500);
     return () => window.clearInterval(poll);
+  }, [connection, connected]);
+
+  useEffect(() => {
+    if (!connection || connected) return;
+    const timer = window.setTimeout(() => setWaitingLonger(true), 25_000);
+    return () => window.clearTimeout(timer);
   }, [connection, connected]);
 
   async function createConnection() {
     setCreating(true);
     setError("");
+    setWaitingLonger(false);
     try {
       const response = await fetch("/api/onboarding/connect", {
         method: "POST",
@@ -90,17 +93,40 @@ export default function OnboardingWizard({
     }
   }
 
-  async function copyCommand() {
+  async function copyCommand(mode: "default" | "advanced" = "default") {
     if (!connection) return;
-    await navigator.clipboard.writeText(connection.command);
-    await fetch("/api/onboarding/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventType: "onboarding.connection_command_copied", agentId: connection.agentId }),
-    }).catch(() => undefined);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
+    const command =
+      mode === "advanced" ? `${connection.command} --repository /absolute/path/to/repository` : connection.command;
+    try {
+      await navigator.clipboard.writeText(command);
+      await fetch("/api/onboarding/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventType: "onboarding.connection_command_copied", agentId: connection.agentId }),
+      }).catch(() => undefined);
+      setCopied(mode);
+      window.setTimeout(() => setCopied(undefined), 1800);
+    } catch {
+      setError("The command could not be copied. Check your browser’s clipboard permission and try again.");
+    }
   }
+
+  async function copyDiagnostics() {
+    try {
+      await navigator.clipboard.writeText("mission-agent doctor");
+      setCopied("doctor");
+      window.setTimeout(() => setCopied(undefined), 1800);
+    } catch {
+      setError("The diagnostics command could not be copied. Check your browser’s clipboard permission and try again.");
+    }
+  }
+
+  const statusItems = [
+    [progress.installed, "Mission Agent installed"],
+    [progress.heartbeat, "Signed heartbeat received"],
+    [progress.pullReady, "Assignment channel ready"],
+    [progress.repository, "Repository registered"],
+  ] as const;
 
   return (
     <main className="onboarding-shell">
@@ -108,13 +134,15 @@ export default function OnboardingWizard({
         <BrandSprite asset="mark-compact" />
         <span>MISSION CONTROL</span>
       </header>
-      <section className="onboarding-intro">
-        <p className="section-label">Welcome to {workspaceName}</p>
-        <h1>Let’s connect your first agent.</h1>
-        <p>One command. No documentation required.</p>
-      </section>
+      {!connection && (
+        <section className="onboarding-intro">
+          <p className="section-label">Welcome to {workspaceName}</p>
+          <h1>Let’s connect your first agent.</h1>
+          <p>One command. No documentation required.</p>
+        </section>
+      )}
       <ol className="onboarding-steps onboarding-steps-five">
-        {["Create account", "Create workspace", "Connect agent", "Launch first mission", "Watch execution"].map(
+        {["Create account", "Create workspace", "Connect agent", "Launch mission", "Watch execution"].map(
           (label, index) => (
             <li className={index < stage ? "complete" : index === stage ? "active" : ""} key={label}>
               <span>{index < stage ? "✓" : "○"}</span>
@@ -153,61 +181,130 @@ export default function OnboardingWizard({
         )}
         {connection && !connected && (
           <div className="command-stage">
-            <p className="section-label">Connect {connection.agentName}</p>
-            <h2 className="onboarding-heading">Copy and run this command.</h2>
-            <p>Run it in the terminal on the computer where {connection.agentName} works.</p>
-            <div className="command-copy">
-              <code>{safeDisplayedCommand}</code>
-              <button onClick={copyCommand}>{copied ? "Copied ✓" : "Copy"}</button>
-            </div>
-            <div className="heartbeat-wait">
-              <span className="heartbeat-dot" />
+            <p className="section-label">{adapterName} · Mission Agent</p>
+            <h1 className="onboarding-heading">Connect {environmentName}</h1>
+            <p className="onboarding-lede">
+              Open a terminal inside the first Git repository you want Mission Control to manage.
+            </p>
+            <p>This installs one Mission Agent for this computer. The same agent can manage multiple repositories.</p>
+            <div className="connection-instruction">
+              <b>1</b>
               <div>
-                <strong>Waiting for heartbeat and assignment channel…</strong>
-                <small>This page advances only after signed pull readiness is confirmed.</small>
+                <strong>Open Terminal and change into your repository.</strong>
+                <code>cd ~/Developer/my-project</code>
               </div>
             </div>
-            {choice === "generic_remote" && (
+            <div className="connection-instruction">
+              <b>2</b>
+              <div>
+                <strong>Copy and run the command below.</strong>
+                <div className="command-copy">
+                  <code aria-label="Connection command with protected credential hidden">{commandPreview}</code>
+                  <button aria-label="Copy complete connection command" onClick={() => copyCommand()}>
+                    {copied === "default" ? "Copied" : "Copy connection command"}
+                  </button>
+                </div>
+                <small>
+                  The copied command includes a secure connection credential. It is not displayed on this page and is
+                  stored locally by Mission Agent during setup.
+                </small>
+              </div>
+            </div>
+            <div className="connection-instruction">
+              <b>3</b>
+              <div className="connection-status">
+                <strong>Connection status</strong>
+                <ul aria-live="polite">
+                  {statusItems.map(([complete, label]) => (
+                    <li className={complete ? "complete" : ""} key={label}>
+                      <span aria-hidden="true">{complete ? "✓" : "○"}</span>
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+                <small>
+                  This page will advance automatically once Mission Agent is connected and ready to receive work.
+                </small>
+              </div>
+            </div>
+            <details className="connection-details">
+              <summary>Advanced: connect a repository by absolute path</summary>
+              <p>Use this when you do not want to change directories before connecting.</p>
+              <div className="command-copy">
+                <code>{commandPreview} --repository /absolute/path/to/repository</code>
+                <button
+                  aria-label="Copy complete connection command with repository path"
+                  onClick={() => copyCommand("advanced")}
+                >
+                  {copied === "advanced" ? "Copied" : "Copy advanced command"}
+                </button>
+              </div>
+            </details>
+            {waitingLonger && (
               <details className="connection-details">
-                <summary>Generic agent configuration</summary>
-                <dl>
-                  <div>
-                    <dt>Endpoint</dt>
-                    <dd>{connection.endpoint}</dd>
-                  </div>
-                  <div>
-                    <dt>Credential</dt>
-                    <dd>{connection.credentialId}</dd>
-                  </div>
-                  <div>
-                    <dt>Protocol</dt>
-                    <dd>{connection.protocolVersion}</dd>
-                  </div>
-                </dl>
+                <summary>Still waiting?</summary>
+                <p>Make sure:</p>
+                <ul>
+                  <li>You ran the command inside a Git repository.</li>
+                  <li>Node.js and Git are installed.</li>
+                  <li>Your computer can reach app.missioncontrol.wallyweb.com.</li>
+                </ul>
+                <div className="troubleshooting-actions">
+                  <button onClick={() => copyCommand()}>Copy command again</button>
+                  {progress.installed && (
+                    <button aria-label="Copy Mission Agent diagnostics command" onClick={copyDiagnostics}>
+                      {copied === "doctor" ? "Diagnostics command copied" : "Run connection diagnostics"}
+                    </button>
+                  )}
+                  <Link href="/docs/mission-agent">Open troubleshooting</Link>
+                  <button onClick={createConnection}>Regenerate connection command</button>
+                </div>
               </details>
+            )}
+            {error && (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
             )}
           </div>
         )}
         {connected && (
-          <div className="connected-stage">
+          <div className="connected-stage" aria-live="polite">
             <div className="connected-check">✓</div>
-            <p className="section-label">Heartbeat received</p>
-            <h2>Connected.</h2>
+            <p className="section-label">Mission Agent connected</p>
+            <h2>Ready to launch.</h2>
             <p>
-              <strong>{connected.name}</strong> is ready in <strong>{workspaceName}</strong>.
+              ✓ Mission Agent connected
+              <br />✓ {connected.repository_count} {connected.repository_count === 1 ? "repository" : "repositories"}{" "}
+              registered
+              <br />✓ Ready to launch a repository mission
             </p>
-            <p>
-              Mission Agent {connected.mission_agent_version} · {connected.mission_agent_adapter} adapter · assignment
-              channel ready
-            </p>
+            <p>Your Mission Agent can manage multiple repositories from this computer.</p>
+            <details className="connection-details">
+              <summary>Useful Mission Agent commands</summary>
+              <ul className="mission-agent-command-list">
+                <li>
+                  <code>mission-agent status</code>
+                  <span>Check the connection, heartbeat, active assignment, and installed version.</span>
+                </li>
+                <li>
+                  <code>mission-agent repository add /path/to/another/repository</code>
+                  <span>Add another Git repository for this Mission Agent to manage.</span>
+                </li>
+                <li>
+                  <code>mission-agent doctor</code>
+                  <span>Run connection and dependency diagnostics.</span>
+                </li>
+              </ul>
+            </details>
             <div className="first-mission-card">
               <div>
-                <p className="section-label">Next · Launch first mission</p>
-                <h3>{connected.name === "Hermes" ? "Review today’s system health" : "Analyze this repository"}</h3>
+                <p className="section-label">Next</p>
+                <h3>Analyze this repository</h3>
                 <p>Start with a small, read-only mission and watch its execution become an artifact.</p>
               </div>
-              <Link className="launch-button onboarding-action" href="/?firstMission=1">
-                Launch first mission →
+              <Link className="launch-button onboarding-action" href="/">
+                Launch repository mission →
               </Link>
             </div>
           </div>

@@ -18,7 +18,7 @@ export type ActionActor = { workspaceId: string; id: string; type: ActorType; ro
 async function context(workspaceId: string, executionId: string) {
   const row = (
     await getDatabasePool().query(
-      `SELECT e.*,a.status agent_status,a.trust_level,a.capabilities,r.local_path,r.default_branch,r.protected_branches,r.allowed_branch_prefixes,r.allowed_remotes,r.push_allowed,r.pull_request_allowed FROM execution_projections e JOIN agents a ON a.workspace_id=e.workspace_id AND a.agent_id=e.agent_id JOIN repositories r ON r.workspace_id=e.workspace_id AND r.repository_id=e.repository_id WHERE e.workspace_id=$1 AND e.execution_id=$2`,
+      `SELECT e.*,a.status agent_status,a.trust_level,a.capabilities,r.local_path,r.name repository_name,r.default_branch,r.protected_branches,r.allowed_branch_prefixes,r.allowed_remotes,r.push_allowed,r.pull_request_allowed,r.location_mode,r.observed_remote_url,r.provider_type FROM execution_projections e JOIN agents a ON a.workspace_id=e.workspace_id AND a.agent_id=e.agent_id JOIN repositories r ON r.workspace_id=e.workspace_id AND r.repository_id=e.repository_id WHERE e.workspace_id=$1 AND e.execution_id=$2`,
       [workspaceId, executionId],
     )
   ).rows[0];
@@ -85,7 +85,11 @@ export async function requestSensitiveAction(input: {
   parameters: Record<string, unknown>;
   targetResource: string;
 }) {
-  if (["repository.push_branch", "repository.create_pull_request"].includes(input.actionType))
+  if (
+    ["repository.push_branch", "repository.create_pull_request", "repository.publish_for_review"].includes(
+      input.actionType,
+    )
+  )
     await assertCapabilityEnabled(input.actor.workspaceId, "stop_git_publication");
   const row = await context(input.actor.workspaceId, input.executionId);
   const actionId = input.actionRequestId ?? randomUUID();
@@ -97,7 +101,12 @@ export async function requestSensitiveAction(input: {
     commit: row.commit_id,
     ...input.parameters,
   };
-  if (["repository.push_branch", "repository.create_pull_request"].includes(input.actionType))
+  if (
+    ["repository.push_branch", "repository.create_pull_request", "repository.publish_for_review"].includes(
+      input.actionType,
+    ) &&
+    row.location_mode !== "mission_agent"
+  )
     await validatePublicationPreflight({
       worktreePath: String(row.worktree_path),
       worktreeRoot: process.env.CODEX_WORKTREE_ROOT!,
@@ -196,6 +205,128 @@ export async function requestSensitiveAction(input: {
     "WaitForActionApproval",
   );
   return { actionRequestId: actionId, approvalId, decision, events: result.events };
+}
+
+function githubRepository(remoteUrl: string) {
+  const normalized = remoteUrl
+    .trim()
+    .replace(/^git@github\.com:/, "github.com/")
+    .replace(/^ssh:\/\/git@github\.com\//, "github.com/")
+    .replace(/^https?:\/\/(?:[^/@]+@)?github\.com\//, "github.com/")
+    .replace(/\.git$/, "");
+  const match = normalized.match(/^github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)$/);
+  if (!match) throw new ValidationFailedError("Publish for Review currently requires a GitHub origin remote");
+  return match[1];
+}
+
+export async function requestPublishForReview(input: { actor: ActionActor; commandId: string; executionId: string }) {
+  const row = await context(input.actor.workspaceId, input.executionId);
+  if (row.provider_type !== "github" || !row.observed_remote_url)
+    throw new ValidationFailedError("This repository is not configured for GitHub publication");
+  if (!String(row.branch_name).startsWith("mission/"))
+    throw new ValidationFailedError("Only Mission Agent branches can be published for review");
+  const mission = (
+    await getDatabasePool().query(
+      `SELECT name,objective,success_criteria,resolved_inputs FROM mission_projections WHERE workspace_id=$1 AND mission_id=$2`,
+      [input.actor.workspaceId, row.mission_id],
+    )
+  ).rows[0];
+  const task = (
+    await getDatabasePool().query(
+      `SELECT verification_requirements FROM task_projections WHERE workspace_id=$1 AND task_id=$2`,
+      [input.actor.workspaceId, row.task_id],
+    )
+  ).rows[0];
+  const artifacts = (
+    await getDatabasePool().query(
+      `SELECT artifact_id,kind,checksum_sha256,metadata FROM artifacts WHERE workspace_id=$1 AND execution_id=$2 AND deleted_at IS NULL ORDER BY created_at`,
+      [input.actor.workspaceId, input.executionId],
+    )
+  ).rows;
+  const patch = artifacts.find((artifact) => artifact.kind === "git_patch");
+  const validation = artifacts.find((artifact) => artifact.kind === "validation_results");
+  const summary = artifacts.find((artifact) => artifact.kind === "change_summary");
+  if (!patch || !validation || !summary)
+    throw new ValidationFailedError("Diff, validation, and change-summary evidence are required before publication");
+  const baseCommit = row.base_commit ?? patch.metadata?.repositoryCommit;
+  if (!baseCommit) throw new ValidationFailedError("The approved base commit is missing from execution evidence");
+  const providerRepository = githubRepository(String(row.observed_remote_url));
+  const evidence = artifacts.map((artifact) => ({
+    artifactId: artifact.artifact_id,
+    kind: artifact.kind,
+    checksum: artifact.checksum_sha256,
+  }));
+  const evidenceChecksum = canonicalHash(evidence);
+  const acceptanceCriteria = Array.isArray(mission.success_criteria) ? mission.success_criteria : [];
+  const validationCommands = Array.isArray(task?.verification_requirements) ? task.verification_requirements : [];
+  const sourceRecommendationId = mission.resolved_inputs?.recommendationId ?? null;
+  const missionUrl = `${process.env.PUBLIC_APP_URL ?? "https://app.missioncontrol.wallyweb.com"}/missions/${row.mission_id}`;
+  const description = [
+    "## Objective",
+    mission.objective,
+    "",
+    "## Source recommendation",
+    sourceRecommendationId ? String(sourceRecommendationId) : "Direct change mission",
+    "",
+    "## Acceptance criteria",
+    ...(acceptanceCriteria.length
+      ? acceptanceCriteria.map((value: string) => `- ${value}`)
+      : ["- Complete the approved mission objective"]),
+    "",
+    "## Implementation evidence",
+    `- Local commit: \`${row.commit_id}\``,
+    `- Base commit: \`${baseCommit}\``,
+    `- Diff artifact: \`${patch.artifact_id}\` (SHA-256 \`${patch.checksum_sha256}\`)`,
+    `- Change summary artifact: \`${summary.artifact_id}\``,
+    "",
+    "## Validation",
+    ...(validationCommands.length
+      ? validationCommands.map((value: string) => `- \`${value}\``)
+      : ["- No explicit validation command configured"]),
+    `- Validation artifact: \`${validation.artifact_id}\` (SHA-256 \`${validation.checksum_sha256}\`)`,
+    "",
+    "## Limitations and risks",
+    "- Review the evidence and provider CI before merge.",
+    "- This approval does not authorize merge or deployment.",
+    "",
+    "## Rollback",
+    `- Close this pull request and delete \`${row.branch_name}\`; no protected branch was modified.`,
+    "",
+    "## Mission traceability",
+    `- [Originating Mission Control mission](${missionUrl})`,
+    `- Evidence checksum: \`${evidenceChecksum}\``,
+    "",
+    "> Human-approved authority: publish this exact local commit for review. No merge, deployment, force push, or additional modification was authorized.",
+  ].join("\n");
+  return requestSensitiveAction({
+    actor: input.actor,
+    commandId: input.commandId,
+    executionId: input.executionId,
+    actionType: "repository.publish_for_review",
+    targetResource: `github:${providerRepository}`,
+    parameters: {
+      repositoryIdentity: row.repository_id,
+      remoteIdentity: row.observed_remote_url,
+      providerRepository,
+      remote: "origin",
+      targetBranch: row.default_branch,
+      baseBranch: row.base_branch ?? row.default_branch,
+      baseCommit,
+      sourceBranch: row.branch_name,
+      branch: row.branch_name,
+      commit: row.commit_id,
+      force: false,
+      objective: mission.objective,
+      acceptanceCriteria,
+      validationCommands,
+      validationResults: validation.checksum_sha256,
+      sourceRecommendationId,
+      evidence,
+      evidenceChecksum,
+      title: mission.name.slice(0, 120),
+      description,
+    },
+  });
 }
 
 export async function resolveActionApproval(input: {

@@ -10,6 +10,8 @@ After the heartbeat arrives, Mission Control unlocks a prefilled first mission: 
 
 The production system now includes PostgreSQL-backed event sourcing, deterministic policies, human approvals, mission templates, schedules, notifications, usage controls, operational views, live Codex and Hermes execution paths, mixed-agent orchestration, bounded GitHub branch push and pull-request creation, and artifact evidence. These are post-demo additions and should be described that way.
 
+Mission Control was built through a repeated design-and-implementation workflow. ChatGPT served as the technical architect, product strategist, design partner, and review partner. Codex served as the primary implementation agent, powered by GPT-5.6, and used ChatGPT's phase plans to audit, build, test, deploy, and refine the production system.
+
 Safety boundaries remain intentional. Mission Control agents cannot autonomously merge, deploy, remediate production infrastructure, modify infrastructure or secrets, sign financial transactions, submit transactions, or move assets. GitHub pull requests remain open and unmerged until a human acts outside the agent authority boundary. Mission Agent also verifies the repository before and after read-only analysis and stops when it detects mutation.
 
 Mission Control is free while it is evolving. It is being used daily to manage an AI organization, and feedback from people doing the same is welcome.

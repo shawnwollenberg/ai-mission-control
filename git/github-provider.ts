@@ -9,7 +9,7 @@ import type {
   PushBranchResult,
 } from "@/git/git-provider";
 
-type Pr = { number: number; url: string; headRefName: string; baseRefName: string; state: string };
+type Pr = { number: number; url: string; headRefName: string; baseRefName: string; state: string; headRefOid: string };
 export class GitHubProvider implements GitProvider {
   pushBranch(request: PushBranchRequest): Promise<PushBranchResult> {
     return new LocalGitProvider().pushBranch(request);
@@ -39,7 +39,7 @@ export class GitHubProvider implements GitProvider {
       "--state",
       "all",
       "--json",
-      "number,url,headRefName,baseRefName,state",
+      "number,url,headRefName,baseRefName,state,headRefOid",
     ]);
     if (list.exitCode !== 0) throw new Error(`GitHub query failed: ${list.stderr}`);
     let found = (JSON.parse(list.stdout) as Pr[])[0];
@@ -66,11 +66,13 @@ export class GitHubProvider implements GitProvider {
         "--repo",
         request.repository,
         "--json",
-        "number,url,headRefName,baseRefName,state",
+        "number,url,headRefName,baseRefName,state,headRefOid",
       ]);
       if (verify.exitCode !== 0) throw new Error("GitHub did not confirm pull-request creation");
       found = JSON.parse(verify.stdout) as Pr;
     }
+    if (found.headRefOid !== request.commit)
+      throw new ValidationFailedError("GitHub pull-request head does not match the approved commit");
     return {
       provider: "github",
       number: found.number,
@@ -78,6 +80,7 @@ export class GitHubProvider implements GitProvider {
       sourceBranch: found.headRefName,
       targetBranch: found.baseRefName,
       state: found.state.toLowerCase(),
+      headSha: found.headRefOid,
     };
   }
 }

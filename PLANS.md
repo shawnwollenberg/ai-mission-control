@@ -1,6 +1,8 @@
 # Mission Control — Production Readiness Execution Plan
 
-**Status:** Phase 3 complete at `76ea49b`; Phase 4 remote-agent integration approved — 2026-07-18
+The long-term product direction is maintained in `docs/INTERNAL_PRODUCT_ENGINEERING_ROADMAP.md`. It guides architecture and phase sequencing but does not authorize implementation or expand agent authority; the approved boundaries in this plan remain controlling.
+
+**Status:** Phase 6 deployed; Mission Agent 0.6.3 compatibility fixes deployed — 2026-07-21
 
 **Planning date:** 2026-07-18
 
@@ -422,6 +424,66 @@ Phase 5 completed on 2026-07-19. Mission Control now provides bounded schedule c
 Mission Agent is the outbound-only local runtime. Pull assignments use bounded long polling and durable operational leases; canonical execution events remain business truth. Codex is the first complete adapter and is restricted to read-only repository analysis. Hermes, Claude Code, and generic adapters may connect but must clearly report that local execution is not yet supported. See `docs/MISSION_AGENT_PROTOCOL.md` for the protocol, threat model, recovery semantics, and rollback.
 
 Completion requires a fresh production user to connect behind NAT, confirm pull readiness, register a safe local repository, launch the starter analysis mission, observe live progress, receive a genuine Markdown artifact, restart without duplicate work, revoke access, and reconnect. The hackathon evidence package begins only after this acceptance succeeds.
+
+### Repository Change Missions — approved 2026-07-20
+
+**Goal:** Turn the proven read-only repository analysis into an approval-gated implementation workflow without expanding Mission Control's permanent authority.
+
+**Boundary:** A user selects Change Repository, supplies an editable objective, acceptance criteria, and optional allowlisted validation commands. Codex first creates a read-only implementation plan. Mission Control then requires an explicit `repository.modify` approval before the local Mission Agent creates an isolated `mission/*` branch and Git worktree. Codex may modify only that worktree. The runtime gathers validation output and diff evidence, creates one local commit, and stops at human review.
+
+**Permanent prohibitions:** No automatic push, pull request, merge, deployment, infrastructure or secret modification, transaction signing, or transaction submission. The registered source branch and worktree must remain unchanged.
+
+**Canonical truth:** Existing mission, task, execution, approval, progress, artifact, and completion events remain authoritative. Worktree paths, lease tokens, and restart checkpoints are bounded operational state and cannot independently authorize or complete work.
+
+**Acceptance:** Demonstrate the plan before approval, prove no write occurs before approval, approve the exact repository/base/objective action, produce an isolated local branch and commit, show changed files/full diff/validation evidence, preserve the original branch, and recover safely from a restarted Mission Agent.
+
+## Mission Control 0.4 — Engineering Manager
+
+**Controlling outcome:** Make Mission Control the best place to supervise AI software engineers.
+
+**Approved first slice — 2026-07-20:** Recommendations are canonical, persistent, evidence-linked entities with Open, Accepted, In Progress, Completed, Stale, and Dismissed lifecycle states. Repository Analysis emits structured recommendations, repository and mission views expose them, and one action creates an idempotently linked, approval-gated Repository Change Mission inheriting objective, evidence, acceptance criteria, and allowlisted validation suggestions.
+
+**Sequence after the first slice:** Expand versioned engineering Mission Templates, add a review-before-execution Mission Planner, project an evidence-backed Mission Graph, and deepen Repository Health.
+
+**Architecture direction:** Build Repository Knowledge rather than private Agent Memory. Repository architecture, tooling, standards, decisions, known issues, mission history, and recommendations remain durable platform knowledge that interchangeable agents consume. Every visible recommendation, graph relationship, and health claim must cite canonical evidence and rebuild from the event log and durable artifacts.
+
+**Authority boundary:** Version 0.4 does not weaken existing approval separation. File modification, branch push, and pull-request creation remain distinct actions; merge, deployment, infrastructure/secret modification, and transaction signing/submission remain prohibited unless separately authorized in a later phase.
+
+**First-slice acceptance:** Recommendation projections must rebuild from canonical events; source mission, execution, artifact, and evidence remain traceable; generated validation commands pass a strict allowlist; retries cannot create duplicate missions; terminal lifecycle states cannot reopen; existing Mission Agent installations remain compatible; and no recommendation can independently authorize repository modification.
+
+## Mission Control 0.5 — Repository Intelligence
+
+**Controlling outcome:** Make the repository—not an individual agent—the durable, explainable system of record for what happened, why it happened, and what should happen next. Implementation authorized by the product owner on 2026-07-20.
+
+**Priority 1 — Repository Health:** Promote Repository Health into the primary daily dashboard. A versioned deterministic scoring projection may summarize test posture, architecture, security, technical debt, documentation, dependency freshness, CI, mission outcomes, and recommendation lifecycle. Every score and subscore must expose its calculation version, freshness, confidence, contributing observations, and evidence. Unknown data lowers confidence or remains unknown; it must not silently become a failing score.
+
+**Priority 2 — Repository Timeline:** Project repository activity as mission history rather than Git history: analyses, recommendations, accepted work, change missions, validations, approvals, commits, publication, deployments, incidents, and audits. Timeline relationships must come from canonical causation, provenance, and explicit mission links. Git commits may be evidence, but are not the timeline's source of truth.
+
+**Priority 3 — Repository Knowledge:** Create evidence-backed pages for major components such as Authentication. Knowledge connects architecture, files, tests, risks, recommendations, decisions, ownership observations, and related missions. Model-generated summaries remain attributed observations; accepted human decisions and verified execution outcomes remain distinguishable facts.
+
+**Priority 4 — Health trends:** Record immutable, versioned health assessments so users can compare like-for-like scores over time and see which completed recommendations changed which dimensions. A completed mission does not automatically improve health: new repository evidence and the scoring rules must justify the change.
+
+**Priority 5 — Action templates:** Offer versioned mission templates at actionable findings so common work can begin with evidence, objective, acceptance criteria, and validation already linked. Template selection cannot bypass planning, policy, or approval boundaries.
+
+**Semantic layer direction:** Queries such as “Why is authentication designed this way?”, “Which recommendations have been ignored for 90 days?”, and “Which components generate the most technical debt?” should traverse evidence-backed repository relationships. Semantic retrieval may locate relevant records and draft an answer, but citations must resolve to canonical events, artifacts, recommendations, decisions, and outcomes. Generated prose is never an independent source of truth.
+
+**Approved first implementation boundary:** Mission Agent emits bounded evidence-backed observations across seven health dimensions. Mission Control validates those observations, computes versioned deterministic scores, stores immutable event-derived assessment history, and projects repository-linked missions, recommendations, health assessments, and approvals into a timeline. The authenticated home becomes repository-first. Missing inputs remain unknown and reduce confidence; mission completion alone never changes health.
+
+**Recommended smallest slice:** One repository receives a versioned explainable health assessment after analysis, a mission-and-recommendation timeline, and a before/after trend only after an evidence-producing follow-up analysis. Repository Knowledge and natural-language semantic queries should follow after those foundations are proven.
+
+**Authority boundary:** Repository Intelligence is read, projection, and planning capability. It grants no autonomous push, pull-request, merge, deployment, infrastructure or secret modification, transaction signing, or transaction submission authority.
+
+## Cross-phase test matrix
+
+## Mission Control 0.5 — Delivery Authority Expansion
+
+**Approved first boundary:** `Publish for Review` combines the exact approved mission-branch push and evidence-rich pull-request creation into one human approval. The binding includes repository/remote identity, base branch/commit, mission branch, local commit, diff evidence, objective, acceptance criteria, validation evidence, and action hash. Any mismatch stops publication; force push and protected-branch push are prohibited.
+
+**Execution topology:** Mission Agent 0.6 performs only the exact commit push from its retained isolated worktree over its signed outbound pull channel. Mission Control keeps provider credentials server-side, creates/confirms the pull request, and records branch, PR number/URL, head SHA, and evidence checksum in the event-backed action result.
+
+**Still disabled:** Merge, deployment, infrastructure/secret modification, transaction signing/submission, CI/review bypass, and any additional repository modification. Review agents may recommend a merge but cannot authorize it. Merge and deployment schemas are documented architecture only.
+
+**Acceptance:** Use a disposable GitHub repository to prove one approval, exact branch/commit publication, complete PR evidence, stale/mismatched approval invalidation, no-force/no-default-branch enforcement, retry/restart idempotency, and projection rebuild.
 
 ## Cross-phase test matrix
 

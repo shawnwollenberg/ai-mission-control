@@ -16,6 +16,8 @@ Mission Control gives an AI organization one durable operating surface:
 - Gate consequential actions through parameter-bound human approvals.
 - Enforce permanent policy boundaries around deployment, merges, infrastructure, secrets, and transactions.
 - Record execution evidence, artifacts, heartbeats, failures, retries, and final outcomes.
+- Turn evidence-backed analysis findings into persistent recommendations and approval-gated change missions.
+- Track explainable Repository Health and repository activity over time.
 
 Mission Control is free while it is evolving. It is used daily to manage a real AI organization, and feedback from people building their own agent teams is welcome.
 
@@ -24,6 +26,116 @@ Mission Control is free while it is evolving. It is used daily to manage a real 
 Mission Templates are the fastest path from intent to coordinated execution. Pick a workflow, provide a few focused inputs, and Mission Control resolves the task graph, agent requirements, policies, evidence expectations, and approval boundaries.
 
 The durable template model and initial software, operations, research, DeFi, and mixed-agent workflows are implemented today. The product direction expands that catalog around recognizable jobs such as Software Feature, Production Bug, Security Review, PR Review, Research, Architecture Design, Customer Onboarding, Daily DeFi Review, and Weekly Health Report.
+
+## The Future of Mission Control
+
+Today, Mission Control helps you supervise AI coding agents.
+
+Tomorrow, it becomes the operating system for your entire AI workforce.
+
+### Today
+
+Mission Control provides a secure environment for AI software engineering.
+
+- Connect a repository.
+- Launch an analysis or change mission.
+- Review architecture and implementation plans.
+- Review structured, evidence-backed recommendations and Repository Health.
+- Create a focused change mission directly from a recommendation.
+- Approve implementation before files are modified.
+- Inspect diffs, validation results, artifacts, and local commits.
+- Separately approve **Publish for Review** to push the exact reviewed commit and open an evidence-rich pull request.
+- Stay in control.
+
+Every mission is transparent, auditable, and human-supervised. Repository Change Missions operate in isolated worktrees and stop at a local commit. A separate, parameter-bound **Publish for Review** approval may push that exact commit and open a pull request. Mission Control still cannot merge or deploy autonomously.
+
+### Next
+
+Mission Control will deepen Repository Knowledge and help an engineering manager understand what should happen next.
+
+Agents will be able to:
+
+- Build durable knowledge around repository components, risks, standards, tests, and decisions.
+- Compare evidence-backed Repository Health assessments over time.
+- Plan larger objectives as reviewable mission graphs.
+- Coordinate specialized engineering agents against shared repository knowledge.
+
+Approval to modify files does not imply approval to publish. Publication approval does not imply approval to merge or deploy.
+
+### Soon
+
+Mission Control will coordinate teams of specialized AI workers. Imagine assigning work to:
+
+- Backend Engineer
+- Frontend Engineer
+- QA Engineer
+- Documentation Specialist
+- Security Reviewer
+
+Mission Control will select the best execution engine, coordinate collaboration, and present a unified mission timeline.
+
+### Smarter Every Day
+
+Future agents will not start from zero. They will remember:
+
+- Your repositories
+- Previous missions
+- Coding standards
+- Architectural decisions
+- Organizational preferences
+
+Over time, your AI workforce becomes more effective because it learns alongside your organization.
+
+### Capabilities Instead of Monoliths
+
+Agents will install capabilities just as developers install software packages. Examples include:
+
+- AWS
+- GitHub
+- Kubernetes
+- Stripe
+- Slack
+- Terraform
+- PostgreSQL
+- Twilio
+- Solidity
+- React
+
+Mission Control will automatically assign work to agents with the right expertise and explicitly granted permissions.
+
+### Beyond Software
+
+The Mission lifecycle is not limited to engineering. The same platform can supervise:
+
+- Customer support
+- Finance
+- Marketing
+- Cybersecurity
+- Infrastructure
+- Business operations
+- Autonomous trading
+- AI receptionists
+
+Every AI worker follows the same secure approval, policy, audit, and evidence model.
+
+### Executive Control Anywhere
+
+Mission Control is designed to support remote workers from day one. In the future, a dedicated mobile application will allow you to:
+
+- Review missions
+- Approve changes
+- Monitor organizational health
+- Respond to alerts
+- Pause or stop agents
+- Supervise your AI workforce from anywhere
+
+### Our Vision
+
+We believe organizations will soon employ both humans and autonomous AI workers.
+
+Mission Control is being built to manage that future—not by replacing human judgment, but by making autonomous work transparent, secure, accountable, and collaborative.
+
+Our goal is not to build another coding assistant. Our goal is to build **Mission Control for AI organizations**.
 
 ## The original demo
 
@@ -47,6 +159,8 @@ Phase 2 adds a separate `npm run worker:codex` process for an owner-registered, 
 
 Phase 3 adds deterministic policy, durable parameter-bound approvals, and a separate `npm run worker:actions` publication boundary. A generated branch push and pull-request creation require distinct approvals and execution-time revalidation. Merge, deployment, force push, protected-branch writes, secrets, infrastructure changes, and financial actions remain denied. See [the Phase 3 completion report](docs/PHASE_3_COMPLETION_REPORT.md) and [Phase 3 operations](docs/PHASE_3_OPERATIONS.md).
 
+The current Mission Agent flow adds genuine outbound-only repository execution behind NAT: read-only analysis, structured Recommendations, deterministic Repository Health, approval-gated isolated changes, and a separately approved **Publish for Review** action. Publication pushes only the reviewed mission commit and creates a traceable pull request using the owner's local GitHub authentication. See [the Mission Agent CLI guide](docs/MISSION_AGENT_CLI.md) and [Agent Protocol 1.0](docs/MISSION_AGENT_PROTOCOL.md).
+
 ## Architectural constitution
 
 Mission Control has exactly one source of truth: the event log. Mission Plan, Mission Log, Mission Health, recommendations, approvals, artifacts, and the final debrief own no independent business state. Replaying a mission's events from an empty projection reconstructs every user-visible fact except ephemeral UI state.
@@ -62,39 +176,39 @@ The current low-cost public deployment uses:
 
 The application explicitly prohibits autonomous deployment, merge, infrastructure modification, secret modification, transaction signing, and transaction submission. Releasing Mission Control itself is a separate human-approved development activity.
 
-## How Codex and GPT-5.6 Were Used
+## How ChatGPT, Codex, and GPT-5.6 Were Used
 
-Mission Control was developed using Codex and GPT-5.6 throughout the project lifecycle.
+Mission Control was built through a repeated design-and-implementation workflow involving ChatGPT, Codex, and GPT-5.6.
 
-### Codex
+### ChatGPT: Architecture, Product Design, and Review
 
-- Implemented major application features.
-- Refactored and extended the architecture.
-- Built production-ready workflows.
-- Generated tests and ran the validation suite.
-- Assisted with debugging and production rehearsals.
-- Implemented infrastructure and deployment automation.
-- Built the Mission Agent onboarding and pull-based execution flow.
-- Helped create production and hackathon documentation.
+ChatGPT acted as my technical architect, product strategist, and design partner. I used it to develop the product concept, design the event-sourced architecture, define the agent and execution model, establish safety and approval boundaries, review implementation progress, and turn each milestone into detailed instructions for Codex.
+
+### Codex: Implementation, Testing, and Deployment
+
+Codex acted as the primary implementation agent. It audited the repository, wrote and refactored the application, created tests, implemented production infrastructure, fixed deployment issues, built the Mission Agent onboarding flow, and validated the system through integration tests, restarts, replay, and projection verification.
 
 Codex was used through both Codex Desktop and the Codex CLI. Desktop supported the collaborative product loop, browser review, screenshots, and longer implementation sessions. The CLI provided the focused repository and terminal workflow for code inspection, tests, builds, Git operations, container publishing, deployment, and operational verification.
 
-### GPT-5.6
+### GPT-5.6: The Model Powering Codex
 
-- Acted as the technical architect and design partner.
-- Helped design the event-sourced architecture.
-- Reviewed system design decisions.
-- Refined the Mission Control execution model.
-- Helped develop the product vision and user experience.
-- Assisted with technical writing, documentation, and the Devpost submission.
+GPT-5.6 was the language model used by Codex during implementation. It powered Codex as it interpreted the implementation plans, inspected the codebase, wrote code, created tests, debugged failures, produced documentation, and assisted with deployment.
 
-Development was iterative: GPT-5.6 was used for architectural planning and design decisions, while Codex implemented, tested, and refined the production codebase under Mission Control's supervision. The repository history, source-of-truth documents under [`docs/`](docs/), and [`PLANS.md`](PLANS.md) preserve that process rather than presenting the project as a one-shot generated artifact.
+The workflow was:
+
+1. I described the problem, goals, and constraints to ChatGPT.
+2. ChatGPT helped me design the system and produce a detailed implementation plan.
+3. I gave that plan to Codex.
+4. Codex, powered by GPT-5.6, implemented and validated the work.
+5. I reviewed the results with ChatGPT and planned the next phase.
+
+The repository history, source-of-truth documents under [`docs/`](docs/), and [`PLANS.md`](PLANS.md) preserve that process rather than presenting the project as a one-shot generated artifact.
 
 ## Honest execution boundary
 
 The AWS demo defaults to `ENABLE_LIVE_CODEX=false`. Its bounded Hermes workflow validates a known fallback artifact and records the provenance as `validated_fallback`; the UI never presents that artifact as live Codex execution. Agent-ingestion endpoints require a secret bearer token, and the public runtime exposes no shell, arbitrary prompt, or repository path.
 
-This distinction matters: Codex and GPT-5.6 built and deployed the product, while the reliable public demo explicitly labels whether an artifact inside a demonstrated mission was produced live or selected from the validated fallback.
+This distinction matters: ChatGPT helped design and plan Mission Control, while Codex, powered by GPT-5.6, built and deployed it. The reliable public demo explicitly labels whether an artifact inside a demonstrated mission was produced live or selected from the validated fallback.
 
 ## Run locally
 

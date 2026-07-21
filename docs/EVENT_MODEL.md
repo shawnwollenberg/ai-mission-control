@@ -102,6 +102,15 @@ Whether all fields are needed in the MVP remains undecided.
 - `deployment.succeeded`
 - `deployment.failed`
 
+### Repository intelligence
+
+- `repository_health.assessed`
+- Existing `recommendation.created` and `recommendation.status_changed` events provide actionable health history.
+
+`repository_health.assessed` records repository, source mission/execution/artifact, observed commit, validated observations, deterministic dimension scores, overall score, confidence, and scoring version. Unknown dimensions carry a null score. Assessment history is immutable; a later analysis creates a new aggregate rather than rewriting an earlier score.
+
+Repository Timeline is derived from canonical repository-linked mission, recommendation, approval, artifact, and health events. It introduces no independent timeline event merely to duplicate existing facts.
+
 ## Core state machines
 
 Provisional only:
@@ -176,3 +185,15 @@ Its first acceptance test appends `mission.created`, `plan.created`, `task.creat
 - What data proves the demo-environment promotion boundary could not be crossed before approval?
 - Which events must be persisted versus generated for presentation?
 - How are estimates calculated and revised without implying false precision?
+
+## Repository Change Mission event flow
+
+The workflow uses the existing canonical vocabulary: mission/task creation and assignment, execution request/accept/progress, `approval.requested`, `approval.granted|denied|expired`, execution resume/failure/success, artifact creation, and task/mission completion. Progress stages identify planning, approval wait, worktree preparation, validation, and review readiness; they do not grant authority.
+
+The approval action hash binds `repository.modify` to the registered repository, base branch, base commit, and objective. The implementation plan is evidence on the request. Subsequent artifacts record the patch, validation results, execution log, branch, and local commit. Replaying these events reconstructs the same visible result without recreating a worktree, rerunning Codex, committing, pushing, merging, or deploying.
+
+## Repository Recommendation aggregate
+
+Repository recommendations are first-class aggregates, distinct from the legacy demo optimizer recommendation. `recommendation.created` records repository, originating analysis mission/execution/artifact, title, description, reasoning, file evidence, estimated impact/risk/effort, suggested validation, and acceptance criteria. `recommendation.status_changed` records lifecycle movement through `open`, `accepted`, `in_progress`, `completed`, `stale`, or `dismissed`, including the linked change mission where applicable.
+
+The projection owns no independent facts. Rebuild consumes recommendation events and joins repository/mission/artifact projections for display. Creating a Change Mission appends the normal mission/task/execution events and then links that mission through the recommendation aggregate. Model text alone is not a Recommendation until validated structured evidence is canonically appended.

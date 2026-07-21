@@ -50,9 +50,13 @@ export async function POST(request: Request) {
     const workspaceName = (
       await getDatabasePool().query<{ name: string }>("SELECT name FROM workspaces WHERE id=$1", [identity.workspaceId])
     ).rows[0]?.name;
+    const environmentName = workspaceName?.endsWith("'s Workspace")
+      ? workspaceName.replace(/'s Workspace$/, "'s Computer")
+      : "My Computer";
+    const agentName = `${environmentName} – ${profile.name}`;
     const registration = await registerRemoteAgent({
       actor: identity,
-      name: profile.name,
+      name: agentName,
       description: profile.description,
       endpoint: `${publicUrl}/api/agent-protocol/v1/messages`,
       capabilities: [...profile.capabilities],
@@ -74,13 +78,13 @@ export async function POST(request: Request) {
         credentialId: registration.credential.credentialId,
         secret: registration.credential.secret,
         agentType: body.agentType,
-        agentName: profile.name,
+        agentName,
         capabilities: profile.capabilities,
         workspaceName: workspaceName ?? "My Workspace",
       }),
     ).toString("base64url");
-    const missionAgentVersion = "0.1.0";
-    const missionAgentChecksum = "b244caeaeae646069686aa4de1bbb555edc1d4cd487f415264a46e9083e61f61";
+    const missionAgentVersion = "0.5.0";
+    const missionAgentChecksum = "dea6023abe7ea38862d3f9c9b5708a8f8a2fc7df6f08171b06940eb22ce11460";
     const command = `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && node "$tmp" connect '${config}'`;
     await recordOnboardingEvent({
       workspaceId: identity.workspaceId,
@@ -97,7 +101,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         agentId: registration.agentId,
-        agentName: profile.name,
+        agentName,
         command,
         endpoint: `${publicUrl}/api/agent-protocol/v1/messages`,
         credentialId: registration.credential.credentialId,

@@ -3,6 +3,7 @@ import { requirePageIdentity } from "@/lib/page-auth";
 import { getMissionProjection, getMissionTimeline } from "@/lib/mission-queries";
 import DurableMissionConsole from "./durable-mission-console";
 import { getMissionExecution } from "@/lib/execution-queries";
+import { listMissionRecommendations } from "@/application/recommendation-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
       initialApprovals={execution.approvals}
       initialExecutions={execution.executions}
       initialActions={execution.actions}
+      initialRecommendations={await listMissionRecommendations(identity.workspaceId, missionId)}
     />
   );
 }

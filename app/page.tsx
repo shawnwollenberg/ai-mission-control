@@ -1,33 +1,56 @@
 import { requirePageIdentity } from "@/lib/page-auth";
-import LaunchForm from "./launch-form";
 import { headers } from "next/headers";
 import AgentConnectWizard from "./agent-connect-wizard";
 import { PublicShell } from "./public-site";
 import FirstMissionForm from "./first-mission-form";
 import { getDatabasePool } from "@/lib/database";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function LaunchPage({ searchParams }: { searchParams: Promise<{ firstMission?: string }> }) {
+export default async function LaunchPage() {
   const requestHeaders = await headers();
   const host = (requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"))?.split(":")[0];
   if (host?.startsWith("app.")) {
     const identity = await requirePageIdentity("/");
-    const query = await searchParams;
-    if (query.firstMission === "1") {
-      const repositories = (
-        await getDatabasePool().query(
-          `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name FROM repositories r
-           JOIN agents a ON a.workspace_id=r.workspace_id AND r.allowed_agent_ids ? (a.agent_id::text)
-           WHERE r.workspace_id=$1 AND r.location_mode='mission_agent' AND r.disabled_at IS NULL
-             AND a.delivery_mode='pull' AND a.status='active' AND a.pull_ready_at>now()-interval '5 minutes'
-           ORDER BY r.updated_at DESC`,
-          [identity.workspaceId],
-        )
-      ).rows;
-      return <FirstMissionForm repositories={repositories} />;
-    }
-    return <LaunchForm />;
+    const state = (
+      await getDatabasePool().query(
+        `SELECT w.name,
+          (SELECT count(*)::int FROM agents a WHERE a.workspace_id=w.id AND a.delivery_mode='pull' AND a.status='active') configured_agents,
+          (SELECT count(*)::int FROM agents a WHERE a.workspace_id=w.id AND a.delivery_mode='pull' AND a.status='active' AND a.last_heartbeat_at>now()-interval '5 minutes' AND a.pull_ready_at>now()-interval '5 minutes') ready_agents,
+          (SELECT count(*)::int FROM repositories r WHERE r.workspace_id=w.id AND r.location_mode='mission_agent' AND r.disabled_at IS NULL) repositories
+         FROM workspaces w WHERE w.id=$1`,
+        [identity.workspaceId],
+      )
+    ).rows[0];
+    if (!state.ready_agents)
+      return state.configured_agents ? (
+        <ReconnectAgentHome workspaceName={state.name} />
+      ) : (
+        <FirstRunHome workspaceName={state.name} />
+      );
+    const repositories = (
+      await getDatabasePool().query(
+        `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name,
+          health.score health_score,health.confidence health_confidence,health.assessed_at health_assessed_at,
+          (SELECT count(*)::int FROM recommendation_projections recommendation
+           WHERE recommendation.workspace_id=r.workspace_id AND recommendation.repository_id=r.repository_id
+             AND recommendation.status IN ('open','accepted','in_progress')) actionable_recommendations
+         FROM repositories r
+         JOIN agents a ON a.workspace_id=r.workspace_id AND r.allowed_agent_ids ? a.agent_id::text
+         LEFT JOIN LATERAL (
+           SELECT score,confidence,assessed_at FROM repository_health_assessments assessment
+           WHERE assessment.workspace_id=r.workspace_id AND assessment.repository_id=r.repository_id
+           ORDER BY assessed_at DESC LIMIT 1
+         ) health ON true
+         WHERE r.workspace_id=$1 AND r.location_mode='mission_agent' AND r.disabled_at IS NULL AND a.status='active'
+           AND a.last_heartbeat_at>now()-interval '5 minutes' AND a.pull_ready_at>now()-interval '5 minutes'
+         ORDER BY r.updated_at DESC`,
+        [identity.workspaceId],
+      )
+    ).rows;
+    if (!repositories.length) return <RepositoryRequiredHome workspaceName={state.name} />;
+    return <FirstMissionForm repositories={repositories} />;
   }
   return (
     <PublicShell>
@@ -117,5 +140,78 @@ export default async function LaunchPage({ searchParams }: { searchParams: Promi
         </a>
       </section>
     </PublicShell>
+  );
+}
+
+function FirstRunHome({ workspaceName }: { workspaceName: string }) {
+  const firstName = workspaceName.replace(/['’]s Workspace$/, "");
+  return (
+    <main className="onboarding-shell">
+      <section className="onboarding-intro">
+        <p className="section-label">Your workspace is ready</p>
+        <h1>Welcome, {firstName}.</h1>
+        <p>Connect your first agent to launch a mission.</p>
+      </section>
+      <section className="onboarding-panel">
+        <h2>Connect your first agent</h2>
+        <div className="agent-choice-grid">
+          {[
+            ["Codex", "codex"],
+            ["Hermes", "hermes"],
+            ["Claude Code", "claude_code"],
+            ["Generic Agent", "generic_remote"],
+          ].map(([label, id]) => (
+            <Link className="first-run-agent" href={`/onboarding?agent=${id}`} key={id}>
+              {label}
+              <span>→</span>
+            </Link>
+          ))}
+        </div>
+        <div className="troubleshooting-actions">
+          <Link href="/docs/what-is-mission-control">What is Mission Control?</Link>
+          <Link href="/quick-start">View Quick Start</Link>
+          <a href="/logout">Log out</a>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function ReconnectAgentHome({ workspaceName }: { workspaceName: string }) {
+  return (
+    <main className="onboarding-shell">
+      <section className="onboarding-intro">
+        <p className="section-label">{workspaceName}</p>
+        <h1>Reconnect your Mission Agent.</h1>
+        <p>Your agent and repositories are still registered, but its recent heartbeat has expired.</p>
+      </section>
+      <section className="onboarding-panel">
+        <code>mission-agent status</code>
+        <code>mission-agent service install</code>
+        <p>Once a fresh heartbeat arrives, the live repository mission will unlock automatically.</p>
+        <Link className="launch-button onboarding-action" href="/onboarding">
+          View connection status →
+        </Link>
+      </section>
+    </main>
+  );
+}
+
+function RepositoryRequiredHome({ workspaceName }: { workspaceName: string }) {
+  return (
+    <main className="onboarding-shell">
+      <section className="onboarding-intro">
+        <p className="section-label">{workspaceName}</p>
+        <h1>Register your first repository.</h1>
+        <p>Your agent is connected, but it needs a repository before it can receive work.</p>
+      </section>
+      <section className="onboarding-panel">
+        <code>mission-agent repository add /path/to/repository</code>
+        <p>The page will unlock live repository missions after the repository is registered.</p>
+        <Link className="launch-button" href="/onboarding">
+          View connection status →
+        </Link>
+      </section>
+    </main>
   );
 }

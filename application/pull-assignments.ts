@@ -97,11 +97,12 @@ export async function claimNextAssignment(input: {
 
     const assignment = (
       await client.query(
-        `SELECT p.* FROM pull_assignments p JOIN execution_projections e ON e.workspace_id=p.workspace_id AND e.execution_id=p.execution_id
+        `SELECT p.*,e.status execution_status,t.status task_status FROM pull_assignments p JOIN execution_projections e ON e.workspace_id=p.workspace_id AND e.execution_id=p.execution_id
          JOIN task_projections t ON t.workspace_id=p.workspace_id AND t.task_id=p.task_id
          JOIN agents a ON a.workspace_id=p.workspace_id AND a.agent_id=p.agent_id
          WHERE p.workspace_id=$1 AND p.agent_id=$2 AND p.status='available' AND e.agent_id=$2
-           AND e.status='requested' AND t.status='assigned' AND a.status='active' AND a.capabilities @> t.required_capabilities
+           AND e.status IN('requested','accepted','preparing','running')
+           AND t.status IN('assigned','running') AND a.status='active' AND a.capabilities @> t.required_capabilities
            AND NOT EXISTS (
              SELECT 1 FROM jsonb_array_elements(t.required_resources) resource
              WHERE NOT EXISTS (
@@ -116,6 +117,7 @@ export async function claimNextAssignment(input: {
       )
     ).rows[0];
     if (!assignment) return undefined;
+    const resumed = assignment.execution_status !== "requested";
     const leaseToken = `mc_lease_${randomBytes(32).toString("base64url")}`;
     const leased = (
       await client.query(
@@ -125,7 +127,7 @@ export async function claimNextAssignment(input: {
         [input.credential.workspace_id, assignment.assignment_id, input.leaseOwner, hash(leaseToken), leaseSeconds],
       )
     ).rows[0];
-    return { assignment: leased, leaseToken, resumed: false };
+    return { assignment: leased, leaseToken, resumed };
   });
 }
 

@@ -8,8 +8,11 @@ import { stableUuid } from "@/lib/stable-id";
 import { coordinateAfterTask } from "@/application/mission-coordinator";
 import type { ProtocolEnvelope } from "@/remote-agent/protocol";
 import { sha256 } from "@/remote-agent/protocol";
-import { applyApprovalProjection, requestRemoteApproval } from "@/application/approval-commands";
+import { applyApprovalProjection, expireApproval, requestRemoteApproval } from "@/application/approval-commands";
 import { recordUsage } from "@/application/usage-budget";
+import { recordRepositoryRecommendations } from "@/application/recommendation-commands";
+import { recordRepositoryHealthAssessment } from "@/application/repository-health-commands";
+import type { RepositoryObservation } from "@/domain/repository-health";
 
 type Credential = {
   workspace_id: string;
@@ -26,8 +29,9 @@ async function executionRow(message: ProtocolEnvelope, workspaceId: string) {
       attempt: number;
       status: string;
       delivery_mode: string;
+      repository_id: string | null;
     }>(
-      `SELECT e.mission_id,e.task_id,e.agent_id,e.attempt,e.status,a.delivery_mode FROM execution_projections e
+      `SELECT e.mission_id,e.task_id,e.agent_id,e.attempt,e.status,e.repository_id,a.delivery_mode FROM execution_projections e
        JOIN agents a ON a.workspace_id=e.workspace_id AND a.agent_id=e.agent_id
        WHERE e.workspace_id=$1 AND e.execution_id=$2`,
       [workspaceId, message.executionId],
@@ -228,6 +232,27 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
         payload: { ...message.payload, heartbeat: true },
       });
       await getDatabasePool().query(
+        `INSERT INTO execution_heartbeats(
+          workspace_id,execution_id,agent_id,worker_id,stage,command_summary,
+          progress_percent,progress_message,received_at,lease_expires_at
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,now(),now()+interval '90 seconds')
+        ON CONFLICT(workspace_id,execution_id) DO UPDATE SET
+          agent_id=excluded.agent_id,worker_id=excluded.worker_id,stage=excluded.stage,
+          command_summary=excluded.command_summary,progress_percent=excluded.progress_percent,
+          progress_message=excluded.progress_message,received_at=excluded.received_at,
+          lease_expires_at=excluded.lease_expires_at`,
+        [
+          credential.workspace_id,
+          message.executionId,
+          credential.agent_id,
+          String(message.payload.workerId ?? credential.agent_id).slice(0, 200),
+          String(message.payload.stage ?? current.status ?? "running").slice(0, 100),
+          message.payload.commandSummary ? String(message.payload.commandSummary).slice(0, 500) : null,
+          Number.isInteger(message.payload.progressPercent) ? Number(message.payload.progressPercent) : null,
+          message.payload.summary ? String(message.payload.summary).slice(0, 1000) : null,
+        ],
+      );
+      await getDatabasePool().query(
         "UPDATE execution_projections SET last_heartbeat_at=now() WHERE workspace_id=$1 AND execution_id=$2",
         [credential.workspace_id, message.executionId],
       );
@@ -258,12 +283,17 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
         throw new ValidationFailedError("Inline artifact is missing or oversized");
       if (message.payload.checksum !== sha256(new Uint8Array(body)))
         throw new ValidationFailedError("Submitted artifact checksum does not match content");
+      const artifactKind = String(message.payload.artifactType ?? "report");
+      const parsedRecommendations =
+        artifactKind === "repository_recommendations" ? parseRepositoryRecommendations(body) : undefined;
+      const parsedHealth =
+        artifactKind === "repository_health_observations" ? parseRepositoryHealthObservations(body) : undefined;
       const artifact = await storeExecutionArtifact({
         workspaceId: credential.workspace_id,
         missionId: message.missionId!,
         taskId: message.taskId!,
         executionId: message.executionId!,
-        kind: String(message.payload.artifactType ?? "report"),
+        kind: artifactKind,
         mediaType: String(message.payload.mediaType ?? "text/markdown"),
         body,
         maxBytes: 128 * 1024,
@@ -286,6 +316,33 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
           checksum: artifact.checksum,
         },
       });
+      if (artifact.kind === "repository_recommendations") {
+        if (!current.repository_id) throw new ValidationFailedError("Recommendation artifact requires a repository");
+        await recordRepositoryRecommendations({
+          actor: actor(credential),
+          commandId: stableUuid(`remote:${message.messageId}:recommendations`),
+          repositoryId: current.repository_id,
+          sourceMissionId: message.missionId!,
+          sourceExecutionId: message.executionId!,
+          sourceArtifactId: artifact.artifactId,
+          recommendations: parsedRecommendations!,
+        });
+      }
+      if (artifact.kind === "repository_health_observations") {
+        if (!current.repository_id) throw new ValidationFailedError("Repository health artifact requires a repository");
+        await recordRepositoryHealthAssessment({
+          actor: actor(credential),
+          commandId: stableUuid(`remote:${message.messageId}:repository-health`),
+          repositoryId: current.repository_id,
+          sourceMissionId: message.missionId!,
+          sourceExecutionId: message.executionId!,
+          sourceArtifactId: artifact.artifactId,
+          repositoryCommit: message.payload.repositoryCommit
+            ? String(message.payload.repositoryCommit).slice(0, 100)
+            : undefined,
+          observations: parsedHealth!,
+        });
+      }
       return { status: "accepted", artifactId: artifact.artifactId };
     }
     case "ExecutionApprovalRequested": {
@@ -330,7 +387,22 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     case "ExecutionPaused":
       await transition(message, credential, "paused");
       return { status: "accepted" };
-    case "ExecutionResumed":
+    case "ExecutionResumed": {
+      const approval = (
+        await getDatabasePool().query<{ approval_id: string; status: string; action_hash: string }>(
+          `SELECT approval_id,status,action_hash FROM approval_projections
+           WHERE workspace_id=$1 AND execution_id=$2 AND agent_id=$3 AND approval_type='remote_workflow'
+           ORDER BY created_at DESC LIMIT 1`,
+          [credential.workspace_id, message.executionId, credential.agent_id],
+        )
+      ).rows[0];
+      if (
+        !approval ||
+        approval.status !== "granted" ||
+        String(message.payload.approvalId ?? "") !== approval.approval_id ||
+        String(message.payload.actionHash ?? "") !== approval.action_hash
+      )
+        throw new ValidationFailedError("Execution cannot resume without the exact granted approval");
       await transition(message, credential, "running");
       await handleTaskTransition({
         actor: actor(credential),
@@ -340,6 +412,7 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
         details: { approvalDecision: "granted" },
       });
       return { status: "accepted" };
+    }
     case "ExecutionSucceeded": {
       if (current.delivery_mode === "pull") {
         const artifactCount = await getDatabasePool().query<{ count: number }>(
@@ -434,6 +507,17 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     }
     case "ExecutionFailed":
       await transition(message, credential, "failed");
+      for (const row of (
+        await getDatabasePool().query<{ approval_id: string }>(
+          "SELECT approval_id FROM approval_projections WHERE workspace_id=$1 AND execution_id=$2 AND status='pending'",
+          [credential.workspace_id, message.executionId],
+        )
+      ).rows)
+        await expireApproval({
+          workspaceId: credential.workspace_id,
+          approvalId: row.approval_id,
+          actorId: "terminal-execution-cleanup",
+        });
       await handleTaskTransition({
         actor: actor(credential),
         commandId: stableUuid(`remote:${message.messageId}:task-failed`),
@@ -449,6 +533,125 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     default:
       throw new ValidationFailedError(`${message.messageType} is not enabled in the first remote-agent slice`);
   }
+}
+
+export function parseRepositoryRecommendations(body: Buffer) {
+  let value: unknown;
+  try {
+    value = JSON.parse(body.toString("utf8"));
+  } catch {
+    throw new ValidationFailedError("Recommendation artifact must be valid JSON");
+  }
+  if (!Array.isArray(value)) throw new ValidationFailedError("Recommendation artifact must contain an array");
+  return value.map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item))
+      throw new ValidationFailedError("Recommendation entry is invalid");
+    const row = item as Record<string, unknown>;
+    const evidenceEntries = Array.isArray(row.evidence)
+      ? row.evidence
+      : row.evidence && typeof row.evidence === "object"
+        ? [row.evidence]
+        : [];
+    const evidence = evidenceEntries.map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry))
+        throw new ValidationFailedError("Recommendation evidence is invalid");
+      const e = entry as Record<string, unknown>;
+      const path = String(e.path ?? "").trim();
+      if (!path || path.startsWith("/") || path.includes(".."))
+        throw new ValidationFailedError("Recommendation evidence path is unsafe");
+      return {
+        path,
+        ...(Number.isInteger(e.line) && Number(e.line) > 0 ? { line: Number(e.line) } : {}),
+        ...(e.description ? { description: String(e.description).slice(0, 500) } : {}),
+      };
+    });
+    const validationEntries = Array.isArray(row.suggestedValidation)
+      ? row.suggestedValidation
+      : typeof row.suggestedValidation === "string"
+        ? [row.suggestedValidation]
+        : [];
+    const acceptanceEntries = Array.isArray(row.acceptanceCriteria)
+      ? row.acceptanceCriteria
+      : typeof row.acceptanceCriteria === "string"
+        ? [row.acceptanceCriteria]
+        : [];
+    const validation = validationEntries
+      .map(String)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    const acceptance = acceptanceEntries
+      .map(String)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    const impact = String(row.estimatedImpact ?? "medium");
+    const risk = String(row.estimatedRisk ?? "medium");
+    if (
+      !(["low", "medium", "high", "critical"] as string[]).includes(impact) ||
+      !(["low", "medium", "high"] as string[]).includes(risk)
+    )
+      throw new ValidationFailedError("Recommendation impact or risk is invalid");
+    return {
+      title: String(row.title ?? "").slice(0, 200),
+      description: String(row.description ?? "").slice(0, 2000),
+      reasoning: String(row.reasoning ?? "").slice(0, 3000),
+      evidence,
+      estimatedImpact: impact as "low" | "medium" | "high" | "critical",
+      estimatedRisk: risk as "low" | "medium" | "high",
+      estimatedEffort: String(row.estimatedEffort ?? "Unknown").slice(0, 100),
+      suggestedValidation: validation.slice(0, 10).map((x) => x.slice(0, 300)),
+      acceptanceCriteria: acceptance.slice(0, 20).map((x) => x.slice(0, 300)),
+    };
+  });
+}
+
+function parseRepositoryHealthObservations(body: Buffer): RepositoryObservation[] {
+  let value: unknown;
+  try {
+    value = JSON.parse(body.toString("utf8"));
+  } catch {
+    throw new ValidationFailedError("Repository health artifact must be valid JSON");
+  }
+  if (!Array.isArray(value)) throw new ValidationFailedError("Repository health artifact must contain an array");
+  return value.slice(0, 70).map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item))
+      throw new ValidationFailedError("Repository health observation is invalid");
+    const row = item as Record<string, unknown>;
+    const dimension = String(row.dimension ?? "");
+    const status = String(row.status ?? "");
+    const severity = String(row.severity ?? "low");
+    if (
+      !(
+        ["architecture", "tests", "security", "technical_debt", "documentation", "dependencies", "ci"] as string[]
+      ).includes(dimension)
+    )
+      throw new ValidationFailedError("Repository health dimension is invalid");
+    if (!(["strength", "risk", "unknown"] as string[]).includes(status))
+      throw new ValidationFailedError("Repository health status is invalid");
+    if (!(["low", "medium", "high", "critical"] as string[]).includes(severity))
+      throw new ValidationFailedError("Repository health severity is invalid");
+    const evidence = Array.isArray(row.evidence)
+      ? row.evidence.slice(0, 20).map((entry) => {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry))
+            throw new ValidationFailedError("Repository health evidence is invalid");
+          const e = entry as Record<string, unknown>;
+          const path = String(e.path ?? "").trim();
+          if (!path || path.startsWith("/") || path.split("/").includes(".."))
+            throw new ValidationFailedError("Repository health evidence path is unsafe");
+          return {
+            path,
+            ...(Number.isInteger(e.line) && Number(e.line) > 0 ? { line: Number(e.line) } : {}),
+            ...(e.description ? { description: String(e.description).slice(0, 500) } : {}),
+          };
+        })
+      : [];
+    return {
+      dimension: dimension as RepositoryObservation["dimension"],
+      status: status as RepositoryObservation["status"],
+      severity: severity as RepositoryObservation["severity"],
+      summary: String(row.summary ?? "").slice(0, 500),
+      evidence,
+    };
+  });
 }
 
 export async function reserveProtocolMessage(input: {

@@ -13,7 +13,7 @@ narration: yes
 
 ## Intent
 
-Create a professional but personal hackathon submission video from genuine production screenshots. Begin with the founder's transition from managing thirteen engineers to coordinating AI agents, then demonstrate the public onboarding journey, genuine pull-based local Codex execution, durable evidence, operational governance, and the distinct roles of GPT-5.6 and Codex.
+Create a professional but personal hackathon submission video from genuine production screenshots. Begin with the founder's transition from managing thirteen engineers to coordinating AI agents, then demonstrate the public onboarding journey, genuine pull-based local Codex execution, durable evidence, operational governance, and the distinct roles of ChatGPT, Codex, and GPT-5.6.
 
 The film must be honest about what is live and what was added after the original prototype. It must not imply that the live-execution and GitHub pull-request screenshots came from the same mission. It must not emphasize the unpopulated execution-heartbeat field in the running screenshot.
 
@@ -29,7 +29,7 @@ The film must be honest about what is live and what was added after the original
 - Conversational narration at approximately normal speed, never above 1.05x.
 - Large editorial overlays so no small application text must be read.
 - Slow screenshot camera moves, restrained teal/amber accents, and controlled transitions.
-- Explicit side-by-side attribution: GPT-5.6 for architecture, product, safety, and review; Codex for implementation, testing, deployment, and refinement.
+- Explicit three-part attribution: ChatGPT for architecture, product strategy, safety, and review; Codex for implementation, testing, deployment, and validation; GPT-5.6 as the model powering Codex.
 
 ## Notes
 

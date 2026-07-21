@@ -17,13 +17,24 @@ export async function POST(request: Request) {
   try {
     const commandId = readIdempotencyKey(request);
     if (!commandId) throw new ValidationFailedError("A UUID idempotency-key header is required");
-    const body = (await request.json()) as { agentId?: string; repositoryId?: string };
+    const body = (await request.json()) as {
+      agentId?: string;
+      repositoryId?: string;
+      missionType?: "analysis" | "change";
+      objective?: string;
+      acceptanceCriteria?: string;
+      validationInstructions?: string;
+    };
     if (!body.agentId || !body.repositoryId) throw new ValidationFailedError("Agent and repository are required");
     const result = await launchFirstRepositoryMission({
       actor: identity,
       commandId,
       agentId: body.agentId,
       repositoryId: body.repositoryId,
+      missionType: body.missionType ?? "analysis",
+      objective: body.objective,
+      acceptanceCriteria: body.acceptanceCriteria,
+      validationInstructions: body.validationInstructions,
     });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

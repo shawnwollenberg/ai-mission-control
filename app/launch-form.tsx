@@ -13,8 +13,8 @@ type LaunchInput = {
 };
 
 const DEFAULT_MISSION: LaunchInput = {
-  name: "Integrate Stripe Billing",
-  objective: "Launch Stripe Billing for ServicePilot",
+  name: "",
+  objective: "",
   domain: "software_delivery",
   priority: "high",
   riskLevel: "unknown",
@@ -28,7 +28,13 @@ const FIRST_MISSION: LaunchInput = {
   riskLevel: "low",
 };
 
-export default function LaunchForm({ firstMission = false }: { firstMission?: boolean }) {
+export default function LaunchForm({
+  firstMission = false,
+  liveRepositoryMissionAvailable = false,
+}: {
+  firstMission?: boolean;
+  liveRepositoryMissionAvailable?: boolean;
+}) {
   const [mission, setMission] = useState(firstMission ? FIRST_MISSION : DEFAULT_MISSION);
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState("");
@@ -69,6 +75,9 @@ export default function LaunchForm({ firstMission = false }: { firstMission?: bo
         <Link className="nav-link" href="/missions">
           Mission archive
         </Link>
+        <Link className="nav-link" href="/onboarding">
+          Connect agent
+        </Link>
         <a className="nav-link" href="/logout">
           Log out
         </a>
@@ -80,21 +89,41 @@ export default function LaunchForm({ firstMission = false }: { firstMission?: bo
           <h1>{firstMission ? "Start small. See the whole loop." : "Give your organization an outcome."}</h1>
           <p className="lede">Mission Control coordinates the work and returns when human judgment is required.</p>
           <div className="principle">Humans manage outcomes, not AI.</div>
+          {liveRepositoryMissionAvailable && (
+            <div className="first-mission-card">
+              <div>
+                <p className="section-label">Live execution</p>
+                <h3>Run Codex on a registered repository</h3>
+                <p>Launch a real, read-only repository analysis through your connected Mission Agent.</p>
+              </div>
+              <Link className="launch-button onboarding-action" href="/?firstMission=1">
+                Launch live repository mission →
+              </Link>
+            </div>
+          )}
         </div>
 
         <form className="launch-card" onSubmit={launch}>
           <div className="card-heading">
-            <span>Mission directive</span>
-            <span className="secure">Durable command channel</span>
+            <span>Simulated mission directive</span>
+            <span className="secure">No agent assignment</span>
           </div>
+          <p className="form-note">
+            This form records and simulates a mission plan. It does not send work to your connected Mission Agent.
+          </p>
           <label>
             Name
-            <input value={mission.name} onChange={(event) => setMission({ ...mission, name: event.target.value })} />
+            <input
+              placeholder="Give this mission a clear name"
+              value={mission.name}
+              onChange={(event) => setMission({ ...mission, name: event.target.value })}
+            />
           </label>
           <label>
             Objective
             <textarea
               autoFocus
+              placeholder="What outcome should your AI organization deliver?"
               value={mission.objective}
               onChange={(event) => setMission({ ...mission, objective: event.target.value })}
               rows={3}
@@ -132,7 +161,7 @@ export default function LaunchForm({ firstMission = false }: { firstMission?: bo
             </p>
           )}
           <button className="launch-button" disabled={launching} type="submit">
-            {launching ? "Persisting mission…" : "Launch mission"}
+            {launching ? "Persisting mission…" : "Create simulated mission"}
             <span aria-hidden>→</span>
           </button>
         </form>
