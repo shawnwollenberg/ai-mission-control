@@ -44,4 +44,6 @@ test("provider verification retries an already-pushed exact publication without 
   assert.match(consoleSource, /\["repository\.push_branch", "repository\.publish_for_review"\]/);
   const timeline = await readFile("lib/mission-queries.ts", "utf8");
   assert.match(timeline, /"action\.execution_reconciliation_started": "Action verification resumed"/);
+  const projections = await readFile("scripts/projections.ts", "utf8");
+  assert.match(projections, /to_jsonb\(x\) - 'last_heartbeat_at'/);
 });
