@@ -513,7 +513,9 @@ export default function DurableMissionConsole({
                 seconds. The recorded {modeLabel(mission.executionMode, executions).toLowerCase()} outcome is{" "}
                 {mission.status}.
                 {actions.some(
-                  (action) => action.actionType === "repository.push_branch" && action.status === "succeeded",
+                  (action) =>
+                    ["repository.push_branch", "repository.publish_for_review"].includes(action.actionType) &&
+                    action.status === "succeeded",
                 )
                   ? " The exact approved branch was pushed."
                   : " No branch push was recorded."}{" "}

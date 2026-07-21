@@ -63,6 +63,7 @@ const labels: Record<string, string> = {
   "action.approved": "Action approved",
   "action.denied": "Action denied",
   "action.execution_started": "Action execution started",
+  "action.execution_reconciliation_started": "Action verification resumed",
   "action.execution_succeeded": "Action execution succeeded",
   "action.execution_failed": "Action execution failed",
   "action.expired": "Action expired",
@@ -87,6 +88,8 @@ function safeSummary(event: DomainEvent): string {
     return `${String(event.payload.actionType)} requested for ${String(event.payload.targetResource)}`.slice(0, 300);
   if (event.eventType === "action.execution_succeeded")
     return "The approved external action was confirmed by its provider.";
+  if (event.eventType === "action.execution_reconciliation_started")
+    return "Mission Control resumed provider verification without repeating the approved external action.";
   if (typeof event.payload.status === "string") return `Mission status changed to ${event.payload.status}`;
   return "This event type is not yet supported by the current timeline renderer.";
 }

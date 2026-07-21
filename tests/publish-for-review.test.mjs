@@ -40,4 +40,8 @@ test("provider verification retries an already-pushed exact publication without 
   assert.match(executor, /reconcileFailedActionExecution/);
   assert.match(executor, /process\.env\.GITHUB_TOKEN \?\? process\.env\.GH_TOKEN/);
   assert.match(executor, /confirmed\.head\.sha !== parameters\.commit/);
+  const consoleSource = await readFile("app/missions/[missionId]/durable-mission-console.tsx", "utf8");
+  assert.match(consoleSource, /\["repository\.push_branch", "repository\.publish_for_review"\]/);
+  const timeline = await readFile("lib/mission-queries.ts", "utf8");
+  assert.match(timeline, /"action\.execution_reconciliation_started": "Action verification resumed"/);
 });
