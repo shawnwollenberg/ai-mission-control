@@ -42,11 +42,14 @@ export default function RecommendationActions({
   return (
     <div className="mission-actions">
       {(["open", "accepted"].includes(currentStatus) ||
-        (currentStatus === "in_progress" && ["failed", "cancelled"].includes(linkedMissionStatus ?? ""))) && (
+        (currentStatus === "in_progress" && ["failed", "cancelled"].includes(linkedMissionStatus ?? "")) ||
+        (currentStatus === "completed" && linkedMissionStatus === "completed")) && (
         <button disabled={pending} onClick={launch}>
           {pending
             ? "Creating mission…"
-            : currentStatus === "in_progress"
+            : currentStatus === "completed"
+              ? "Create Follow-up Change Mission"
+              : currentStatus === "in_progress"
               ? "Retry Change Mission"
               : "Create Change Mission"}
         </button>

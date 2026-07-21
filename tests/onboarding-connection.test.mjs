@@ -125,6 +125,7 @@ test("recommendations expose traceable one-click Change Mission creation", async
   assert.match(page, /Evidence/);
   assert.match(actions, /Create Change Mission/);
   assert.match(actions, /Retry Change Mission/);
+  assert.match(actions, /Create Follow-up Change Mission/);
   assert.match(route, /retriableMissionStatuses/);
   assert.match(route, /sourceRecommendationId/);
   assert.match(route, /acceptanceCriteria/);

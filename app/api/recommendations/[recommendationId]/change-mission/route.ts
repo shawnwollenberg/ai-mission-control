@@ -17,7 +17,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ rec
     const { recommendationId } = await params;
     const recommendation = await getRecommendation(identity.workspaceId, recommendationId);
     if (!recommendation) throw new NotFoundError("Recommendation");
-    const retriableMissionStatuses = new Set(["failed", "cancelled"]);
+    const retriableMissionStatuses = new Set(["failed", "cancelled", "completed"]);
     if (
       recommendation.linkedMissionId &&
       !retriableMissionStatuses.has(recommendation.linkedMissionStatus ?? "")

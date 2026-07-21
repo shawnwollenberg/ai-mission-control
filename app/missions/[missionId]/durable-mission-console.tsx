@@ -326,7 +326,8 @@ export default function DurableMissionConsole({
                         (action) =>
                           action.executionId === execution.executionId &&
                           action.actionType === "repository.publish_for_review" &&
-                          action.status !== "failed",
+                          (action.status !== "failed" ||
+                            String(action.result?.message ?? "").includes("evidence checksum")),
                       ) && (
                         <div className="mission-actions">
                           <button disabled={pending} onClick={() => publishForReview(execution.executionId)}>
@@ -428,6 +429,13 @@ export default function DurableMissionConsole({
                         : `Remote branch: ${String(action.result.remoteRef)}`}
                   </p>
                 )}
+                {action.status === "failed" &&
+                  String(action.result?.message ?? "").includes("evidence checksum") && (
+                    <p>
+                      This approval cannot be reused because its evidence was incomplete. Open the source recommendation
+                      and create a follow-up Change Mission to regenerate complete evidence.
+                    </p>
+                  )}
               </div>
             ))}
           </section>

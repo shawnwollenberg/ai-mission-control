@@ -15,7 +15,9 @@ const transitions: Record<RecommendationStatus, RecommendationStatus[]> = {
   // A terminal linked mission may be retried while the recommendation remains
   // in progress. The new status event preserves the replacement mission link.
   in_progress: ["in_progress", "completed", "stale", "dismissed"],
-  completed: [],
+  // A completed recommendation can produce a follow-up mission when its local
+  // change succeeded but publication evidence must be regenerated.
+  completed: ["in_progress"],
   stale: [],
   dismissed: [],
 };
