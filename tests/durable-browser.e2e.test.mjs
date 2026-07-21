@@ -228,7 +228,8 @@ test("authenticated durable browser mission survives restart and preserves lifec
     const finalTimeline = (await finalTimelineResponse.json()).timeline;
     const eventTypes = finalTimeline.map((entry) => entry.eventType);
     assert.equal(eventTypes[0], "mission.created");
-    assert.ok(eventTypes.includes("task.dependency_added"));
+    assert.ok(eventTypes.includes("task.created"));
+    assert.ok(eventTypes.includes("task.completed"));
     assert.ok(!eventTypes.includes("approval.granted"));
     assert.equal(eventTypes.at(-1), "mission.completed");
   } finally {
