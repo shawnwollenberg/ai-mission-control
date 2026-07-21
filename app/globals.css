@@ -1503,6 +1503,18 @@ select:focus {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.approval-filter-bar {
+  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  margin: 0 0 18px;
+  width: 100%;
+}
+.approval-filter-bar select,
+.approval-filter-bar button {
+  min-width: 0;
+  width: 100%;
+}
 .log-item {
   display: grid;
   grid-template-columns: 40px 1fr;
@@ -2665,6 +2677,9 @@ select:focus {
 }
 
 @media (max-width: 820px) {
+  .approval-filter-bar {
+    grid-template-columns: 1fr 1fr;
+  }
   .launch-grid {
     grid-template-columns: 1fr;
     padding: 70px 0;

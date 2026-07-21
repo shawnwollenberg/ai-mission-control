@@ -138,3 +138,13 @@ test("repository preflight failures use actionable product language", async () =
   assert.match(console, /Execution heartbeat: Not expected/);
   assert.match(console, /stopped safely before Codex made changes/);
 });
+
+test("approval filters share one desktop row without clipping inbox messages", async () => {
+  const page = await readFile("app/approvals/page.tsx", "utf8");
+  const inbox = await readFile("app/approvals/inbox.tsx", "utf8");
+  const styles = await readFile("app/globals.css", "utf8");
+  assert.match(page, /approval-filter-bar/);
+  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) auto/);
+  assert.match(inbox, /approval-inbox-list/);
+  assert.match(styles, /\.approval-inbox-list \{[\s\S]*max-height: none/);
+});

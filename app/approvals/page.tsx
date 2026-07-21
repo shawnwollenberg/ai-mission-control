@@ -37,7 +37,7 @@ export default async function ApprovalsPage({
           <p>Parameter-bound decisions for external actions.</p>
         </div>
       </header>
-      <form className="mission-actions">
+      <form className="mission-actions approval-filter-bar">
         <select name="status" defaultValue={filters.status ?? ""}>
           <option value="">All statuses</option>
           <option>pending</option>
@@ -57,7 +57,7 @@ export default async function ApprovalsPage({
           <option>moderate</option>
           <option>low</option>
         </select>
-        <button type="submit">Filter</button>
+        <button type="submit">Apply filters</button>
       </form>
       <ApprovalInbox approvals={await listApprovalInbox(identity.workspaceId, filters)} />
     </main>
