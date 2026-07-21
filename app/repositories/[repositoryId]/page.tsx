@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { notFound } from "next/navigation";
 import { listRepositoryRecommendations } from "@/application/recommendation-queries";
 import { listRepositoryHealthAssessments, listRepositoryTimeline } from "@/application/repository-health-queries";
@@ -44,20 +45,7 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
   const actionable = recommendations.filter((item) => ["open", "accepted", "in_progress"].includes(item.status));
   return (
     <main className="durable-mission-shell">
-      <nav className="brandbar">
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Repository Intelligence</p>
-        </div>
-        <div className="inline-links">
-          <Link className="nav-link" href="/">
-            New Mission
-          </Link>
-          <Link className="nav-link" href="/agents">
-            Agents
-          </Link>
-        </div>
-      </nav>
+      <AppNavigation subtitle="Repository Intelligence" />
       <header className="mission-header compact">
         <div>
           <p className="section-label">{repository.observed_remote_url || "Local repository"}</p>

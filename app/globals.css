@@ -946,6 +946,44 @@ select {
   gap: 14px;
   border-bottom: 1px solid var(--line);
 }
+.app-navigation {
+  justify-content: space-between;
+}
+.app-navigation-brand {
+  align-items: center;
+  color: inherit;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 14px;
+  text-decoration: none;
+}
+.app-navigation-brand > span,
+.app-navigation-brand .eyebrow,
+.app-navigation-brand .brand-subtitle {
+  display: block;
+}
+.app-navigation-links {
+  align-items: center;
+  display: flex;
+  gap: clamp(10px, 1.5vw, 22px);
+  margin-left: auto;
+}
+@media (max-width: 900px) {
+  .app-navigation {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-block: 14px;
+  }
+  .app-navigation-links {
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    width: 100%;
+  }
+  .app-navigation-links .nav-link {
+    flex: 0 0 auto;
+  }
+}
 
 .brandmark {
   display: grid;

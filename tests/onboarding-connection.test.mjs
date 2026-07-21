@@ -148,3 +148,19 @@ test("approval filters share one desktop row without clipping inbox messages", a
   assert.match(inbox, /approval-inbox-list/);
   assert.match(styles, /\.approval-inbox-list \{[\s\S]*max-height: none/);
 });
+
+test("authenticated pages share one consistent primary navigation", async () => {
+  const navigation = await readFile("app/app-navigation.tsx", "utf8");
+  for (const label of ["New Mission", "Missions", "Agents", "Approvals", "Templates", "Operations", "Log out"])
+    assert.match(navigation, new RegExp(label));
+  for (const page of [
+    "app/missions/page.tsx",
+    "app/approvals/page.tsx",
+    "app/agents/page.tsx",
+    "app/templates/page.tsx",
+    "app/operations/page.tsx",
+    "app/schedules/page.tsx",
+    "app/notifications/page.tsx",
+  ])
+    assert.match(await readFile(page, "utf8"), /<AppNavigation subtitle=/);
+});

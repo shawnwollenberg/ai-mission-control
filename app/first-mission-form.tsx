@@ -2,7 +2,7 @@
 
 import { FormEvent, useRef, useState } from "react";
 import Link from "next/link";
-import { BrandSprite } from "@/app/brand-assets";
+import { AppNavigation } from "@/app/app-navigation";
 
 type Repository = {
   repository_id: string;
@@ -53,26 +53,19 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
   }
   return (
     <main className="launch-shell">
-      <nav className="brandbar">
-        <BrandSprite asset="mark-compact" />
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">New Mission · Live Mission Agent</p>
-        </div>
-        <Link className="nav-link" href="/agents">
-          Agent Registry
-        </Link>
-        <Link className="nav-link" href="/preview/servicepilot">
-          Run Demo
-        </Link>
-      </nav>
+      <AppNavigation subtitle="New Mission · Live Mission Agent" />
       <section className="repository-dashboard">
         <div className="panel-heading">
           <div>
             <p className="section-label">Daily control plane</p>
             <h2>Repositories</h2>
           </div>
-          <span>{repositories.length} connected</span>
+          <div className="inline-links">
+            <span>{repositories.length} connected</span>
+            <Link className="nav-link" href="/preview/servicepilot">
+              Run Demo
+            </Link>
+          </div>
         </div>
         <div className="repository-card-grid">
           {repositories.map((repository) => (

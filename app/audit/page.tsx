@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { requirePageIdentity } from "@/lib/page-auth";
 import { listGovernanceAudit } from "@/application/governance-queries";
 export const dynamic = "force-dynamic";
@@ -7,18 +8,7 @@ export default async function AuditPage() {
   const events = await listGovernanceAudit(identity.workspaceId);
   return (
     <main className="durable-mission-shell">
-      <nav className="brandbar">
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Governance audit</p>
-        </div>
-        <Link className="nav-link" href="/approvals">
-          Approvals
-        </Link>
-        <Link className="nav-link" href="/missions">
-          Missions
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Governance audit" />
       <header className="mission-header compact">
         <div>
           <p className="section-label">Durable history</p>

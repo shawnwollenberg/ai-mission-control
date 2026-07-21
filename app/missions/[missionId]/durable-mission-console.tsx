@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BrandSprite } from "@/app/brand-assets";
+import { AppNavigation } from "@/app/app-navigation";
 import type { MissionReadModel } from "@/lib/mission-projection-store";
 import type { MissionTimelineEntry } from "@/lib/mission-queries";
 import type { ActionReadModel, ApprovalReadModel, ExecutionReadModel, TaskReadModel } from "@/lib/execution-queries";
@@ -186,19 +186,7 @@ export default function DurableMissionConsole({
 
   return (
     <main className="durable-mission-shell">
-      <nav className="brandbar">
-        <BrandSprite asset="mark-compact" />
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Durable mission command</p>
-        </div>
-        <Link className="nav-link" href="/missions">
-          Mission archive
-        </Link>
-        <a className="nav-link" href="/logout">
-          Log out
-        </a>
-      </nav>
+      <AppNavigation subtitle="Durable mission command" />
       <header className="mission-header compact">
         <div>
           <p className="section-label">Mission / {mission.missionId.slice(0, 8)}</p>

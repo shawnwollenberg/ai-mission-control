@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { notFound } from "next/navigation";
 import { getRecommendation } from "@/application/recommendation-queries";
 import { requirePageIdentity } from "@/lib/page-auth";
@@ -11,15 +12,7 @@ export default async function RecommendationPage({ params }: { params: Promise<{
   if (!r) notFound();
   return (
     <main className="launch-shell">
-      <nav className="brandbar">
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Repository Recommendation</p>
-        </div>
-        <Link className="nav-link" href={`/missions/${r.sourceMissionId}`}>
-          Source mission
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Repository Recommendation" />
       <section className="command-panel mission-summary">
         <div className="panel-title">
           <div>
@@ -33,6 +26,9 @@ export default async function RecommendationPage({ params }: { params: Promise<{
           </span>
         </div>
         <p>{r.description}</p>
+        <p>
+          <Link href={`/missions/${r.sourceMissionId}`}>View source analysis mission →</Link>
+        </p>
         <h2>Reasoning</h2>
         <p>{r.reasoning}</p>
         <h2>Evidence</h2>
