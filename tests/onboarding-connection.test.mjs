@@ -124,7 +124,16 @@ test("recommendations expose traceable one-click Change Mission creation", async
   assert.match(page, /Repository Recommendation/);
   assert.match(page, /Evidence/);
   assert.match(actions, /Create Change Mission/);
+  assert.match(actions, /Retry Change Mission/);
+  assert.match(route, /retriableMissionStatuses/);
   assert.match(route, /sourceRecommendationId/);
   assert.match(route, /acceptanceCriteria/);
   assert.match(route, /suggestedValidation/);
+});
+
+test("repository preflight failures use actionable product language", async () => {
+  const console = await readFile("app/missions/[missionId]/durable-mission-console.tsx", "utf8");
+  assert.match(console, /Repository preflight blocked/);
+  assert.match(console, /Execution heartbeat: Not expected/);
+  assert.match(console, /stopped safely before Codex made changes/);
 });

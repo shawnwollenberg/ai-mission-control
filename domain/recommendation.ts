@@ -12,7 +12,9 @@ export type RecommendationState = {
 const transitions: Record<RecommendationStatus, RecommendationStatus[]> = {
   open: ["accepted", "in_progress", "stale", "dismissed"],
   accepted: ["in_progress", "stale", "dismissed"],
-  in_progress: ["completed", "stale", "dismissed"],
+  // A terminal linked mission may be retried while the recommendation remains
+  // in progress. The new status event preserves the replacement mission link.
+  in_progress: ["in_progress", "completed", "stale", "dismissed"],
   completed: [],
   stale: [],
   dismissed: [],

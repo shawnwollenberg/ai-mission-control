@@ -69,7 +69,11 @@ export default async function RecommendationPage({ params }: { params: Promise<{
             Linked change mission: <Link href={`/missions/${r.linkedMissionId}`}>{r.linkedMissionId}</Link>
           </p>
         )}
-        <RecommendationActions recommendationId={recommendationId} status={r.status} />
+        <RecommendationActions
+          recommendationId={recommendationId}
+          status={r.status}
+          linkedMissionStatus={r.linkedMissionStatus}
+        />
       </section>
     </main>
   );

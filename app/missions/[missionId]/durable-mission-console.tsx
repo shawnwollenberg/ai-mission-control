@@ -310,8 +310,9 @@ export default function DurableMissionConsole({
                 </p>
                 <p>{execution.progressSummary ?? "Waiting for progress"}</p>
                 <small>
-                  Last heartbeat:{" "}
-                  {execution.lastHeartbeat ? new Date(execution.lastHeartbeat).toLocaleString() : "Not received"} ·{" "}
+                  {execution.status === "failed" && execution.stage === "assignment_received"
+                    ? "Execution heartbeat: Not expected — stopped during repository preflight"
+                    : `Last heartbeat: ${execution.lastHeartbeat ? new Date(execution.lastHeartbeat).toLocaleString() : "Not received"}`} ·{" "}
                   {execution.commandsCompleted} commands · {execution.artifacts.length} artifacts
                 </small>
                 {execution.commitId && (
@@ -338,7 +339,22 @@ export default function DurableMissionConsole({
                       )}
                   </>
                 )}
-                {execution.failureClassification && <p>Failure: {execution.failureClassification}</p>}
+                {execution.failureClassification && (
+                  <p>
+                    Failure type:{" "}
+                    {execution.failureClassification === "local_adapter_failure"
+                      ? execution.stage === "assignment_received"
+                        ? "Repository preflight blocked"
+                        : "Local Mission Agent execution"
+                      : execution.failureClassification.replaceAll("_", " ")}
+                  </p>
+                )}
+                {execution.status === "failed" && execution.stage === "assignment_received" && (
+                  <p>
+                    Mission Control stopped safely before Codex made changes. Resolve the repository issue above, then
+                    retry the Change Mission from its recommendation.
+                  </p>
+                )}
                 <ul>
                   {execution.artifacts.map((artifact) => (
                     <li key={artifact.artifactId}>
