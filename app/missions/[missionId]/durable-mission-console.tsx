@@ -325,11 +325,19 @@ export default function DurableMissionConsole({
                       !actions.some(
                         (action) =>
                           action.executionId === execution.executionId &&
-                          action.actionType === "repository.publish_for_review",
+                          action.actionType === "repository.publish_for_review" &&
+                          action.status !== "failed",
                       ) && (
                         <div className="mission-actions">
                           <button disabled={pending} onClick={() => publishForReview(execution.executionId)}>
-                            Publish for Review
+                            {actions.some(
+                              (action) =>
+                                action.executionId === execution.executionId &&
+                                action.actionType === "repository.publish_for_review" &&
+                                action.status === "failed",
+                            )
+                              ? "Retry Publish for Review"
+                              : "Publish for Review"}
                           </button>
                           <small>
                             Push this exact commit and open an evidence-rich pull request. Merge and deployment stay
@@ -410,9 +418,11 @@ export default function DurableMissionConsole({
                   ))}
                 </ul>
                 {action.result && (
-                  <p>
+                  <p className={action.status === "failed" ? "form-error" : undefined}>
                     {action.actionType === "repository.publish_for_review"
-                      ? `Provider-confirmed pull request: ${String((action.result.pullRequest as Record<string, unknown> | undefined)?.url ?? "pending")}`
+                      ? action.status === "failed"
+                        ? `Publication stopped safely: ${String(action.result.message ?? "Review the failure and request a new publication approval.")}`
+                        : `Provider-confirmed pull request: ${String((action.result.pullRequest as Record<string, unknown> | undefined)?.url ?? "pending")}`
                       : action.actionType === "repository.create_pull_request"
                         ? `Provider-confirmed pull request: ${String(action.result.url)}`
                         : `Remote branch: ${String(action.result.remoteRef)}`}

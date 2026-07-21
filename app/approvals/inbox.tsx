@@ -29,7 +29,7 @@ export default function ApprovalInbox({ approvals }: { approvals: Approval[] }) 
     if (response.ok) location.reload();
   }
   return (
-    <section className="log-list">
+    <section className="log-list approval-inbox-list">
       {approvals.length === 0 ? (
         <div className="empty-state">
           <h2>No matching approvals</h2>

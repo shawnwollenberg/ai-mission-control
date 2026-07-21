@@ -1492,6 +1492,17 @@ select:focus {
   max-height: 225px;
   overflow: hidden;
 }
+.approval-inbox-list {
+  max-height: none;
+  overflow: visible;
+  gap: 16px;
+}
+.approval-inbox-list .approval-card pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .log-item {
   display: grid;
   grid-template-columns: 40px 1fr;

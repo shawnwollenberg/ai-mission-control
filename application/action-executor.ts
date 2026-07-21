@@ -301,3 +301,40 @@ export async function finalizeMissionAgentPublication(workspaceId: string, actio
     throw error;
   }
 }
+
+export async function failMissionAgentPublication(
+  workspaceId: string,
+  actionId: string,
+  agentId: string,
+  summary: string,
+) {
+  const row = (
+    await getDatabasePool().query(
+      `SELECT ar.status FROM action_request_projections ar
+       JOIN publication_assignments pa ON pa.workspace_id=ar.workspace_id AND pa.action_request_id=ar.action_request_id
+       WHERE ar.workspace_id=$1 AND ar.action_request_id=$2 AND pa.agent_id=$3`,
+      [workspaceId, actionId, agentId],
+    )
+  ).rows[0];
+  if (!row) throw new ValidationFailedError("Publication assignment was not found");
+  if (row.status === "failed") return;
+  if (row.status !== "executing") throw new ValidationFailedError("Publication is not executing");
+  const state = rehydrateAction(
+    await loadAggregateEvents({ workspaceId, aggregateType: "action_request", aggregateId: actionId }),
+  )!;
+  await append(
+    workspaceId,
+    actionId,
+    transitionAction(state, "failed", {
+      classification: "publication_preflight_failure",
+      retryDisposition: "requires-human-review",
+      result: { message: summary.slice(0, 500) },
+    }),
+    agentId,
+  );
+  await getDatabasePool().query(
+    `UPDATE publication_assignments SET status='failed',updated_at=now()
+     WHERE workspace_id=$1 AND action_request_id=$2 AND agent_id=$3`,
+    [workspaceId, actionId, agentId],
+  );
+}
