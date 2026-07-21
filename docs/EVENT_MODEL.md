@@ -197,3 +197,11 @@ The approval action hash binds `repository.modify` to the registered repository,
 Repository recommendations are first-class aggregates, distinct from the legacy demo optimizer recommendation. `recommendation.created` records repository, originating analysis mission/execution/artifact, title, description, reasoning, file evidence, estimated impact/risk/effort, suggested validation, and acceptance criteria. `recommendation.status_changed` records lifecycle movement through `open`, `accepted`, `in_progress`, `completed`, `stale`, or `dismissed`, including the linked change mission where applicable.
 
 The projection owns no independent facts. Rebuild consumes recommendation events and joins repository/mission/artifact projections for display. Creating a Change Mission appends the normal mission/task/execution events and then links that mission through the recommendation aggregate. Model text alone is not a Recommendation until validated structured evidence is canonically appended.
+
+## Pull-request review and merge aggregates
+
+`pull_request.observed` records provider identity, number, URL, state, base/head refs and SHAs, diff checksum, mergeability, checks, policy snapshot, and observation time. A changed head appends `pull_request.revision_changed`; it never rewrites an earlier snapshot.
+
+`review.requested → review.started → review.completed | review.failed | review.stale` binds one exact revision and stores scope results, counts, confidence, disposition, CI evidence, and result checksum. `review_finding.created` records category, severity, blocking flag, confidence, evidence, ranges, resolution and validation suggestions. `review_finding.status_changed` moves through `open`, `accepted`, `in_progress`, `resolved`, `dismissed`, or `stale`; resolution includes the linked fix mission and confirming review when present.
+
+`merge_readiness.evaluated` records every required predicate and an overall fail-closed decision. Merge uses the existing action/approval vocabulary with `repository.merge_pull_request`. `merge.approval_invalidated` records the changed predicate. `merge.provider_confirmed` records actor, timestamp, merge commit, final head, base, strategy, provider URL, and full mission/recommendation/review traceability. Replay projects those facts and never calls the provider.

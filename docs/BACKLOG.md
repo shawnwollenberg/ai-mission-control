@@ -142,3 +142,18 @@ Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner,
 - [x] Keep force push, default/protected-branch push, merge, deployment, infrastructure/secrets, and transactions denied.
 - [x] Document independent review, merge authority, deployment mission, and repository autonomy policy boundaries without enabling them.
 - [ ] Validate the complete boundary against a disposable production GitHub repository and rebuild projections after restart.
+
+## Mission Control 0.7 — Review and Merge
+
+- [x] Complete and document the 0.6 disposable-repository production acceptance gate.
+- [x] Define exact-revision review, finding, readiness, stale, approval, and merge aggregates.
+- [ ] Persist provider-backed pull-request revisions and exact-SHA review missions.
+- [ ] Persist structured review findings and lifecycle transitions.
+- [ ] Create idempotent linked fix missions from findings.
+- [ ] Publish incremental fix commits without force and stale prior reviews.
+- [ ] Independently retrieve CI, mergeability, protection, review, and strategy policy.
+- [ ] Present merge approval only for a fully known passing readiness snapshot.
+- [ ] Bind and execute one exact provider merge after fresh owner approval.
+- [ ] Invalidate approval for every specified head/base/CI/finding/policy/strategy change.
+- [ ] Record and replay provider-confirmed post-merge evidence.
+- [ ] Prove the full blocking-finding → fix → re-review → stale-approval → merge acceptance path.
