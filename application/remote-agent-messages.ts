@@ -296,7 +296,6 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
         kind: artifactKind,
         mediaType: String(message.payload.mediaType ?? "text/markdown"),
         body,
-        maxBytes: 128 * 1024,
         metadata: {
           name: message.payload.name,
           description: message.payload.description,

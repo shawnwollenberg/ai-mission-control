@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for integration tests");
@@ -19,6 +22,7 @@ let credential;
 let repository;
 
 test.before(async () => {
+  process.env.ARTIFACT_STORAGE_ROOT ??= await mkdtemp(join(tmpdir(), "mission-agent-pull-artifacts-"));
   await getDatabasePool().query("INSERT INTO workspaces(id,slug,name) VALUES($1,$2,'Pull Test Workspace')", [
     workspaceId,
     `pull-${workspaceId}`,
@@ -61,6 +65,65 @@ test.before(async () => {
     defaultBranch: "main",
     commit: "b".repeat(40),
   });
+});
+
+test("multiple valid inline artifacts use the repository execution budget rather than a cumulative transport limit", async () => {
+  const launched = await launchFirstRepositoryMission({
+    actor,
+    commandId: randomUUID(),
+    agentId: registration.agentId,
+    repositoryId: repository.repository_id,
+    objective: "Produce enough bounded evidence to cross one transport frame cumulatively",
+  });
+  const envelope = (messageType, payload) => ({
+    protocolVersion: "1.0",
+    messageId: randomUUID(),
+    idempotencyKey: randomUUID(),
+    agentId: registration.agentId,
+    workspaceId,
+    sentAt: new Date().toISOString(),
+    messageType,
+    correlationId: launched.executionId,
+    missionId: launched.missionId,
+    taskId: launched.taskId,
+    executionId: launched.executionId,
+    attempt: 1,
+    payload,
+  });
+  await processRemoteMessage(
+    envelope("ExecutionAccepted", { stage: "assignment_received", summary: "Assignment accepted" }),
+    credential,
+  );
+  for (const [artifactType, body] of [
+    ["codex_execution_log", Buffer.alloc(110 * 1024, "a")],
+    ["git_patch", Buffer.alloc(40 * 1024, "b")],
+  ]) {
+    await processRemoteMessage(
+      envelope("ExecutionArtifactSubmitted", {
+        name: artifactType,
+        description: "Bounded regression evidence",
+        artifactType,
+        mediaType: "text/plain",
+        byteSize: body.length,
+        checksum: createHash("sha256").update(body).digest("hex"),
+        contentBase64: body.toString("base64"),
+      }),
+      credential,
+    );
+  }
+  assert.equal(
+    (
+      await getDatabasePool().query(
+        "SELECT count(*)::int count FROM artifacts WHERE workspace_id=$1 AND execution_id=$2",
+        [workspaceId, launched.executionId],
+      )
+    ).rows[0].count,
+    2,
+  );
+  await processRemoteMessage(
+    envelope("ExecutionFailed", { classification: "test_cleanup", summary: "Artifact regression complete" }),
+    credential,
+  );
 });
 
 test.after(async () => {
