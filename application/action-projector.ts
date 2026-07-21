@@ -27,7 +27,7 @@ export async function applyActionProjection(client: PoolClient, events: DomainEv
       );
     } else {
       await client.query(
-        `UPDATE action_request_projections SET aggregate_version=$3,status=COALESCE($4,status),policy_version=COALESCE($5,policy_version),policy_outcome=COALESCE($6,policy_outcome),policy_reasons=CASE WHEN $7::jsonb IS NULL THEN policy_reasons ELSE $7::jsonb END,approval_id=COALESCE($8,approval_id),result=COALESCE($9,result),failure_classification=COALESCE($10,failure_classification),retry_disposition=COALESCE($11,retry_disposition),executed_at=CASE WHEN $4='executing' THEN $12 ELSE executed_at END,completed_at=CASE WHEN $4 IN('succeeded','failed','denied','expired','cancelled') THEN $12 ELSE completed_at END,updated_at=$12,last_event_position=$13 WHERE workspace_id=$1 AND action_request_id=$2`,
+        `UPDATE action_request_projections SET aggregate_version=$3,status=COALESCE($4,status),policy_version=COALESCE($5,policy_version),policy_outcome=COALESCE($6,policy_outcome),policy_reasons=CASE WHEN $7::jsonb IS NULL THEN policy_reasons ELSE $7::jsonb END,approval_id=COALESCE($8,approval_id),result=COALESCE($9,result),failure_classification=CASE WHEN $4='succeeded' THEN NULL ELSE COALESCE($10,failure_classification) END,retry_disposition=CASE WHEN $4='succeeded' THEN NULL ELSE COALESCE($11,retry_disposition) END,executed_at=CASE WHEN $4='executing' THEN $12 ELSE executed_at END,completed_at=CASE WHEN $4='executing' THEN NULL WHEN $4 IN('succeeded','failed','denied','expired','cancelled') THEN $12 ELSE completed_at END,updated_at=$12,last_event_position=$13 WHERE workspace_id=$1 AND action_request_id=$2`,
         [
           event.workspaceId,
           event.aggregateId,

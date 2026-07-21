@@ -71,6 +71,15 @@ export function transitionAction(
   };
   return { eventType: eventType[target], eventSchemaVersion: 1, payload: { ...details, status: target } };
 }
+export function reconcileFailedActionExecution(state: ActionState): NewDomainEvent {
+  if (state.status !== "failed")
+    throw new InvalidTransitionError("ActionRequest", state.status, "reconciling");
+  return {
+    eventType: "action.execution_reconciliation_started",
+    eventSchemaVersion: 1,
+    payload: { status: "executing", reconciliation: true },
+  };
+}
 export function policyEvaluated(state: ActionState, decision: PolicyDecision): NewDomainEvent {
   if (state.status !== "evaluating")
     throw new InvalidTransitionError("ActionRequest", state.status, "policy_evaluated");

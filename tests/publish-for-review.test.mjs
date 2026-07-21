@@ -31,3 +31,13 @@ test("pull-request evidence includes traceability and the bounded authority stat
   assert.match(source, /Human-approved authority: publish this exact local commit for review/);
   assert.match(source, /evidenceChecksum/);
 });
+
+test("provider verification retries an already-pushed exact publication without another approval", async () => {
+  const assignments = await readFile("application/publication-assignments.ts", "utf8");
+  const executor = await readFile("application/action-executor.ts", "utf8");
+  assert.match(assignments, /status IN\('available','claimed','pushed'\)/);
+  assert.match(executor, /ar\.status IN\('executing','failed'\) AND pa\.status='pushed'/);
+  assert.match(executor, /reconcileFailedActionExecution/);
+  assert.match(executor, /process\.env\.GITHUB_TOKEN \?\? process\.env\.GH_TOKEN/);
+  assert.match(executor, /confirmed\.head\.sha !== parameters\.commit/);
+});

@@ -33,7 +33,7 @@ export async function claimPublicationAssignment(workspaceId: string, agentId: s
   return withTransaction(async (client) => {
     const row = (
       await client.query(
-        `SELECT * FROM publication_assignments WHERE workspace_id=$1 AND agent_id=$2 AND status IN('available','claimed')
+        `SELECT * FROM publication_assignments WHERE workspace_id=$1 AND agent_id=$2 AND status IN('available','claimed','pushed')
        ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1`,
         [workspaceId, agentId],
       )

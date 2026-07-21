@@ -1,6 +1,6 @@
 import { applyActionProjection } from "@/application/action-projector";
 import { consumeApproval } from "@/application/approval-commands";
-import { rehydrateAction, transitionAction } from "@/domain/action-request";
+import { reconcileFailedActionExecution, rehydrateAction, transitionAction } from "@/domain/action-request";
 import { LocalGitProvider } from "@/git/local-git-provider";
 import { GitHubProvider } from "@/git/github-provider";
 import { LocalGitCredentialProvider } from "@/git/credential-provider";
@@ -229,19 +229,30 @@ export async function finalizeMissionAgentPublication(workspaceId: string, actio
       `SELECT ar.*,r.name repository_name,pa.result publication_result
      FROM action_request_projections ar JOIN repositories r ON r.workspace_id=ar.workspace_id AND r.repository_id=ar.repository_id
      JOIN publication_assignments pa ON pa.workspace_id=ar.workspace_id AND pa.action_request_id=ar.action_request_id
-     WHERE ar.workspace_id=$1 AND ar.action_request_id=$2 AND ar.status='executing' AND pa.status='pushed'`,
+     WHERE ar.workspace_id=$1 AND ar.action_request_id=$2 AND ar.status IN('executing','failed') AND pa.status='pushed'`,
       [workspaceId, actionId],
     )
   ).rows[0];
   if (!row) throw new ValidationFailedError("Publication is not ready for pull-request creation");
   const parameters = row.parameters_summary as Record<string, unknown>;
   if (canonicalHash(parameters) !== row.action_hash) throw new ValidationFailedError("Publication evidence changed");
+  if (row.status === "failed") {
+    const failedState = rehydrateAction(
+      await loadAggregateEvents({ workspaceId, aggregateType: "action_request", aggregateId: actionId }),
+    )!;
+    await append(workspaceId, actionId, reconcileFailedActionExecution(failedState), workerId);
+  }
   try {
     const reported = row.publication_result as Record<string, unknown>;
     const repository = String(parameters.providerRepository);
     const number = Number(reported.pullRequestNumber);
+    const githubToken = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
     const response = await fetch(`https://api.github.com/repos/${repository}/pulls/${number}`, {
-      headers: { Accept: "application/vnd.github+json", "User-Agent": "Mission-Control" },
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "Mission-Control",
+        ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
+      },
       signal: AbortSignal.timeout(15_000),
     });
     if (!response.ok) throw new ValidationFailedError("GitHub did not confirm the pull request");
@@ -284,19 +295,9 @@ export async function finalizeMissionAgentPublication(workspaceId: string, actio
     await completePublicationAssignment(workspaceId, actionId, result);
     return result;
   } catch (error) {
-    const state = rehydrateAction(
-      await loadAggregateEvents({ workspaceId, aggregateType: "action_request", aggregateId: actionId }),
-    )!;
-    await append(
-      workspaceId,
-      actionId,
-      transitionAction(state, "failed", {
-        classification: "pull_request_creation_failure",
-        retryDisposition: "requires-human-review",
-        result: { message: error instanceof Error ? error.message : String(error) },
-      }),
-      workerId,
-    );
+    // The agent has already confirmed the exact remote branch and PR. A provider
+    // verification outage is therefore recoverable and must not convert the
+    // approval-bound action into a terminal failure or repeat the external effect.
     throw error;
   }
 }
