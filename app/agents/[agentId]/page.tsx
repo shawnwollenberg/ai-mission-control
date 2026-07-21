@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { getAgentDetail } from "@/application/registry";
 import { requirePageIdentity } from "@/lib/page-auth";
 import CredentialControls from "./credential-controls";
@@ -12,15 +13,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
     await getAgentDetail(identity.workspaceId, (await params).agentId);
   return (
     <main className="durable-mission-shell">
-      <nav className="brandbar">
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Agent detail</p>
-        </div>
-        <Link className="nav-link" href="/agents">
-          Agent registry
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Agent detail" />
       <header className="mission-header compact">
         <div>
           <p className="section-label">

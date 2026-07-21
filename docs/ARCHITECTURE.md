@@ -181,6 +181,14 @@ Deployment is a separate future mission. It must bind an exact merged commit, ta
 
 Future autonomy settings are repository policy (`manual`, `publish-after-approval`, `merge-after-checks-and-approval`, and narrowly bounded higher modes), never vague “full autonomy.” Every mode preserves protected-branch controls, evidence requirements, emergency stops, credential isolation, and independent merge/deployment boundaries.
 
+## Review and merge authority
+
+Mission Control 0.7 adds provider-backed pull-request snapshots, exact-revision review aggregates, first-class review findings, fail-closed merge-readiness snapshots, and a separate approval-bound merge action. Reviews bind repository/PR identity, base and head SHAs, diff checksum, review policy, and mission identity. A head change immediately makes prior reviews and findings stale and invalidates merge approval.
+
+Fix missions are normal approval-gated Repository Change Missions linked to one finding and expected PR head. They may update the existing branch only through a new local commit and a separately approved non-force publication. Builder and reviewer authority remain logically separate.
+
+Merge execution is server-side and revalidates provider head/base, CI, mergeability, conflicts, protections, reviews, findings, strategy, and action hash immediately before the effect. Unknown state denies readiness. See `docs/MISSION_CONTROL_0_7_REVIEW_AND_MERGE.md`.
+
 ## Open questions
 
 - Where will the demo run and what network access can be assumed?

@@ -1,7 +1,7 @@
 import { requirePageIdentity } from "@/lib/page-auth";
 import Link from "next/link";
 import { searchMissions } from "@/application/mission-search";
-import { BrandSprite } from "@/app/brand-assets";
+import { AppNavigation } from "@/app/app-navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -30,22 +30,7 @@ export default async function MissionListPage({
   });
   return (
     <main className="archive-shell">
-      <nav className="brandbar">
-        <BrandSprite asset="mark-compact" />
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Durable mission archive</p>
-        </div>
-        <Link className="nav-link" href="/">
-          New mission
-        </Link>
-        <Link className="nav-link" href="/approvals">
-          Approvals
-        </Link>
-        <a className="nav-link" href="/logout">
-          Log out
-        </a>
-      </nav>
+      <AppNavigation subtitle="Durable mission archive" />
       <header className="archive-header">
         <div>
           <p className="section-label">Mission archive</p>

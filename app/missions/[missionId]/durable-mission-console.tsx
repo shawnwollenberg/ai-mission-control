@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BrandSprite } from "@/app/brand-assets";
+import { AppNavigation } from "@/app/app-navigation";
 import type { MissionReadModel } from "@/lib/mission-projection-store";
 import type { MissionTimelineEntry } from "@/lib/mission-queries";
 import type { ActionReadModel, ApprovalReadModel, ExecutionReadModel, TaskReadModel } from "@/lib/execution-queries";
@@ -186,19 +186,7 @@ export default function DurableMissionConsole({
 
   return (
     <main className="durable-mission-shell">
-      <nav className="brandbar">
-        <BrandSprite asset="mark-compact" />
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Durable mission command</p>
-        </div>
-        <Link className="nav-link" href="/missions">
-          Mission archive
-        </Link>
-        <a className="nav-link" href="/logout">
-          Log out
-        </a>
-      </nav>
+      <AppNavigation subtitle="Durable mission command" />
       <header className="mission-header compact">
         <div>
           <p className="section-label">Mission / {mission.missionId.slice(0, 8)}</p>
@@ -310,8 +298,9 @@ export default function DurableMissionConsole({
                 </p>
                 <p>{execution.progressSummary ?? "Waiting for progress"}</p>
                 <small>
-                  Last heartbeat:{" "}
-                  {execution.lastHeartbeat ? new Date(execution.lastHeartbeat).toLocaleString() : "Not received"} ·{" "}
+                  {execution.status === "failed" && execution.stage === "assignment_received"
+                    ? "Execution heartbeat: Not expected — stopped during repository preflight"
+                    : `Last heartbeat: ${execution.lastHeartbeat ? new Date(execution.lastHeartbeat).toLocaleString() : "Not received"}`} ·{" "}
                   {execution.commandsCompleted} commands · {execution.artifacts.length} artifacts
                 </small>
                 {execution.commitId && (
@@ -324,11 +313,20 @@ export default function DurableMissionConsole({
                       !actions.some(
                         (action) =>
                           action.executionId === execution.executionId &&
-                          action.actionType === "repository.publish_for_review",
+                          action.actionType === "repository.publish_for_review" &&
+                          (action.status !== "failed" ||
+                            String(action.result?.message ?? "").includes("evidence checksum")),
                       ) && (
                         <div className="mission-actions">
                           <button disabled={pending} onClick={() => publishForReview(execution.executionId)}>
-                            Publish for Review
+                            {actions.some(
+                              (action) =>
+                                action.executionId === execution.executionId &&
+                                action.actionType === "repository.publish_for_review" &&
+                                action.status === "failed",
+                            )
+                              ? "Retry Publish for Review"
+                              : "Publish for Review"}
                           </button>
                           <small>
                             Push this exact commit and open an evidence-rich pull request. Merge and deployment stay
@@ -338,7 +336,22 @@ export default function DurableMissionConsole({
                       )}
                   </>
                 )}
-                {execution.failureClassification && <p>Failure: {execution.failureClassification}</p>}
+                {execution.failureClassification && (
+                  <p>
+                    Failure type:{" "}
+                    {execution.failureClassification === "local_adapter_failure"
+                      ? execution.stage === "assignment_received"
+                        ? "Repository preflight blocked"
+                        : "Local Mission Agent execution"
+                      : execution.failureClassification.replaceAll("_", " ")}
+                  </p>
+                )}
+                {execution.status === "failed" && execution.stage === "assignment_received" && (
+                  <p>
+                    Mission Control stopped safely before Codex made changes. Resolve the repository issue above, then
+                    retry the Change Mission from its recommendation.
+                  </p>
+                )}
                 <ul>
                   {execution.artifacts.map((artifact) => (
                     <li key={artifact.artifactId}>
@@ -394,14 +407,23 @@ export default function DurableMissionConsole({
                   ))}
                 </ul>
                 {action.result && (
-                  <p>
+                  <p className={action.status === "failed" ? "form-error" : undefined}>
                     {action.actionType === "repository.publish_for_review"
-                      ? `Provider-confirmed pull request: ${String((action.result.pullRequest as Record<string, unknown> | undefined)?.url ?? "pending")}`
+                      ? action.status === "failed"
+                        ? `Publication stopped safely: ${String(action.result.message ?? "Review the failure and request a new publication approval.")}`
+                        : `Provider-confirmed pull request: ${String((action.result.pullRequest as Record<string, unknown> | undefined)?.url ?? "pending")}`
                       : action.actionType === "repository.create_pull_request"
                         ? `Provider-confirmed pull request: ${String(action.result.url)}`
                         : `Remote branch: ${String(action.result.remoteRef)}`}
                   </p>
                 )}
+                {action.status === "failed" &&
+                  String(action.result?.message ?? "").includes("evidence checksum") && (
+                    <p>
+                      This approval cannot be reused because its evidence was incomplete. Open the source recommendation
+                      and create a follow-up Change Mission to regenerate complete evidence.
+                    </p>
+                  )}
               </div>
             ))}
           </section>
@@ -513,7 +535,9 @@ export default function DurableMissionConsole({
                 seconds. The recorded {modeLabel(mission.executionMode, executions).toLowerCase()} outcome is{" "}
                 {mission.status}.
                 {actions.some(
-                  (action) => action.actionType === "repository.push_branch" && action.status === "succeeded",
+                  (action) =>
+                    ["repository.push_branch", "repository.publish_for_review"].includes(action.actionType) &&
+                    action.status === "succeeded",
                 )
                   ? " The exact approved branch was pushed."
                   : " No branch push was recorded."}{" "}

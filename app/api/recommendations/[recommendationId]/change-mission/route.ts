@@ -17,7 +17,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ rec
     const { recommendationId } = await params;
     const recommendation = await getRecommendation(identity.workspaceId, recommendationId);
     if (!recommendation) throw new NotFoundError("Recommendation");
-    if (recommendation.linkedMissionId) return NextResponse.json({ missionId: recommendation.linkedMissionId });
+    const retriableMissionStatuses = new Set(["failed", "cancelled", "completed"]);
+    if (
+      recommendation.linkedMissionId &&
+      !retriableMissionStatuses.has(recommendation.linkedMissionStatus ?? "")
+    )
+      return NextResponse.json({ missionId: recommendation.linkedMissionId });
     const agent = (
       await getDatabasePool().query(
         "SELECT agent_id FROM execution_projections WHERE workspace_id=$1 AND execution_id=$2",
@@ -28,7 +33,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ rec
     // A recommendation may create at most one change mission. Derive the command
     // identity from the recommendation so a retry after a partial response cannot
     // create a second mission, even when the browser supplies a new request key.
-    const commandId = stableUuid(`recommendation-change-mission:${recommendationId}`);
+    const commandId = stableUuid(
+      `recommendation-change-mission:${recommendationId}:${recommendation.linkedMissionId ?? "initial"}`,
+    );
     const launched = await launchFirstRepositoryMission({
       actor: { workspaceId: identity.workspaceId, userId: identity.userId, role: identity.role },
       commandId,
@@ -43,10 +50,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ rec
     });
     await changeRecommendationStatus({
       actor: { workspaceId: identity.workspaceId, id: identity.userId, type: "human" },
-      commandId: stableUuid(`recommendation-link:${recommendationId}`),
+      commandId: stableUuid(
+        `recommendation-link:${recommendationId}:${recommendation.linkedMissionId ?? "initial"}`,
+      ),
       recommendationId,
       target: "in_progress",
-      reason: "Change mission created from recommendation",
+      reason: recommendation.linkedMissionId
+        ? `Change mission retried after ${recommendation.linkedMissionStatus ?? "terminal"} mission`
+        : "Change mission created from recommendation",
       linkedMissionId: launched.missionId,
     });
     return NextResponse.json(launched, { status: 201 });

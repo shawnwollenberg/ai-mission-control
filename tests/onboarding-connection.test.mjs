@@ -72,7 +72,11 @@ test("connection UI keeps the payload masked and advanced setup collapsed", asyn
 });
 
 test("Mission Agent maintains pull readiness with periodic signed heartbeats", async () => {
-  const source = await readFile(new URL("../public/mission-agent-0.5.0.mjs", import.meta.url), "utf8");
+  const manifest = JSON.parse(await readFile(new URL("../public/mission-agent-latest.json", import.meta.url), "utf8"));
+  const source = await readFile(new URL(`../public${manifest.path}`, import.meta.url), "utf8");
+  const connectRoute = await readFile(new URL("../app/api/onboarding/connect/route.ts", import.meta.url), "utf8");
+  assert.match(connectRoute, new RegExp(`missionAgentVersion = "${manifest.version}"`));
+  assert.match(connectRoute, new RegExp(`missionAgentChecksum = "${manifest.sha256}"`));
   assert.match(source, /const heartbeatTimer = setInterval/);
   assert.match(source, /60_000/);
   assert.match(source, /heartbeatTimer\.unref\(\)/);
@@ -120,7 +124,43 @@ test("recommendations expose traceable one-click Change Mission creation", async
   assert.match(page, /Repository Recommendation/);
   assert.match(page, /Evidence/);
   assert.match(actions, /Create Change Mission/);
+  assert.match(actions, /Retry Change Mission/);
+  assert.match(actions, /Create Follow-up Change Mission/);
+  assert.match(route, /retriableMissionStatuses/);
   assert.match(route, /sourceRecommendationId/);
   assert.match(route, /acceptanceCriteria/);
   assert.match(route, /suggestedValidation/);
+});
+
+test("repository preflight failures use actionable product language", async () => {
+  const console = await readFile("app/missions/[missionId]/durable-mission-console.tsx", "utf8");
+  assert.match(console, /Repository preflight blocked/);
+  assert.match(console, /Execution heartbeat: Not expected/);
+  assert.match(console, /stopped safely before Codex made changes/);
+});
+
+test("approval filters share one desktop row without clipping inbox messages", async () => {
+  const page = await readFile("app/approvals/page.tsx", "utf8");
+  const inbox = await readFile("app/approvals/inbox.tsx", "utf8");
+  const styles = await readFile("app/globals.css", "utf8");
+  assert.match(page, /approval-filter-bar/);
+  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) auto/);
+  assert.match(inbox, /approval-inbox-list/);
+  assert.match(styles, /\.approval-inbox-list \{[\s\S]*max-height: none/);
+});
+
+test("authenticated pages share one consistent primary navigation", async () => {
+  const navigation = await readFile("app/app-navigation.tsx", "utf8");
+  for (const label of ["New Mission", "Missions", "Agents", "Approvals", "Templates", "Operations", "Log out"])
+    assert.match(navigation, new RegExp(label));
+  for (const page of [
+    "app/missions/page.tsx",
+    "app/approvals/page.tsx",
+    "app/agents/page.tsx",
+    "app/templates/page.tsx",
+    "app/operations/page.tsx",
+    "app/schedules/page.tsx",
+    "app/notifications/page.tsx",
+  ])
+    assert.match(await readFile(page, "utf8"), /<AppNavigation subtitle=/);
 });

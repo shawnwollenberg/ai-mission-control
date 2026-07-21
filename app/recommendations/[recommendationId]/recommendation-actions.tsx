@@ -3,9 +3,11 @@ import { useState } from "react";
 export default function RecommendationActions({
   recommendationId,
   status: currentStatus,
+  linkedMissionStatus,
 }: {
   recommendationId: string;
   status: string;
+  linkedMissionStatus?: string;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -39,9 +41,17 @@ export default function RecommendationActions({
   }
   return (
     <div className="mission-actions">
-      {["open", "accepted"].includes(currentStatus) && (
+      {(["open", "accepted"].includes(currentStatus) ||
+        (currentStatus === "in_progress" && ["failed", "cancelled"].includes(linkedMissionStatus ?? "")) ||
+        (currentStatus === "completed" && linkedMissionStatus === "completed")) && (
         <button disabled={pending} onClick={launch}>
-          {pending ? "Creating mission…" : "Create Change Mission"}
+          {pending
+            ? "Creating mission…"
+            : currentStatus === "completed"
+              ? "Create Follow-up Change Mission"
+              : currentStatus === "in_progress"
+              ? "Retry Change Mission"
+              : "Create Change Mission"}
         </button>
       )}
       {currentStatus === "open" && (

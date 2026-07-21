@@ -57,33 +57,35 @@ async function loadWorkspace(id: string) {
 async function snapshot(client: PoolClient) {
   const where = workspace ? " WHERE workspace_id=$1" : "";
   const params = workspace ? [workspace] : [];
-  const tables: Record<string, string> = {
-    mission_projections: "1,2",
-    task_projections: "1,2",
-    task_dependencies: "1,2,3,4",
-    approval_projections: "1,2",
-    execution_projections: "1,2",
-    action_request_projections: "1,2",
-    mission_template_projections: "1,2,3",
-    schedule_projections: "1,2",
-    schedule_run_projections: "1,2",
-    notification_projections: "1,2",
-    notification_preferences: "1",
-    usage_records: "1,2",
-    budget_policies: "1,2",
-    budget_decisions: "1,2",
-    worker_projections: "1,2",
-    saved_view_projections: "1,2",
-    anomaly_projections: "1,2",
-    workspace_emergency_controls: "1",
-    recommendation_projections: "1,2",
-    repository_health_assessments: "1,2",
+  const tables: Record<string, { order: string; jsonExpression?: string }> = {
+    mission_projections: { order: "1,2" },
+    task_projections: { order: "1,2" },
+    task_dependencies: { order: "1,2,3,4" },
+    approval_projections: { order: "1,2" },
+    // last_heartbeat_at is transient transport liveness updated outside the event
+    // stream. All authoritative execution fields remain replay-verified.
+    execution_projections: { order: "1,2", jsonExpression: "to_jsonb(x) - 'last_heartbeat_at'" },
+    action_request_projections: { order: "1,2" },
+    mission_template_projections: { order: "1,2,3" },
+    schedule_projections: { order: "1,2" },
+    schedule_run_projections: { order: "1,2" },
+    notification_projections: { order: "1,2" },
+    notification_preferences: { order: "1" },
+    usage_records: { order: "1,2" },
+    budget_policies: { order: "1,2" },
+    budget_decisions: { order: "1,2" },
+    worker_projections: { order: "1,2" },
+    saved_view_projections: { order: "1,2" },
+    anomaly_projections: { order: "1,2" },
+    workspace_emergency_controls: { order: "1" },
+    recommendation_projections: { order: "1,2" },
+    repository_health_assessments: { order: "1,2" },
   };
   const out: Record<string, unknown> = {};
-  for (const [table, order] of Object.entries(tables))
+  for (const [table, definition] of Object.entries(tables))
     out[table] = (
       await client.query(
-        `SELECT row_to_json(x) value FROM (SELECT * FROM ${table}${where} ORDER BY ${order}) x`,
+        `SELECT ${definition.jsonExpression ?? "row_to_json(x)"} value FROM (SELECT * FROM ${table}${where} ORDER BY ${definition.order}) x`,
         params,
       )
     ).rows.map((r) => r.value);

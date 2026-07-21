@@ -485,6 +485,14 @@ Completion requires a fresh production user to connect behind NAT, confirm pull 
 
 **Acceptance:** Use a disposable GitHub repository to prove one approval, exact branch/commit publication, complete PR evidence, stale/mismatched approval invalidation, no-force/no-default-branch enforcement, retry/restart idempotency, and projection rebuild.
 
+## Mission Control 0.7 — Review and Merge
+
+**0.6 gate completed — 2026-07-21:** Production accepted repository registration, analysis, health, recommendations, recommendation-linked change, planning, write approval, isolated implementation, validation, exact local commit, separately approved publication, exact GitHub PR head verification, restart recovery, and full projection equality. Evidence and friction are recorded in `docs/MISSION_CONTROL_0_6_PRODUCTION_ACCEPTANCE.md`.
+
+**Authorized 0.7 boundary:** Add independent exact-revision PR review, first-class findings, idempotent finding-linked fix missions, controlled incremental PR updates, fail-closed CI/policy/readiness verification, and one separate exact approval-bound merge. Any revision or readiness change invalidates approval. Deployment, force operations, protection/admin bypass, default-branch writes, infrastructure/secrets, and transactions remain denied.
+
+**Design:** `docs/MISSION_CONTROL_0_7_REVIEW_AND_MERGE.md` is controlling for aggregate boundaries, role separation, stale semantics, merge binding, provider credentials, recovery, and intentionally unsupported behavior.
+
 ## Cross-phase test matrix
 
 - Unit: transitions, dependency resolution, policy, health, retry classification, schemas, serialization.

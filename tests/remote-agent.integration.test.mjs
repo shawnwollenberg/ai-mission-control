@@ -268,13 +268,13 @@ test("remote workflow approval is parameter-bound while financial execution is p
 
 test("protocol rate limits are enforced per agent and message category", async () => {
   await getDatabasePool().query(
-    "DELETE FROM protocol_rate_limits WHERE workspace_id=$1 AND agent_id=$2 AND category='heartbeat'",
+    "DELETE FROM protocol_rate_limits WHERE workspace_id=$1 AND agent_id=$2 AND category='agent_heartbeat'",
     [workspaceId, registration.agentId],
   );
   for (let request = 0; request < 6; request += 1)
-    await enforceProtocolRateLimit(workspaceId, registration.agentId, "heartbeat");
+    await enforceProtocolRateLimit(workspaceId, registration.agentId, "agent_heartbeat");
   await assert.rejects(
-    enforceProtocolRateLimit(workspaceId, registration.agentId, "heartbeat"),
+    enforceProtocolRateLimit(workspaceId, registration.agentId, "agent_heartbeat"),
     /Protocol rate limit exceeded/,
   );
 });

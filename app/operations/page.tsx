@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { requirePageIdentity } from "@/lib/page-auth";
 import { operationsDashboard } from "@/application/operations-dashboard";
 import { updateEmergencyControl } from "./emergency-actions";
@@ -8,24 +9,7 @@ export default async function OperationsPage() {
   const dashboard = await operationsDashboard(identity.workspaceId);
   return (
     <main className="archive-shell">
-      <nav className="brandbar">
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Operations</p>
-        </div>
-        <Link className="nav-link" href="/missions">
-          Missions
-        </Link>
-        <Link className="nav-link" href="/schedules">
-          Schedules
-        </Link>
-        <Link className="nav-link" href="/notifications">
-          Notifications
-        </Link>
-        <Link className="nav-link" href="/operations/dead-letters">
-          Dead letters
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Operations" />
       <header className="archive-header">
         <div>
           <p className="section-label">Attention queue</p>

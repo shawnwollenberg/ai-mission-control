@@ -2,7 +2,7 @@
 
 import { FormEvent, useRef, useState } from "react";
 import Link from "next/link";
-import { BrandSprite } from "./brand-assets";
+import { AppNavigation } from "./app-navigation";
 
 type LaunchInput = {
   name: string;
@@ -66,22 +66,7 @@ export default function LaunchForm({
 
   return (
     <main className="launch-shell">
-      <nav className="brandbar">
-        <BrandSprite asset="mark-compact" />
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Executive operations for AI teams</p>
-        </div>
-        <Link className="nav-link" href="/missions">
-          Mission archive
-        </Link>
-        <Link className="nav-link" href="/onboarding">
-          Connect agent
-        </Link>
-        <a className="nav-link" href="/logout">
-          Log out
-        </a>
-      </nav>
+      <AppNavigation subtitle="Executive operations for AI teams" />
 
       <section className="launch-grid">
         <div className="launch-copy">
