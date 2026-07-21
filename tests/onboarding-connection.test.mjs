@@ -72,7 +72,11 @@ test("connection UI keeps the payload masked and advanced setup collapsed", asyn
 });
 
 test("Mission Agent maintains pull readiness with periodic signed heartbeats", async () => {
-  const source = await readFile(new URL("../public/mission-agent-0.5.0.mjs", import.meta.url), "utf8");
+  const manifest = JSON.parse(await readFile(new URL("../public/mission-agent-latest.json", import.meta.url), "utf8"));
+  const source = await readFile(new URL(`../public${manifest.path}`, import.meta.url), "utf8");
+  const connectRoute = await readFile(new URL("../app/api/onboarding/connect/route.ts", import.meta.url), "utf8");
+  assert.match(connectRoute, new RegExp(`missionAgentVersion = "${manifest.version}"`));
+  assert.match(connectRoute, new RegExp(`missionAgentChecksum = "${manifest.sha256}"`));
   assert.match(source, /const heartbeatTimer = setInterval/);
   assert.match(source, /60_000/);
   assert.match(source, /heartbeatTimer\.unref\(\)/);

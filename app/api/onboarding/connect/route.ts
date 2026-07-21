@@ -83,8 +83,8 @@ export async function POST(request: Request) {
         workspaceName: workspaceName ?? "My Workspace",
       }),
     ).toString("base64url");
-    const missionAgentVersion = "0.5.0";
-    const missionAgentChecksum = "dea6023abe7ea38862d3f9c9b5708a8f8a2fc7df6f08171b06940eb22ce11460";
+    const missionAgentVersion = "0.6.4";
+    const missionAgentChecksum = "ea2b425c21ecdeabe71ee23b5e65d5aeaffbb950749d9318c280ce3137352dc1";
     const command = `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && node "$tmp" connect '${config}'`;
     await recordOnboardingEvent({
       workspaceId: identity.workspaceId,
