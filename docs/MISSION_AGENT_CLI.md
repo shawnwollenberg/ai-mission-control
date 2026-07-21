@@ -19,7 +19,7 @@ cd /path/to/repository
 <generated connection command> --repository /absolute/path/to/repository
 ```
 
-The generated command downloads immutable `mission-agent-0.2.0.mjs`, verifies its SHA-256 checksum, stores the credential, registers the first repository, installs the stable `mission-agent` command under `~/.local/bin`, sends a signed heartbeat, and starts outbound assignment polling. No inbound port is required.
+The generated command downloads a checksummed immutable Mission Agent release, stores the credential, registers the first repository, installs the stable `mission-agent` command under `~/.local/bin`, sends a signed heartbeat, and starts outbound assignment polling. No inbound port is required. The stable launcher can upgrade to the current release with `mission-agent update`; the current published release is 0.6.3.
 
 If no Git repository is found, run from inside one or provide `--repository /absolute/path/to/repository`.
 
@@ -41,7 +41,7 @@ mission-agent logout --yes
 
 The stable executable resolves the active immutable version internally. Users do not need to know the artifact filename. If `~/.local/bin` is not already on `PATH`, connection prints the directory to add.
 
-Existing 0.1.0 and 0.1.1 users do not reconnect. Download and checksum-verify 0.2.0 using the published values, then run `node mission-agent-0.2.0.mjs install`. This installs the stable launcher while preserving the existing credential, heartbeat identity, and repository configuration. Subsequent upgrades use `mission-agent update`.
+Existing users do not reconnect when upgrading. Run `mission-agent update` to download and verify the release identified by `mission-agent-latest.json`, then reinstall the user service if the command asks you to activate the new executable there. The update preserves the existing credential, heartbeat identity, and repository configuration.
 
 ## Add repositories
 
@@ -63,6 +63,14 @@ On macOS, Mission Agent prefers Keychain and keeps nonsecret configuration in an
 ## Troubleshooting
 
 Run `mission-agent doctor`. It checks Node, protected configuration, credential access, Git, Codex, repository accessibility, and signed Mission Control heartbeat. A heartbeat alone does not unlock a repository mission: pull readiness and at least one eligible registered repository are also required.
+
+## Repository workflow
+
+Repository Analysis is read-only and produces a Markdown report, structured Recommendations, and evidence-backed Repository Health observations. A Recommendation can create a Repository Change Mission with its objective, evidence, acceptance criteria, and suggested validation already linked.
+
+A Change Mission first produces a read-only implementation plan. Mission Control requests an exact `repository.modify` approval before Mission Agent creates an isolated worktree, modifies files, validates the result, and creates one local commit. The registered source checkout remains unchanged.
+
+When the local result is ready, **Publish for Review** is a second approval. Mission Agent 0.6.3 revalidates and pushes only the approved mission commit without force, then opens the approved pull request using the owner's local GitHub CLI authentication. Mission Control independently confirms the pull request. Merge, deployment, infrastructure or secret modification, and transaction signing or submission remain unavailable.
 
 ## FAQ
 

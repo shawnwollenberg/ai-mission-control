@@ -4,7 +4,7 @@ This package documents Mission Control as it exists after the original hackathon
 
 ## Development Attribution
 
-ChatGPT helped design Mission Control and plan each production phase.  Codex, powered by GPT-5.6, implemented, tested, deployed, and refined the system.  ChatGPT and GPT-5.6 are not interchangeable in this account: ChatGPT was the architecture, product, design, and review partner; GPT-5.6 was the model used by the Codex implementation agent.
+ChatGPT helped design Mission Control and plan each production phase. Codex, powered by GPT-5.6, implemented, tested, deployed, and refined the system. ChatGPT and GPT-5.6 are not interchangeable in this account: ChatGPT was the architecture, product, design, and review partner; GPT-5.6 was the model used by the Codex implementation agent.
 
 ## Public links
 

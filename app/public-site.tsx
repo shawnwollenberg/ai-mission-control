@@ -77,6 +77,8 @@ export const docGroups = [
       ["Policy", "/docs/concepts/policy"],
       ["Approval", "/docs/concepts/approval"],
       ["Artifact", "/docs/concepts/artifact"],
+      ["Recommendation", "/docs/concepts/recommendation"],
+      ["Repository Health", "/docs/concepts/repository-health"],
     ],
   },
   {
@@ -219,6 +221,36 @@ export const docs: Record<
       },
     ],
   },
+  "concepts/recommendation": {
+    eyebrow: "Concepts",
+    title: "Recommendation",
+    lede: "A persistent, evidence-backed finding from Repository Analysis that can be tracked and turned into focused work.",
+    sections: [
+      {
+        title: "Traceability",
+        body: "Each Recommendation remains linked to its source mission, analysis artifact, repository-relative evidence, acceptance criteria, and suggested validation. Its lifecycle can move through Open, Accepted, In Progress, Completed, Stale, or Dismissed.",
+      },
+      {
+        title: "Create a change mission",
+        body: "One action creates an approval-gated Repository Change Mission with the objective, evidence, acceptance criteria, and safe validation suggestions already linked. The Recommendation itself never grants write authority.",
+      },
+    ],
+  },
+  "concepts/repository-health": {
+    eyebrow: "Concepts",
+    title: "Repository Health",
+    lede: "An explainable, versioned assessment of repository architecture, tests, security, technical debt, documentation, dependencies, and CI.",
+    sections: [
+      {
+        title: "Evidence before score",
+        body: "Mission Agent submits bounded observations with repository-relative evidence. Mission Control validates those observations and calculates the score deterministically. Missing evidence remains unknown and lowers confidence instead of becoming a synthetic failure.",
+      },
+      {
+        title: "History and timeline",
+        body: "Immutable assessments make trends comparable, while the Repository Timeline connects analyses, recommendations, change missions, approvals, artifacts, and publication outcomes from canonical events.",
+      },
+    ],
+  },
   "running-codex": {
     eyebrow: "Guides",
     title: "Running Codex",
@@ -226,7 +258,11 @@ export const docs: Record<
     sections: [
       {
         title: "Initial permissions",
-        body: "Read, worktree writes, tests, and local commits are allowed. Push and PR creation require separate approvals. Merge and deployment are denied.",
+        body: "Repository Analysis is read-only. A Change Mission requires a repository.modify approval before isolated worktree writes, tests, and one local commit. Publish for Review is a second approval bound to that exact commit and pull request. Merge and deployment remain denied.",
+      },
+      {
+        title: "From analysis to review",
+        body: "Analysis produces an artifact, structured Recommendations, and Repository Health observations. Create a Change Mission from a Recommendation, approve its implementation plan, inspect the diff and validation evidence, then separately approve Publish for Review when the local commit is ready.",
       },
     ],
   },
@@ -267,11 +303,15 @@ export const docs: Record<
       },
       {
         title: "3. Run",
-        body: "Select the registered repository and launch Analyze this repository. Mission Agent pulls the assignment over outbound HTTPS, renews its lease, reports bounded progress, uploads a checksummed Markdown artifact, and completes the mission.",
+        body: "Select the registered repository and launch Analyze Repository. Mission Agent pulls the assignment over outbound HTTPS, renews its lease, reports live heartbeats and bounded progress, uploads a checksummed Markdown artifact, submits structured Recommendations and Repository Health evidence, and completes the mission.",
       },
       {
         title: "Operations",
-        body: "Use the stable mission-agent command: status, doctor, repository list, repository add /path, repository inspect <id>, repository remove <id>, update, and logout --yes. Immutable versioned executables remain behind this command.",
+        body: "Use the stable mission-agent command: status, doctor, repository list, repository add /path, repository inspect <id>, repository remove <id>, update, and logout --yes. Run mission-agent update to install the current 0.6.3 release without reconnecting. Immutable versioned executables remain behind this command.",
+      },
+      {
+        title: "Change and publish",
+        body: "A Repository Change Mission plans in read-only mode, waits for an exact write approval, works in an isolated Git worktree, validates, and creates one local commit. Publish for Review then requires a separate human approval before Mission Agent pushes that exact commit without force and opens a traceable pull request using the owner's local GitHub authentication.",
       },
     ],
   },
@@ -347,7 +387,13 @@ export const docs: Record<
     eyebrow: "Guides",
     title: "Policies",
     lede: "Compose workspace, repository, agent, environment, and action restrictions deterministically.",
-    sections: [{ title: "Revalidation", body: "Sensitive actions are checked again immediately before execution." }],
+    sections: [
+      { title: "Revalidation", body: "Sensitive actions are checked again immediately before execution." },
+      {
+        title: "Separated authority",
+        body: "Repository modification and Publish for Review are separate, exact approvals. Publication can push only the reviewed mission commit and create its pull request. It cannot merge, deploy, bypass review or CI, or modify more files.",
+      },
+    ],
   },
   security: {
     eyebrow: "Guides",
@@ -357,6 +403,10 @@ export const docs: Record<
       {
         title: "Human release boundary",
         body: "Deploying Mission Control is a reviewed human release activity. Mission Control agents still cannot deploy autonomously.",
+      },
+      {
+        title: "Local credentials",
+        body: "Mission Agent keeps its connection credential in the macOS Keychain or an owner-only local file. GitHub authentication remains on the user's computer; Mission Control never sends provider credentials to the agent.",
       },
     ],
   },

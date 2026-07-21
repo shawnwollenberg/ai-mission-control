@@ -94,9 +94,9 @@ Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner,
 - [x] Generate a workspace-scoped credential and one copyable install command.
 - [x] Detect a real signed heartbeat and advance the browser automatically.
 - [x] Put a preselected read-only first mission directly after connection.
-- [ ] Package the connector as a versioned, checksummed distribution.
-- [ ] Add durable pull delivery for agents behind NAT or localhost.
-- [ ] Execute and complete the preselected first mission through the newly connected agent.
+- [x] Package the connector as a versioned, checksummed distribution.
+- [x] Add durable pull delivery for agents behind NAT or localhost.
+- [x] Execute and complete the preselected first mission through the newly connected agent.
 - [ ] Validate an unknown user reaching an artifact without assistance in under ten minutes.
 
 ## Repository Change Missions

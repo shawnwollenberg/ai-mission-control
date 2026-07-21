@@ -16,6 +16,8 @@ Mission Control gives an AI organization one durable operating surface:
 - Gate consequential actions through parameter-bound human approvals.
 - Enforce permanent policy boundaries around deployment, merges, infrastructure, secrets, and transactions.
 - Record execution evidence, artifacts, heartbeats, failures, retries, and final outcomes.
+- Turn evidence-backed analysis findings into persistent recommendations and approval-gated change missions.
+- Track explainable Repository Health and repository activity over time.
 
 Mission Control is free while it is evolving. It is used daily to manage a real AI organization, and feedback from people building their own agent teams is welcome.
 
@@ -38,25 +40,27 @@ Mission Control provides a secure environment for AI software engineering.
 - Connect a repository.
 - Launch an analysis or change mission.
 - Review architecture and implementation plans.
+- Review structured, evidence-backed recommendations and Repository Health.
+- Create a focused change mission directly from a recommendation.
 - Approve implementation before files are modified.
 - Inspect diffs, validation results, artifacts, and local commits.
+- Separately approve **Publish for Review** to push the exact reviewed commit and open an evidence-rich pull request.
 - Stay in control.
 
-Every mission is transparent, auditable, and human-supervised. Repository Change Missions operate in isolated worktrees and stop at a local commit; they do not push, create pull requests, merge, or deploy automatically.
+Every mission is transparent, auditable, and human-supervised. Repository Change Missions operate in isolated worktrees and stop at a local commit. A separate, parameter-bound **Publish for Review** approval may push that exact commit and open a pull request. Mission Control still cannot merge or deploy autonomously.
 
 ### Next
 
-Mission Control will connect repository analysis directly to focused follow-up work and separately approved publication actions.
+Mission Control will deepen Repository Knowledge and help an engineering manager understand what should happen next.
 
 Agents will be able to:
 
-- Turn recommendations into change missions.
-- Implement features and fix bugs.
-- Run tests and produce complete diffs.
-- Propose a branch push.
-- Prepare a pull request after a separate human approval.
+- Build durable knowledge around repository components, risks, standards, tests, and decisions.
+- Compare evidence-backed Repository Health assessments over time.
+- Plan larger objectives as reviewable mission graphs.
+- Coordinate specialized engineering agents against shared repository knowledge.
 
-Approval to modify files will not imply approval to push, and approval to push will not imply approval to create a pull request. Merge and deployment remain outside this boundary.
+Approval to modify files does not imply approval to publish. Publication approval does not imply approval to merge or deploy.
 
 ### Soon
 
@@ -154,6 +158,8 @@ The authenticated Phase 1 path now runs on PostgreSQL canonical events and rebui
 Phase 2 adds a separate `npm run worker:codex` process for an owner-registered, repository-allowlisted Codex agent. It runs only in generated Git worktrees, records live heartbeats, commands, tests, checksummed artifacts, and a local commit, and never pushes, merges, or deploys. See [the Phase 2 completion report](docs/PHASE_2_COMPLETION_REPORT.md) and [Phase 2 operations](docs/PHASE_2_OPERATIONS.md).
 
 Phase 3 adds deterministic policy, durable parameter-bound approvals, and a separate `npm run worker:actions` publication boundary. A generated branch push and pull-request creation require distinct approvals and execution-time revalidation. Merge, deployment, force push, protected-branch writes, secrets, infrastructure changes, and financial actions remain denied. See [the Phase 3 completion report](docs/PHASE_3_COMPLETION_REPORT.md) and [Phase 3 operations](docs/PHASE_3_OPERATIONS.md).
+
+The current Mission Agent flow adds genuine outbound-only repository execution behind NAT: read-only analysis, structured Recommendations, deterministic Repository Health, approval-gated isolated changes, and a separately approved **Publish for Review** action. Publication pushes only the reviewed mission commit and creates a traceable pull request using the owner's local GitHub authentication. See [the Mission Agent CLI guide](docs/MISSION_AGENT_CLI.md) and [Agent Protocol 1.0](docs/MISSION_AGENT_PROTOCOL.md).
 
 ## Architectural constitution
 

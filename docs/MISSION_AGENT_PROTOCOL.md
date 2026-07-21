@@ -1,6 +1,6 @@
 # Mission Control Agent Protocol 1.0 — Pull Transport
 
-**Status:** Approved implementation boundary — updated 2026-07-20
+**Status:** Approved implementation boundary — updated 2026-07-21
 
 Mission Agent is the outbound-only local runtime for Mission Control. Codex, Hermes, Claude Code, and generic command adapters sit behind this runtime. The first execution-capable adapter is Codex, limited to read-only repository analysis.
 
@@ -42,6 +42,8 @@ The initial adapter resolves the workspace repository ID only through Mission Ag
 Mission Agent 0.3.1 adds the separately selected `repository_change` assignment. It plans in the source repository under the read-only sandbox, submits the plan with a `repository.modify` approval request, and polls the approval through the signed leased-assignment channel. Only a grant permits creation of an isolated `mission/*` worktree and a workspace-write Codex invocation. The runtime accepts only parsed allowlisted validation commands, uploads review evidence, creates one local commit, and verifies the source branch and worktree are unchanged. It never pushes, creates a pull request, merges, deploys, changes infrastructure or secrets, or signs/submits transactions.
 
 Mission Agent 0.6.0 adds a separate publication pull channel. Only a consumed owner approval for `repository.publish_for_review` produces an assignment. The runtime revalidates the exact worktree, branch, commit, clean status, remote identity, target commit, and diff checksum; pushes the exact commit without force; and uses the owner's locally scoped GitHub CLI authentication to create the approved PR. Mission Control independently confirms the provider PR, target, branch, and head SHA before recording success. This authority cannot modify more files, merge, deploy, bypass CI/review, change infrastructure or secrets, or sign/submit transactions.
+
+Mission Agent 0.6.1 normalizes singular evidence objects emitted by Codex into the bounded evidence list required by Recommendation validation and reports execution heartbeats during long local stages. Version 0.6.2 similarly normalizes singular acceptance criteria and validation suggestions without weakening server validation. Version 0.6.3 unwraps nested protocol acknowledgement results so approval identifiers, artifact identifiers, and publication state remain consistent across the signed transport. These are compatibility fixes; they grant no additional authority.
 
 Mission Agent 0.4.0 adds a second read-only analysis pass that emits a bounded JSON recommendation artifact. Mission Control validates that artifact before creating canonical repository Recommendation aggregates. Invalid JSON, missing evidence, unsafe paths, unsupported impact/risk values, or oversized recommendation sets fail the analysis rather than persisting untrusted model text as product state.
 

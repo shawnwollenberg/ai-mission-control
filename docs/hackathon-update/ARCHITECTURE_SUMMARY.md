@@ -22,4 +22,4 @@ Production runs on a single low-cost AWS Graviton instance with the web applicat
 
 ## Development Workflow
 
-ChatGPT acted as the technical architect, product strategist, design partner, and review partner for this architecture.  Codex acted as the primary implementation agent and used the phase plans to implement, test, deploy, and validate the system.  GPT-5.6 was the language model powering Codex during that implementation work.
+ChatGPT acted as the technical architect, product strategist, design partner, and review partner for this architecture. Codex acted as the primary implementation agent and used the phase plans to implement, test, deploy, and validate the system. GPT-5.6 was the language model powering Codex during that implementation work.
