@@ -51,7 +51,7 @@ Projection verification on the disposable database reported identical live and r
 
 Project-Brain-enabled local executions are held without a Codex job until a final context artifact is generated and explicitly bound. Binding rechecks repository HEAD, then enqueues the existing Codex job idempotently. The Codex worker reads the immutable artifact, recomputes SHA-256, refuses stale or mismatched evidence, records received and verified checksums canonically, and injects the exact verified bytes plus checksum into the agent prompt.
 
-Remote execution envelopes can carry the immutable artifact bytes and all required metadata. Mission Agent independently checks byte count, checksum, contract, and starting SHA, reports the received and verified checksum, and includes the exact content in analysis and change prompts. Mission Control refuses transition to remote running when the first verification report does not match.
+The remote envelope and Mission Agent now define checksum verification fields and exact-byte prompt handling, but PB-enabled remote dispatch is deliberately disabled until the missing remote Project Brain operation/binding transport is complete. This fail-closed boundary prevents a mission-level artifact from being reused for a different execution. The preparatory response handler refuses a mismatched first verification report.
 
 Closure authorization additionally requires the execution binding, exact context checksum, and successful agent verification.
 
