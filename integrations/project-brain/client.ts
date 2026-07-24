@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { access, realpath } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { runSafeProcess } from "@/execution/safe-process";
 import {
@@ -171,6 +171,23 @@ export class ProjectBrainClient {
       input.repositoryPath,
     );
     const response = envelope<T>(parsed, input.operation);
+    if (response.status === "succeeded") {
+      if (!response.repository)
+        throw new ProjectBrainAdapterError("Project Brain omitted repository identity", "invalid_response");
+      const [returnedCheckout, requestedCheckout] = await Promise.all([
+        realpath(String((response.repository as Record<string, unknown>).checkout_path)),
+        realpath(input.repositoryPath),
+      ]);
+      if (
+        returnedCheckout !== requestedCheckout ||
+        (startingSha !== null && (response.repository as Record<string, unknown>).head_sha !== startingSha)
+      )
+        throw new ProjectBrainAdapterError(
+          "Project Brain response does not match the requested checkout and starting revision",
+          "invalid_response",
+          response,
+        );
+    }
     if (response.contract_version !== projectBrainContractVersion)
       throw new ProjectBrainAdapterError("Project Brain returned an incompatible contract version", "incompatible_contract", response);
     const endingSha = await this.head(input.repositoryPath);

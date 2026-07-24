@@ -12,7 +12,7 @@ import { ProjectBrainPanel } from "../integrations/project-brain/project-brain-p
 async function fixture(body) {
   const root = await mkdtemp(path.join(tmpdir(), "mission-control-project-brain-"));
   const executable = path.join(root, "project-brain");
-  await writeFile(executable, `#!/bin/sh\n${body}\n`);
+  await writeFile(executable, `#!/bin/sh\n${body.replaceAll("/fixture", root)}\n`);
   await chmod(executable, 0o755);
   return { root, executable };
 }

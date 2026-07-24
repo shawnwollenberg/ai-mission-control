@@ -38,8 +38,8 @@ export class ProjectBrainService {
       write: true,
     });
   }
-  readContext(scope: Scope, request: Record<string, unknown>) {
-    return this.run(scope, "read_context", request);
+  readContext<T = unknown>(scope: Scope, request: Record<string, unknown>) {
+    return this.run<T>(scope, "read_context", request);
   }
   recordClosure(scope: Scope, request: Record<string, unknown>) {
     return this.run(scope, "record_closure", request);
