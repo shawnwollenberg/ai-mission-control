@@ -62,7 +62,9 @@ export function approvalInbox(
 ) {
   const groups = knowledge.data.knowledge as Record<string, unknown> | undefined;
   const proposals = Array.isArray(groups?.proposed) ? groups.proposed : [];
-  const evaluations = Array.isArray(curation.data.reviews) ? curation.data.reviews : [];
+  const reviews = Array.isArray(curation.data.reviews) ? curation.data.reviews : [];
+  const evaluatorReports = Array.isArray(curation.data.evaluations) ? curation.data.evaluations : [];
+  const evaluations = [...evaluatorReports, ...reviews];
   return {
     proposals,
     evaluations,
