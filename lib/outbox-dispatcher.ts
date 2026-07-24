@@ -45,6 +45,15 @@ export async function processOneOutbox(workerId: string) {
         correlationId: message.correlation_id,
         maxAttempts: 5,
       });
+    if (message.topic === "project-brain.operation")
+      await enqueueJob({
+        workspaceId: message.workspace_id,
+        jobType: "project_brain_operation",
+        payload: { operationId: message.payload.operationId },
+        idempotencyKey: `outbox:${message.event_id}`,
+        correlationId: message.correlation_id,
+        maxAttempts: 3,
+      });
     await getDatabasePool().query(
       "UPDATE outbox SET status='delivered',delivered_at=now(),locked_by=NULL,locked_until=NULL WHERE id=$1 AND locked_by=$2",
       [message.id, workerId],

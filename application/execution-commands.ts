@@ -19,6 +19,7 @@ import { evaluateAgentEligibility, type RequiredResource } from "@/application/a
 import { evaluateExecutionBudget, recordUsage } from "@/application/usage-budget";
 import { assertCapabilityEnabled } from "@/application/emergency-controls";
 import { createPullAssignment, completePullAssignment } from "@/application/pull-assignments";
+import { readExecutionArtifact } from "@/execution/artifact-store";
 export type ExecutionActor = { workspaceId: string; id: string; type: ActorType };
 type DispatchTaskRow = { mission_id: string; status: string; current_attempt: number; timeout_seconds: number | null };
 async function append(
@@ -100,6 +101,8 @@ export async function handleRequestExecution(input: {
   await assertCapabilityEnabled(input.actor.workspaceId, "pause_codex_assignments");
   const policy = await getDispatchPolicy(input.actor.workspaceId, input.agentId, input.repositoryId);
   if (policy.adapter_type !== "codex") throw new ValidationFailedError("This command requires a Codex agent");
+  if (policy.location_mode !== "server" || policy.local_path.startsWith("mission-agent://"))
+    throw new ValidationFailedError("Local Codex execution requires a server repository checkout");
   if (!policy.read_allowed || !policy.write_allowed)
     throw new ValidationFailedError("Repository does not allow the required access");
   const task = (
@@ -144,14 +147,15 @@ export async function handleRequestExecution(input: {
     target: "assigned",
     details: { assignedExecutor: input.agentId },
   });
-  await enqueueJob({
-    workspaceId: input.actor.workspaceId,
-    jobType: "execute_codex",
-    payload: { executionId },
-    idempotencyKey: `execute:${executionId}`,
-    correlationId: task.mission_id,
-    maxAttempts: 3,
-  });
+  if (!policy.project_brain_enabled)
+    await enqueueJob({
+      workspaceId: input.actor.workspaceId,
+      jobType: "execute_codex",
+      payload: { executionId },
+      idempotencyKey: `execute:${executionId}`,
+      correlationId: task.mission_id,
+      maxAttempts: 3,
+    });
   return { executionId, events: result.events, duplicateCommand: result.duplicateCommand };
 }
 export async function handleRequestRemoteExecution(input: {
@@ -216,6 +220,69 @@ export async function handleRequestRemoteExecution(input: {
     idempotencyKey: input.commandId,
   });
   const repositoryChange = task.approval_requirements?.missionType === "change";
+  const repositoryId = task.required_resources.find((resource) => resource.resourceType === "repository")?.resourceId;
+  if (!repositoryId) throw new ValidationFailedError("Remote execution requires a repository resource");
+  const repository = (
+    await getDatabasePool().query<{
+      location_mode: string;
+      observed_commit: string | null;
+      repository_fingerprint: string | null;
+      project_brain_enabled: boolean;
+      read_allowed: boolean;
+      write_allowed: boolean;
+    }>(
+      `SELECT location_mode,observed_commit,repository_fingerprint,project_brain_enabled,read_allowed,write_allowed
+       FROM repositories WHERE workspace_id=$1 AND repository_id=$2 AND disabled_at IS NULL`,
+      [input.actor.workspaceId, repositoryId],
+    )
+  ).rows[0];
+  if (!repository || repository.location_mode !== "mission_agent")
+    throw new ValidationFailedError("Remote execution requires a Mission Agent repository");
+  if (!repository.read_allowed) throw new ValidationFailedError("Repository does not allow required remote access");
+  if (repository.project_brain_enabled)
+    throw new ValidationFailedError(
+      "Remote Project Brain context transport is unavailable; disable Project Brain for this mission or connect a compatible transport",
+    );
+  let projectBrainContext: Record<string, unknown> | undefined;
+  if (repository.project_brain_enabled) {
+    const binding = (
+      await getDatabasePool().query<{
+        final_context_artifact_id: string;
+        context_checksum: string;
+        context_schema_version: string;
+        contract_version: string;
+        starting_sha: string;
+        selected_source_manifest: unknown[];
+        context_bytes: number;
+        context_quality: Record<string, unknown>;
+        bound_at: Date | null;
+      }>(
+        `SELECT * FROM mission_project_brain_projections
+         WHERE workspace_id=$1 AND mission_id=$2 AND final_context_artifact_id IS NOT NULL`,
+        [input.actor.workspaceId, task.mission_id],
+      )
+    ).rows[0];
+    if (!binding) throw new ValidationFailedError("Verified Project Brain context is required");
+    if (binding.starting_sha !== repository.observed_commit)
+      throw new ValidationFailedError("Project Brain context is stale because repository HEAD changed");
+    const artifact = await readExecutionArtifact(input.actor.workspaceId, binding.final_context_artifact_id);
+    if (!artifact || artifact.metadata.checksum_sha256 !== binding.context_checksum)
+      throw new ValidationFailedError("Project Brain context artifact checksum mismatch");
+    projectBrainContext = {
+      artifactId: binding.final_context_artifact_id,
+      contentBase64: artifact.body.toString("base64"),
+      checksum: binding.context_checksum,
+      schemaVersion: binding.context_schema_version,
+      contractVersion: binding.contract_version,
+      startingSha: binding.starting_sha,
+      repositoryFingerprint: repository.repository_fingerprint,
+      selectedSourceManifest: binding.selected_source_manifest,
+      contextBytes: binding.context_bytes,
+      contextQuality: binding.context_quality,
+      bindingTimestamp: binding.bound_at?.toISOString() ?? new Date().toISOString(),
+      verificationRequired: true,
+    };
+  }
   const taskEnvelope = {
     missionType: repositoryChange ? "repository_change" : "repository_analysis",
     taskObjective: task.name,
@@ -243,6 +310,7 @@ export async function handleRequestRemoteExecution(input: {
     artifactRequirements: repositoryChange
       ? ["implementation_plan", "git_patch", "validation_results", "change_summary"]
       : ["repository_analysis"],
+    ...(projectBrainContext ? { projectBrainContext } : {}),
   };
   const result = await appendEvents({
     workspaceId: input.actor.workspaceId,

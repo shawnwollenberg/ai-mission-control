@@ -308,10 +308,39 @@ async function assignmentAction(config, assignment, action, type) {
     assignment,
   );
 }
-async function progress(config, assignment, stage, summary, percent) {
-  await protocolMessage(config, assignment, "ExecutionProgressReported", { stage, summary, progressPercent: percent });
+async function progress(config, assignment, stage, summary, percent, evidence = {}) {
+  await protocolMessage(config, assignment, "ExecutionProgressReported", {
+    stage,
+    summary,
+    progressPercent: percent,
+    ...evidence,
+  });
   await executionHeartbeat(config, assignment, stage, summary, percent);
   await updateState({ activeAssignment: assignment, stage, leaseExpiresAt: assignment.leaseExpiresAt });
+}
+function verifiedProjectBrainContext(assignment, startingSha) {
+  const context = assignment.projectBrainContext;
+  if (!context) return undefined;
+  if (
+    context.verificationRequired !== true ||
+    typeof context.contentBase64 !== "string" ||
+    !/^[a-f0-9]{64}$/.test(String(context.checksum ?? "")) ||
+    context.startingSha !== startingSha ||
+    context.contractVersion !== "1.0"
+  )
+    throw new Error("Project Brain context binding is invalid or stale.");
+  const bytes = Buffer.from(context.contentBase64, "base64");
+  if (bytes.byteLength !== Number(context.contextBytes) || sha256(bytes) !== context.checksum)
+    throw new Error("Project Brain context artifact checksum verification failed.");
+  return {
+    content: bytes.toString("utf8"),
+    evidence: {
+      receivedContextChecksum: context.checksum,
+      verifiedContextChecksum: context.checksum,
+      contextVerificationOutcome: "verified",
+      startingSha,
+    },
+  };
 }
 async function executionHeartbeat(config, assignment, stage, summary, progressPercent) {
   await protocolMessage(config, assignment, "ExecutionHeartbeat", {
@@ -329,11 +358,21 @@ async function executeAnalysis(config, assignment) {
   if (!repository) throw new Error("The assignment repository is not registered on this Mission Agent.");
   const resolved = await realpath(repository.path);
   if (resolved !== repository.path) throw new Error("Repository path changed after registration.");
-  await progress(config, assignment, "validating_repository", "Validating repository", 10);
   const before = exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], resolved);
   const beforeCommit = exec("git", ["rev-parse", "HEAD"], resolved);
+  const projectBrain = verifiedProjectBrainContext(assignment, beforeCommit);
+  if (projectBrain)
+    await progress(
+      config,
+      assignment,
+      "project_brain_context_verified",
+      "Verified exact Project Brain context artifact",
+      15,
+      projectBrain.evidence,
+    );
+  else await progress(config, assignment, "validating_repository", "Validating repository", 10);
   const outputPath = join(root, `artifact-${assignment.executionId}.md`);
-  const prompt = `Analyze this repository in read-only mode. Do not modify files, install packages, commit, push, create pull requests, access secrets, or deploy. Produce Markdown with exactly these sections: Repository overview, Main technologies, Application structure, Important commands, Test setup, Notable risks, Suggested next mission. Base every finding on visible repository contents. Objective: ${assignment.instructions ?? assignment.taskObjective}`;
+  const prompt = `Analyze this repository in read-only mode. Do not modify files, install packages, commit, push, create pull requests, access secrets, or deploy. Produce Markdown with exactly these sections: Repository overview, Main technologies, Application structure, Important commands, Test setup, Notable risks, Suggested next mission. Base every finding on visible repository contents. Objective: ${assignment.instructions ?? assignment.taskObjective}${projectBrain ? `\n\nVerified Project Brain context (${projectBrain.evidence.verifiedContextChecksum}):\n${projectBrain.content}` : ""}`;
   await progress(config, assignment, "inspecting_repository", "Inspecting repository structure", 25);
   const child = spawn("codex", ["exec", "--sandbox", "read-only", "--skip-git-repo-check", "-o", outputPath, prompt], {
     cwd: resolved,
@@ -556,9 +595,19 @@ async function executeChange(config, assignment) {
     throw new Error("The registered repository has uncommitted changes. Commit or stash them before a change mission.");
   const baseBranch = repository.branch;
   const baseCommit = exec("git", ["rev-parse", `${baseBranch}^{commit}`], resolved);
+  const projectBrain = verifiedProjectBrainContext(assignment, baseCommit);
+  if (projectBrain)
+    await progress(
+      config,
+      assignment,
+      "project_brain_context_verified",
+      "Verified exact Project Brain context artifact",
+      5,
+      projectBrain.evidence,
+    );
   const planPath = join(root, `plan-${assignment.executionId}.md`);
   await progress(config, assignment, "planning_change", "Codex is preparing an implementation plan", 10);
-  const planPrompt = `Inspect this repository in read-only mode and prepare an implementation plan for: ${assignment.instructions}. Do not modify files. Produce Markdown with exactly these sections: Likely files or components, Expected behavior, Tests to add or update, Risks, Validation approach.`;
+  const planPrompt = `Inspect this repository in read-only mode and prepare an implementation plan for: ${assignment.instructions}. Do not modify files. Produce Markdown with exactly these sections: Likely files or components, Expected behavior, Tests to add or update, Risks, Validation approach.${projectBrain ? `\n\nVerified Project Brain context (${projectBrain.evidence.verifiedContextChecksum}):\n${projectBrain.content}` : ""}`;
   const planResult = await runCodex(
     config,
     assignment,
@@ -695,7 +744,7 @@ async function executeChange(config, assignment) {
   }
   await progress(config, assignment, "worktree_ready", "Isolated mission branch and worktree created", 30);
   const summaryPath = join(root, `change-summary-${assignment.executionId}.md`);
-  const changePrompt = `Implement this approved repository change inside the current isolated worktree: ${assignment.instructions}\n\nFollow the approved plan:\n${plan.toString("utf8")}\n\nDo not push, create a pull request, merge, deploy, access secrets, modify infrastructure, or write outside this worktree. Do not commit; Mission Agent will validate and create the local commit. Return a concise factual summary.`;
+  const changePrompt = `Implement this approved repository change inside the current isolated worktree: ${assignment.instructions}\n\nFollow the approved plan:\n${plan.toString("utf8")}${projectBrain ? `\n\nVerified Project Brain context (${projectBrain.evidence.verifiedContextChecksum}):\n${projectBrain.content}` : ""}\n\nDo not push, create a pull request, merge, deploy, access secrets, modify infrastructure, or write outside this worktree. Do not commit; Mission Agent will validate and create the local commit. Return a concise factual summary.`;
   let changeResult = await runCodex(
     config,
     assignment,

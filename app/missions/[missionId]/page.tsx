@@ -5,13 +5,9 @@ import DurableMissionConsole from "./durable-mission-console";
 import { getMissionExecution } from "@/lib/execution-queries";
 import { listMissionRecommendations } from "@/application/recommendation-queries";
 import { getDatabasePool } from "@/lib/database";
-import { ProjectBrainClient } from "@/integrations/project-brain/client";
-import { ProjectBrainService } from "@/integrations/project-brain/service";
 import { ProjectBrainPanel } from "@/integrations/project-brain/project-brain-panel";
-import type { ProjectBrainEnvelope } from "@/integrations/project-brain/types";
-import { contextEvidence } from "@/integrations/project-brain/projections";
 import { revalidatePath } from "next/cache";
-import { getProjectBrainConfiguration, publicProjectBrainError } from "@/integrations/project-brain/config";
+import { requestProjectBrainOperation, requestProjectBrainWriteApproval } from "@/application/project-brain-commands";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +18,6 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
   if (!mission) return notFound();
   const missionObjective = mission.objective;
   const execution = await getMissionExecution(identity.workspaceId, missionId);
-  let contextPreview: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
-  let boundContext: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
-  let boundContextEvidence: ReturnType<typeof contextEvidence> | undefined;
-  let projectBrainError: string | undefined;
   const registeredRepository = (
     await getDatabasePool().query<{ repository_id: string; local_path: string }>(
       `SELECT r.repository_id,r.local_path FROM repositories r
@@ -35,57 +27,12 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
       [identity.workspaceId, missionId],
     )
   ).rows[0];
-  let projectBrainConfiguration: ReturnType<typeof getProjectBrainConfiguration> = {
-    enabled: false,
-    status: "not_configured",
-  };
-  try {
-    projectBrainConfiguration = getProjectBrainConfiguration();
-  } catch {
-    projectBrainError = "Project Brain configuration is invalid. Review operator diagnostics.";
-  }
-  if (registeredRepository && projectBrainConfiguration.enabled) {
-    try {
-      const service = new ProjectBrainService(new ProjectBrainClient(projectBrainConfiguration));
-      contextPreview = (
-        await service.previewContext<Record<string, unknown>>(
-          {
-            workspaceId: identity.workspaceId,
-            repositoryId: registeredRepository.repository_id,
-            repositoryPath: registeredRepository.local_path,
-            missionId,
-          },
-          { objective: missionObjective, role: "implementer" },
-        )
-      ).envelope;
-      const activeExecutionId = execution.executions[0]?.executionId;
-      if (activeExecutionId) {
-        try {
-          boundContext = (
-            await service.readContext<Record<string, unknown>>(
-              {
-                workspaceId: identity.workspaceId,
-                repositoryId: registeredRepository.repository_id,
-                repositoryPath: registeredRepository.local_path,
-                missionId,
-                executionId: activeExecutionId,
-              },
-              { path: `.project-brain/context-packs/${missionId}.yaml` },
-            )
-          ).envelope;
-          boundContextEvidence = contextEvidence(boundContext, {
-            missionId,
-            executionId: activeExecutionId,
-            startingSha: boundContext.repository?.head_sha ?? "",
-          });
-        } catch {
-          // A missing final pack is expected before the explicit generation action.
-        }
-      }
-    } catch (error) {
-      projectBrainError = publicProjectBrainError(error);
-    }
-  }
+  const projectBrainProjection = (
+    await getDatabasePool().query<Record<string, unknown>>(
+      "SELECT * FROM mission_project_brain_projections WHERE workspace_id=$1 AND mission_id=$2",
+      [identity.workspaceId, missionId],
+    )
+  ).rows[0];
   async function generateProjectBrainContext() {
     "use server";
     const actionIdentity = await requirePageIdentity(`/missions/${missionId}`);
@@ -98,19 +45,46 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
         [actionIdentity.workspaceId, missionId],
       )
     ).rows[0];
-    const configuration = getProjectBrainConfiguration();
-    if (!binding || !configuration.enabled) throw new Error("Project Brain context generation is unavailable");
-    const service = new ProjectBrainService(new ProjectBrainClient(configuration));
-    await service.prepareAndBindContext(
-      {
-        workspaceId: actionIdentity.workspaceId,
-        repositoryId: binding.repository_id,
-        repositoryPath: binding.local_path,
-        missionId,
-        executionId: binding.execution_id,
+    if (!binding) throw new Error("Project Brain context generation is unavailable");
+    const contextRequest = {
+      repositoryId: binding.repository_id,
+      missionId,
+      executionId: binding.execution_id,
+      operation: "prepare_context" as const,
+      arguments: {
+        objective: missionObjective,
+        role: "implementer",
+        preview: false,
+        output: `.project-brain/context-packs/${missionId}.yaml`,
       },
-      { objective: missionObjective, role: "implementer", output: `.project-brain/context-packs/${missionId}.yaml` },
-    );
+    };
+    const granted = (
+      await getDatabasePool().query<{ approval_id: string; requested_action: Record<string, unknown> }>(
+        `SELECT approval_id,requested_action FROM approval_projections
+         WHERE workspace_id=$1 AND mission_id=$2 AND execution_id=$3
+           AND approval_type='project_brain_repository_write' AND status='granted'
+           AND requested_action->>'operation'='prepare_context'
+           AND requested_action->>'repositoryId'=$4
+           AND (expires_at IS NULL OR expires_at>now()) ORDER BY created_at DESC LIMIT 1`,
+        [actionIdentity.workspaceId, missionId, binding.execution_id, binding.repository_id],
+      )
+    ).rows[0];
+    if (!granted) {
+      await requestProjectBrainWriteApproval({
+        actor: { workspaceId: actionIdentity.workspaceId, id: actionIdentity.userId, type: "human" },
+        request: contextRequest,
+      });
+      revalidatePath(`/missions/${missionId}`);
+      return;
+    }
+    await requestProjectBrainOperation({
+      actor: { workspaceId: actionIdentity.workspaceId, id: actionIdentity.userId, type: "human" },
+      request: {
+        ...contextRequest,
+        approvalId: granted.approval_id,
+        idempotencyKey: `project-brain-context-final:${missionId}:${binding.execution_id}`,
+      },
+    });
     revalidatePath(`/missions/${missionId}`);
   }
   return (
@@ -124,22 +98,12 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
         initialActions={execution.actions}
         initialRecommendations={await listMissionRecommendations(identity.workspaceId, missionId)}
       />
-      {contextPreview || boundContext || projectBrainError ? (
+      {registeredRepository || projectBrainProjection ? (
         <section aria-label="Project Brain mission evidence">
-          <ProjectBrainPanel context={boundContext ?? contextPreview} error={projectBrainError} />
-          {boundContextEvidence?.valid ? (
-            <pre>{JSON.stringify(boundContextEvidence.timelineItem, null, 2)}</pre>
-          ) : boundContextEvidence ? (
-            <div role="alert">
-              <p>The stored context no longer matches this mission execution. Generate a fresh verified pack.</p>
-              <pre>{JSON.stringify(boundContextEvidence.timelineItem, null, 2)}</pre>
-              <form action={generateProjectBrainContext}>
-                <button type="submit">Regenerate and bind verified context</button>
-              </form>
-            </div>
-          ) : execution.executions[0] ? (
+          <ProjectBrainPanel projection={projectBrainProjection} />
+          {execution.executions[0] ? (
             <form action={generateProjectBrainContext}>
-              <button type="submit">Generate and bind verified context</button>
+              <button type="submit">Authorize or generate verified context</button>
             </form>
           ) : (
             <p>Context can be bound after an execution is assigned.</p>

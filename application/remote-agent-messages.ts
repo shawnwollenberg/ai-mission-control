@@ -13,6 +13,7 @@ import { recordUsage } from "@/application/usage-budget";
 import { recordRepositoryRecommendations } from "@/application/recommendation-commands";
 import { recordRepositoryHealthAssessment } from "@/application/repository-health-commands";
 import type { RepositoryObservation } from "@/domain/repository-health";
+import { applyProjectBrainProjection } from "@/application/project-brain-projector";
 
 type Credential = {
   workspace_id: string;
@@ -30,9 +31,14 @@ async function executionRow(message: ProtocolEnvelope, workspaceId: string) {
       status: string;
       delivery_mode: string;
       repository_id: string | null;
+      context_checksum: string | null;
+      starting_sha: string | null;
+      agent_verification_status: string | null;
     }>(
-      `SELECT e.mission_id,e.task_id,e.agent_id,e.attempt,e.status,e.repository_id,a.delivery_mode FROM execution_projections e
+      `SELECT e.mission_id,e.task_id,e.agent_id,e.attempt,e.status,e.repository_id,a.delivery_mode,
+        mp.context_checksum,mp.starting_sha,mp.agent_verification_status FROM execution_projections e
        JOIN agents a ON a.workspace_id=e.workspace_id AND a.agent_id=e.agent_id
+       LEFT JOIN mission_project_brain_projections mp ON mp.workspace_id=e.workspace_id AND mp.mission_id=e.mission_id
        WHERE e.workspace_id=$1 AND e.execution_id=$2`,
       [workspaceId, message.executionId],
     )
@@ -56,7 +62,7 @@ async function transition(
   message: ProtocolEnvelope,
   credential: Credential,
   target: Parameters<typeof handleExecutionTransition>[0]["target"],
-  suffix = target,
+  suffix: string = target,
 ) {
   return handleExecutionTransition({
     actor: actor(credential),
@@ -259,6 +265,80 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       return { status: "accepted" };
     }
     case "ExecutionProgressReported": {
+      if (current.context_checksum && current.agent_verification_status !== "verified") {
+        const received = String(message.payload.receivedContextChecksum ?? "");
+        const verified = String(message.payload.verifiedContextChecksum ?? "");
+        const outcome = String(message.payload.contextVerificationOutcome ?? "");
+        const startingSha = String(message.payload.startingSha ?? "");
+        if (
+          received !== current.context_checksum ||
+          verified !== current.context_checksum ||
+          outcome !== "verified" ||
+          startingSha !== current.starting_sha
+        ) {
+          await transition(
+            {
+              ...message,
+              payload: {
+                classification: "context_verification_failed",
+                retryDisposition: "requires-human-review",
+                stage: "project_brain_context_verification",
+                summary: "Remote agent did not verify the bound Project Brain context",
+              },
+            },
+            credential,
+            "failed",
+            "context-mismatch",
+          );
+          throw new ValidationFailedError("Remote agent Project Brain context verification failed");
+        }
+        const operation = (
+          await getDatabasePool().query<{ operation_id: string }>(
+            `SELECT operation_id FROM project_brain_operation_projections
+             WHERE workspace_id=$1 AND mission_id=$2 AND operation='prepare_context' AND status='succeeded'
+             ORDER BY completed_at DESC LIMIT 1`,
+            [credential.workspace_id, message.missionId],
+          )
+        ).rows[0];
+        if (operation)
+          await appendEvents({
+            workspaceId: credential.workspace_id,
+            aggregateType: "project_brain_operation",
+            aggregateId: operation.operation_id,
+            missionId: message.missionId,
+            expectedVersion: (
+              await loadAggregateEvents({
+                workspaceId: credential.workspace_id,
+                aggregateType: "project_brain_operation",
+                aggregateId: operation.operation_id,
+              })
+            ).at(-1)!.aggregateVersion,
+            commandId: stableUuid(`remote:${message.messageId}:context-verified`),
+            commandType: "VerifyRemoteProjectBrainContext",
+            correlationId: message.missionId!,
+            actor: { type: "agent", id: credential.agent_id },
+            events: [
+              {
+                eventType: "project_brain.context_verified_by_agent",
+                eventSchemaVersion: 1,
+                payload: {
+                  repositoryId: current.repository_id,
+                  operation: "prepare_context",
+                  operationStatus: "succeeded",
+                  contextChecksum: verified,
+                  startingSha,
+                  missionProjection: {
+                    agentReceivedChecksum: received,
+                    agentVerifiedChecksum: verified,
+                    agentVerificationStatus: "verified",
+                    verifiedAt: message.sentAt,
+                  },
+                },
+              },
+            ],
+            applyProjections: applyProjectBrainProjection,
+          });
+      }
       if (current.status === "accepted") {
         await transition(message, credential, "preparing", "preparing");
         await transition(message, credential, "running", "running");

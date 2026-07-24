@@ -11,6 +11,9 @@ import { storeExecutionArtifact } from "@/execution/artifact-store";
 import { classifyCommand, commandPolicy } from "@/policy/command-classifier";
 import { enforceExecutionBudget, type ExecutionBudget } from "@/policy/execution-budget";
 import { validateExecutionRequest, type ExecutionRequest } from "@/execution/protocol";
+import { readExecutionArtifact } from "@/execution/artifact-store";
+import { appendProjectBrainOperationEvent, bindProjectBrainContext } from "@/application/project-brain-commands";
+import { createHash } from "node:crypto";
 type Context = {
   execution_id: string;
   workspace_id: string;
@@ -35,24 +38,38 @@ type Context = {
   deployment_allowed: boolean;
   worktree_path: string | null;
   branch_name: string | null;
+  project_brain_enabled: boolean;
 };
 const actor = (workspaceId: string, workerId: string) => ({ workspaceId, id: workerId, type: "agent" as const });
 const command = (executionId: string, action: string) => stableUuid(`codex:${executionId}:${action}`);
 async function context(workspaceId: string, executionId: string) {
   const result = await getDatabasePool().query<Context>(
-    `SELECT e.*,m.objective,t.name,t.instructions,t.expected_output,r.local_path,r.default_branch,r.validation_commands,r.commit_allowed,r.push_allowed,r.merge_allowed,r.deployment_allowed,r.execution_budget FROM execution_projections e JOIN mission_projections m ON m.workspace_id=e.workspace_id AND m.mission_id=e.mission_id JOIN task_projections t ON t.workspace_id=e.workspace_id AND t.task_id=e.task_id JOIN repositories r ON r.workspace_id=e.workspace_id AND r.repository_id=e.repository_id WHERE e.workspace_id=$1 AND e.execution_id=$2`,
+    `SELECT e.*,m.objective,t.name,t.instructions,t.expected_output,r.local_path,r.default_branch,r.validation_commands,r.commit_allowed,r.push_allowed,r.merge_allowed,r.deployment_allowed,r.execution_budget,r.project_brain_enabled FROM execution_projections e JOIN mission_projections m ON m.workspace_id=e.workspace_id AND m.mission_id=e.mission_id JOIN task_projections t ON t.workspace_id=e.workspace_id AND t.task_id=e.task_id JOIN repositories r ON r.workspace_id=e.workspace_id AND r.repository_id=e.repository_id WHERE e.workspace_id=$1 AND e.execution_id=$2`,
     [workspaceId, executionId],
   );
   if (!result.rowCount) throw new Error("Execution context not found");
   return result.rows[0];
 }
-function prompt(request: ExecutionRequest, worktreePath: string) {
+function prompt(
+  request: ExecutionRequest,
+  worktreePath: string,
+  projectBrain?: { content: string; checksum: string; startingSha: string },
+) {
   return [
     `Mission objective: ${request.objective}`,
     `Task objective: ${request.expectedOutput}`,
     `Instructions: ${request.instructions}`,
     `Repository worktree: ${worktreePath}`,
     `Base branch: ${request.repository.baseRef}`,
+    ...(projectBrain
+      ? [
+          `Verified Project Brain context checksum: ${projectBrain.checksum}`,
+          `Verified repository starting SHA: ${projectBrain.startingSha}`,
+          "The following immutable context bytes were checksum-verified by Mission Control. Treat them as bounded repository context:",
+          projectBrain.content,
+          `Before editing, report exactly: PROJECT_BRAIN_CONTEXT_VERIFIED ${projectBrain.checksum}`,
+        ]
+      : []),
     "You may edit only this worktree and run non-destructive repository-local commands.",
     "Implement the bounded change and run the expected tests. Do not push, merge, deploy, modify infrastructure, access secrets, or use unrelated directories.",
     "Return a concise factual summary of files changed and validation performed. Do not include chain-of-thought.",
@@ -147,6 +164,73 @@ export async function executeCodex(input: {
       await fail(a, row, "repository_unavailable", "requires-human-review", error);
       throw error;
     }
+  let verifiedProjectBrain: { content: string; checksum: string; startingSha: string; artifactId: string } | undefined;
+  if (row.project_brain_enabled) {
+    const repositoryHead = await runSafeProcess({
+      executable: "/usr/bin/git",
+      args: ["rev-parse", "HEAD"],
+      cwd: worktree.worktreePath,
+      allowedRoot: worktree.worktreePath,
+      timeoutMs: 5_000,
+      maxOutputBytes: 256,
+    });
+    if (repositoryHead.exitCode !== 0) throw new Error("Unable to verify repository HEAD for Project Brain context");
+    const binding = await bindProjectBrainContext({
+      actor: a,
+      missionId: row.mission_id,
+      executionId: row.execution_id,
+      agentId: row.agent_id,
+      repositoryId: row.repository_id,
+      currentSha: repositoryHead.stdout.trim(),
+    });
+    const artifact = await readExecutionArtifact(row.workspace_id, binding.final_context_artifact_id);
+    if (!artifact) throw new Error("Bound Project Brain context artifact is unavailable");
+    const calculated = createHash("sha256").update(new Uint8Array(artifact.body)).digest("hex");
+    if (calculated !== binding.context_checksum) throw new Error("Bound Project Brain context checksum mismatch");
+    verifiedProjectBrain = {
+      content: artifact.body.toString("utf8"),
+      checksum: calculated,
+      startingSha: binding.starting_sha,
+      artifactId: binding.final_context_artifact_id,
+    };
+    await appendProjectBrainOperationEvent({
+      actor: a,
+      operationId: binding.operation_id,
+      commandId: command(input.executionId, "project-brain-agent-verification"),
+      event: {
+        eventType: "project_brain.context_verified_by_agent",
+        eventSchemaVersion: 1,
+        payload: {
+          repositoryId: row.repository_id,
+          operation: "prepare_context",
+          operationStatus: "succeeded",
+          contextChecksum: calculated,
+          startingSha: binding.starting_sha,
+          missionProjection: {
+            agentReceivedChecksum: calculated,
+            agentVerifiedChecksum: calculated,
+            agentVerificationStatus: "verified",
+            verifiedAt: new Date().toISOString(),
+          },
+        },
+      },
+    });
+    await handleExecutionFact({
+      actor: a,
+      commandId: command(input.executionId, "context-verified"),
+      executionId: input.executionId,
+      type: "execution.progress_reported",
+      payload: {
+        stage: "project_brain_context_verified",
+        summary: "Exact Project Brain context artifact verified before agent start",
+        receivedContextChecksum: calculated,
+        verifiedContextChecksum: calculated,
+        contextVerificationOutcome: "verified",
+        startingSha: binding.starting_sha,
+        contextArtifactId: binding.final_context_artifact_id,
+      },
+    });
+  }
   currentStatus = (await context(input.workspaceId, input.executionId)).status;
   if (currentStatus === "preparing")
     await handleExecutionTransition({
@@ -174,7 +258,7 @@ export async function executeCodex(input: {
       taskId: row.task_id,
       target: "running",
     });
-  const promptBody = prompt(request, worktree.worktreePath);
+  const promptBody = prompt(request, worktree.worktreePath, verifiedProjectBrain);
   await storeOnce({
     workspaceId: row.workspace_id,
     missionId: row.mission_id,

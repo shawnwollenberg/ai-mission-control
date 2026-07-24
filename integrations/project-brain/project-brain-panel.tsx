@@ -7,6 +7,7 @@ export function ProjectBrainPanel(props: {
   inbox?: { proposals: unknown[]; evaluations: unknown[]; promotionAvailable: false };
   projectedStatus?: string;
   context?: ProjectBrainEnvelope<Record<string, unknown>>;
+  projection?: Record<string, unknown>;
   error?: string;
 }) {
   return (
@@ -19,6 +20,7 @@ export function ProjectBrainPanel(props: {
         <span>{props.projectedStatus ?? props.status?.status ?? "not connected"}</span>
       </div>
       {props.error ? <p role="alert">{props.error}</p> : null}
+      {props.projection ? <pre>{JSON.stringify(props.projection, null, 2)}</pre> : null}
       {props.summary ? <pre>{JSON.stringify(props.summary.data, null, 2)}</pre> : <p>No summary loaded.</p>}
       {props.health ? (
         <div>

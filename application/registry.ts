@@ -19,6 +19,8 @@ type DispatchPolicyRow = {
   local_path: string;
   default_branch: string;
   validation_commands: string[][];
+  location_mode: "server" | "mission_agent";
+  project_brain_enabled: boolean;
 };
 function owner(actor: RegistryActor) {
   if (actor.role !== "owner") throw new ValidationFailedError("Workspace owner permission is required");

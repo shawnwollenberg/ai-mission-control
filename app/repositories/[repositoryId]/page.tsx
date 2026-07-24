@@ -6,11 +6,7 @@ import { listRepositoryHealthAssessments, listRepositoryTimeline } from "@/appli
 import { repositoryHealthDimensions } from "@/domain/repository-health";
 import { getDatabasePool } from "@/lib/database";
 import { requirePageIdentity } from "@/lib/page-auth";
-import { ProjectBrainClient } from "@/integrations/project-brain/client";
 import { ProjectBrainPanel } from "@/integrations/project-brain/project-brain-panel";
-import type { ProjectBrainEnvelope } from "@/integrations/project-brain/types";
-import { approvalInbox, projectStatus } from "@/integrations/project-brain/projections";
-import { getProjectBrainConfiguration, publicProjectBrainError } from "@/integrations/project-brain/config";
 export const dynamic = "force-dynamic";
 
 const labels: Record<string, string> = {
@@ -49,78 +45,12 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
   const previous = assessments[1];
   const delta = current?.score != null && previous?.score != null ? current.score - previous.score : undefined;
   const actionable = recommendations.filter((item) => ["open", "accepted", "in_progress"].includes(item.status));
-  let projectBrainStatus: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
-  let projectBrainSummary: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
-  let projectBrainHealth: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
-  let projectBrainInbox: { proposals: unknown[]; evaluations: unknown[]; promotionAvailable: false } | undefined;
-  let projectedProjectBrainStatus: string | undefined;
-  let projectBrainError: string | undefined;
-  let projectBrainConfiguration: ReturnType<typeof getProjectBrainConfiguration> = {
-    enabled: false,
-    status: "not_configured",
-  };
-  try {
-    projectBrainConfiguration = getProjectBrainConfiguration();
-  } catch {
-    projectBrainError = "Project Brain configuration is invalid. Review operator diagnostics.";
-  }
-  if (projectBrainConfiguration.enabled) {
-    const client = new ProjectBrainClient(projectBrainConfiguration);
-    try {
-      const capabilities = await client.capabilities(repository.local_path);
-      const [detected, validated, summarized, health, knowledge, curation] = (
-        await Promise.all([
-          client.execute<Record<string, unknown>>({
-            workspaceId: identity.workspaceId,
-            repositoryId,
-            repositoryPath: repository.local_path,
-            operation: "detect_repository",
-          }),
-          client.execute<Record<string, unknown>>({
-            workspaceId: identity.workspaceId,
-            repositoryId,
-            repositoryPath: repository.local_path,
-            operation: "validate_repository",
-          }),
-          client.execute<Record<string, unknown>>({
-            workspaceId: identity.workspaceId,
-            repositoryId,
-            repositoryPath: repository.local_path,
-            operation: "get_summary",
-          }),
-          client.execute<Record<string, unknown>>({
-            workspaceId: identity.workspaceId,
-            repositoryId,
-            repositoryPath: repository.local_path,
-            operation: "get_health",
-          }),
-          client.execute<Record<string, unknown>>({
-            workspaceId: identity.workspaceId,
-            repositoryId,
-            repositoryPath: repository.local_path,
-            operation: "list_knowledge",
-          }),
-          client.execute<Record<string, unknown>>({
-            workspaceId: identity.workspaceId,
-            repositoryId,
-            repositoryPath: repository.local_path,
-            operation: "get_curation",
-          }),
-        ])
-      ).map((result) => result.envelope);
-      projectBrainStatus = detected;
-      projectBrainSummary = summarized;
-      projectBrainHealth = health;
-      projectBrainInbox = approvalInbox(knowledge, curation);
-      projectedProjectBrainStatus = projectStatus({
-        capabilities,
-        detection: detected,
-        validation: validated,
-      });
-    } catch (error) {
-      projectBrainError = publicProjectBrainError(error);
-    }
-  }
+  const projectBrainProjection = (
+    await getDatabasePool().query<Record<string, unknown>>(
+      "SELECT * FROM repository_project_brain_projections WHERE workspace_id=$1 AND repository_id=$2",
+      [identity.workspaceId, repositoryId],
+    )
+  ).rows[0];
   return (
     <main className="durable-mission-shell">
       <AppNavigation subtitle="Repository Intelligence" />
@@ -146,12 +76,8 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
 
       <section className="health-summary-grid">
         <ProjectBrainPanel
-          status={projectBrainStatus}
-          summary={projectBrainSummary}
-          health={projectBrainHealth}
-          inbox={projectBrainInbox}
-          projectedStatus={projectedProjectBrainStatus}
-          error={projectBrainError}
+          projection={projectBrainProjection}
+          projectedStatus={String(projectBrainProjection?.last_operation_status ?? "not refreshed")}
         />
         <article className="command-panel">
           <p className="section-label">Repository Health</p>

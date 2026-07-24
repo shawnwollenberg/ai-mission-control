@@ -142,6 +142,9 @@ export async function requestActionApproval(input: {
   evidence: unknown[];
   requestedBy: string;
   expiresAt: string;
+  requestedAction?: Record<string, unknown>;
+  riskExplanation?: string;
+  supportingEvidenceSummary?: string;
 }) {
   const approvalId = stableUuid(`action-approval:${input.actionRequestId}`);
   const result = await appendEvents({
@@ -164,15 +167,19 @@ export async function requestActionApproval(input: {
           agentId: input.agentId,
           actionRequestId: input.actionRequestId,
           approvalType: input.approvalType,
-          requestedAction: { actionType: input.actionType, targetResource: input.targetResource },
+          requestedAction: input.requestedAction ?? {
+            actionType: input.actionType,
+            targetResource: input.targetResource,
+          },
           actionHash: input.actionHash,
-          riskExplanation: "External publication requires owner approval",
+          riskExplanation: input.riskExplanation ?? "External publication requires owner approval",
           riskLevel: "high",
           policyReasons: input.policyReasons,
           policyVersion: input.policyVersion,
           evidence: input.evidence,
           requestedBy: input.requestedBy,
-          supportingEvidenceSummary: "Exact execution, branch, commit, remote, and policy evidence",
+          supportingEvidenceSummary:
+            input.supportingEvidenceSummary ?? "Exact execution, branch, commit, remote, and policy evidence",
           expiresAt: input.expiresAt,
           status: "pending",
         },
