@@ -38,6 +38,7 @@ type RepositoryAuthorization = {
   observed_commit: string | null;
   read_allowed: boolean;
   write_allowed: boolean;
+  commit_allowed: boolean;
   project_brain_enabled: boolean;
   allowed_agent_ids: string[];
 };
@@ -49,7 +50,7 @@ export async function requestProjectBrainOperation(input: {
   const operationId = input.request.operationId ?? randomUUID();
   const repository = (
     await getDatabasePool().query<RepositoryAuthorization>(
-      `SELECT local_path,location_mode,observed_commit,read_allowed,write_allowed,
+      `SELECT local_path,location_mode,observed_commit,read_allowed,write_allowed,commit_allowed,
         project_brain_enabled,allowed_agent_ids
        FROM repositories WHERE workspace_id=$1 AND repository_id=$2 AND disabled_at IS NULL`,
       [input.actor.workspaceId, input.request.repositoryId],
@@ -68,11 +69,16 @@ export async function requestProjectBrainOperation(input: {
     maxOutputBytes,
     arguments: input.request.arguments,
   });
+  const agentId =
+    input.request.agentId ??
+    (repository.location_mode === "mission_agent" && repository.allowed_agent_ids.length === 1
+      ? repository.allowed_agent_ids[0]
+      : undefined);
   const requestDocument = {
     repositoryId: input.request.repositoryId,
     missionId: input.request.missionId ?? null,
     executionId: input.request.executionId ?? null,
-    agentId: input.request.agentId ?? null,
+    agentId: agentId ?? null,
     operation: input.request.operation,
     arguments: input.request.arguments ?? {},
     startingSha,
@@ -82,21 +88,24 @@ export async function requestProjectBrainOperation(input: {
     maxOutputBytes,
     requiredProjectBrainVersion: input.request.requiredProjectBrainVersion ?? "0.4.0",
     requiredContractVersion: input.request.requiredContractVersion ?? "1.0",
+    artifactVersioning: repository.location_mode === "mission_agent" && policy.repositoryFilesChanged,
   };
   const fingerprint = projectBrainRequestFingerprint(requestDocument);
   const reasons: string[] = [];
   if (!repository.project_brain_enabled) reasons.push("project_brain_not_enabled");
   if (!repository.read_allowed) reasons.push("repository_read_denied");
   if (policy.requiredPermission === "write" && !repository.write_allowed) reasons.push("repository_write_denied");
-  if (input.request.agentId && !repository.allowed_agent_ids.includes(input.request.agentId))
-    reasons.push("agent_not_allowed_for_repository");
-  if (input.request.agentId) {
+  if (repository.location_mode === "mission_agent" && policy.repositoryFilesChanged && !repository.commit_allowed)
+    reasons.push("repository_commit_denied");
+  if (repository.location_mode === "mission_agent" && !agentId) reasons.push("remote_agent_required");
+  if (agentId && !repository.allowed_agent_ids.includes(agentId)) reasons.push("agent_not_allowed_for_repository");
+  if (agentId) {
     const permission = (
       await getDatabasePool().query<{ permissions: string[] }>(
         `SELECT permissions FROM agent_resource_permissions
          WHERE workspace_id=$1 AND agent_id=$2 AND resource_type='repository' AND resource_id=$3
            AND revoked_at IS NULL`,
-        [input.actor.workspaceId, input.request.agentId, input.request.repositoryId],
+        [input.actor.workspaceId, agentId, input.request.repositoryId],
       )
     ).rows[0];
     if (!permission?.permissions.includes(policy.requiredPermission))
@@ -215,7 +224,7 @@ export async function requestProjectBrainWriteApproval(input: {
 }) {
   const repository = (
     await getDatabasePool().query<RepositoryAuthorization>(
-      `SELECT local_path,location_mode,observed_commit,read_allowed,write_allowed,
+      `SELECT local_path,location_mode,observed_commit,read_allowed,write_allowed,commit_allowed,
         project_brain_enabled,allowed_agent_ids
        FROM repositories WHERE workspace_id=$1 AND repository_id=$2 AND disabled_at IS NULL`,
       [input.actor.workspaceId, input.request.repositoryId],
@@ -232,11 +241,16 @@ export async function requestProjectBrainWriteApproval(input: {
     arguments: input.request.arguments,
   });
   if (!policy.approvalType) throw new ValidationFailedError("This Project Brain operation does not require approval");
+  const agentId =
+    input.request.agentId ??
+    (repository.location_mode === "mission_agent" && repository.allowed_agent_ids.length === 1
+      ? repository.allowed_agent_ids[0]
+      : undefined);
   const requestDocument = {
     repositoryId: input.request.repositoryId,
     missionId: input.request.missionId ?? null,
     executionId: input.request.executionId ?? null,
-    agentId: input.request.agentId ?? null,
+    agentId: agentId ?? null,
     operation: input.request.operation,
     arguments: input.request.arguments ?? {},
     startingSha: input.request.startingSha ?? repository.observed_commit,
@@ -246,6 +260,7 @@ export async function requestProjectBrainWriteApproval(input: {
     maxOutputBytes: input.request.maxOutputBytes ?? 1_000_000,
     requiredProjectBrainVersion: input.request.requiredProjectBrainVersion ?? "0.4.0",
     requiredContractVersion: input.request.requiredContractVersion ?? "1.0",
+    artifactVersioning: repository.location_mode === "mission_agent" && policy.repositoryFilesChanged,
   };
   const fingerprint = projectBrainRequestFingerprint(requestDocument);
   const actionRequestId = stableUuid(`project-brain-approval:${fingerprint}`);
@@ -253,7 +268,7 @@ export async function requestProjectBrainWriteApproval(input: {
     workspaceId: input.actor.workspaceId,
     missionId: input.request.missionId!,
     executionId: input.request.executionId,
-    agentId: input.request.agentId,
+    agentId,
     actionRequestId,
     actionType: policy.policyAction,
     targetResource: input.request.repositoryId,

@@ -11,6 +11,8 @@ const successfulFacts = new Set(successfulFactNames);
 const terminal = new Set([
   "project_brain.operation_succeeded",
   "project_brain.operation_failed",
+  "project_brain.remote_operation_denied",
+  "project_brain.remote_operation_failed",
   ...successfulFactNames,
 ]);
 
@@ -22,15 +24,22 @@ export async function applyProjectBrainProjection(client: PoolClient, events: Do
     const status =
       event.eventType === "project_brain.operation_authorized"
         ? "authorized"
-        : event.eventType === "project_brain.operation_denied"
+        : event.eventType === "project_brain.operation_denied" ||
+            event.eventType === "project_brain.remote_operation_denied"
           ? "denied"
-          : event.eventType === "project_brain.operation_started"
-            ? "started"
-            : event.eventType === "project_brain.operation_succeeded" || successfulFacts.has(event.eventType)
-              ? "succeeded"
-              : event.eventType === "project_brain.operation_failed"
-                ? "failed"
-                : null;
+          : event.eventType === "project_brain.remote_operation_dispatched"
+            ? "dispatched"
+            : event.eventType === "project_brain.remote_operation_accepted"
+              ? "accepted"
+              : event.eventType === "project_brain.operation_started" ||
+                  event.eventType === "project_brain.remote_operation_started"
+                ? "started"
+                : event.eventType === "project_brain.operation_succeeded" || successfulFacts.has(event.eventType)
+                  ? "succeeded"
+                  : event.eventType === "project_brain.operation_failed" ||
+                      event.eventType === "project_brain.remote_operation_failed"
+                    ? "failed"
+                    : null;
     if (event.eventType === "project_brain.operation_requested") {
       await client.query(
         `INSERT INTO project_brain_operation_projections(
@@ -83,7 +92,8 @@ export async function applyProjectBrainProjection(client: PoolClient, events: Do
           p.result ? JSON.stringify(p.result) : null,
           p.failureStage ?? null,
           p.failureCause ?? null,
-          event.eventType === "project_brain.operation_started",
+          event.eventType === "project_brain.operation_started" ||
+            event.eventType === "project_brain.remote_operation_started",
           event.occurredAt,
           terminal.has(event.eventType) || event.eventType === "project_brain.operation_denied",
         ],

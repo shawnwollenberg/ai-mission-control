@@ -14,6 +14,8 @@ import { recordRepositoryRecommendations } from "@/application/recommendation-co
 import { recordRepositoryHealthAssessment } from "@/application/repository-health-commands";
 import type { RepositoryObservation } from "@/domain/repository-health";
 import { applyProjectBrainProjection } from "@/application/project-brain-projector";
+import { validateRemoteProjectBrainCapabilities } from "@/integrations/project-brain/remote-protocol";
+import { processRemoteProjectBrainMessage } from "@/application/remote-project-brain-results";
 
 type Credential = {
   workspace_id: string;
@@ -58,6 +60,33 @@ const actor = (credential: Credential) => ({
   id: credential.agent_id,
   type: "agent" as const,
 });
+export async function enforceRemoteContextVerification(
+  current: {
+    context_checksum: string | null;
+    starting_sha: string | null;
+    agent_verification_status: string | null;
+  },
+  payload: Record<string, unknown>,
+  onMismatch: () => Promise<void>,
+) {
+  if (!current.context_checksum || current.agent_verification_status === "verified") return undefined;
+  const evidence = {
+    received: String(payload.receivedContextChecksum ?? ""),
+    verified: String(payload.verifiedContextChecksum ?? ""),
+    outcome: String(payload.contextVerificationOutcome ?? ""),
+    startingSha: String(payload.startingSha ?? ""),
+  };
+  if (
+    evidence.received !== current.context_checksum ||
+    evidence.verified !== current.context_checksum ||
+    evidence.outcome !== "verified" ||
+    evidence.startingSha !== current.starting_sha
+  ) {
+    await onMismatch();
+    throw new ValidationFailedError("Remote agent Project Brain context verification failed");
+  }
+  return evidence;
+}
 async function transition(
   message: ProtocolEnvelope,
   credential: Credential,
@@ -73,6 +102,8 @@ async function transition(
   });
 }
 export async function processRemoteMessage(message: ProtocolEnvelope, credential: Credential) {
+  if (String(message.messageType).startsWith("RemoteProjectBrain"))
+    return processRemoteProjectBrainMessage(message, credential.workspace_id);
   if (message.messageType === "ApprovalDecisionAcknowledged") {
     const approvalId = String(message.payload.approvalId ?? "");
     const approval = await loadAggregateEvents({
@@ -120,6 +151,10 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     const pullReady = message.messageType === "AgentHeartbeat" && message.payload.assignmentPull === true;
     const credentialVerified =
       message.messageType === "AgentHeartbeat" && credential.credential_record_status === "pending_verification";
+    const projectBrainCapabilities =
+      message.payload.projectBrain === undefined
+        ? undefined
+        : validateRemoteProjectBrainCapabilities(message.payload.projectBrain);
     await appendEvents({
       workspaceId: credential.workspace_id,
       aggregateType: "agent",
@@ -132,6 +167,16 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       actor: { type: "agent", id: credential.agent_id },
       events: [
         { eventType, eventSchemaVersion: 1, occurredAt: message.sentAt, payload: message.payload },
+        ...(projectBrainCapabilities
+          ? [
+              {
+                eventType: "agent.remote_project_brain_capability_advertised",
+                eventSchemaVersion: 1,
+                occurredAt: message.sentAt,
+                payload: { capabilities: projectBrainCapabilities },
+              },
+            ]
+          : []),
         ...(pullReady
           ? [
               {
@@ -175,6 +220,13 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
               pullReady ? String(message.payload.adapter ?? "generic") : null,
             ],
           );
+          if (projectBrainCapabilities)
+            await client.query(
+              `UPDATE agents SET remote_project_brain_capabilities=$3,
+                remote_project_brain_capabilities_at=$4,updated_at=$4
+               WHERE workspace_id=$1 AND agent_id=$2`,
+              [credential.workspace_id, credential.agent_id, JSON.stringify(projectBrainCapabilities), last.occurredAt],
+            );
           await client.query(
             `INSERT INTO agent_heartbeats(workspace_id,agent_id,credential_id,protocol_version,received_at,reported_at) VALUES($1,$2,$3,'1.0',now(),$4) ON CONFLICT(workspace_id,agent_id) DO UPDATE SET credential_id=EXCLUDED.credential_id,protocol_version=EXCLUDED.protocol_version,received_at=EXCLUDED.received_at,reported_at=EXCLUDED.reported_at`,
             [credential.workspace_id, credential.agent_id, credential.credential_id, message.sentAt],
@@ -212,6 +264,14 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     return { status: "accepted", eventType };
   }
   const current = await executionRow(message, credential.workspace_id);
+  if (
+    current.context_checksum &&
+    ["ExecutionArtifactSubmitted", "ExecutionSucceeded"].includes(message.messageType) &&
+    current.agent_verification_status !== "verified"
+  )
+    throw new ValidationFailedError(
+      "Project Brain context checksum must be verified before artifacts or execution success are accepted",
+    );
   if (["succeeded", "failed", "timed_out", "cancelled"].includes(current.status))
     return { status: "ignored_terminal", executionStatus: current.status };
   switch (message.messageType) {
@@ -266,16 +326,7 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
     }
     case "ExecutionProgressReported": {
       if (current.context_checksum && current.agent_verification_status !== "verified") {
-        const received = String(message.payload.receivedContextChecksum ?? "");
-        const verified = String(message.payload.verifiedContextChecksum ?? "");
-        const outcome = String(message.payload.contextVerificationOutcome ?? "");
-        const startingSha = String(message.payload.startingSha ?? "");
-        if (
-          received !== current.context_checksum ||
-          verified !== current.context_checksum ||
-          outcome !== "verified" ||
-          startingSha !== current.starting_sha
-        ) {
+        const evidence = await enforceRemoteContextVerification(current, message.payload, async () => {
           await transition(
             {
               ...message,
@@ -290,8 +341,10 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
             "failed",
             "context-mismatch",
           );
-          throw new ValidationFailedError("Remote agent Project Brain context verification failed");
-        }
+        });
+        const received = evidence!.received;
+        const verified = evidence!.verified;
+        const startingSha = evidence!.startingSha;
         const operation = (
           await getDatabasePool().query<{ operation_id: string }>(
             `SELECT operation_id FROM project_brain_operation_projections
@@ -585,6 +638,49 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       return { status: "completed" };
     }
     case "ExecutionFailed":
+      if (message.payload.classification === "project_brain_context_stale") {
+        const operation = (
+          await getDatabasePool().query<{ operation_id: string }>(
+            `SELECT operation_id FROM project_brain_operation_projections
+             WHERE workspace_id=$1 AND mission_id=$2 AND operation='prepare_context' AND status='succeeded'
+             ORDER BY completed_at DESC LIMIT 1`,
+            [credential.workspace_id, message.missionId],
+          )
+        ).rows[0];
+        if (operation)
+          await appendEvents({
+            workspaceId: credential.workspace_id,
+            aggregateType: "project_brain_operation",
+            aggregateId: operation.operation_id,
+            missionId: message.missionId,
+            expectedVersion: (
+              await loadAggregateEvents({
+                workspaceId: credential.workspace_id,
+                aggregateType: "project_brain_operation",
+                aggregateId: operation.operation_id,
+              })
+            ).at(-1)!.aggregateVersion,
+            commandId: stableUuid(`remote:${message.messageId}:context-stale`),
+            commandType: "InvalidateRemoteProjectBrainContext",
+            correlationId: message.missionId!,
+            actor: { type: "agent", id: credential.agent_id },
+            events: [
+              {
+                eventType: "project_brain.remote_repository_head_changed",
+                eventSchemaVersion: 1,
+                payload: {
+                  repositoryId: current.repository_id,
+                  operation: "prepare_context",
+                  operationStatus: "succeeded",
+                  expectedSha: message.payload.expectedStartingSha,
+                  observedSha: message.payload.observedStartingSha,
+                  missionProjection: { contextBoundStatus: "stale" },
+                },
+              },
+            ],
+            applyProjections: applyProjectBrainProjection,
+          });
+      }
       await transition(message, credential, "failed");
       for (const row of (
         await getDatabasePool().query<{ approval_id: string }>(

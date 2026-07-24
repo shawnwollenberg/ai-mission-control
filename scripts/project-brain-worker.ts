@@ -4,6 +4,7 @@ import { closeDatabasePool } from "../lib/database";
 import { executeProjectBrainOperation } from "../integrations/project-brain/worker";
 import { assertSupportedNodeVersion } from "../lib/runtime-version";
 import { startWorkerPresence } from "./worker-presence";
+import { recoverRemoteProjectBrainAssignments } from "../application/remote-project-brain-assignments";
 
 assertSupportedNodeVersion();
 const workerId = process.env.WORKER_ID ?? `project-brain-${randomUUID().slice(0, 8)}`;
@@ -15,6 +16,7 @@ async function main() {
   const stopPresence = await startWorkerPresence(workerId, "project_brain");
   const leaseSeconds = Number(process.env.PROJECT_BRAIN_JOB_LEASE_SECONDS ?? 90);
   while (!stopping) {
+    await recoverRemoteProjectBrainAssignments();
     const job = await claimJob(workerId, leaseSeconds, undefined, "project_brain_operation");
     if (!job) {
       await new Promise((resolve) => setTimeout(resolve, Number(process.env.WORKER_POLL_MS ?? 1000)));

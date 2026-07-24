@@ -14,6 +14,7 @@ import { appendProjectBrainOperationEvent } from "@/application/project-brain-co
 import { consumeApproval } from "@/application/approval-commands";
 import { storeExecutionArtifact } from "@/execution/artifact-store";
 import { stableUuid } from "@/lib/stable-id";
+import { dispatchRemoteProjectBrainOperation } from "./remote-dispatch";
 
 type OperationRow = {
   operation_id: string;
@@ -89,27 +90,37 @@ export async function executeProjectBrainOperation(input: {
   if (!row) throw new Error("Project Brain operation not found");
   if (["succeeded", "failed", "denied"].includes(row.status)) return { terminal: true, status: row.status };
   if (row.location_mode === "mission_agent") {
-    await appendProjectBrainOperationEvent({
-      actor: { workspaceId: input.workspaceId, id: input.workerId, type: "agent" },
-      operationId: input.operationId,
-      commandId: stableUuid(`project-brain:${input.operationId}:remote-blocked`),
-      event: {
-        eventType: "project_brain.operation_failed",
-        eventSchemaVersion: 1,
-        payload: {
-          repositoryId: row.repository_id,
-          operation: row.operation,
-          operationStatus: "failed",
-          failureStage: "routing",
-          failureCause: "remote_project_brain_transport_unavailable",
-          humanApprovalRequired: Boolean(
-            projectBrainOperationPolicy(row.operation, (row.request.arguments as Record<string, unknown>) ?? {})
-              .approvalType,
-          ),
+    try {
+      await dispatchRemoteProjectBrainOperation(input);
+      return { terminal: true, status: "dispatched" };
+    } catch (error) {
+      const cause = error instanceof Error ? error.message : String(error);
+      await appendProjectBrainOperationEvent({
+        actor: { workspaceId: input.workspaceId, id: input.workerId, type: "agent" },
+        operationId: input.operationId,
+        commandId: stableUuid(
+          `project-brain:${input.operationId}:remote-${input.finalAttempt ? "blocked" : "attempt-blocked"}`,
+        ),
+        event: {
+          eventType: input.finalAttempt
+            ? "project_brain.remote_operation_denied"
+            : "project_brain.remote_operation_attempt_blocked",
+          eventSchemaVersion: 1,
+          payload: {
+            repositoryId: row.repository_id,
+            operation: row.operation,
+            operationStatus: input.finalAttempt ? "denied" : "retrying",
+            failureStage: "remote_dispatch",
+            failureCause: cause.slice(0, 500),
+            humanApprovalRequired: Boolean(
+              projectBrainOperationPolicy(row.operation, (row.request.arguments as Record<string, unknown>) ?? {})
+                .approvalType,
+            ),
+          },
         },
-      },
-    });
-    return { terminal: true, status: "failed" };
+      });
+      throw error;
+    }
   }
   await appendProjectBrainOperationEvent({
     actor: { workspaceId: input.workspaceId, id: input.workerId, type: "agent" },
@@ -308,28 +319,45 @@ export async function executeProjectBrainOperation(input: {
             staleCount: Number(resultData.stale_count ?? 0),
             unresolvedContradictionCount: Number(resultData.unresolved_contradiction_count ?? 0),
           },
-          missionProjection: context
-            ? preview
-              ? { contextPreviewStatus: "available" }
-              : {
-                  contextPreviewStatus: "final",
-                  finalContextArtifactId: context.artifactId,
-                  contextRepositoryPath: context.path,
-                  contextChecksum: context.sha256,
-                  contextSchemaVersion: context.schema_version,
-                  contractVersion: result.envelope.contract_version,
-                  startingSha: head,
-                  contextBytes: context.byteSize,
-                  selectedSourceManifest: resultData.selected_sources ?? [],
-                  contextQuality: resultData.quality ?? {},
+          missionProjection:
+            row.operation === "prepare_context" && preview && !context
+              ? {
+                  contextPreviewStatus: "available",
+                  selectedSourceManifest:
+                    (
+                      (resultData.context_pack as Record<string, unknown> | undefined)?.selection as
+                        Record<string, unknown> | undefined
+                    )?.sources ?? [],
+                  contextQuality:
+                    (resultData.context_pack as Record<string, unknown> | undefined)?.context_quality ?? {},
                 }
-            : row.operation === "record_closure"
-              ? { closureStatus: "recorded" }
-              : row.operation === "propose_learning"
-                ? { learningProposalStatus: "proposed" }
-                : row.operation === "evaluate_learning"
-                  ? { evaluationStatus: "evaluated" }
-                  : undefined,
+              : context
+                ? preview
+                  ? { contextPreviewStatus: "available" }
+                  : {
+                      contextPreviewStatus: "final",
+                      finalContextArtifactId: context.artifactId,
+                      contextRepositoryPath: context.path,
+                      contextChecksum: context.sha256,
+                      contextSchemaVersion: context.schema_version,
+                      contractVersion: result.envelope.contract_version,
+                      startingSha: head,
+                      contextBytes: context.byteSize,
+                      selectedSourceManifest:
+                        (
+                          (resultData.context_pack as Record<string, unknown> | undefined)?.selection as
+                            Record<string, unknown> | undefined
+                        )?.sources ?? [],
+                      contextQuality:
+                        (resultData.context_pack as Record<string, unknown> | undefined)?.context_quality ?? {},
+                    }
+                : row.operation === "record_closure"
+                  ? { closureStatus: "recorded" }
+                  : row.operation === "propose_learning"
+                    ? { learningProposalStatus: "proposed" }
+                    : row.operation === "evaluate_learning"
+                      ? { evaluationStatus: "evaluated" }
+                      : undefined,
         },
       },
     });

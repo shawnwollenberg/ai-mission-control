@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
-import { chmod, mkdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { appendFileSync } from "node:fs";
+import { chmod, mkdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { homedir, platform } from "node:os";
-import { basename, join } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const VERSION = "0.6.6";
+const VERSION = "0.6.7";
 const root = process.env.MISSION_AGENT_HOME ?? join(homedir(), ".mission-agent");
 const configPath = join(root, "config.json");
 const statePath = join(root, "state.json");
@@ -18,6 +20,19 @@ const option = (name) => {
   return index >= 0 ? process.argv[index + 1] : undefined;
 };
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const equalChecksum = (left, right) =>
+  /^[a-f0-9]{64}$/.test(String(left)) &&
+  /^[a-f0-9]{64}$/.test(String(right)) &&
+  timingSafeEqual(Buffer.from(left, "hex"), Buffer.from(right, "hex"));
+const canonicalJson = (value) => {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.keys(value)
+      .sort((left, right) => left.localeCompare(right))
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+      .join(",")}}`;
+  return JSON.stringify(value);
+};
 const exec = (binary, args, cwd) => {
   const result = spawnSync(binary, args, { cwd, encoding: "utf8", timeout: 15_000 });
   if (result.status !== 0) {
@@ -41,8 +56,10 @@ async function protectedJson(path) {
 }
 async function save(path, value) {
   await mkdir(root, { recursive: true, mode: 0o700 });
-  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
-  await chmod(path, 0o600);
+  const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+  await chmod(temporary, 0o600);
+  await rename(temporary, path);
 }
 function keychainSecret(agentId) {
   const result = spawnSync("security", ["find-generic-password", "-a", agentId, "-s", "Mission Agent", "-w"], {
@@ -57,12 +74,28 @@ async function loadConfig() {
   if (!config.secret) throw new Error("Mission Agent credential is missing.");
   return config;
 }
+let stateMutationQueue = Promise.resolve();
 async function updateState(patch) {
-  let current = {};
-  try {
-    current = await protectedJson(statePath);
-  } catch {}
-  await save(statePath, { ...current, ...patch, updatedAt: new Date().toISOString(), version: VERSION });
+  const mutation = stateMutationQueue.then(async () => {
+    let current = {};
+    try {
+      current = await protectedJson(statePath);
+    } catch {}
+    await save(statePath, { ...current, ...patch, updatedAt: new Date().toISOString(), version: VERSION });
+  });
+  stateMutationQueue = mutation.catch(() => undefined);
+  return mutation;
+}
+async function markProjectBrainReceiptAcknowledged(idempotencyKey) {
+  const current = await protectedJson(statePath);
+  const receipt = current.projectBrainReceipts?.[idempotencyKey];
+  if (!receipt) return;
+  await updateState({
+    projectBrainReceipts: {
+      ...(current.projectBrainReceipts ?? {}),
+      [idempotencyKey]: { ...receipt, centralAcknowledged: true },
+    },
+  });
 }
 
 function envelope(config, messageType, payload, execution) {
@@ -124,8 +157,13 @@ async function signedRequest(config, path, messageType, payload = {}, execution,
   if (!response.ok) throw new Error(result.error?.message ?? `Mission Control returned ${response.status}.`);
   return result;
 }
+function callbackConfirmsTerminal(response, messageType) {
+  const status = response?.result?.status ?? response?.result?.result?.status;
+  return status === (messageType === "RemoteProjectBrainOperationSucceeded" ? "succeeded" : "failed");
+}
 
 async function heartbeat(config) {
+  const projectBrain = projectBrainCapabilities(config);
   await signedRequest(config, "/api/agent-protocol/v1/messages", "AgentHeartbeat", {
     status: "ready",
     assignmentPull: true,
@@ -133,8 +171,239 @@ async function heartbeat(config) {
     adapter: config.adapter,
     platform: platform(),
     capabilities: config.capabilities,
+    ...(projectBrain ? { projectBrain } : {}),
   });
   await updateState({ connected: true, pullReady: true, lastHeartbeatAt: new Date().toISOString(), lastError: null });
+}
+const projectBrainOperations = [
+  "detect_repository",
+  "initialize_repository",
+  "validate_repository",
+  "get_summary",
+  "prepare_context",
+  "read_context",
+  "record_closure",
+  "propose_learning",
+  "evaluate_learning",
+  "get_curation",
+  "list_knowledge",
+  "get_health",
+  "diagnostics",
+];
+const projectBrainWriteOperations = [
+  "initialize_repository",
+  "prepare_context",
+  "record_closure",
+  "propose_learning",
+  "evaluate_learning",
+];
+function validRemoteProjectBrainRequestShape(request) {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const sha = /^[a-f0-9]{40,64}$/;
+  const requestedAt = Date.parse(String(request.requestedAt ?? ""));
+  const expiresAt = Date.parse(String(request.expiresAt ?? ""));
+  return (
+    request.protocolVersion === "1.0" &&
+    [request.requestId, request.operationId, request.workspaceId, request.agentId, request.repositoryId].every(
+      (value) => typeof value === "string" && uuid.test(value),
+    ) &&
+    [request.missionId, request.executionId, request.approvalId].every(
+      (value) => value === null || (typeof value === "string" && uuid.test(value)),
+    ) &&
+    typeof request.repositoryLocator === "string" &&
+    /^mission-agent:\/\/[a-f0-9]{64}$/.test(request.repositoryLocator) &&
+    typeof request.repositoryFingerprint === "string" &&
+    /^[a-f0-9]{64}$/.test(request.repositoryFingerprint) &&
+    typeof request.startingSha === "string" &&
+    sha.test(request.startingSha) &&
+    request.arguments &&
+    typeof request.arguments === "object" &&
+    !Array.isArray(request.arguments) &&
+    typeof request.requiredProjectBrainVersion === "string" &&
+    typeof request.requiredContractVersion === "string" &&
+    Array.isArray(request.requiredSchemaVersions) &&
+    request.requiredSchemaVersions.every((value) => typeof value === "string") &&
+    Array.isArray(request.requestedArtifactTypes) &&
+    request.requestedArtifactTypes.every((value) => typeof value === "string") &&
+    Number.isInteger(request.timeoutMs) &&
+    request.timeoutMs > 0 &&
+    request.timeoutMs <= 3_600_000 &&
+    Number.isInteger(request.maxOutputBytes) &&
+    request.maxOutputBytes > 0 &&
+    request.maxOutputBytes <= 10_000_000 &&
+    request.policyDecision &&
+    typeof request.policyDecision === "object" &&
+    request.authorization &&
+    typeof request.authorization === "object" &&
+    typeof request.artifactVersioning === "boolean" &&
+    Number.isFinite(requestedAt) &&
+    Number.isFinite(expiresAt) &&
+    expiresAt > requestedAt &&
+    expiresAt - requestedAt <= 3_600_000 &&
+    typeof request.nonce === "string" &&
+    request.nonce.length >= 16 &&
+    request.nonce.length <= 200
+  );
+}
+const projectBrainArtifactKinds = {
+  initialize_repository: ["project_brain_initialization"],
+  prepare_context: ["context_pack"],
+  read_context: ["context_pack"],
+  record_closure: ["mission_result"],
+  propose_learning: ["proposed_learning"],
+  evaluate_learning: ["knowledge_evaluation"],
+};
+function projectBrainCapabilities(config) {
+  const executable = config.projectBrainExecutable;
+  if (!executable || !isAbsolute(executable))
+    return {
+      installed: false,
+      coreVersion: "",
+      contractVersions: [],
+      schemaVersions: [],
+      operations: [],
+      readOperations: [],
+      writeOperations: [],
+      maxRequestBytes: 1_000_000,
+      maxResultBytes: 5_000_000,
+      artifactTransferModes: ["inline_base64"],
+      runtimeReady: false,
+      diagnosticsStatus: "not_configured",
+    };
+  const result = spawnSync(executable, ["capabilities", "--json"], {
+    encoding: "utf8",
+    timeout: 5_000,
+    env: { PATH: process.env.PATH ?? "/usr/bin:/bin", LANG: "C.UTF-8" },
+  });
+  try {
+    const parsed = JSON.parse(result.stdout);
+    const available = Object.keys(parsed.operations ?? {}).filter((operation) => projectBrainOperations.includes(operation));
+    return {
+      installed: result.status === 0,
+      coreVersion: String(parsed.core_version ?? ""),
+      contractVersions: parsed.consumer_contract_versions ?? [],
+      schemaVersions: parsed.supported_artifact_schema_versions ?? [],
+      operations: available,
+      readOperations: available.filter(
+        (operation) => !projectBrainWriteOperations.includes(operation) || operation === "prepare_context",
+      ),
+      writeOperations: available.filter((operation) => projectBrainWriteOperations.includes(operation)),
+      maxRequestBytes: 1_000_000,
+      maxResultBytes: 5_000_000,
+      artifactTransferModes: ["inline_base64"],
+      runtimeReady: result.status === 0,
+      diagnosticsStatus: result.status === 0 ? "ready" : "failed",
+    };
+  } catch {
+    return {
+      installed: false,
+      coreVersion: "",
+      contractVersions: [],
+      schemaVersions: [],
+      operations: [],
+      readOperations: [],
+      writeOperations: [],
+      maxRequestBytes: 1_000_000,
+      maxResultBytes: 5_000_000,
+      artifactTransferModes: ["inline_base64"],
+      runtimeReady: false,
+      diagnosticsStatus: "invalid_capabilities",
+    };
+  }
+}
+function validateRemoteProjectBrainAuthoritySnapshot(config, request, state = {}, now = Date.now()) {
+  if (!validRemoteProjectBrainRequestShape(request))
+    throw new Error("Remote Project Brain request structure is invalid.");
+  const unsigned = { ...request };
+  for (const key of [
+    "assignmentId",
+    "leaseOwner",
+    "leaseToken",
+    "leaseExpiresAt",
+    "requestChecksum",
+    "missionControlSignature",
+  ])
+    delete unsigned[key];
+  if (!equalChecksum(sha256(canonicalJson(unsigned)), request.requestChecksum))
+    throw new Error("Remote Project Brain request checksum is invalid.");
+  if (
+    !equalChecksum(
+      createHmac("sha256", sha256(config.secret)).update(request.requestChecksum).digest("hex"),
+      request.missionControlSignature,
+    )
+  )
+    throw new Error("Remote Project Brain request signature is invalid.");
+  if (
+    request.workspaceId !== config.workspaceId ||
+    request.agentId !== config.agentId ||
+    request.idempotencyKey !== `project-brain:${request.operationId}` ||
+    !projectBrainOperations.includes(request.operation)
+  )
+    throw new Error("Remote Project Brain request identity or operation is invalid.");
+  const repository = config.repositories?.[request.repositoryId];
+  if (
+    !repository ||
+    request.repositoryLocator !== `mission-agent://${repository.fingerprint}` ||
+    request.repositoryFingerprint !== repository.fingerprint
+  )
+    throw new Error("Remote Project Brain repository registration does not match.");
+  const cached = state.projectBrainReceipts?.[request.idempotencyKey];
+  const recovered =
+    state.projectBrainInFlight?.requestId === request.requestId &&
+    state.projectBrainInFlight?.requestChecksum === request.requestChecksum;
+  const historical = (cached && cached.requestChecksum === request.requestChecksum) || recovered;
+  if (Date.parse(request.expiresAt) <= now && !historical)
+    throw new Error("Remote Project Brain request expiry is invalid.");
+  const writing =
+    request.operation === "prepare_context"
+      ? request.arguments?.write === true
+      : projectBrainWriteOperations.includes(request.operation);
+  const approvalFingerprint = sha256(
+    canonicalJson({
+      repositoryId: request.repositoryId,
+      missionId: request.missionId,
+      executionId: request.executionId,
+      agentId: request.agentId,
+      operation: request.operation,
+      arguments: request.arguments ?? {},
+      startingSha: request.startingSha,
+      locationMode: "mission_agent",
+      expectedWriteScope: request.requestedArtifactTypes,
+      timeoutMs: Number(request.timeoutMs),
+      maxOutputBytes: Number(request.maxOutputBytes),
+      requiredProjectBrainVersion: request.requiredProjectBrainVersion,
+      requiredContractVersion: request.requiredContractVersion,
+      artifactVersioning: request.artifactVersioning,
+    }),
+  );
+  const authorization = request.authorization ?? {};
+  const policyDecision = request.policyDecision ?? {};
+  if (
+    authorization.allowedAgent !== true ||
+    policyDecision.outcome !== "allowed" ||
+    policyDecision.action !== (writing ? "project_brain.repository_write" : "project_brain.read") ||
+    authorization.repositoryReadAllowed !== true ||
+    authorization.resourcePermission !== true ||
+    authorization.requiredPermission !== (writing ? "write" : "read") ||
+    (writing &&
+      (authorization.repositoryWriteAllowed !== true ||
+        authorization.repositoryCommitAllowed !== true ||
+        request.artifactVersioning !== true ||
+        repository.projectBrainWriteAllowed !== true ||
+        !request.approvalId ||
+        request.approvalFingerprint !== approvalFingerprint))
+  )
+    throw new Error("Remote Project Brain authorization snapshot is not permitted.");
+  if (
+    writing &&
+    !historical &&
+    authorization.approvalExpiresAt &&
+    Date.parse(authorization.approvalExpiresAt) <= now
+  )
+    throw new Error("Remote Project Brain approval expired.");
+  if ((state.projectBrainNonces ?? []).includes(request.nonce) && !historical)
+    throw new Error("Remote Project Brain request nonce was replayed.");
+  return { repository, writing, approvalFingerprint, historical: Boolean(historical) };
 }
 function inspectRepository(path) {
   if (!path) throw new Error("Provide a repository path, for example: mission-agent repository add .");
@@ -151,7 +420,7 @@ function inspectRepository(path) {
     commit,
     branch,
     remoteUrl,
-    fingerprint: sha256(`${remoteUrl ?? "local"}\n${commit}\n${basename(resolved)}`),
+    fingerprint: sha256(`${remoteUrl ?? `local:${resolved}`}\n${basename(resolved)}`),
   };
 }
 function normalizedRemote(remoteUrl) {
@@ -172,6 +441,7 @@ async function registerRepository(config, path) {
     commit: repository.commit,
   });
   const registered = response.repository;
+  const existingRegistration = config.repositories?.[registered.repository_id];
   config.repositories = {
     ...(config.repositories ?? {}),
     [registered.repository_id]: {
@@ -181,6 +451,7 @@ async function registerRepository(config, path) {
       remoteUrl: repository.remoteUrl,
       branch: repository.branch,
       commit: repository.commit,
+      projectBrainWriteAllowed: existingRegistration?.projectBrainWriteAllowed === true,
     },
   };
   await persistConfig(config);
@@ -321,11 +592,17 @@ async function progress(config, assignment, stage, summary, percent, evidence = 
 function verifiedProjectBrainContext(assignment, startingSha) {
   const context = assignment.projectBrainContext;
   if (!context) return undefined;
+  if (context.startingSha !== startingSha) {
+    const error = new Error("Project Brain context is stale because the repository HEAD changed.");
+    error.classification = "project_brain_context_stale";
+    error.expectedStartingSha = context.startingSha;
+    error.observedStartingSha = startingSha;
+    throw error;
+  }
   if (
     context.verificationRequired !== true ||
     typeof context.contentBase64 !== "string" ||
     !/^[a-f0-9]{64}$/.test(String(context.checksum ?? "")) ||
-    context.startingSha !== startingSha ||
     context.contractVersion !== "1.0"
   )
     throw new Error("Project Brain context binding is invalid or stale.");
@@ -340,6 +617,196 @@ function verifiedProjectBrainContext(assignment, startingSha) {
       contextVerificationOutcome: "verified",
       startingSha,
     },
+  };
+}
+async function verifiedRemoteProjectBrainArtifact(
+  checkout,
+  artifact,
+  allowedKinds,
+  requiredSchemas,
+  currentBytes,
+  maximumBytes,
+) {
+  const artifactPath = String(artifact.path ?? "");
+  if (!allowedKinds.includes(String(artifact.kind)))
+    throw new Error("Remote Project Brain returned an artifact kind outside the operation allowlist.");
+  if (!requiredSchemas.includes(String(artifact.schema_version ?? "")))
+    throw new Error("Remote Project Brain returned an unsupported artifact schema.");
+  if (!artifactPath || artifactPath.startsWith("/") || artifactPath.split("/").includes(".."))
+    throw new Error("Remote Project Brain returned an unsafe artifact path.");
+  const absolute = await realpath(join(checkout, artifactPath));
+  if (absolute !== checkout && !absolute.startsWith(`${checkout}/`))
+    throw new Error("Remote Project Brain artifact escaped the checkout.");
+  const body = await readFile(absolute);
+  const totalBytes = currentBytes + body.byteLength;
+  if (totalBytes > maximumBytes || sha256(body) !== artifact.sha256)
+    throw new Error("Remote Project Brain artifact integrity validation failed.");
+  return { body, totalBytes, artifactPath };
+}
+async function verifiedPriorProjectBrainArtifacts(
+  state,
+  checkout,
+  statusText,
+  repositoryId,
+  repositoryLocator,
+  additionalDescriptors = [],
+) {
+  const descriptors = new Map(
+    additionalDescriptors.map((artifact) => [String(artifact.path), String(artifact.sha256)]),
+  );
+  for (const receipt of Object.values(state.projectBrainReceipts ?? {}))
+    if (
+      receipt?.messageType === "RemoteProjectBrainOperationSucceeded" &&
+      receipt?.centralAcknowledged === true &&
+      receipt?.response?.envelope?.repository?.id === repositoryId &&
+      receipt?.response?.envelope?.repository?.checkout_path === repositoryLocator
+    )
+      for (const artifact of receipt.response.envelope.artifacts ?? [])
+        if (artifact?.path && /^[a-f0-9]{64}$/.test(String(artifact.sha256 ?? "")))
+          descriptors.set(String(artifact.path), String(artifact.sha256));
+  for (const line of statusText.split("\n").filter(Boolean)) {
+    const path = line.slice(3);
+    const expected = descriptors.get(path);
+    if (!expected) throw new Error("Remote Project Brain requires a clean or previously verified worktree.");
+    const absolute = await realpath(join(checkout, path));
+    if ((absolute !== checkout && !absolute.startsWith(`${checkout}/`)) || sha256(await readFile(absolute)) !== expected)
+      throw new Error("A previously verified Project Brain artifact changed unexpectedly.");
+  }
+  return descriptors;
+}
+async function versionAcknowledgedProjectBrainArtifacts(config, repositoryId, checkout, additionalDescriptors = []) {
+  let state = {};
+  try {
+    state = await protectedJson(statePath);
+  } catch {}
+  const repository = config.repositories?.[repositoryId];
+  if (!repository) throw new Error("Project Brain artifact versioning requires a registered repository.");
+  const statusText = exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], checkout);
+  if (!statusText) {
+    const commitSha = exec("git", ["rev-parse", "HEAD"], checkout);
+    return { parentSha: commitSha, commitSha, paths: [] };
+  }
+  await verifiedPriorProjectBrainArtifacts(
+    state,
+    checkout,
+    statusText,
+    repositoryId,
+    `mission-agent://${repository.fingerprint}`,
+    additionalDescriptors,
+  );
+  const paths = statusText
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.slice(3));
+  const explicitlyReturnedPaths = new Set(additionalDescriptors.map((artifact) => String(artifact.path ?? "")));
+  if (
+    paths.some(
+      (path) => !path.startsWith(".project-brain/") && !(path === "AGENTS.md" && explicitlyReturnedPaths.has(path)),
+    )
+  )
+    throw new Error("Project Brain artifact versioning refused a path outside .project-brain.");
+  if (spawnSync("git", ["diff", "--cached", "--quiet"], { cwd: checkout }).status !== 0)
+    throw new Error("Project Brain artifact versioning requires an empty Git index.");
+  const parentSha = exec("git", ["rev-parse", "HEAD"], checkout);
+  const checksums = Object.fromEntries(
+    await Promise.all(paths.map(async (path) => [path, sha256(await readFile(join(checkout, path)))])),
+  );
+  let currentState = {};
+  try {
+    currentState = await protectedJson(statePath);
+  } catch {}
+  await updateState({
+    projectBrainInFlight: {
+      ...(currentState.projectBrainInFlight ?? {}),
+      versioningIntent: { parentSha, paths, checksums },
+    },
+  });
+  const artifactCommit = await finishProjectBrainArtifactVersioning(checkout, {
+    parentSha,
+    paths,
+    checksums,
+  });
+  try {
+    currentState = await protectedJson(statePath);
+  } catch {}
+  await updateState({
+    projectBrainInFlight: {
+      ...(currentState.projectBrainInFlight ?? {}),
+      artifactCommit,
+    },
+  });
+  // Registration refresh is best-effort here. The signed terminal callback
+  // carries the exact A→B transition and is authoritative centrally; a
+  // transient refresh failure must not turn an already committed write into a
+  // terminal failure.
+  await registerRepository(config, checkout).catch(() => undefined);
+  return artifactCommit;
+}
+async function finishProjectBrainArtifactVersioning(checkout, intent) {
+  const { parentSha, paths, checksums } = intent;
+  if (
+    !/^[a-f0-9]{40}$/.test(String(parentSha ?? "")) ||
+    !Array.isArray(paths) ||
+    paths.length === 0 ||
+    new Set(paths).size !== paths.length ||
+    paths.some(
+      (path) =>
+        typeof path !== "string" ||
+        (!path.startsWith(".project-brain/") && path !== "AGENTS.md") ||
+        path.startsWith("/") ||
+        path.split("/").includes("..") ||
+        !/^[a-f0-9]{64}$/.test(String(checksums?.[path] ?? "")),
+    )
+  )
+    throw new Error("Project Brain artifact versioning intent is invalid.");
+  if (exec("git", ["rev-parse", "HEAD"], checkout) !== parentSha)
+    throw new Error("Project Brain artifact versioning parent changed during recovery.");
+  for (const path of paths) {
+    const absolute = await realpath(join(checkout, path));
+    if (
+      (absolute !== checkout && !absolute.startsWith(`${checkout}/`)) ||
+      sha256(await readFile(absolute)) !== checksums[path]
+    )
+      throw new Error("Project Brain artifact versioning recovery found changed bytes.");
+  }
+  // Rebuild the index from the approved parent so a crash after any update-index
+  // call cannot leave an ambiguous or attacker-controlled staged state.
+  exec("git", ["read-tree", parentSha], checkout);
+  for (const path of paths) {
+    const body = await readFile(join(checkout, path));
+    const hashed = spawnSync("git", ["hash-object", "-w", "--stdin"], {
+      cwd: checkout,
+      input: body,
+      encoding: "utf8",
+      env: { PATH: process.env.PATH ?? "/usr/bin:/bin", LANG: "C.UTF-8" },
+    });
+    if (hashed.status !== 0 || !/^[a-f0-9]{40}$/.test(hashed.stdout.trim()))
+      throw new Error("Project Brain artifact blob could not be written.");
+    exec("git", ["update-index", "--add", "--cacheinfo", `100644,${hashed.stdout.trim()},${path}`], checkout);
+  }
+  const tree = exec("git", ["write-tree"], checkout);
+  const committed = spawnSync("git", ["commit-tree", tree, "-p", parentSha], {
+    cwd: checkout,
+    input: "project-brain: version governed artifacts\n",
+    encoding: "utf8",
+    env: {
+      PATH: process.env.PATH ?? "/usr/bin:/bin",
+      LANG: "C.UTF-8",
+      GIT_AUTHOR_NAME: "Mission Control Project Brain",
+      GIT_AUTHOR_EMAIL: "project-brain@localhost",
+      GIT_COMMITTER_NAME: "Mission Control Project Brain",
+      GIT_COMMITTER_EMAIL: "project-brain@localhost",
+    },
+  });
+  const commitSha = committed.stdout.trim();
+  if (committed.status !== 0 || !/^[a-f0-9]{40}$/.test(commitSha))
+    throw new Error("Project Brain artifact commit object could not be created.");
+  exec("git", ["update-ref", "HEAD", commitSha, parentSha], checkout);
+  return {
+    parentSha,
+    commitSha,
+    paths,
+    checksums,
   };
 }
 async function executionHeartbeat(config, assignment, stage, summary, progressPercent) {
@@ -590,12 +1057,28 @@ async function executeChange(config, assignment) {
   if (!repository) throw new Error("The assignment repository is not registered on this Mission Agent.");
   const resolved = await realpath(repository.path);
   if (resolved !== repository.path) throw new Error("Repository path changed after registration.");
-  const originalStatus = exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], resolved);
-  if (originalStatus)
-    throw new Error("The registered repository has uncommitted changes. Commit or stash them before a change mission.");
+  let originalStatus = exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], resolved);
   const baseBranch = repository.branch;
-  const baseCommit = exec("git", ["rev-parse", `${baseBranch}^{commit}`], resolved);
+  let baseCommit = exec("git", ["rev-parse", `${baseBranch}^{commit}`], resolved);
   const projectBrain = verifiedProjectBrainContext(assignment, baseCommit);
+  if (originalStatus) {
+    let state = {};
+    try {
+      state = await protectedJson(statePath);
+    } catch {}
+    await verifiedPriorProjectBrainArtifacts(
+      state,
+      resolved,
+      originalStatus,
+      resource.resourceId,
+      `mission-agent://${repository.fingerprint}`,
+    );
+  }
+  if (projectBrain) {
+    await versionAcknowledgedProjectBrainArtifacts(config, resource.resourceId, resolved);
+    baseCommit = exec("git", ["rev-parse", `${baseBranch}^{commit}`], resolved);
+    originalStatus = exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], resolved);
+  }
   if (projectBrain)
     await progress(
       config,
@@ -744,7 +1227,7 @@ async function executeChange(config, assignment) {
   }
   await progress(config, assignment, "worktree_ready", "Isolated mission branch and worktree created", 30);
   const summaryPath = join(root, `change-summary-${assignment.executionId}.md`);
-  const changePrompt = `Implement this approved repository change inside the current isolated worktree: ${assignment.instructions}\n\nFollow the approved plan:\n${plan.toString("utf8")}${projectBrain ? `\n\nVerified Project Brain context (${projectBrain.evidence.verifiedContextChecksum}):\n${projectBrain.content}` : ""}\n\nDo not push, create a pull request, merge, deploy, access secrets, modify infrastructure, or write outside this worktree. Do not commit; Mission Agent will validate and create the local commit. Return a concise factual summary.`;
+  const changePrompt = `Implement the exact change in the approved plan below inside the current isolated worktree. Repository write approval has already been granted for this plan, base commit, and isolated worktree. Treat every approval or pause step in the approved plan as already completed; execute only its implementation and validation steps.\n\nApproved plan:\n${plan.toString("utf8")}${projectBrain ? `\n\nVerified Project Brain context (${projectBrain.evidence.verifiedContextChecksum}):\n${projectBrain.content}` : ""}\n\nDo not request another approval. Do not push, create a pull request, merge, deploy, access secrets, modify infrastructure, or write outside this worktree. Do not commit; Mission Agent will validate and create the local commit. Return a concise factual summary.`;
   let changeResult = await runCodex(
     config,
     assignment,
@@ -907,11 +1390,700 @@ async function work(config, assignment) {
     else await executeAnalysis(config, assignment);
   } catch (error) {
     await protocolMessage(config, assignment, "ExecutionFailed", {
-      classification: "local_adapter_failure",
+      classification: error.classification ?? "local_adapter_failure",
       summary: error.message,
+      ...(error.expectedStartingSha ? { expectedStartingSha: error.expectedStartingSha } : {}),
+      ...(error.observedStartingSha ? { observedStartingSha: error.observedStartingSha } : {}),
     }).catch(() => undefined);
     await updateState({ activeAssignment: null, stage: "failed", lastError: error.message });
   }
+}
+async function projectBrainMessage(config, assignment, messageType, payload = {}) {
+  return signedRequest(
+    config,
+    "/api/agent-protocol/v1/project-brain/messages",
+    messageType,
+    { assignmentId: assignment.assignmentId, operationId: assignment.operationId, ...payload },
+    assignment.missionId
+      ? { missionId: assignment.missionId, executionId: assignment.executionId ?? undefined }
+      : undefined,
+    {
+      assignmentId: assignment.assignmentId,
+      leaseOwner: assignment.leaseOwner,
+      leaseToken: assignment.leaseToken,
+    },
+  );
+}
+async function runProjectBrainProcess(
+  executable,
+  args,
+  cwd,
+  timeoutMs,
+  maxOutputBytes,
+  leaseState,
+  durableOutput,
+) {
+  const startedEpochMs = Date.now();
+  return new Promise((resolveResult, reject) => {
+    const child = spawn(executable, args, {
+      cwd,
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { PATH: process.env.PATH ?? "/usr/bin:/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" },
+    });
+    const stdout = [];
+    const stderr = [];
+    let size = 0;
+    let exceeded = false;
+    const collect = (target, durablePath) => (chunk) => {
+      size += chunk.length;
+      if (size > maxOutputBytes) {
+        exceeded = true;
+        child.kill("SIGKILL");
+      } else {
+        target.push(chunk);
+        if (durablePath) appendFileSync(durablePath, chunk, { mode: 0o600 });
+      }
+    };
+    child.stdout.on("data", collect(stdout, durableOutput?.stdoutPath));
+    child.stderr.on("data", collect(stderr, durableOutput?.stderrPath));
+    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
+    const leaseGuard = setInterval(() => {
+      if (leaseState.lost) child.kill("SIGKILL");
+    }, 250);
+    child.once("error", reject);
+    child.once("close", (code, signal) => {
+      clearTimeout(timer);
+      clearInterval(leaseGuard);
+      resolveResult({
+        startedEpochMs,
+        completedEpochMs: Date.now(),
+        exitCode: code,
+        signal,
+        exceeded,
+        timedOut: signal === "SIGKILL" && !exceeded,
+        leaseLost: leaseState.lost,
+        stdout: Buffer.concat(stdout).toString("utf8"),
+        stderr: Buffer.concat(stderr).toString("utf8"),
+      });
+    });
+  });
+}
+function projectBrainRunnerPaths(requestId) {
+  const prefix = join(root, `project-brain-runner-${requestId}`);
+  return {
+    specPath: `${prefix}.spec.json`,
+    resultPath: `${prefix}.result.json`,
+    lockPath: `${prefix}.lock`,
+    pidPath: `${prefix}.pid`,
+    cancelPath: `${prefix}.cancel`,
+    stdoutPath: `${prefix}.stdout`,
+    stderrPath: `${prefix}.stderr`,
+  };
+}
+async function removeProjectBrainRunnerEvidence(paths) {
+  if (!paths) return;
+  await Promise.all([
+    rm(paths.specPath, { force: true }),
+    rm(paths.resultPath, { force: true }),
+    rm(paths.lockPath, { force: true }),
+    rm(paths.pidPath, { force: true }),
+    rm(paths.cancelPath, { force: true }),
+    rm(paths.stdoutPath, { force: true }),
+    rm(paths.stderrPath, { force: true }),
+  ]);
+}
+function processIsAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function runDurableProjectBrainProcess(
+  requestId,
+  executable,
+  args,
+  cwd,
+  timeoutMs,
+  maxOutputBytes,
+  leaseState,
+) {
+  const paths = projectBrainRunnerPaths(requestId);
+  let currentState = {};
+  try {
+    currentState = await protectedJson(statePath);
+  } catch {}
+  const existing = currentState.projectBrainInFlight ?? {};
+  try {
+    await stat(paths.specPath);
+  } catch {
+    await writeFile(
+      paths.specPath,
+      JSON.stringify({ executable, args, cwd, timeoutMs, maxOutputBytes }),
+      { mode: 0o600 },
+    );
+  }
+  await updateState({
+    projectBrainInFlight: {
+      ...existing,
+      runner: paths,
+    },
+  });
+  let result;
+  try {
+    result = await protectedJson(paths.resultPath);
+  } catch {}
+  if (!result) {
+    let locked = false;
+    try {
+      await stat(paths.lockPath);
+      locked = true;
+    } catch {}
+    if (locked) {
+      const pid = Number(await readFile(paths.pidPath, "utf8").catch(() => ""));
+      if (!processIsAlive(pid)) {
+        const currentStatus = exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], cwd);
+        if (currentStatus !== String(existing.statusBefore ?? ""))
+          throw new Error(
+            "project_brain_reconciliation_required: durable runner stopped after repository bytes changed",
+          );
+        await Promise.all([
+          rm(paths.lockPath, { force: true }),
+          rm(paths.pidPath, { force: true }),
+          rm(paths.stdoutPath, { force: true }),
+          rm(paths.stderrPath, { force: true }),
+        ]);
+        locked = false;
+      }
+    }
+    if (!locked) {
+      const runner = spawn(
+        process.execPath,
+        [fileURLToPath(import.meta.url), "internal-project-brain-runner", paths.specPath, paths.resultPath],
+        { detached: true, stdio: "ignore", env: { ...process.env, MISSION_AGENT_HOME: root } },
+      );
+      runner.unref();
+    }
+    const deadline = Date.now() + timeoutMs + 10_000;
+    while (!result && Date.now() < deadline) {
+      if (leaseState.lost) await writeFile(paths.cancelPath, "lease_lost\n", { mode: 0o600 });
+      await new Promise((resolveWait) => setTimeout(resolveWait, 250));
+      try {
+        result = await protectedJson(paths.resultPath);
+      } catch {}
+    }
+  }
+  if (!result)
+    throw new Error(
+      "project_brain_reconciliation_required: durable runner has not produced a terminal result",
+    );
+  return result;
+}
+async function internalProjectBrainRunner(specPath, resultPath) {
+  const expected = projectBrainRunnerPaths(basename(specPath).replace(/^project-brain-runner-/, "").replace(/\.spec\.json$/, ""));
+  if (resolve(specPath) !== resolve(expected.specPath) || resolve(resultPath) !== resolve(expected.resultPath))
+    throw new Error("Project Brain runner paths are invalid.");
+  try {
+    await writeFile(expected.lockPath, `${process.pid}\n`, { flag: "wx", mode: 0o600 });
+  } catch (error) {
+    if (error?.code === "EEXIST") return;
+    throw error;
+  }
+  await writeFile(expected.pidPath, `${process.pid}\n`, { mode: 0o600 });
+  await writeFile(expected.stdoutPath, "", { mode: 0o600 });
+  await writeFile(expected.stderrPath, "", { mode: 0o600 });
+  const spec = await protectedJson(expected.specPath);
+  const leaseState = { lost: false };
+  const cancelPoll = setInterval(async () => {
+    try {
+      await stat(expected.cancelPath);
+      leaseState.lost = true;
+    } catch {}
+  }, 100);
+  cancelPoll.unref();
+  const result = await runProjectBrainProcess(
+    String(spec.executable),
+    Array.isArray(spec.args) ? spec.args.map(String) : [],
+    String(spec.cwd),
+    Number(spec.timeoutMs),
+    Number(spec.maxOutputBytes),
+    leaseState,
+    { stdoutPath: expected.stdoutPath, stderrPath: expected.stderrPath },
+  );
+  clearInterval(cancelPoll);
+  const temporary = `${expected.resultPath}.${process.pid}.tmp`;
+  await writeFile(temporary, JSON.stringify(result), { mode: 0o600 });
+  await rename(temporary, expected.resultPath);
+}
+async function executeRemoteProjectBrain(config, assignment) {
+  const request = assignment;
+  let state = {};
+  try {
+    state = await protectedJson(statePath);
+  } catch {}
+  validateRemoteProjectBrainAuthoritySnapshot(config, request, state);
+  if (!validRemoteProjectBrainRequestShape(request))
+    throw new Error("Remote Project Brain request structure is invalid.");
+  const unsigned = { ...request };
+  delete unsigned.assignmentId;
+  delete unsigned.leaseOwner;
+  delete unsigned.leaseToken;
+  delete unsigned.leaseExpiresAt;
+  delete unsigned.requestChecksum;
+  delete unsigned.missionControlSignature;
+  const computedRequestChecksum = sha256(canonicalJson(unsigned));
+  if (!equalChecksum(computedRequestChecksum, request.requestChecksum)) {
+    if (process.env.MISSION_AGENT_DEBUG_REQUEST === "1")
+      await writeFile(join(root, "request-debug.json"), JSON.stringify(unsigned, null, 2), { mode: 0o600 });
+    throw new Error("Remote Project Brain request checksum is invalid.");
+  }
+  if (
+    !equalChecksum(
+      createHmac("sha256", sha256(config.secret)).update(request.requestChecksum).digest("hex"),
+      request.missionControlSignature,
+    )
+  )
+    throw new Error("Remote Project Brain request signature is invalid.");
+  if (
+    request.workspaceId !== config.workspaceId ||
+    request.agentId !== config.agentId ||
+    request.idempotencyKey !== `project-brain:${request.operationId}` ||
+    !projectBrainOperations.includes(request.operation)
+  )
+    throw new Error("Remote Project Brain request identity, expiry, or operation is invalid.");
+  const repository = config.repositories?.[request.repositoryId];
+  if (
+    !repository ||
+    request.repositoryLocator !== `mission-agent://${repository.fingerprint}` ||
+    request.repositoryFingerprint !== repository.fingerprint
+  )
+    throw new Error("Remote Project Brain repository registration does not match.");
+  const cached = state.projectBrainReceipts?.[request.idempotencyKey];
+  if (cached) {
+    if (cached.requestChecksum !== request.requestChecksum)
+      throw new Error("Remote Project Brain idempotency key was reused with different input.");
+    const delivered = await projectBrainMessage(config, assignment, cached.messageType, { response: cached.response });
+    if (!callbackConfirmsTerminal(delivered, cached.messageType))
+      throw new Error("Mission Control did not confirm the cached Project Brain terminal result.");
+    await markProjectBrainReceiptAcknowledged(request.idempotencyKey);
+    await updateState({ activeProjectBrainAssignment: null });
+    return delivered;
+  }
+  const recoveredProcess =
+    state.projectBrainInFlight?.requestId === request.requestId &&
+    state.projectBrainInFlight?.requestChecksum === request.requestChecksum
+      ? state.projectBrainInFlight
+      : undefined;
+  if (Date.parse(request.expiresAt) <= Date.now() && !recoveredProcess)
+    throw new Error("Remote Project Brain request expiry is invalid.");
+  if (!isAbsolute(repository.path)) throw new Error("Remote Project Brain checkout mapping must be absolute.");
+  const configuredPath = resolve(repository.path);
+  const checkout = await realpath(configuredPath);
+  if (checkout !== configuredPath || relative(dirname(checkout), checkout).startsWith(".."))
+    throw new Error("Remote Project Brain checkout mapping is unsafe.");
+  if (exec("git", ["rev-parse", "--show-toplevel"], checkout) !== checkout)
+    throw new Error("Remote Project Brain checkout containment validation failed.");
+  const currentRepository = inspectRepository(checkout);
+  if (
+    currentRepository.fingerprint !== repository.fingerprint ||
+    currentRepository.name !== repository.name ||
+    currentRepository.remoteUrl !== repository.remoteUrl
+  )
+    throw new Error("Remote Project Brain repository identity changed after registration.");
+  const startingSha = exec("git", ["rev-parse", "HEAD"], checkout);
+  let recoveredArtifactCommit = recoveredProcess?.artifactCommit;
+  if (
+    !recoveredArtifactCommit &&
+    recoveredProcess?.versioningIntent &&
+    startingSha === request.startingSha
+  ) {
+    recoveredArtifactCommit = await finishProjectBrainArtifactVersioning(
+      checkout,
+      recoveredProcess.versioningIntent,
+    );
+    await updateState({
+      projectBrainInFlight: {
+        ...recoveredProcess,
+        artifactCommit: recoveredArtifactCommit,
+      },
+    });
+  }
+  if (
+    !recoveredArtifactCommit &&
+    recoveredProcess?.versioningIntent &&
+    startingSha !== request.startingSha
+  ) {
+    const intent = recoveredProcess.versioningIntent;
+    const committedPaths = exec("git", ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"], checkout)
+      .split("\n")
+      .filter(Boolean);
+    if (
+      exec("git", ["rev-parse", "HEAD^"], checkout) !== intent.parentSha ||
+      intent.parentSha !== request.startingSha ||
+      committedPaths.length !== intent.paths.length ||
+      committedPaths.some((path) => !intent.paths.includes(path))
+    )
+      throw new Error("Remote Project Brain artifact commit recovery could not verify the exact transition.");
+    for (const path of intent.paths)
+      if (sha256(await readFile(join(checkout, path))) !== intent.checksums[path])
+        throw new Error("Remote Project Brain artifact commit recovery found changed bytes.");
+    recoveredArtifactCommit = {
+      parentSha: intent.parentSha,
+      commitSha: startingSha,
+      paths: intent.paths,
+      checksums: intent.checksums,
+    };
+  }
+  if (startingSha !== request.startingSha && recoveredArtifactCommit?.commitSha !== startingSha)
+    throw new Error("Remote Project Brain repository HEAD changed.");
+  const authorization = request.authorization ?? {};
+  const policyDecision = request.policyDecision ?? {};
+  const writing =
+    request.operation === "prepare_context"
+      ? request.arguments?.write === true
+      : projectBrainWriteOperations.includes(request.operation);
+  if (request.operation === "prepare_context" && request.arguments?.preview === true && request.arguments?.write === true)
+    throw new Error("Remote Project Brain context preview cannot also request a write.");
+  const approvalFingerprint = sha256(
+    canonicalJson({
+      repositoryId: request.repositoryId,
+      missionId: request.missionId,
+      executionId: request.executionId,
+      agentId: request.agentId,
+      operation: request.operation,
+      arguments: request.arguments ?? {},
+      startingSha: request.startingSha,
+      locationMode: "mission_agent",
+      expectedWriteScope: request.requestedArtifactTypes,
+      timeoutMs: Number(request.timeoutMs),
+      maxOutputBytes: Number(request.maxOutputBytes),
+      requiredProjectBrainVersion: request.requiredProjectBrainVersion,
+      requiredContractVersion: request.requiredContractVersion,
+      artifactVersioning: request.artifactVersioning,
+    }),
+  );
+  if (
+    authorization.allowedAgent !== true ||
+    policyDecision.outcome !== "allowed" ||
+    policyDecision.action !== (writing ? "project_brain.repository_write" : "project_brain.read") ||
+    authorization.repositoryReadAllowed !== true ||
+    authorization.resourcePermission !== true ||
+    authorization.requiredPermission !== (writing ? "write" : "read") ||
+    (writing &&
+      (authorization.repositoryWriteAllowed !== true ||
+        authorization.repositoryCommitAllowed !== true ||
+        request.artifactVersioning !== true ||
+        repository.projectBrainWriteAllowed !== true ||
+        !request.approvalId ||
+        request.approvalFingerprint !== approvalFingerprint))
+  )
+    throw new Error("Remote Project Brain authorization snapshot is not permitted.");
+  if (
+    writing &&
+    !recoveredProcess &&
+    authorization.approvalExpiresAt &&
+    Date.parse(authorization.approvalExpiresAt) <= Date.now()
+  )
+    throw new Error("Remote Project Brain approval expired.");
+  const statusBefore =
+    recoveredProcess?.statusBefore ?? exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], checkout);
+  const priorArtifacts = await verifiedPriorProjectBrainArtifacts(
+    state,
+    checkout,
+    statusBefore,
+    request.repositoryId,
+    request.repositoryLocator,
+  );
+  const caps = projectBrainCapabilities(config);
+  if (
+    !recoveredProcess &&
+    (!caps.installed ||
+      !caps.runtimeReady ||
+      caps.coreVersion !== request.requiredProjectBrainVersion ||
+      !caps.contractVersions.includes(request.requiredContractVersion) ||
+      request.requiredSchemaVersions.some((version) => !caps.schemaVersions.includes(version)) ||
+      !caps.operations.includes(request.operation))
+  )
+    throw new Error("Remote Project Brain runtime capabilities are incompatible.");
+  if ((state.projectBrainNonces ?? []).includes(request.nonce) && !recoveredProcess)
+    throw new Error("Remote Project Brain request nonce was replayed.");
+  const runnerPaths = recoveredProcess?.runner ?? projectBrainRunnerPaths(request.requestId);
+  let durableTerminalResult;
+  if (recoveredProcess)
+    try {
+      durableTerminalResult = await protectedJson(runnerPaths.resultPath);
+    } catch {}
+  if (!durableTerminalResult) {
+    let liveAuthorization;
+    try {
+      liveAuthorization = await signedRequest(
+        config,
+        `/api/agent-protocol/v1/project-brain/${assignment.assignmentId}/reauthorize`,
+        "AgentProjectBrainReauthorizationRequested",
+        {
+          leaseOwner: assignment.leaseOwner,
+          leaseToken: assignment.leaseToken,
+          requestChecksum: request.requestChecksum,
+        },
+      );
+    } catch (error) {
+      if (recoveredProcess?.runner) {
+        await writeFile(runnerPaths.cancelPath, "authority_revoked\n", { mode: 0o600 });
+        throw new Error(
+          `project_brain_reconciliation_required: live authority was revoked while durable work remained (${error.message})`,
+        );
+      }
+      throw error;
+    }
+    if (
+      liveAuthorization?.authorized !== true ||
+      liveAuthorization.requestFingerprint !== approvalFingerprint
+    ) {
+      if (recoveredProcess?.runner) {
+        await writeFile(runnerPaths.cancelPath, "authority_revoked\n", { mode: 0o600 });
+        throw new Error(
+          "project_brain_reconciliation_required: live authority was revoked while durable work remained",
+        );
+      }
+      throw new Error("Remote Project Brain live reauthorization did not match the signed request.");
+    }
+  }
+  if (!recoveredProcess)
+    await updateState({
+      projectBrainNonces: [...(state.projectBrainNonces ?? []).slice(-999), request.nonce],
+      activeProjectBrainAssignment: assignment,
+      projectBrainInFlight: {
+        requestId: request.requestId,
+        requestChecksum: request.requestChecksum,
+        startedAt: new Date().toISOString(),
+        startedEpochMs: Date.now(),
+        statusBefore: exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], checkout),
+        result: null,
+      },
+    });
+  await projectBrainMessage(config, assignment, "RemoteProjectBrainOperationAccepted");
+  await projectBrainMessage(config, assignment, "RemoteProjectBrainOperationStarted");
+  const leaseState = { lost: false };
+  const leaseTimer = setInterval(
+    () =>
+      void signedRequest(
+        config,
+        `/api/agent-protocol/v1/project-brain/${assignment.assignmentId}/lease`,
+        "AgentProjectBrainLeaseRenewed",
+        { leaseOwner: assignment.leaseOwner, leaseToken: assignment.leaseToken },
+      ).catch(() => {
+        leaseState.lost = true;
+      }),
+    30_000,
+  );
+  leaseTimer.unref();
+  const startedAt = recoveredProcess?.startedAt ?? new Date().toISOString();
+  const started = recoveredProcess?.startedEpochMs ?? Date.now();
+  let result = recoveredProcess?.result ?? durableTerminalResult;
+  if (!result)
+    try {
+      result = await runDurableProjectBrainProcess(
+        request.requestId,
+        config.projectBrainExecutable,
+        [
+          "consumer",
+          "--operation",
+          request.operation,
+          "--repo",
+          checkout,
+          "--contract-version",
+          request.requiredContractVersion,
+          "--request-json",
+          JSON.stringify(request.arguments ?? {}),
+        ],
+        checkout,
+        Math.min(Number(request.timeoutMs), 3_600_000),
+        Math.min(Number(request.maxOutputBytes), caps.maxResultBytes),
+        leaseState,
+      );
+      await updateState({
+        projectBrainInFlight: {
+          requestId: request.requestId,
+          requestChecksum: request.requestChecksum,
+          startedAt,
+          startedEpochMs: started,
+          statusBefore,
+          runner: recoveredProcess?.runner ?? projectBrainRunnerPaths(request.requestId),
+          result,
+        },
+      });
+    } finally {
+      clearInterval(leaseTimer);
+    }
+  else clearInterval(leaseTimer);
+  if (result.timedOut) throw new Error("Remote Project Brain operation timed out.");
+  if (result.leaseLost) throw new Error("Remote Project Brain lease was lost during execution.");
+  if (result.exceeded) throw new Error("Remote Project Brain operation exceeded its output bound.");
+  let envelope;
+  try {
+    envelope = JSON.parse(result.stdout);
+  } catch {
+    throw new Error("Remote Project Brain returned invalid JSON.");
+  }
+  if (
+    !envelope ||
+    envelope.operation !== request.operation ||
+    envelope.contract_version !== request.requiredContractVersion ||
+    !["succeeded", "failed"].includes(envelope.status) ||
+    !Array.isArray(envelope.artifacts) ||
+    !Array.isArray(envelope.warnings) ||
+    !Array.isArray(envelope.blockers) ||
+    typeof envelope.repository_files_changed !== "boolean"
+  )
+    throw new Error("Remote Project Brain returned an invalid consumer envelope.");
+  let endingSha = exec("git", ["rev-parse", "HEAD"], checkout);
+  if (endingSha !== request.startingSha && recoveredArtifactCommit?.commitSha !== endingSha)
+    throw new Error("Remote Project Brain changed repository HEAD.");
+  if (
+    !envelope.repository ||
+    (await realpath(String(envelope.repository.checkout_path ?? ""))) !== checkout ||
+    envelope.repository.head_sha !== request.startingSha ||
+    envelope.repository.ending_head_sha !== request.startingSha
+  )
+    throw new Error("Remote Project Brain repository binding is invalid.");
+  const statusAfter = exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], checkout);
+  if (!writing && statusAfter !== statusBefore)
+    throw new Error("A read-only Project Brain operation changed repository files.");
+  if (writing) {
+    const artifactPaths = new Set(envelope.artifacts.map((artifact) => String(artifact.path ?? "")));
+    const changedPaths = statusAfter
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => line.slice(3));
+    if (changedPaths.some((changedPath) => !artifactPaths.has(changedPath) && !priorArtifacts.has(changedPath)))
+      throw new Error("Project Brain changed files outside the approved artifact scope.");
+    for (const [path, expected] of priorArtifacts)
+      if (
+        changedPaths.includes(path) &&
+        !artifactPaths.has(path) &&
+        sha256(await readFile(join(checkout, path))) !== expected
+      )
+        throw new Error("Project Brain changed a prior verified artifact outside the current operation scope.");
+  }
+  const artifacts = [];
+  let artifactBytes = 0;
+  for (const artifact of envelope.artifacts) {
+    const verified = await verifiedRemoteProjectBrainArtifact(
+      checkout,
+      artifact,
+      projectBrainArtifactKinds[request.operation] ?? [],
+      request.requiredSchemaVersions,
+      artifactBytes,
+      Number(request.maxOutputBytes),
+    );
+    const { body } = verified;
+    artifactBytes = verified.totalBytes;
+    artifacts.push({
+      ...artifact,
+      size: body.byteLength,
+      transfer_mode: "inline_base64",
+      content_base64: body.toString("base64"),
+    });
+  }
+  const aggregateLimit = Math.min(Number(request.maxOutputBytes), Number(caps.maxResultBytes), 10 * 1024 * 1024);
+  if (
+    Buffer.byteLength(
+      canonicalJson({
+        envelope: { ...envelope, artifacts },
+        process: {
+          exitCode: result.exitCode,
+          stdoutSha256: sha256(result.stdout),
+          stderrSha256: sha256(result.stderr),
+        },
+        artifactCommitBudget: "x".repeat(4_096),
+      }),
+    ) > aggregateLimit
+  )
+    throw new Error("Remote Project Brain serialized response exceeded the negotiated aggregate result bound.");
+  let artifactCommit = recoveredArtifactCommit;
+  if (
+    result.exitCode === 0 &&
+    envelope.status === "succeeded" &&
+    writing &&
+    request.artifactVersioning === true &&
+    artifacts.length &&
+    !artifactCommit
+  ) {
+    artifactCommit = await versionAcknowledgedProjectBrainArtifacts(config, request.repositoryId, checkout, artifacts);
+    if (artifactCommit.parentSha !== request.startingSha)
+      throw new Error("Project Brain artifact commit parent did not match the approved starting SHA.");
+    endingSha = artifactCommit.commitSha;
+  }
+  if (artifactCommit && recoveredProcess) await registerRepository(config, checkout).catch(() => undefined);
+  for (const artifact of artifacts) artifact.repository_sha = endingSha;
+  envelope = {
+    ...envelope,
+    repository: {
+      id: request.repositoryId,
+      checkout_path: request.repositoryLocator,
+      head_sha: request.startingSha,
+      ending_head_sha: endingSha,
+    },
+    artifacts,
+  };
+  const processDurationMs = Math.max(
+    0,
+    Number(result.completedEpochMs ?? Date.now()) - Number(result.startedEpochMs ?? started),
+  );
+  const responseWithoutChecksum = {
+    requestId: request.requestId,
+    idempotencyKey: request.idempotencyKey,
+    requestChecksum: request.requestChecksum,
+    startedAt,
+    completedAt: new Date().toISOString(),
+    startingSha: request.startingSha,
+    endingSha,
+    projectBrainVersion: caps.coreVersion || request.requiredProjectBrainVersion,
+    schemaVersions: caps.schemaVersions.length ? caps.schemaVersions : request.requiredSchemaVersions,
+    durationMs: processDurationMs,
+    process: {
+      exitCode: result.exitCode,
+      stdoutSha256: sha256(result.stdout),
+      stderrSha256: sha256(result.stderr),
+    },
+    ...(artifactCommit ? { artifactCommit } : {}),
+    envelope,
+  };
+  if (
+    Buffer.byteLength(canonicalJson(responseWithoutChecksum)) >
+    aggregateLimit
+  )
+    throw new Error("Remote Project Brain serialized response exceeded the negotiated aggregate result bound.");
+  const response = { ...responseWithoutChecksum, responseChecksum: sha256(canonicalJson(responseWithoutChecksum)) };
+  const messageType =
+    result.exitCode === 0 && envelope.status === "succeeded"
+      ? "RemoteProjectBrainOperationSucceeded"
+      : "RemoteProjectBrainOperationFailed";
+  await updateState({
+    activeProjectBrainAssignment: assignment,
+    projectBrainInFlight: null,
+    projectBrainReceipts: {
+      ...(state.projectBrainReceipts ?? {}),
+      [request.idempotencyKey]: {
+        requestChecksum: request.requestChecksum,
+        messageType,
+        response,
+        centralAcknowledged: false,
+      },
+    },
+  });
+  await removeProjectBrainRunnerEvidence(
+    recoveredProcess?.runner ?? projectBrainRunnerPaths(request.requestId),
+  );
+  const delivered = await projectBrainMessage(config, assignment, messageType, { response });
+  if (!callbackConfirmsTerminal(delivered, messageType))
+    throw new Error("Mission Control did not confirm the Project Brain terminal result.");
+  await markProjectBrainReceiptAcknowledged(request.idempotencyKey);
+  await updateState({ activeProjectBrainAssignment: null });
+  return delivered;
 }
 async function publishForReview(config, publication) {
   const repository = config.repositories?.[publication.repositoryId];
@@ -1056,11 +2228,47 @@ async function run() {
   );
   heartbeatTimer.unref();
   let recovered;
+  let recoveredProjectBrain;
   try {
     const state = await protectedJson(statePath);
     recovered =
       state.activeAssignment && typeof state.activeAssignment === "object" ? state.activeAssignment : undefined;
+    recoveredProjectBrain =
+      state.activeProjectBrainAssignment && typeof state.activeProjectBrainAssignment === "object"
+        ? state.activeProjectBrainAssignment
+        : undefined;
   } catch {}
+  if (recoveredProjectBrain) {
+    try {
+      await signedRequest(
+        config,
+        `/api/agent-protocol/v1/project-brain/${recoveredProjectBrain.assignmentId}/lease`,
+        "AgentProjectBrainLeaseRenewed",
+        {
+          leaseOwner: recoveredProjectBrain.leaseOwner,
+          leaseToken: recoveredProjectBrain.leaseToken,
+        },
+      );
+      await executeRemoteProjectBrain(config, recoveredProjectBrain);
+      if (process.argv.includes("--once")) return;
+    } catch (error) {
+      let hasCachedResult = false;
+      try {
+        const latestState = await protectedJson(statePath);
+        hasCachedResult = Boolean(latestState.projectBrainReceipts?.[recoveredProjectBrain.idempotencyKey]);
+      } catch {}
+      const reconciliationRequired = String(error?.message ?? "").startsWith(
+        "project_brain_reconciliation_required:",
+      );
+      await updateState({
+        activeProjectBrainAssignment: reconciliationRequired ? recoveredProjectBrain : null,
+        stage: "project_brain_recovering",
+        lastError: hasCachedResult
+          ? `Cached Project Brain result is waiting for a fresh assignment lease: ${error.message}`
+          : `Prior Project Brain lease could not be recovered: ${error.message}`,
+      });
+    }
+  }
   if (recovered) {
     try {
       const renewed = await assignmentAction(config, recovered, "lease", "AgentAssignmentLeaseRenewed");
@@ -1081,6 +2289,97 @@ async function run() {
       // the service is running. Refresh protected configuration before pulling
       // work so a newly registered repository is immediately assignable.
       config = await loadConfig();
+      let pendingProjectBrain;
+      try {
+        const latestState = await protectedJson(statePath);
+        pendingProjectBrain = latestState.activeProjectBrainAssignment;
+      } catch {}
+      if (pendingProjectBrain && typeof pendingProjectBrain === "object") {
+        await new Promise((resolveWait) => setTimeout(resolveWait, 1_000));
+        try {
+          await executeRemoteProjectBrain(config, pendingProjectBrain);
+        } catch (error) {
+          let hasCachedResult = false;
+          try {
+            const latestState = await protectedJson(statePath);
+            hasCachedResult = Boolean(
+              latestState.projectBrainReceipts?.[pendingProjectBrain.idempotencyKey],
+            );
+          } catch {}
+          if (!hasCachedResult) throw error;
+          await updateState({
+            activeProjectBrainAssignment: null,
+            stage: "project_brain_awaiting_fresh_lease",
+            lastError: `Cached Project Brain result requires a fresh assignment lease: ${error.message}`,
+          });
+        }
+        if (process.argv.includes("--once")) return;
+        continue;
+      }
+      const projectBrainResponse = await signedRequest(
+        config,
+        "/api/agent-protocol/v1/project-brain/pull",
+        "AgentProjectBrainPullRequested",
+        { leaseOwner: config.leaseOwner },
+      );
+      if (projectBrainResponse?.assignment) {
+        try {
+          await executeRemoteProjectBrain(config, projectBrainResponse.assignment);
+        } catch (error) {
+          let cachedTerminal = false;
+          let cachedReceipt;
+          try {
+            const latestState = await protectedJson(statePath);
+            cachedReceipt = latestState.projectBrainReceipts?.[projectBrainResponse.assignment.idempotencyKey];
+            cachedTerminal = Boolean(cachedReceipt);
+          } catch {}
+          if (cachedTerminal) {
+            await updateState({
+              stage: "project_brain_callback_retry",
+              lastError: `Project Brain result is cached for retry: ${error.message}`,
+            });
+            await projectBrainMessage(
+              config,
+              projectBrainResponse.assignment,
+              cachedReceipt.messageType,
+              { response: cachedReceipt.response },
+            )
+              .then(async (acknowledgement) => {
+                if (!callbackConfirmsTerminal(acknowledgement, cachedReceipt.messageType))
+                  throw new Error("Mission Control terminal result did not match the cached callback.");
+                await markProjectBrainReceiptAcknowledged(projectBrainResponse.assignment.idempotencyKey);
+                await updateState({ activeProjectBrainAssignment: null, stage: "project_brain_completed" });
+              })
+              .catch(() => undefined);
+            if (process.argv.includes("--once")) return;
+            continue;
+          }
+          if (String(error?.message ?? "").startsWith("project_brain_reconciliation_required:")) {
+            await updateState({
+              activeProjectBrainAssignment: projectBrainResponse.assignment,
+              stage: "project_brain_recovering",
+              lastError: error.message,
+            });
+            if (process.argv.includes("--once")) return;
+            continue;
+          }
+          const denied = /signature|identity|expiry|operation|registration|mapping|authorization|approval|capabilit/i.test(
+            error.message,
+          );
+          await projectBrainMessage(
+            config,
+            projectBrainResponse.assignment,
+            denied ? "RemoteProjectBrainOperationDenied" : "RemoteProjectBrainOperationFailed",
+            { error: error.message },
+          ).catch(() => undefined);
+          await updateState({
+            activeProjectBrainAssignment: null,
+            stage: "project_brain_failed",
+            lastError: error.message,
+          });
+        }
+        if (process.argv.includes("--once")) return;
+      }
       const publicationResponse = await signedRequest(
         config,
         "/api/agent-protocol/v1/publications/pull",
@@ -1207,6 +2506,26 @@ async function repositoryRemove(id) {
   await persistConfig(config);
   console.log(`Repository association removed.\n\nRepository: ${id}\nAgent: ${config.agentName}`);
 }
+async function configureProjectBrain(executable) {
+  if (!executable || !isAbsolute(executable))
+    throw new Error("Provide the explicit absolute Project Brain executable path.");
+  const resolved = await realpath(executable);
+  const config = await loadConfig();
+  config.projectBrainExecutable = resolved;
+  const repositoryId = option("--allow-write");
+  if (repositoryId) {
+    if (!config.repositories?.[repositoryId])
+      throw new Error("The write-enabled repository must already be registered on this Mission Agent.");
+    config.repositories[repositoryId].projectBrainWriteAllowed = true;
+  }
+  await persistConfig(config);
+  const capabilities = projectBrainCapabilities(config);
+  if (!capabilities.runtimeReady)
+    throw new Error("The configured Project Brain executable did not return valid capabilities.");
+  console.log(
+    `Project Brain configured.\n\nExecutable: ${resolved}\nCore version: ${capabilities.coreVersion}\nContract versions: ${capabilities.contractVersions.join(", ")}\nRepository writes: ${repositoryId ?? "disabled"}`,
+  );
+}
 async function update() {
   const config = await loadConfig();
   const response = await fetch(`${config.missionControlUrl}/mission-agent-latest.json`, {
@@ -1235,8 +2554,23 @@ async function update() {
   console.log(`Mission Agent updated to ${manifest.version} and the background service was restarted.`);
 }
 
+export {
+  executeRemoteProjectBrain,
+  finishProjectBrainArtifactVersioning,
+  runDurableProjectBrainProcess,
+  runProjectBrainProcess,
+  updateState,
+  validateRemoteProjectBrainAuthoritySnapshot,
+  verifiedPriorProjectBrainArtifacts,
+  verifiedRemoteProjectBrainArtifact,
+  verifiedProjectBrainContext,
+};
+
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)
 try {
-  if (command === "connect") await connect(process.argv[3]);
+  if (command === "internal-project-brain-runner")
+    await internalProjectBrainRunner(process.argv[3], process.argv[4]);
+  else if (command === "connect") await connect(process.argv[3]);
   else if (command === "run") await run();
   else if (command === "status") await status();
   else if (command === "doctor") await doctor();
@@ -1245,6 +2579,8 @@ try {
   else if (command === "repository" && process.argv[3] === "add") await repositoryAdd(process.argv[4]);
   else if (command === "repository" && process.argv[3] === "remove") await repositoryRemove(process.argv[4]);
   else if (command === "repository" && process.argv[3] === "inspect") await repositoryInspect(process.argv[4]);
+  else if (command === "project-brain" && process.argv[3] === "configure")
+    await configureProjectBrain(process.argv[4]);
   else if (command === "install") await installCurrentVersion();
   else if (command === "update") await update();
   else if (command === "service" && process.argv[3] === "install") {
@@ -1252,7 +2588,7 @@ try {
     console.log("Mission Agent service installed and started.");
   } else
     throw new Error(
-      "Commands: connect, install, run, status, doctor, update, logout, repository list|add|remove|inspect",
+      "Commands: connect, install, run, status, doctor, update, logout, repository list|add|remove|inspect, project-brain configure",
     );
 } catch (error) {
   console.error(

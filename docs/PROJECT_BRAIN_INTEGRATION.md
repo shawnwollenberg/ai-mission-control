@@ -15,6 +15,9 @@ log.
   read-only approval inbox.
 - The adapter invokes a configured executable with a fixed argument allowlist, `shell: false`, a registered
   repository working directory, bounded output, a timeout, and a minimal environment.
+- A `mission-agent://` repository is never resolved by the server. Its owning Mission Agent maps the opaque
+  repository ID and fingerprint to an explicitly registered local checkout, reauthorizes with Mission Control
+  immediately before execution, and invokes the same fixed consumer contract locally.
 - Markdown returned by Project Brain is rendered as text. It is never injected as trusted HTML.
 
 ## Event and projection model
@@ -46,6 +49,11 @@ transitions.
 Missing installation, incompatible contract or schema, invalid repository state, dirty-worktree write refusal,
 timeout, output truncation, malformed JSON, and non-success exit classifications are distinct typed failures.
 They retain warnings, blockers, and required actions from the consumer envelope where available.
+
+Remote requests additionally fail closed for stale capabilities, changed registration or HEAD, revoked agent or
+resource authority, approval mismatch or expiry, invalid signatures, request expiry, nonce replay, response or
+artifact checksum mismatch, and context-consumption mismatch. A durable runner and local receipt cache preserve a
+completed remote result across Mission Agent restart or callback loss.
 
 ## Deliberate exclusions
 
@@ -124,7 +132,9 @@ remain in server-side diagnostics and structured adapter results.
 
 ## Known limitations
 
-The first release supports one repository-local Project Brain installation contract. It does not provide background
-synchronization, repository initialization, promotion actions, knowledge editing, semantic retrieval, network
-service discovery, or cross-repository knowledge. Project Brain invocations remain synchronous and bounded; a
-future phase should move them behind the durable worker/outbox boundary before high-volume production use.
+The integration supports one repository-local Project Brain installation contract and inline bounded artifact
+transport. It does not provide background knowledge synchronization, promotion actions, knowledge editing,
+semantic retrieval, network service discovery, or cross-repository knowledge. Remote execution requires a
+continuously registered pull-mode Mission Agent and an explicitly configured absolute Project Brain executable.
+Repository-local artifacts remain authoritative; Mission Control's copies are immutable execution and display
+evidence.

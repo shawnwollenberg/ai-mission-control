@@ -13,7 +13,23 @@ test("read-only and repository-writing operations have explicit governance", () 
   assert.equal(projectBrainOperationPolicy("record_closure").requiredPermission, "write");
   assert.equal(projectBrainOperationPolicy("record_closure").approvalType, "project_brain_repository_write");
   assert.equal(projectBrainOperationPolicy("prepare_context", { preview: true }).requiredPermission, "read");
-  assert.equal(projectBrainOperationPolicy("prepare_context", { preview: false }).requiredPermission, "write");
+  assert.equal(
+    projectBrainOperationPolicy("prepare_context", { preview: false, write: true }).requiredPermission,
+    "write",
+  );
+  assert.throws(
+    () =>
+      validateProjectBrainRequest({
+        operation: "prepare_context",
+        repositoryId: "repository",
+        locationMode: "mission_agent",
+        startingSha: "a".repeat(40),
+        timeoutMs: 10,
+        maxOutputBytes: 100,
+        arguments: { preview: true, write: true },
+      }),
+    /cannot also request/,
+  );
 });
 
 test("request fingerprint is stable and binds all changed arguments", () => {

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("Mission Agent publication is exact, non-force, evidence-bound, and separate from merge", async () => {
-  const source = await readFile("public/mission-agent-0.6.6.mjs", "utf8");
+  const source = await readFile("public/mission-agent-0.6.7.mjs", "utf8");
   assert.match(source, /The local branch or commit changed after Publish for Review was approved/);
   assert.match(source, /sha256\(patch\.stdout\)/);
   assert.match(source, /Force push is never permitted/);
@@ -16,7 +16,7 @@ test("Mission Agent publication is exact, non-force, evidence-bound, and separat
 });
 
 test("publication evidence includes new files and reports local preflight failures", async () => {
-  const source = await readFile("public/mission-agent-0.6.6.mjs", "utf8");
+  const source = await readFile("public/mission-agent-0.6.7.mjs", "utf8");
   const endpoint = await readFile("app/api/agent-protocol/v1/publications/fail/route.ts", "utf8");
   const inbox = await readFile("app/approvals/inbox.tsx", "utf8");
   const styles = await readFile("app/globals.css", "utf8");

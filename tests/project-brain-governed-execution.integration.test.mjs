@@ -102,7 +102,7 @@ test("repository write without exact approval is durably denied and never enqueu
   assert.equal(outbox.rows[0].count, 0);
 });
 
-test("remote repository URI never reaches local filesystem execution", async () => {
+test("remote repository without a compatible agent stays durably fail-closed", async () => {
   const requested = await requestProjectBrainOperation({
     actor,
     request: {
@@ -116,6 +116,7 @@ test("remote repository URI never reaches local filesystem execution", async () 
       workspaceId,
       operationId: requested.operationId,
       workerId: "remote-routing-test",
+      finalAttempt: true,
     }),
   );
   const projection = (
@@ -124,6 +125,6 @@ test("remote repository URI never reaches local filesystem execution", async () 
       [workspaceId, requested.operationId],
     )
   ).rows[0];
-  assert.equal(projection.status, "failed");
-  assert.equal(projection.failure_cause, "remote_project_brain_transport_unavailable");
+  assert.equal(projection.status, "denied");
+  assert.match(projection.failure_cause, /remote_agent_required/);
 });

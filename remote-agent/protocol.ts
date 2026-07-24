@@ -28,6 +28,15 @@ export const inboundMessageTypes = [
   "AgentPublicationPullRequested",
   "AgentPublicationPushCompleted",
   "AgentPublicationFailed",
+  "AgentProjectBrainPullRequested",
+  "AgentProjectBrainAssignmentAcknowledged",
+  "AgentProjectBrainLeaseRenewed",
+  "AgentProjectBrainReauthorizationRequested",
+  "RemoteProjectBrainOperationAccepted",
+  "RemoteProjectBrainOperationStarted",
+  "RemoteProjectBrainOperationDenied",
+  "RemoteProjectBrainOperationSucceeded",
+  "RemoteProjectBrainOperationFailed",
 ] as const;
 export const outboundMessageTypes = [
   "ExecutionRequested",
@@ -38,6 +47,7 @@ export const outboundMessageTypes = [
   "ApprovalExpired",
   "ApprovalCancelled",
   "AgentConfigurationChanged",
+  "RemoteProjectBrainOperationRequested",
 ] as const;
 export type InboundMessageType = (typeof inboundMessageTypes)[number];
 export type OutboundMessageType = (typeof outboundMessageTypes)[number];

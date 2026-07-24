@@ -22,6 +22,7 @@ export class ProjectBrainAdapterError extends Error {
 
 const operations = new Set<ProjectBrainOperation>([
   "detect_repository",
+  "initialize_repository",
   "validate_repository",
   "get_summary",
   "prepare_context",

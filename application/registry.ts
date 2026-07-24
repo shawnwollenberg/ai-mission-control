@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NotFoundError, ValidationFailedError } from "@/lib/application-errors";
 import { getDatabasePool } from "@/lib/database";
-import { grantAgentResource } from "@/application/agent-eligibility";
 
 export type RegistryActor = { workspaceId: string; userId: string; role: "owner" | "member" };
 type DispatchPolicyRow = {
@@ -256,8 +255,9 @@ export async function registerMissionAgentRepository(input: {
       allowed_branch_prefixes,allowed_remotes,provider_type,location_mode,repository_fingerprint,observed_remote_url,observed_commit)
      VALUES($1,$2,$3,$4,$5,$6,true,false,false,$11,false,false,'[]',$11,$7,$12,'["origin"]',$13,'mission_agent',$8,$9,$10)
      ON CONFLICT(workspace_id,repository_fingerprint) WHERE repository_fingerprint IS NOT NULL AND disabled_at IS NULL
-     DO UPDATE SET name=EXCLUDED.name,default_branch=EXCLUDED.default_branch,allowed_agent_ids=EXCLUDED.allowed_agent_ids,
+     DO UPDATE SET name=EXCLUDED.name,default_branch=EXCLUDED.default_branch,
        observed_remote_url=EXCLUDED.observed_remote_url,observed_commit=EXCLUDED.observed_commit,updated_at=now()
+     WHERE repositories.allowed_agent_ids @> $6::jsonb
      RETURNING repository_id,name,default_branch,repository_fingerprint,observed_commit`,
     [
       input.workspaceId,
@@ -276,13 +276,14 @@ export async function registerMissionAgentRepository(input: {
     ],
   );
   const repository = result.rows[0];
-  await grantAgentResource({
-    workspaceId: input.workspaceId,
-    agentId: input.agentId,
-    resourceType: "repository",
-    resourceId: repository.repository_id,
-    permissions: ["read"],
-  });
+  if (!repository) throw new ValidationFailedError("Repository is already associated with another Mission Agent");
+  await getDatabasePool().query(
+    `INSERT INTO agent_resource_permissions(
+       workspace_id,agent_id,resource_type,resource_id,permissions
+     ) VALUES($1,$2,'repository',$3,'["read"]')
+     ON CONFLICT(workspace_id,agent_id,resource_type,resource_id) DO NOTHING`,
+    [input.workspaceId, input.agentId, repository.repository_id],
+  );
   return repository;
 }
 export async function getDispatchPolicy(workspaceId: string, agentId: string, repositoryId: string) {

@@ -35,6 +35,7 @@ const write = (artifacts: string[]): ProjectBrainOperationPolicy => ({
 
 export const projectBrainOperationPolicies: Record<ProjectBrainOperation, ProjectBrainOperationPolicy> = {
   detect_repository: read(),
+  initialize_repository: write(["project_brain_initialization"]),
   validate_repository: read(),
   get_summary: read(),
   prepare_context: read(["project_brain_context_preview"]),
@@ -52,7 +53,7 @@ export function projectBrainOperationPolicy(
   operation: ProjectBrainOperation,
   args: Record<string, unknown> = {},
 ): ProjectBrainOperationPolicy {
-  if (operation === "prepare_context" && args.preview !== true) return write(["project_brain_context_pack"]);
+  if (operation === "prepare_context" && args.write === true) return write(["project_brain_context_pack"]);
   return projectBrainOperationPolicies[operation];
 }
 
@@ -102,6 +103,8 @@ export function validateProjectBrainRequest(input: {
   arguments?: Record<string, unknown>;
 }) {
   const policy = projectBrainOperationPolicy(input.operation, input.arguments);
+  if (input.operation === "prepare_context" && input.arguments?.preview === true && input.arguments?.write === true)
+    throw new Error("Project Brain context preview cannot also request a repository write");
   if (!policy) throw new Error("Project Brain operation is not allowlisted");
   if (!policy.allowedLocationModes.includes(input.locationMode))
     throw new Error("Project Brain operation is unsupported for this repository location");

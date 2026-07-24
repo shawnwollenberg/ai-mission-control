@@ -2,6 +2,7 @@ export const projectBrainContractVersion = "1.0";
 
 export type ProjectBrainOperation =
   | "detect_repository"
+  | "initialize_repository"
   | "validate_repository"
   | "get_summary"
   | "prepare_context"
