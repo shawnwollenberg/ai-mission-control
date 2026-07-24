@@ -52,9 +52,42 @@ function parseObject(output: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function envelope<T>(value: Record<string, unknown>): ProjectBrainEnvelope<T> {
-  const required = ["contract_version", "operation", "status", "artifacts", "warnings", "blockers", "required_actions"];
-  if (required.some((key) => !(key in value)) || !Array.isArray(value.artifacts))
+function envelope<T>(value: Record<string, unknown>, expectedOperation: ProjectBrainOperation): ProjectBrainEnvelope<T> {
+  const stringArray = (candidate: unknown) =>
+    Array.isArray(candidate) && candidate.every((item) => typeof item === "string");
+  const repository = value.repository;
+  const repositoryValid =
+    repository === null ||
+    (typeof repository === "object" &&
+      !Array.isArray(repository) &&
+      typeof (repository as Record<string, unknown>).id === "string" &&
+      typeof (repository as Record<string, unknown>).checkout_path === "string" &&
+      typeof (repository as Record<string, unknown>).head_sha === "string");
+  const artifactsValid =
+    Array.isArray(value.artifacts) &&
+    value.artifacts.every(
+      (artifact) =>
+        artifact &&
+        typeof artifact === "object" &&
+        typeof (artifact as Record<string, unknown>).kind === "string" &&
+        typeof (artifact as Record<string, unknown>).path === "string" &&
+        typeof (artifact as Record<string, unknown>).sha256 === "string" &&
+        typeof (artifact as Record<string, unknown>).schema_version === "string",
+    );
+  if (
+    value.contract_version !== projectBrainContractVersion ||
+    value.operation !== expectedOperation ||
+    !["succeeded", "failed"].includes(String(value.status)) ||
+    !repositoryValid ||
+    !artifactsValid ||
+    !stringArray(value.warnings) ||
+    !stringArray(value.blockers) ||
+    !stringArray(value.required_actions) ||
+    typeof value.human_approval_required !== "boolean" ||
+    typeof value.repository_files_changed !== "boolean" ||
+    typeof value.exit_classification !== "string" ||
+    !("data" in value)
+  )
     throw new ProjectBrainAdapterError("Project Brain returned an invalid consumer envelope", "invalid_response");
   return value as ProjectBrainEnvelope<T>;
 }
@@ -137,7 +170,7 @@ export class ProjectBrainClient {
       ],
       input.repositoryPath,
     );
-    const response = envelope<T>(parsed);
+    const response = envelope<T>(parsed, input.operation);
     if (response.contract_version !== projectBrainContractVersion)
       throw new ProjectBrainAdapterError("Project Brain returned an incompatible contract version", "incompatible_contract", response);
     const endingSha = await this.head(input.repositoryPath);

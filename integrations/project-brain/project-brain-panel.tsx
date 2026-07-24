@@ -3,6 +3,9 @@ import type { ProjectBrainEnvelope } from "./types";
 export function ProjectBrainPanel(props: {
   status?: ProjectBrainEnvelope<Record<string, unknown>>;
   summary?: ProjectBrainEnvelope<Record<string, unknown>>;
+  health?: ProjectBrainEnvelope<Record<string, unknown>>;
+  inbox?: { proposals: unknown[]; evaluations: unknown[]; promotionAvailable: false };
+  projectedStatus?: string;
   context?: ProjectBrainEnvelope<Record<string, unknown>>;
   error?: string;
 }) {
@@ -13,10 +16,16 @@ export function ProjectBrainPanel(props: {
           <p className="section-label">Repository knowledge</p>
           <h2>Project Brain</h2>
         </div>
-        <span>{props.status?.status ?? "not connected"}</span>
+        <span>{props.projectedStatus ?? props.status?.status ?? "not connected"}</span>
       </div>
       {props.error ? <p role="alert">{props.error}</p> : null}
       {props.summary ? <pre>{JSON.stringify(props.summary.data, null, 2)}</pre> : <p>No summary loaded.</p>}
+      {props.health ? (
+        <div>
+          <h3>Knowledge health</h3>
+          <pre>{JSON.stringify(props.health.data, null, 2)}</pre>
+        </div>
+      ) : null}
       {props.context ? (
         <div>
           <h3>Context evidence</h3>
@@ -24,10 +33,16 @@ export function ProjectBrainPanel(props: {
           <small>Completeness and precision are separate indicators. No optimality claim is made.</small>
         </div>
       ) : null}
-      <p>
-        Learning proposals and evaluation results are read-only here. Promotion remains a human-gated Project
-        Brain action.
-      </p>
+      {props.inbox ? (
+        <div>
+          <h3>Learning approval inbox (read only)</h3>
+          <p>
+            {props.inbox.proposals.length} proposals · {props.inbox.evaluations.length} evaluator reports
+          </p>
+          <pre>{JSON.stringify(props.inbox, null, 2)}</pre>
+        </div>
+      ) : null}
+      <p>Promotion remains a human-gated Project Brain repository workflow and is unavailable in this UI.</p>
     </section>
   );
 }

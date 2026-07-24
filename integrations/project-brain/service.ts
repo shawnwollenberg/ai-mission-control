@@ -27,14 +27,15 @@ export class ProjectBrainService {
   approvalInbox(scope: Scope) {
     return Promise.all([this.read(scope, "list_knowledge"), this.read(scope, "get_curation")]);
   }
-  previewContext(scope: Scope, request: Record<string, unknown>) {
-    return this.run(scope, "prepare_context", { ...request, preview: true });
+  previewContext<T = unknown>(scope: Scope, request: Record<string, unknown>) {
+    return this.run<T>(scope, "prepare_context", { ...request, preview: true });
   }
   prepareAndBindContext(scope: Scope, request: Record<string, unknown>) {
     return this.run(scope, "prepare_context", {
       ...request,
       mission_id: scope.missionId,
       execution_id: scope.executionId,
+      write: true,
     });
   }
   readContext(scope: Scope, request: Record<string, unknown>) {

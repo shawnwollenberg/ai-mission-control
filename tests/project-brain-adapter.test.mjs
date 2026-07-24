@@ -21,8 +21,15 @@ const okEnvelope = JSON.stringify({
   contract_version: "1.0",
   operation: "get_summary",
   status: "succeeded",
-  repository: { path: "/fixture", git_sha: "abc123" },
-  artifacts: [{ path: ".project-brain/context/example.json" }],
+  repository: { id: "fixture", checkout_path: "/fixture", head_sha: "abc123" },
+  artifacts: [
+    {
+      kind: "context_pack",
+      path: ".project-brain/context/example.json",
+      sha256: "a".repeat(64),
+      schema_version: "2.5.0",
+    },
+  ],
   warnings: [],
   blockers: [],
   required_actions: [],
@@ -62,6 +69,20 @@ test("malformed output and contract mismatch are rejected", async () => {
   );
 });
 
+test("mismatched operations and incomplete artifact descriptors are rejected", async () => {
+  const mismatch = await fixture(`printf '%s' '${okEnvelope.replace('"get_summary"', '"get_health"')}'`);
+  await assert.rejects(
+    () =>
+      new ProjectBrainClient({ executable: mismatch.executable }).execute({
+        workspaceId: "w",
+        repositoryId: "r",
+        repositoryPath: mismatch.root,
+        operation: "get_summary",
+      }),
+    (error) => error instanceof ProjectBrainAdapterError && error.classification === "invalid_response",
+  );
+});
+
 test("timeouts and output bounds fail closed", async () => {
   const slow = await fixture("sleep 1");
   await assert.rejects(
@@ -94,7 +115,8 @@ test("successful calls return evidence-safe audit events", async () => {
 });
 
 test("context preview is explicit and binding carries mission identity", async () => {
-  const fx = await fixture(`printf '%s' '${okEnvelope}'`);
+  const contextEnvelope = okEnvelope.replace('"operation":"get_summary"', '"operation":"prepare_context"');
+  const fx = await fixture(`printf '%s' '${contextEnvelope}'`);
   const service = new ProjectBrainService(new ProjectBrainClient({ executable: fx.executable }));
   const scope = {
     workspaceId: "workspace-1",

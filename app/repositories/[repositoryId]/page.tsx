@@ -9,6 +9,7 @@ import { requirePageIdentity } from "@/lib/page-auth";
 import { ProjectBrainClient } from "@/integrations/project-brain/client";
 import { ProjectBrainPanel } from "@/integrations/project-brain/project-brain-panel";
 import type { ProjectBrainEnvelope } from "@/integrations/project-brain/types";
+import { approvalInbox, projectStatus } from "@/integrations/project-brain/projections";
 export const dynamic = "force-dynamic";
 
 const labels: Record<string, string> = {
@@ -49,13 +50,18 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
   const actionable = recommendations.filter((item) => ["open", "accepted", "in_progress"].includes(item.status));
   let projectBrainStatus: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
   let projectBrainSummary: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
+  let projectBrainHealth: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
+  let projectBrainInbox:
+    | { proposals: unknown[]; evaluations: unknown[]; promotionAvailable: false }
+    | undefined;
+  let projectedProjectBrainStatus: string | undefined;
   let projectBrainError: string | undefined;
   const projectBrainExecutable = process.env.PROJECT_BRAIN_EXECUTABLE;
   if (projectBrainExecutable) {
     const client = new ProjectBrainClient({ executable: projectBrainExecutable });
     try {
-      await client.capabilities(repository.local_path);
-      [projectBrainStatus, projectBrainSummary] = (
+      const capabilities = await client.capabilities(repository.local_path);
+      const [detected, validated, summarized, health, knowledge, curation] = (
         await Promise.all([
           client.execute<Record<string, unknown>>({
             workspaceId: identity.workspaceId,
@@ -67,10 +73,43 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
             workspaceId: identity.workspaceId,
             repositoryId,
             repositoryPath: repository.local_path,
+            operation: "validate_repository",
+          }),
+          client.execute<Record<string, unknown>>({
+            workspaceId: identity.workspaceId,
+            repositoryId,
+            repositoryPath: repository.local_path,
             operation: "get_summary",
+          }),
+          client.execute<Record<string, unknown>>({
+            workspaceId: identity.workspaceId,
+            repositoryId,
+            repositoryPath: repository.local_path,
+            operation: "get_health",
+          }),
+          client.execute<Record<string, unknown>>({
+            workspaceId: identity.workspaceId,
+            repositoryId,
+            repositoryPath: repository.local_path,
+            operation: "list_knowledge",
+          }),
+          client.execute<Record<string, unknown>>({
+            workspaceId: identity.workspaceId,
+            repositoryId,
+            repositoryPath: repository.local_path,
+            operation: "get_curation",
           }),
         ])
       ).map((result) => result.envelope);
+      projectBrainStatus = detected;
+      projectBrainSummary = summarized;
+      projectBrainHealth = health;
+      projectBrainInbox = approvalInbox(knowledge, curation);
+      projectedProjectBrainStatus = projectStatus({
+        capabilities,
+        detection: detected,
+        validation: validated,
+      });
     } catch (error) {
       projectBrainError = error instanceof Error ? error.message : "Project Brain is unavailable";
     }
@@ -102,6 +141,9 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
         <ProjectBrainPanel
           status={projectBrainStatus}
           summary={projectBrainSummary}
+          health={projectBrainHealth}
+          inbox={projectBrainInbox}
+          projectedStatus={projectedProjectBrainStatus}
           error={projectBrainError}
         />
         <article className="command-panel">
