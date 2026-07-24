@@ -65,13 +65,10 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
               { path: `.project-brain/context-packs/${missionId}.yaml` },
             )
           ).envelope;
-          const binding = (
-            boundContext.data.context_pack as { consumer_binding?: { starting_sha?: string } } | undefined
-          )?.consumer_binding;
           boundContextEvidence = contextEvidence(boundContext, {
             missionId,
             executionId: activeExecutionId,
-            startingSha: binding?.starting_sha ?? "",
+            startingSha: boundContext.repository?.head_sha ?? "",
           });
         } catch {
           // A missing final pack is expected before the explicit generation action.
