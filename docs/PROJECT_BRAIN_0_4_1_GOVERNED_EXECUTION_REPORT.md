@@ -65,7 +65,7 @@ Closure authorization additionally requires the execution binding, exact context
 - New governance adapter/unit subset: 16 passed.
 - Integration tests: 48 passed after correct disposable owner seed setup.
 - New governed-execution integration tests: 3 passed (canonical request/outbox/job idempotency, denied unapproved write, remote URI isolation).
-- Projection replay: equal, 47 events, no discrepancies at the recorded checkpoint.
+- Projection replay: equal, 26 events, no discrepancies on the final clean disposable database.
 - Production build: passed with Next `16.2.10`.
 
 No automatic initialization or learning promotion was added.
