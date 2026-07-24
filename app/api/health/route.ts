@@ -1,12 +1,30 @@
 import { NextResponse } from "next/server";
 import { getDatabasePool } from "@/lib/database";
+import { getProjectBrainConfiguration } from "@/integrations/project-brain/config";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
     await getDatabasePool().query("SELECT 1");
-    return NextResponse.json({ status: "ok", environment: process.env.APP_ENV ?? "unset", database: "reachable" });
+    let projectBrain: ReturnType<typeof getProjectBrainConfiguration>;
+    try {
+      projectBrain = getProjectBrainConfiguration();
+    } catch {
+      projectBrain = { enabled: false, status: "invalid_configuration" };
+    }
+    return NextResponse.json({
+      status: "ok",
+      environment: process.env.APP_ENV ?? "unset",
+      database: "reachable",
+      projectBrain: projectBrain.enabled
+        ? {
+            status: projectBrain.status,
+            requiredVersion: projectBrain.requiredVersion,
+            contractVersion: projectBrain.contractVersion,
+          }
+        : { status: projectBrain.status },
+    });
   } catch (error) {
     console.error(
       JSON.stringify({

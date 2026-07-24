@@ -10,6 +10,7 @@ import { ProjectBrainClient } from "@/integrations/project-brain/client";
 import { ProjectBrainPanel } from "@/integrations/project-brain/project-brain-panel";
 import type { ProjectBrainEnvelope } from "@/integrations/project-brain/types";
 import { approvalInbox, projectStatus } from "@/integrations/project-brain/projections";
+import { getProjectBrainConfiguration, publicProjectBrainError } from "@/integrations/project-brain/config";
 export const dynamic = "force-dynamic";
 
 const labels: Record<string, string> = {
@@ -51,14 +52,20 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
   let projectBrainStatus: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
   let projectBrainSummary: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
   let projectBrainHealth: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
-  let projectBrainInbox:
-    | { proposals: unknown[]; evaluations: unknown[]; promotionAvailable: false }
-    | undefined;
+  let projectBrainInbox: { proposals: unknown[]; evaluations: unknown[]; promotionAvailable: false } | undefined;
   let projectedProjectBrainStatus: string | undefined;
   let projectBrainError: string | undefined;
-  const projectBrainExecutable = process.env.PROJECT_BRAIN_EXECUTABLE;
-  if (projectBrainExecutable) {
-    const client = new ProjectBrainClient({ executable: projectBrainExecutable });
+  let projectBrainConfiguration: ReturnType<typeof getProjectBrainConfiguration> = {
+    enabled: false,
+    status: "not_configured",
+  };
+  try {
+    projectBrainConfiguration = getProjectBrainConfiguration();
+  } catch {
+    projectBrainError = "Project Brain configuration is invalid. Review operator diagnostics.";
+  }
+  if (projectBrainConfiguration.enabled) {
+    const client = new ProjectBrainClient(projectBrainConfiguration);
     try {
       const capabilities = await client.capabilities(repository.local_path);
       const [detected, validated, summarized, health, knowledge, curation] = (
@@ -111,7 +118,7 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
         validation: validated,
       });
     } catch (error) {
-      projectBrainError = error instanceof Error ? error.message : "Project Brain is unavailable";
+      projectBrainError = publicProjectBrainError(error);
     }
   }
   return (

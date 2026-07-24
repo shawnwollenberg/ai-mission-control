@@ -13,12 +13,7 @@ export class ProjectBrainAdapterError extends Error {
   constructor(
     message: string,
     readonly classification:
-      | "not_installed"
-      | "timeout"
-      | "output_limit"
-      | "invalid_response"
-      | "incompatible_contract"
-      | "operation_failed",
+      "not_installed" | "timeout" | "output_limit" | "invalid_response" | "incompatible_contract" | "operation_failed",
     readonly envelope?: ProjectBrainEnvelope,
   ) {
     super(message);
@@ -52,7 +47,11 @@ function parseObject(output: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function envelope<T>(value: Record<string, unknown>, expectedOperation: ProjectBrainOperation): ProjectBrainEnvelope<T> {
+function envelope<T>(
+  value: Record<string, unknown>,
+  expectedOperation: ProjectBrainOperation,
+  expectedContract: string,
+): ProjectBrainEnvelope<T> {
   const stringArray = (candidate: unknown) =>
     Array.isArray(candidate) && candidate.every((item) => typeof item === "string");
   const repository = value.repository;
@@ -65,17 +64,23 @@ function envelope<T>(value: Record<string, unknown>, expectedOperation: ProjectB
       typeof (repository as Record<string, unknown>).head_sha === "string");
   const artifactsValid =
     Array.isArray(value.artifacts) &&
-    value.artifacts.every(
-      (artifact) =>
-        artifact &&
-        typeof artifact === "object" &&
-        typeof (artifact as Record<string, unknown>).kind === "string" &&
-        typeof (artifact as Record<string, unknown>).path === "string" &&
-        typeof (artifact as Record<string, unknown>).sha256 === "string" &&
-        typeof (artifact as Record<string, unknown>).schema_version === "string",
-    );
+    value.artifacts.every((artifact) => {
+      if (!artifact || typeof artifact !== "object") return false;
+      const record = artifact as Record<string, unknown>;
+      const artifactPath = String(record.path ?? "");
+      return (
+        typeof record.kind === "string" &&
+        typeof record.path === "string" &&
+        artifactPath.length > 0 &&
+        !artifactPath.startsWith("/") &&
+        !artifactPath.split("/").includes("..") &&
+        typeof record.sha256 === "string" &&
+        /^[a-f0-9]{64}$/.test(record.sha256) &&
+        typeof record.schema_version === "string"
+      );
+    });
   if (
-    value.contract_version !== projectBrainContractVersion ||
+    value.contract_version !== expectedContract ||
     value.operation !== expectedOperation ||
     !["succeeded", "failed"].includes(String(value.status)) ||
     !repositoryValid ||
@@ -99,6 +104,8 @@ export class ProjectBrainClient {
       timeoutMs?: number;
       maxOutputBytes?: number;
       env?: Record<string, string>;
+      requiredVersion?: string;
+      contractVersion?: string;
     },
   ) {}
 
@@ -136,10 +143,26 @@ export class ProjectBrainClient {
   }
 
   async capabilities(repositoryPath: string): Promise<ProjectBrainCapabilities> {
-    const { parsed } = await this.invoke(["capabilities", "--json"], repositoryPath);
+    const { parsed, result } = await this.invoke(["capabilities", "--json"], repositoryPath);
+    if (result.exitCode !== 0)
+      throw new ProjectBrainAdapterError("Project Brain capability discovery failed", "invalid_response");
     const supported = parsed.consumer_contract_versions;
-    if (!Array.isArray(supported) || !supported.includes(projectBrainContractVersion))
-      throw new ProjectBrainAdapterError("Project Brain does not support consumer contract 1.0", "incompatible_contract");
+    const requiredContract = this.config.contractVersion ?? projectBrainContractVersion;
+    if (
+      typeof parsed.core_version !== "string" ||
+      !Array.isArray(supported) ||
+      !supported.includes(requiredContract) ||
+      !Array.isArray(parsed.supported_artifact_schema_versions) ||
+      !parsed.adapter_compatibility ||
+      typeof parsed.adapter_compatibility !== "object" ||
+      !parsed.operations ||
+      typeof parsed.operations !== "object" ||
+      (this.config.requiredVersion && parsed.core_version !== this.config.requiredVersion)
+    )
+      throw new ProjectBrainAdapterError(
+        "Project Brain does not support consumer contract 1.0",
+        "incompatible_contract",
+      );
     return parsed as ProjectBrainCapabilities;
   }
 
@@ -155,6 +178,7 @@ export class ProjectBrainClient {
     if (!operations.has(input.operation))
       throw new ProjectBrainAdapterError("Project Brain operation is not allowlisted", "invalid_response");
     const started = Date.now();
+    const contractVersion = this.config.contractVersion ?? projectBrainContractVersion;
     const startingSha = await this.head(input.repositoryPath);
     const { parsed, result: processResult } = await this.invoke(
       [
@@ -164,13 +188,19 @@ export class ProjectBrainClient {
         "--repo",
         input.repositoryPath,
         "--contract-version",
-        projectBrainContractVersion,
+        contractVersion,
         "--request-json",
         JSON.stringify(input.request ?? {}),
       ],
       input.repositoryPath,
     );
-    const response = envelope<T>(parsed, input.operation);
+    const response = envelope<T>(parsed, input.operation, contractVersion);
+    if (processResult.exitCode !== 0 && response.status === "succeeded")
+      throw new ProjectBrainAdapterError(
+        "Project Brain returned success with a failing process exit status",
+        "invalid_response",
+        response,
+      );
     if (response.status === "succeeded") {
       if (!response.repository)
         throw new ProjectBrainAdapterError("Project Brain omitted repository identity", "invalid_response");
@@ -188,9 +218,19 @@ export class ProjectBrainClient {
           response,
         );
     }
-    if (response.contract_version !== projectBrainContractVersion)
-      throw new ProjectBrainAdapterError("Project Brain returned an incompatible contract version", "incompatible_contract", response);
+    if (response.contract_version !== contractVersion)
+      throw new ProjectBrainAdapterError(
+        "Project Brain returned an incompatible contract version",
+        "incompatible_contract",
+        response,
+      );
     const endingSha = await this.head(input.repositoryPath);
+    if (startingSha !== endingSha)
+      throw new ProjectBrainAdapterError(
+        "Repository HEAD changed during the Project Brain operation",
+        "operation_failed",
+        response,
+      );
     const checksum = (text: string) => createHash("sha256").update(text).digest("hex");
     const auditEvent = {
       eventType: "project_brain.adapter_invoked" as const,

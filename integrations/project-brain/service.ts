@@ -53,7 +53,11 @@ export class ProjectBrainService {
   private read(scope: Scope, operation: ProjectBrainOperation) {
     return this.run(scope, operation, {});
   }
-  private run<T>(scope: Scope, operation: ProjectBrainOperation, request: Record<string, unknown>): Promise<ProjectBrainResult<T>> {
+  private run<T>(
+    scope: Scope,
+    operation: ProjectBrainOperation,
+    request: Record<string, unknown>,
+  ): Promise<ProjectBrainResult<T>> {
     return this.client.execute<T>({ ...scope, operation, request });
   }
 }

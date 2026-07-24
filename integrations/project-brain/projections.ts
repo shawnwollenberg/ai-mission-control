@@ -37,14 +37,14 @@ export function contextEvidence(
     binding?.mission_id !== expected.missionId ? "mission_id" : null,
     binding?.execution_id !== expected.executionId ? "execution_id" : null,
     binding?.starting_sha !== expected.startingSha ? "starting_sha" : null,
-    typeof artifact?.sha256 !== "string" ? "artifact_checksum" : null,
+    typeof artifact?.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(artifact.sha256) ? "artifact_checksum" : null,
   ].filter((value): value is string => Boolean(value));
   return {
     valid: mismatches.length === 0,
     mismatches,
     timelineItem: {
       kind: "project_brain_context",
-      title: "Verified Project Brain context",
+      title: mismatches.length ? "Unverified Project Brain context" : "Verified Project Brain context",
       path: artifact?.path,
       checksum: artifact?.sha256,
       schemaVersion: artifact?.schema_version,

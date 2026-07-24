@@ -35,6 +35,7 @@ export type ProjectBrainEnvelope<T = unknown> = {
 };
 
 export type ProjectBrainCapabilities = {
+  core_version: string;
   current_consumer_contract_version: string;
   consumer_contract_versions: string[];
   supported_artifact_schema_versions: string[];

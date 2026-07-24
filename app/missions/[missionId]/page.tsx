@@ -11,6 +11,7 @@ import { ProjectBrainPanel } from "@/integrations/project-brain/project-brain-pa
 import type { ProjectBrainEnvelope } from "@/integrations/project-brain/types";
 import { contextEvidence } from "@/integrations/project-brain/projections";
 import { revalidatePath } from "next/cache";
+import { getProjectBrainConfiguration, publicProjectBrainError } from "@/integrations/project-brain/config";
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +35,18 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
       [identity.workspaceId, missionId],
     )
   ).rows[0];
-  if (registeredRepository && process.env.PROJECT_BRAIN_EXECUTABLE) {
+  let projectBrainConfiguration: ReturnType<typeof getProjectBrainConfiguration> = {
+    enabled: false,
+    status: "not_configured",
+  };
+  try {
+    projectBrainConfiguration = getProjectBrainConfiguration();
+  } catch {
+    projectBrainError = "Project Brain configuration is invalid. Review operator diagnostics.";
+  }
+  if (registeredRepository && projectBrainConfiguration.enabled) {
     try {
-      const service = new ProjectBrainService(
-        new ProjectBrainClient({ executable: process.env.PROJECT_BRAIN_EXECUTABLE }),
-      );
+      const service = new ProjectBrainService(new ProjectBrainClient(projectBrainConfiguration));
       contextPreview = (
         await service.previewContext<Record<string, unknown>>(
           {
@@ -75,7 +83,7 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
         }
       }
     } catch (error) {
-      projectBrainError = error instanceof Error ? error.message : "Context preview unavailable";
+      projectBrainError = publicProjectBrainError(error);
     }
   }
   async function generateProjectBrainContext() {
@@ -90,9 +98,9 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
         [actionIdentity.workspaceId, missionId],
       )
     ).rows[0];
-    const executable = process.env.PROJECT_BRAIN_EXECUTABLE;
-    if (!binding || !executable) throw new Error("Project Brain context generation is unavailable");
-    const service = new ProjectBrainService(new ProjectBrainClient({ executable }));
+    const configuration = getProjectBrainConfiguration();
+    if (!binding || !configuration.enabled) throw new Error("Project Brain context generation is unavailable");
+    const service = new ProjectBrainService(new ProjectBrainClient(configuration));
     await service.prepareAndBindContext(
       {
         workspaceId: actionIdentity.workspaceId,
@@ -119,8 +127,16 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
       {contextPreview || boundContext || projectBrainError ? (
         <section aria-label="Project Brain mission evidence">
           <ProjectBrainPanel context={boundContext ?? contextPreview} error={projectBrainError} />
-          {boundContextEvidence ? (
+          {boundContextEvidence?.valid ? (
             <pre>{JSON.stringify(boundContextEvidence.timelineItem, null, 2)}</pre>
+          ) : boundContextEvidence ? (
+            <div role="alert">
+              <p>The stored context no longer matches this mission execution. Generate a fresh verified pack.</p>
+              <pre>{JSON.stringify(boundContextEvidence.timelineItem, null, 2)}</pre>
+              <form action={generateProjectBrainContext}>
+                <button type="submit">Regenerate and bind verified context</button>
+              </form>
+            </div>
           ) : execution.executions[0] ? (
             <form action={generateProjectBrainContext}>
               <button type="submit">Generate and bind verified context</button>
