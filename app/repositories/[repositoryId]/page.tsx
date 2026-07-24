@@ -6,6 +6,9 @@ import { listRepositoryHealthAssessments, listRepositoryTimeline } from "@/appli
 import { repositoryHealthDimensions } from "@/domain/repository-health";
 import { getDatabasePool } from "@/lib/database";
 import { requirePageIdentity } from "@/lib/page-auth";
+import { ProjectBrainClient } from "@/integrations/project-brain/client";
+import { ProjectBrainPanel } from "@/integrations/project-brain/project-brain-panel";
+import type { ProjectBrainEnvelope } from "@/integrations/project-brain/types";
 export const dynamic = "force-dynamic";
 
 const labels: Record<string, string> = {
@@ -28,8 +31,9 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
       default_branch: string;
       observed_commit: string | null;
       observed_remote_url: string | null;
+      local_path: string;
     }>(
-      "SELECT repository_id,name,default_branch,observed_commit,observed_remote_url FROM repositories WHERE workspace_id=$1 AND repository_id=$2 AND disabled_at IS NULL",
+      "SELECT repository_id,name,default_branch,observed_commit,observed_remote_url,local_path FROM repositories WHERE workspace_id=$1 AND repository_id=$2 AND disabled_at IS NULL",
       [identity.workspaceId, repositoryId],
     )
   ).rows[0];
@@ -43,6 +47,34 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
   const previous = assessments[1];
   const delta = current?.score != null && previous?.score != null ? current.score - previous.score : undefined;
   const actionable = recommendations.filter((item) => ["open", "accepted", "in_progress"].includes(item.status));
+  let projectBrainStatus: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
+  let projectBrainSummary: ProjectBrainEnvelope<Record<string, unknown>> | undefined;
+  let projectBrainError: string | undefined;
+  const projectBrainExecutable = process.env.PROJECT_BRAIN_EXECUTABLE;
+  if (projectBrainExecutable) {
+    const client = new ProjectBrainClient({ executable: projectBrainExecutable });
+    try {
+      await client.capabilities(repository.local_path);
+      [projectBrainStatus, projectBrainSummary] = (
+        await Promise.all([
+          client.execute<Record<string, unknown>>({
+            workspaceId: identity.workspaceId,
+            repositoryId,
+            repositoryPath: repository.local_path,
+            operation: "detect_repository",
+          }),
+          client.execute<Record<string, unknown>>({
+            workspaceId: identity.workspaceId,
+            repositoryId,
+            repositoryPath: repository.local_path,
+            operation: "get_summary",
+          }),
+        ])
+      ).map((result) => result.envelope);
+    } catch (error) {
+      projectBrainError = error instanceof Error ? error.message : "Project Brain is unavailable";
+    }
+  }
   return (
     <main className="durable-mission-shell">
       <AppNavigation subtitle="Repository Intelligence" />
@@ -67,6 +99,11 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
       </header>
 
       <section className="health-summary-grid">
+        <ProjectBrainPanel
+          status={projectBrainStatus}
+          summary={projectBrainSummary}
+          error={projectBrainError}
+        />
         <article className="command-panel">
           <p className="section-label">Repository Health</p>
           <h2>
