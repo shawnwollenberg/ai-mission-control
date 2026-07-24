@@ -18,7 +18,12 @@ export type ProjectBrainEnvelope<T = unknown> = {
   contract_version: string;
   operation: string;
   status: "succeeded" | "failed";
-  repository: { path?: string; git_sha?: string } | null;
+  repository: {
+    id: string;
+    checkout_path: string;
+    head_sha: string;
+    ending_head_sha?: string;
+  } | null;
   artifacts: Array<Record<string, unknown>>;
   warnings: string[];
   blockers: string[];
