@@ -60,7 +60,7 @@ Closure authorization additionally requires the execution binding, exact context
 - Migration `0001` through `0025`: applied from an empty PostgreSQL database.
 - TypeScript: passed.
 - ESLint: passed with zero warnings.
-- Unit tests: 89 passed.
+- Unit tests: 90 passed, including exact consumed-approval lease recovery after expiry.
 - Standalone Project Brain tests at `6708a0f`: 64 passed.
 - New governance adapter/unit subset: 16 passed.
 - Integration tests: 48 passed after correct disposable owner seed setup.
@@ -81,6 +81,8 @@ The fresh independent review found no critical arbitrary-command or path-escape 
 - disables PB-enabled remote execution fail-closed until an exact remote operation/binding transport exists, preventing reuse of a mission-level pack from another execution.
 
 The remaining artifact-orphan window and operation-specific argument schemas are medium follow-up items and contribute to the no-go disposition.
+
+The final targeted re-review confirmed that no critical or high-severity findings remain.
 
 ## Remaining release limitations
 

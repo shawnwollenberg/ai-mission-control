@@ -8,6 +8,10 @@ ALTER TABLE jobs ADD CONSTRAINT jobs_job_type_check CHECK(job_type IN(
 ALTER TABLE repositories
   ADD COLUMN project_brain_enabled boolean NOT NULL DEFAULT false;
 
+ALTER TABLE approval_projections
+  ADD COLUMN consumed_by_operation_id uuid,
+  ADD COLUMN consumed_action_hash text;
+
 CREATE TABLE project_brain_operation_projections (
   workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   operation_id uuid NOT NULL,

@@ -106,7 +106,14 @@ export async function applyApprovalProjection(client: PoolClient, events: Domain
       );
     else if (e.eventType.startsWith("approval.")) {
       await client.query(
-        "UPDATE approval_projections SET status=$3,aggregate_version=$4,decided_by=COALESCE($5,decided_by),decision_reason=COALESCE($6,decision_reason),decided_at=COALESCE(decided_at,$7),consumed_at=CASE WHEN $3='consumed' THEN $7 ELSE consumed_at END,policy_version_at_execution=COALESCE($8,policy_version_at_execution) WHERE workspace_id=$1 AND approval_id=$2",
+        `UPDATE approval_projections SET status=$3,aggregate_version=$4,
+          decided_by=COALESCE($5,decided_by),decision_reason=COALESCE($6,decision_reason),
+          decided_at=COALESCE(decided_at,$7),
+          consumed_at=CASE WHEN $3='consumed' THEN $7 ELSE consumed_at END,
+          policy_version_at_execution=COALESCE($8,policy_version_at_execution),
+          consumed_by_operation_id=COALESCE($9,consumed_by_operation_id),
+          consumed_action_hash=COALESCE($10,consumed_action_hash)
+         WHERE workspace_id=$1 AND approval_id=$2`,
         [
           e.workspaceId,
           e.aggregateId,
@@ -116,6 +123,8 @@ export async function applyApprovalProjection(client: PoolClient, events: Domain
           e.payload.reason,
           e.occurredAt,
           e.payload.policyVersionAtExecution ?? null,
+          e.payload.operationId ?? null,
+          e.payload.actionHash ?? null,
         ],
       );
       if (["approval.granted", "approval.denied", "approval.expired"].includes(e.eventType))
@@ -364,6 +373,8 @@ export async function consumeApproval(input: {
   approvalId: string;
   actorId: string;
   policyVersion: string;
+  operationId?: string;
+  actionHash?: string;
 }) {
   const events = await loadAggregateEvents({
     workspaceId: input.workspaceId,
@@ -395,14 +406,26 @@ export async function consumeApproval(input: {
           reason: "Consumed by exact approved action",
           taskId: last.payload.taskId,
           policyVersionAtExecution: input.policyVersion,
+          operationId: input.operationId,
+          actionHash: input.actionHash,
         },
       },
     ],
     applyProjections: async (client, events) => {
       await applyApprovalProjection(client, events);
       await client.query(
-        "UPDATE approval_projections SET consumed_at=$3,policy_version_at_execution=$4 WHERE workspace_id=$1 AND approval_id=$2",
-        [input.workspaceId, input.approvalId, events[0].occurredAt, input.policyVersion],
+        `UPDATE approval_projections SET consumed_at=$3,policy_version_at_execution=$4,
+          consumed_by_operation_id=COALESCE($5,consumed_by_operation_id),
+          consumed_action_hash=COALESCE($6,consumed_action_hash)
+         WHERE workspace_id=$1 AND approval_id=$2`,
+        [
+          input.workspaceId,
+          input.approvalId,
+          events[0].occurredAt,
+          input.policyVersion,
+          input.operationId ?? null,
+          input.actionHash ?? null,
+        ],
       );
     },
   });

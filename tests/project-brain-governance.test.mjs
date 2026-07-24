@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  approvalPermitsProjectBrainOperation,
   projectBrainOperationPolicy,
   projectBrainRequestFingerprint,
   validateProjectBrainRequest,
@@ -46,5 +47,40 @@ test("writes require starting SHA and limits are bounded", () => {
         maxOutputBytes: 10_000_001,
       }),
     /output limit/,
+  );
+});
+
+test("consumed exact approval survives lease recovery after expiry", () => {
+  const base = {
+    expiresAt: new Date(0),
+    actionHash: "a".repeat(64),
+    expectedActionHash: "a".repeat(64),
+    approvalType: "project_brain_repository_write",
+    expectedApprovalType: "project_brain_repository_write",
+    missionId: "mission",
+    expectedMissionId: "mission",
+    executionId: "execution",
+    expectedExecutionId: "execution",
+    operationId: "operation",
+    now: Date.now(),
+  };
+  assert.equal(approvalPermitsProjectBrainOperation({ ...base, status: "granted" }), false);
+  assert.equal(
+    approvalPermitsProjectBrainOperation({
+      ...base,
+      status: "consumed",
+      consumedByOperationId: "operation",
+      consumedActionHash: "a".repeat(64),
+    }),
+    true,
+  );
+  assert.equal(
+    approvalPermitsProjectBrainOperation({
+      ...base,
+      status: "consumed",
+      consumedByOperationId: "different",
+      consumedActionHash: "a".repeat(64),
+    }),
+    false,
   );
 });

@@ -5,7 +5,11 @@ import { getDatabasePool } from "@/lib/database";
 import { runSafeProcess } from "@/execution/safe-process";
 import { ProjectBrainClient, ProjectBrainAdapterError } from "./client";
 import { getProjectBrainConfiguration } from "./config";
-import { projectBrainOperationPolicy, projectBrainRequestFingerprint } from "./governance";
+import {
+  approvalPermitsProjectBrainOperation,
+  projectBrainOperationPolicy,
+  projectBrainRequestFingerprint,
+} from "./governance";
 import { appendProjectBrainOperationEvent } from "@/application/project-brain-commands";
 import { consumeApproval } from "@/application/approval-commands";
 import { storeExecutionArtifact } from "@/execution/artifact-store";
@@ -169,20 +173,32 @@ export async function executeProjectBrainOperation(input: {
           approval_type: string;
           mission_id: string;
           execution_id: string | null;
+          consumed_by_operation_id: string | null;
+          consumed_action_hash: string | null;
         }>(
-          `SELECT status,expires_at,action_hash,approval_type,mission_id,execution_id
+          `SELECT status,expires_at,action_hash,approval_type,mission_id,execution_id,
+            consumed_by_operation_id,consumed_action_hash
            FROM approval_projections WHERE workspace_id=$1 AND approval_id=$2`,
           [input.workspaceId, row.approval_id],
         )
       ).rows[0];
       if (
         !approval ||
-        approval.status !== "granted" ||
-        (approval.expires_at && approval.expires_at.getTime() <= Date.now()) ||
-        approval.action_hash !== currentFingerprint ||
-        approval.approval_type !== policy.approvalType ||
-        approval.mission_id !== row.mission_id ||
-        (approval.execution_id ?? null) !== (row.execution_id ?? null)
+        !approvalPermitsProjectBrainOperation({
+          status: approval.status,
+          expiresAt: approval.expires_at,
+          actionHash: approval.action_hash,
+          expectedActionHash: currentFingerprint,
+          approvalType: approval.approval_type,
+          expectedApprovalType: policy.approvalType,
+          missionId: approval.mission_id,
+          expectedMissionId: row.mission_id,
+          executionId: approval.execution_id,
+          expectedExecutionId: row.execution_id,
+          consumedByOperationId: approval.consumed_by_operation_id,
+          consumedActionHash: approval.consumed_action_hash,
+          operationId: input.operationId,
+        })
       )
         throw new Error("approval_stale_or_mismatched");
       await consumeApproval({
@@ -190,6 +206,8 @@ export async function executeProjectBrainOperation(input: {
         approvalId: row.approval_id,
         actorId: input.workerId,
         policyVersion: "project-brain-0.4.1",
+        operationId: input.operationId,
+        actionHash: currentFingerprint,
       });
     }
     const configuration = getProjectBrainConfiguration();

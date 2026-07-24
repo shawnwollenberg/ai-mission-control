@@ -60,6 +60,38 @@ export function projectBrainRequestFingerprint(value: Record<string, unknown>) {
   return createHash("sha256").update(canonicalJson(value)).digest("hex");
 }
 
+export function approvalPermitsProjectBrainOperation(input: {
+  status: string;
+  expiresAt?: Date | null;
+  actionHash: string;
+  expectedActionHash: string;
+  approvalType: string;
+  expectedApprovalType: string;
+  missionId: string;
+  expectedMissionId: string | null;
+  executionId?: string | null;
+  expectedExecutionId?: string | null;
+  consumedByOperationId?: string | null;
+  consumedActionHash?: string | null;
+  operationId: string;
+  now?: number;
+}) {
+  if (!["granted", "consumed"].includes(input.status)) return false;
+  if (input.status === "granted" && input.expiresAt && input.expiresAt.getTime() <= (input.now ?? Date.now()))
+    return false;
+  if (
+    input.actionHash !== input.expectedActionHash ||
+    input.approvalType !== input.expectedApprovalType ||
+    input.missionId !== input.expectedMissionId ||
+    (input.executionId ?? null) !== (input.expectedExecutionId ?? null)
+  )
+    return false;
+  return (
+    input.status === "granted" ||
+    (input.consumedByOperationId === input.operationId && input.consumedActionHash === input.expectedActionHash)
+  );
+}
+
 export function validateProjectBrainRequest(input: {
   operation: ProjectBrainOperation;
   repositoryId: string;
