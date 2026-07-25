@@ -253,39 +253,44 @@ async function rollbackRepositoryIdentity(repositoryId) {
   const config = await loadConfig();
   const repository = config.repositories?.[repositoryId];
   const previous = repository?.identityHistory?.at(-1);
-  if (!repository || repository.identityVersion !== "stable-v2" || !previous)
+  const resuming = repository?.identityTransition?.status === "rolling_back" && repository?.localRollback?.request;
+  if (!repository || (!resuming && (repository.identityVersion !== "stable-v2" || !previous)))
     throw new Error("A completed stable-v2 activation with durable history is required before rollback.");
-  repository.identityTransition = { status: "rolling_back", startedAt: new Date().toISOString() };
-  await persistConfig(config);
-  const prepared = await signedRequest(config, "/api/agent-protocol/v1/repositories/identity/rollback/prepare",
-    "RepositoryIdentityRollbackRequested", {
-      repositoryId, stableFingerprint: repository.fingerprint, rollbackFingerprint: previous.fingerprint,
-      registeredPath: repository.path, currentHead: exec("git", ["rev-parse", "HEAD"], repository.path),
-    });
-  const request = prepared.rollbackRequest;
-  const unsigned = { ...request }; delete unsigned.requestChecksum; delete unsigned.missionControlSignature;
-  const checksum = sha256(canonicalJson(unsigned));
-  const expectedSignature = createHmac("sha256", sha256(config.secret)).update(checksum).digest("hex");
   const artifact = await artifactIdentity();
-  if (request.requestChecksum !== checksum || request.missionControlSignature !== expectedSignature ||
-      request.agentVersion !== VERSION || request.requiredArtifactChecksum !== artifact.sha256 ||
-      request.repositoryId !== repositoryId || request.stableFingerprint !== repository.fingerprint ||
-      request.rollbackFingerprint !== previous.fingerprint || request.identityProtocolVersion !== "2" ||
-      request.activationProtocolVersion !== "1" || Date.parse(request.expiresAt) <= Date.now())
-    throw new Error("Repository identity rollback request verification failed.");
-  const stableFingerprint = repository.fingerprint;
-  repository.identityVersion = previous.identityVersion;
-  repository.fingerprint = previous.fingerprint;
-  repository.localRollback = { requestId: request.requestId, rolledBackAt: new Date().toISOString(),
-    fromFingerprint: stableFingerprint, toFingerprint: previous.fingerprint };
-  await persistConfig(config);
+  let request = repository.localRollback?.request;
+  if (!resuming) {
+    const prepared = await signedRequest(config, "/api/agent-protocol/v1/repositories/identity/rollback/prepare",
+      "RepositoryIdentityRollbackRequested", {
+        repositoryId, stableFingerprint: repository.fingerprint, rollbackFingerprint: previous.fingerprint,
+        registeredPath: repository.path, currentHead: exec("git", ["rev-parse", "HEAD"], repository.path),
+      });
+    request = prepared.rollbackRequest;
+    const unsigned = { ...request }; delete unsigned.requestChecksum; delete unsigned.missionControlSignature;
+    const checksum = sha256(canonicalJson(unsigned));
+    const expectedSignature = createHmac("sha256", sha256(config.secret)).update(checksum).digest("hex");
+    if (request.requestChecksum !== checksum || request.missionControlSignature !== expectedSignature ||
+        request.agentVersion !== VERSION || request.requiredArtifactChecksum !== artifact.sha256 ||
+        request.repositoryId !== repositoryId || request.stableFingerprint !== repository.fingerprint ||
+        request.rollbackFingerprint !== previous.fingerprint || request.identityProtocolVersion !== "2" ||
+        request.activationProtocolVersion !== "1" || Date.parse(request.expiresAt) <= Date.now())
+      throw new Error("Repository identity rollback request verification failed.");
+    repository.identityTransition = { status: "rolling_back", startedAt: new Date().toISOString(),
+      requestId: request.requestId };
+    repository.localRollback = { request, requestId: request.requestId, rolledBackAt: new Date().toISOString(),
+      fromIdentityVersion: repository.identityVersion, toIdentityVersion: previous.identityVersion,
+      fromFingerprint: repository.fingerprint, toFingerprint: previous.fingerprint };
+    repository.identityVersion = previous.identityVersion;
+    repository.fingerprint = previous.fingerprint;
+    await persistConfig(config);
+  }
+  const rollback = repository.localRollback;
   const acknowledgement = await signedRequest(config,
     "/api/agent-protocol/v1/repositories/identity/rollback/acknowledge",
     "RepositoryIdentityRollbackAcknowledged", {
       migrationId: request.migrationId, requestId: request.requestId, activationProtocolVersion: "1",
       identityProtocolVersion: "2", agentVersion: VERSION, artifact, repositoryId,
-      fromFingerprint: stableFingerprint, toFingerprint: previous.fingerprint,
-      rolledBackAt: repository.localRollback.rolledBackAt, nonce: randomBytes(18).toString("base64url"),
+      fromFingerprint: rollback.fromFingerprint, toFingerprint: rollback.toFingerprint,
+      rolledBackAt: rollback.rolledBackAt, nonce: randomBytes(18).toString("base64url"),
       expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
     });
   if (acknowledgement.status !== "accepted") throw new Error("Repository identity rollback acknowledgement was not accepted.");
