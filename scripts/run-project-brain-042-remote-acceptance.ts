@@ -17,8 +17,7 @@ import type { ProjectBrainOperation } from "../integrations/project-brain/types"
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
-const projectBrainExecutable =
-  process.env.PROJECT_BRAIN_ACCEPTANCE_EXECUTABLE ?? "/tmp/project-brain-042-venv/bin/project-brain";
+const projectBrainExecutable = process.env.PROJECT_BRAIN_ACCEPTANCE_EXECUTABLE ?? "project-brain";
 const port = Number(process.env.PROJECT_BRAIN_ACCEPTANCE_PORT ?? 3137);
 const baseUrl = `http://127.0.0.1:${port}`;
 const workspaceId = randomUUID();
@@ -132,7 +131,7 @@ async function main() {
     }
   });
   const agent = spawn(process.execPath, [resolve("public/mission-agent-0.6.7.mjs"), "run"], {
-    env: { ...process.env, MISSION_AGENT_HOME: agentHome, MISSION_AGENT_DEBUG_REQUEST: "1" },
+    env: { ...process.env, MISSION_AGENT_HOME: agentHome },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let agentLog = "";

@@ -18,6 +18,8 @@
     "worker": "tsx scripts/worker.ts",
     "worker:codex": "tsx scripts/codex-worker.ts",
     "worker:project-brain": "tsx scripts/project-brain-worker.ts",
+    "acceptance:project-brain:local": "tsx scripts/run-project-brain-final-local-acceptance.ts",
+    "acceptance:project-brain:remote": "tsx scripts/run-project-brain-042-remote-acceptance.ts",
     "worker:actions": "tsx scripts/action-worker.ts",
     "worker:remote-agents": "tsx scripts/remote-agent-worker.ts",
     "worker:hermes": "tsx agents/hermes/bridge.ts",

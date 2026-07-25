@@ -172,6 +172,7 @@ export async function executeProjectBrainOperation(input: {
       maxOutputBytes: Number(row.request.maxOutputBytes ?? 1_000_000),
       requiredProjectBrainVersion: row.required_project_brain_version,
       requiredContractVersion: row.required_contract_version,
+      artifactVersioning: false,
     });
     if (currentFingerprint !== row.request_fingerprint) throw new Error("operation_request_fingerprint_changed");
     if (policy.approvalType) {

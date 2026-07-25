@@ -351,7 +351,7 @@ export async function bindProjectBrainContext(input: {
   await appendProjectBrainOperationEvent({
     actor: input.actor,
     operationId: context.operation_id,
-    commandId: `bind:${context.operation_id}:${input.executionId}:${context.context_checksum}`,
+    commandId: stableUuid(`bind:${context.operation_id}:${input.executionId}:${context.context_checksum}`),
     event: {
       eventType: "project_brain.context_bound_to_execution",
       eventSchemaVersion: 1,
