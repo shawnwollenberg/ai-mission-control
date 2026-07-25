@@ -1,0 +1,35 @@
+[
+  {
+    "name": "https",
+    "remotes": [{ "name": "origin", "url": "https://github.com/acme/widget.git" }],
+    "repositoryName": "widget",
+    "canonicalRemoteUrl": "github.com/acme/widget"
+  },
+  {
+    "name": "ssh",
+    "remotes": [{ "name": "origin", "url": "ssh://git@github.com:22/acme/widget.git/" }],
+    "repositoryName": "widget",
+    "canonicalRemoteUrl": "github.com/acme/widget"
+  },
+  {
+    "name": "scp",
+    "remotes": [{ "name": "origin", "url": "git@GitHub.COM:acme/widget.git" }],
+    "repositoryName": "widget",
+    "canonicalRemoteUrl": "github.com/acme/widget"
+  },
+  {
+    "name": "non-default-port",
+    "remotes": [{ "name": "origin", "url": "https://git.example.test:8443/acme/widget.git" }],
+    "repositoryName": "widget",
+    "canonicalRemoteUrl": "git.example.test:8443/acme/widget"
+  },
+  {
+    "name": "origin-precedence",
+    "remotes": [
+      { "name": "upstream", "url": "https://github.com/upstream/widget.git" },
+      { "name": "origin", "url": "https://github.com/acme/widget.git" }
+    ],
+    "repositoryName": "widget",
+    "canonicalRemoteUrl": "github.com/acme/widget"
+  }
+]
