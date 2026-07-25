@@ -1,6 +1,6 @@
 # Project Brain 0.4 production acceptance
 
-Date: 2026-07-24  
+Date: 2026-07-24
 Status: superseded by final combined acceptance
 
 The earlier adapter-only acceptance correctly stopped before execution and

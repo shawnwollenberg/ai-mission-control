@@ -1,7 +1,7 @@
 # Final Project Brain release acceptance
 
-Date: 2026-07-24  
-Target: Mission Control `production`  
+Date: 2026-07-24
+Target: Mission Control `production`
 Candidate branch: `codex/project-brain-final-release-candidate`
 
 ## Included releases
