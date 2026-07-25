@@ -93,7 +93,11 @@ function validateReleaseTrustStore(store = RELEASE_TRUST_STORE) {
     if (publicKey.asymmetricKeyType !== "ed25519" ||
         releasePublicKeyFingerprint(key.publicKeySpkiBase64) !== key.publicKeyFingerprint ||
         fingerprints.has(key.publicKeyFingerprint) ||
-        (key.status === "active" && !key.activatedAt) || (key.status === "revoked" && !key.revokedAt))
+        (key.status === "pending" && (key.activatedAt || key.retiresAt || key.revokedAt)) ||
+        (key.status === "active" && (!key.activatedAt || key.revokedAt)) ||
+        (key.status === "retiring" && (!key.activatedAt || key.revokedAt)) ||
+        (key.status === "retired" && (!key.activatedAt || !key.retiresAt || key.revokedAt)) ||
+        (key.status === "revoked" && !key.revokedAt))
       throw new Error("Release trust store is malformed.");
     fingerprints.add(key.publicKeyFingerprint);
   }
@@ -197,6 +201,15 @@ source = source.replace(
     },
     repositoryIdentity: {`,
 );
+source = source.replace(
+  `        fingerprint: repository.fingerprint,
+      })),
+    },`,
+  `        fingerprint: repository.fingerprint,
+        transitionStatus: repository.identityTransition?.status ?? null,
+      })),
+    },`,
+);
 
 const repositoryLookup = `  const repository = config.repositories?.[request.repositoryId];
   if (`;
@@ -213,6 +226,13 @@ source = source.replace(
   if (config.repositoryIdentityMigrations?.[resource.resourceId] || repository.identityTransition?.status)
     throw new Error("Repository identity transition dispatch barrier is active.");`,
 );
+source = source.replace(
+  `    [registered.repository_id]: {
+      path: repository.path,`,
+  `    [registered.repository_id]: {
+      ...(existingRegistration ?? {}),
+      path: repository.path,`,
+);
 source = source.replaceAll(
   `repository.localActivation = { requestId: request.requestId, activatedAt: new Date().toISOString(),`,
   `repository.identityTransition = { status: "activating", migrationId: pending.migrationId, requestId: request.requestId };
@@ -222,9 +242,71 @@ source = source.replace(
   `  await registerRepository(config, repository.path);
   delete config.repositoryIdentityMigrations[repositoryId];`,
   `  if (acknowledgement.status !== "accepted") throw new Error("Stable identity activation acknowledgement was not accepted.");
-  delete repository.identityTransition;
   await registerRepository(config, repository.path);
+  await heartbeat(config);
+  delete repository.identityTransition;
   delete config.repositoryIdentityMigrations[repositoryId];`,
+);
+
+const rollbackCode = `
+async function rollbackRepositoryIdentity(repositoryId) {
+  const config = await loadConfig();
+  const repository = config.repositories?.[repositoryId];
+  const previous = repository?.identityHistory?.at(-1);
+  if (!repository || repository.identityVersion !== "stable-v2" || !previous)
+    throw new Error("A completed stable-v2 activation with durable history is required before rollback.");
+  repository.identityTransition = { status: "rolling_back", startedAt: new Date().toISOString() };
+  await persistConfig(config);
+  const prepared = await signedRequest(config, "/api/agent-protocol/v1/repositories/identity/rollback/prepare",
+    "RepositoryIdentityRollbackRequested", {
+      repositoryId, stableFingerprint: repository.fingerprint, rollbackFingerprint: previous.fingerprint,
+      registeredPath: repository.path, currentHead: exec("git", ["rev-parse", "HEAD"], repository.path),
+    });
+  const request = prepared.rollbackRequest;
+  const unsigned = { ...request }; delete unsigned.requestChecksum; delete unsigned.missionControlSignature;
+  const checksum = sha256(canonicalJson(unsigned));
+  const expectedSignature = createHmac("sha256", sha256(config.secret)).update(checksum).digest("hex");
+  const artifact = await artifactIdentity();
+  if (request.requestChecksum !== checksum || request.missionControlSignature !== expectedSignature ||
+      request.agentVersion !== VERSION || request.requiredArtifactChecksum !== artifact.sha256 ||
+      request.repositoryId !== repositoryId || request.stableFingerprint !== repository.fingerprint ||
+      request.rollbackFingerprint !== previous.fingerprint || request.identityProtocolVersion !== "2" ||
+      request.activationProtocolVersion !== "1" || Date.parse(request.expiresAt) <= Date.now())
+    throw new Error("Repository identity rollback request verification failed.");
+  const stableFingerprint = repository.fingerprint;
+  repository.identityVersion = previous.identityVersion;
+  repository.fingerprint = previous.fingerprint;
+  repository.localRollback = { requestId: request.requestId, rolledBackAt: new Date().toISOString(),
+    fromFingerprint: stableFingerprint, toFingerprint: previous.fingerprint };
+  await persistConfig(config);
+  const acknowledgement = await signedRequest(config,
+    "/api/agent-protocol/v1/repositories/identity/rollback/acknowledge",
+    "RepositoryIdentityRollbackAcknowledged", {
+      migrationId: request.migrationId, requestId: request.requestId, activationProtocolVersion: "1",
+      identityProtocolVersion: "2", agentVersion: VERSION, artifact, repositoryId,
+      fromFingerprint: stableFingerprint, toFingerprint: previous.fingerprint,
+      rolledBackAt: repository.localRollback.rolledBackAt, nonce: randomBytes(18).toString("base64url"),
+      expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+    });
+  if (acknowledgement.status !== "accepted") throw new Error("Repository identity rollback acknowledgement was not accepted.");
+  await heartbeat(config);
+  delete repository.identityTransition;
+  await persistConfig(config);
+  console.log(\`Repository identity rolled back.\\n\\nRepository: \${repositoryId}\\nIdentity: \${repository.identityVersion}\`);
+}
+`;
+source = source.replace(
+  "\nasync function repositoryAdd(path) {",
+  `${rollbackCode}\nasync function repositoryAdd(path) {`,
+);
+source = source.replace(
+  `  else if (command === "repository" && process.argv[3] === "identity-activate") await activateRepositoryIdentity(process.argv[4]);`,
+  `  else if (command === "repository" && process.argv[3] === "identity-activate") await activateRepositoryIdentity(process.argv[4]);
+  else if (command === "repository" && process.argv[3] === "identity-rollback") await rollbackRepositoryIdentity(process.argv[4]);`,
+);
+source = source.replace(
+  "repository list|add|remove|inspect|identity-activate, project-brain configure",
+  "repository list|add|remove|inspect|identity-activate|identity-rollback, project-brain configure",
 );
 
 source = source.replace(
@@ -262,6 +344,8 @@ source = source.replace(
 source = source.replace(
   `  verifyReleaseManifest,`,
   `  parseReleaseManifestV2,
+  canonicalJson,
+  rollbackRepositoryIdentity,
   validateReleaseTrustStore,
   verifyReleaseManifest,
   verifyReleaseManifestText,
