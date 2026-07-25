@@ -92,6 +92,9 @@ export async function requestProjectBrainOperation(input: {
   };
   const fingerprint = projectBrainRequestFingerprint(requestDocument);
   const reasons: string[] = [];
+  if (process.env.PROJECT_BRAIN_EXECUTION_MODE === "disabled") reasons.push("project_brain_execution_disabled");
+  if (repository.location_mode === "server" && process.env.PROJECT_BRAIN_LOCAL_EXECUTION === "disabled")
+    reasons.push("local_project_brain_execution_disabled");
   if (!repository.project_brain_enabled) reasons.push("project_brain_not_enabled");
   if (!repository.read_allowed) reasons.push("repository_read_denied");
   if (policy.requiredPermission === "write" && !repository.write_allowed) reasons.push("repository_write_denied");

@@ -12,6 +12,7 @@ export type ProcessType =
   | "hermes_bridge"
   | "scheduler"
   | "notification"
+  | "project_brain"
   | "migration"
   | "backup";
 export type ConfigurationCheck = { name: string; ok: boolean; summary: string; required: boolean };
@@ -108,11 +109,86 @@ export async function validateProductionConfiguration(
     );
   }
   if (
-    ["generic", "codex", "action", "remote_delivery", "hermes_bridge", "scheduler", "notification"].includes(
-      processType,
-    )
+    [
+      "generic",
+      "codex",
+      "action",
+      "remote_delivery",
+      "hermes_bridge",
+      "scheduler",
+      "notification",
+      "project_brain",
+    ].includes(processType)
   )
     checks.push(check("worker_identity", configured("WORKER_ID"), "Stable worker identity is configured"));
+  if (processType === "project_brain") {
+    const { getProjectBrainConfiguration } = await import("@/integrations/project-brain/config");
+    const { diagnoseProjectBrainDependencies, diagnoseProjectBrainRuntime } =
+      await import("@/integrations/project-brain/diagnostics");
+    try {
+      const configuration = getProjectBrainConfiguration();
+      checks.push(
+        check("project_brain_configuration", configuration.enabled, "Project Brain is explicitly configured"),
+      );
+      if (configuration.enabled) {
+        checks.push(
+          check("project_brain_version", configuration.requiredVersion === "0.4.0", "Project Brain 0.4.0 is required"),
+          check(
+            "project_brain_contract",
+            configuration.contractVersion === "1.0",
+            "Project Brain consumer contract 1.0 is required",
+          ),
+          check(
+            "project_brain_timeout",
+            configuration.timeoutMs === 15_000,
+            "Project Brain timeout is pinned to 15000 ms",
+          ),
+          check(
+            "project_brain_output_limit",
+            configuration.maxOutputBytes === 1_000_000,
+            "Project Brain output is limited to 1000000 bytes",
+          ),
+        );
+        const diagnostics = await diagnoseProjectBrainRuntime();
+        checks.push(
+          check(
+            "project_brain_diagnostics",
+            diagnostics.ready,
+            diagnostics.ready
+              ? "Project Brain doctor and capabilities are compatible"
+              : "Project Brain diagnostics are incompatible",
+          ),
+        );
+        const dependencies = await diagnoseProjectBrainDependencies();
+        checks.push(
+          check(
+            "project_brain_dependencies",
+            dependencies.ready,
+            dependencies.ready
+              ? "Repository root and artifact storage are accessible"
+              : "Repository root or artifact storage is inaccessible",
+          ),
+        );
+      }
+    } catch {
+      checks.push(check("project_brain_configuration", false, "Project Brain configuration is invalid"));
+    }
+    const repositoryRoot = process.env.CODEX_REPOSITORY_ROOT;
+    checks.push(
+      check(
+        "project_brain_local_execution",
+        ["enabled", "disabled"].includes(process.env.PROJECT_BRAIN_LOCAL_EXECUTION ?? ""),
+        "Local Project Brain execution mode is explicitly enabled or disabled",
+      ),
+    );
+    checks.push(
+      check(
+        "repository_root",
+        !!repositoryRoot && path.isAbsolute(repositoryRoot) && !repositoryRoot.startsWith("/home/"),
+        "Registered repository root is an explicit non-home absolute path",
+      ),
+    );
+  }
   if (processType === "codex") {
     checks.push(check("codex_executable", configured("CODEX_EXECUTABLE"), "Codex executable is explicitly configured"));
     checks.push(
@@ -135,7 +211,7 @@ export async function validateProductionConfiguration(
         checks.push(check("worktree_writable", false, "Worktree root is unavailable or not writable"));
       }
   }
-  const needsArtifacts = ["web", "codex"].includes(processType);
+  const needsArtifacts = ["web", "codex", "project_brain"].includes(processType);
   if (needsArtifacts) {
     const provider = process.env.ARTIFACT_STORAGE_PROVIDER;
     checks.push(

@@ -1,0 +1,89 @@
+# syntax=docker/dockerfile:1.7
+ARG NODE_IMAGE=node:22.23.1-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3
+
+FROM ${NODE_IMAGE} AS node-dependencies
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY scripts/require-node22.mjs ./scripts/require-node22.mjs
+RUN npm ci
+
+FROM ${NODE_IMAGE} AS project-brain-builder
+ARG PROJECT_BRAIN_COMMIT=09cae9482712decc20f043aecb38d944beacfe20
+ARG PROJECT_BRAIN_SOURCE_SHA256=1d127947f5a0ca5497d4a06c1497e36e00057d0551839ac2855b798c275c0d26
+ARG PROJECT_BRAIN_WHEEL_SHA256=033e9f66ffffd1d87a5d5bb9b411cc7331c5bffe4f48a3352d062fe6ab640d70
+ENV SOURCE_DATE_EPOCH=1784936809 \
+    PYTHONHASHSEED=0
+RUN sed -i 's|URIs: http://deb.debian.org/debian$|URIs: http://snapshot.debian.org/archive/debian/20260713T000000Z|; s|URIs: http://deb.debian.org/debian-security$|URIs: http://snapshot.debian.org/archive/debian-security/20260713T000000Z|' /etc/apt/sources.list.d/debian.sources \
+    && printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99snapshot \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
+COPY integrations/project-brain/requirements.lock /build/requirements.lock
+RUN curl --fail --location --silent --show-error \
+      "https://github.com/shawnwollenberg/project-brain/archive/${PROJECT_BRAIN_COMMIT}.tar.gz" \
+      --output project-brain.tar.gz \
+    && echo "${PROJECT_BRAIN_SOURCE_SHA256}  project-brain.tar.gz" | sha256sum --check \
+    && mkdir source \
+    && tar -xzf project-brain.tar.gz --strip-components=1 -C source \
+    && python3 -m pip wheel --no-deps --wheel-dir /wheelhouse ./source \
+    && echo "${PROJECT_BRAIN_WHEEL_SHA256}  /wheelhouse/project_brain-0.4.0-py3-none-any.whl" \
+      | sha256sum --check \
+    && echo "${PROJECT_BRAIN_WHEEL_SHA256}  /wheelhouse/project_brain-0.4.0-py3-none-any.whl" \
+      > /wheelhouse/project-brain-wheel.sha256 \
+    && python3 -m pip download --only-binary=:all: --require-hashes \
+      --requirement /build/requirements.lock --dest /wheelhouse \
+    && python3 source/scripts/install_skill.py install --target /project-brain-skill
+
+FROM ${NODE_IMAGE} AS runner
+ARG PROJECT_BRAIN_COMMIT=09cae9482712decc20f043aecb38d944beacfe20
+LABEL org.opencontainers.image.revision="${PROJECT_BRAIN_COMMIT}" \
+      io.mission-control.project-brain.version="0.4.0" \
+      io.mission-control.project-brain.contract="1.0" \
+      io.mission-control.project-brain.schema="2.5.0"
+ENV NODE_ENV=production \
+    PROJECT_BRAIN_EXECUTABLE=/opt/project-brain/bin/project-brain \
+    PROJECT_BRAIN_SKILL_PATH=/opt/project-brain-skill \
+    PROJECT_BRAIN_REQUIRED_VERSION=0.4.0 \
+    PROJECT_BRAIN_CONTRACT_VERSION=1.0 \
+    PROJECT_BRAIN_TIMEOUT_MS=15000 \
+    PROJECT_BRAIN_MAX_OUTPUT_BYTES=1000000
+RUN sed -i 's|URIs: http://deb.debian.org/debian$|URIs: http://snapshot.debian.org/archive/debian/20260713T000000Z|; s|URIs: http://deb.debian.org/debian-security$|URIs: http://snapshot.debian.org/archive/debian-security/20260713T000000Z|' /etc/apt/sources.list.d/debian.sources \
+    && printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99snapshot \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends git python3 python3-pip python3-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3 -m venv /opt/project-brain
+COPY --from=project-brain-builder /wheelhouse /opt/project-brain-wheelhouse
+COPY --from=project-brain-builder /project-brain-skill /opt/project-brain-skill
+COPY integrations/project-brain/requirements.lock /opt/project-brain-wheelhouse/requirements.lock
+RUN /opt/project-brain/bin/python -m pip install --no-cache-dir --no-index \
+      --find-links /opt/project-brain-wheelhouse --require-hashes \
+      --requirement /opt/project-brain-wheelhouse/requirements.lock \
+    && /opt/project-brain/bin/python -m pip install --no-cache-dir --no-index --no-deps \
+      /opt/project-brain-wheelhouse/project_brain-0.4.0-py3-none-any.whl \
+    && /opt/project-brain/bin/python -m pip check
+
+WORKDIR /app
+COPY --from=node-dependencies /app/node_modules ./node_modules
+COPY scripts ./scripts
+COPY lib ./lib
+COPY application ./application
+COPY domain ./domain
+COPY integrations ./integrations
+COPY execution ./execution
+COPY git ./git
+COPY policy ./policy
+COPY remote-agent ./remote-agent
+COPY templates ./templates
+COPY db ./db
+COPY agents ./agents
+COPY tsconfig.json package.json ./
+RUN groupadd --system --gid 1001 mission-control \
+    && useradd --system --uid 1001 --gid mission-control --home-dir /nonexistent mission-control \
+    && mkdir -p /repositories \
+    && chown -R mission-control:mission-control /repositories
+USER mission-control
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD ["node", "node_modules/tsx/dist/cli.mjs", "scripts/project-brain-worker-health.ts"]
+CMD ["sh", "-c", "node node_modules/tsx/dist/cli.mjs scripts/validate-production-config.ts project_brain && exec node node_modules/tsx/dist/cli.mjs scripts/project-brain-worker.ts"]

@@ -18,6 +18,7 @@ services:
       - { key: APP_ENV, value: production }
       - { key: NODE_VERSION, value: 22.20.0 }
       - { key: PROCESS_TYPE, value: web }
+      - { key: PROJECT_BRAIN_EXECUTION_MODE, value: disabled }
       - key: DATABASE_URL
         fromDatabase: { name: mission-control-production, property: connectionString }
       - { key: PUBLIC_APP_URL, sync: false }

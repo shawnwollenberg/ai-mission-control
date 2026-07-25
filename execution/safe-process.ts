@@ -47,6 +47,7 @@ export async function runSafeProcess(input: {
       ...(input.env?.GIT_CONFIG_GLOBAL ? { GIT_CONFIG_GLOBAL: input.env.GIT_CONFIG_GLOBAL } : {}),
       ...(input.env?.SSH_AUTH_SOCK ? { SSH_AUTH_SOCK: input.env.SSH_AUTH_SOCK } : {}),
       ...(input.env?.CODEX_API_KEY ? { CODEX_API_KEY: input.env.CODEX_API_KEY } : {}),
+      ...(input.env?.PROJECT_BRAIN_SKILL_PATH ? { PROJECT_BRAIN_SKILL_PATH: input.env.PROJECT_BRAIN_SKILL_PATH } : {}),
     };
     const child = spawn(input.executable, input.args, {
       cwd,

@@ -5,6 +5,12 @@ import { executeProjectBrainOperation } from "../integrations/project-brain/work
 import { assertSupportedNodeVersion } from "../lib/runtime-version";
 import { startWorkerPresence } from "./worker-presence";
 import { recoverRemoteProjectBrainAssignments } from "../application/remote-project-brain-assignments";
+import {
+  diagnoseProjectBrainDependencies,
+  diagnoseProjectBrainRuntime,
+  safeProjectBrainDependencyReport,
+  safeProjectBrainDiagnosticReport,
+} from "../integrations/project-brain/diagnostics";
 
 assertSupportedNodeVersion();
 const workerId = process.env.WORKER_ID ?? `project-brain-${randomUUID().slice(0, 8)}`;
@@ -13,6 +19,12 @@ process.on("SIGTERM", () => (stopping = true));
 process.on("SIGINT", () => (stopping = true));
 
 async function main() {
+  const diagnostics = await diagnoseProjectBrainRuntime();
+  const dependencies = await diagnoseProjectBrainDependencies();
+  console.log(JSON.stringify(safeProjectBrainDiagnosticReport(diagnostics)));
+  console.log(JSON.stringify(safeProjectBrainDependencyReport(dependencies)));
+  if (!diagnostics.ready || !dependencies.ready)
+    throw new Error("Project Brain runtime diagnostics failed; refusing to lease jobs");
   const stopPresence = await startWorkerPresence(workerId, "project_brain");
   const leaseSeconds = Number(process.env.PROJECT_BRAIN_JOB_LEASE_SECONDS ?? 90);
   while (!stopping) {

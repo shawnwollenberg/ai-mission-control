@@ -89,6 +89,35 @@ export async function executeProjectBrainOperation(input: {
   ).rows[0];
   if (!row) throw new Error("Project Brain operation not found");
   if (["succeeded", "failed", "denied"].includes(row.status)) return { terminal: true, status: row.status };
+  if (
+    row.location_mode === "server" &&
+    process.env.APP_ENV === "production" &&
+    process.env.PROJECT_BRAIN_LOCAL_EXECUTION !== "enabled"
+  ) {
+    await appendProjectBrainOperationEvent({
+      actor: { workspaceId: input.workspaceId, id: input.workerId, type: "agent" },
+      operationId: input.operationId,
+      commandId: stableUuid(`project-brain:${input.operationId}:local-execution-disabled`),
+      event: {
+        eventType: "project_brain.operation_denied",
+        eventSchemaVersion: 1,
+        payload: {
+          repositoryId: row.repository_id,
+          operation: row.operation,
+          operationStatus: "denied",
+          failureStage: "routing",
+          failureCause: "local_project_brain_execution_disabled",
+          humanApprovalRequired: false,
+          policyDecision: {
+            action: "project_brain.execute",
+            outcome: "denied",
+            reasons: ["local_project_brain_execution_disabled"],
+          },
+        },
+      },
+    });
+    return { terminal: true, status: "denied" };
+  }
   if (row.location_mode === "mission_agent") {
     try {
       await dispatchRemoteProjectBrainOperation(input);
