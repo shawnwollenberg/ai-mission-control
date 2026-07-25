@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "context-pack.schema.json",
+  "type": "object",
+  "required": ["schema_version", "artifact_type", "objective", "role", "repository_sha", "selection", "created_at"],
+  "properties": {
+    "schema_version": {"type": "string", "pattern": "^2\\."},
+    "artifact_type": {"const": "context-pack"},
+    "objective": {"type": "string", "minLength": 1},
+    "role": {"type": "string", "minLength": 1},
+    "repository_sha": {"type": "string", "minLength": 7},
+    "selection": {
+      "type": "object",
+      "required": ["strategy", "sources", "total_bytes", "estimated_tokens"],
+      "properties": {
+        "strategy": {"const": "deterministic-v2"},
+        "sources": {"type": "array", "items": {"type": "object", "required": ["path", "reason", "bytes", "estimated_tokens", "sha256"]}},
+        "omitted_sources": {"type": "array", "items": {"type": "object", "required": ["path", "reason"]}},
+        "total_bytes": {"type": "integer", "minimum": 0},
+        "estimated_tokens": {"type": "integer", "minimum": 0}
+      }
+    },
+    "context_quality": {
+      "type": "object",
+      "required": ["completeness_status", "candidate_files", "candidate_bytes", "initial_selected_bytes", "final_selected_bytes", "reduction_percentage", "missing_context_detected", "revision_count", "final_explicit_sources_complete", "optimality_claimed"],
+      "properties": {
+        "completeness_status": {"enum": ["complete", "revised", "blocked"]},
+        "candidate_files": {"type": "integer", "minimum": 0},
+        "candidate_bytes": {"type": "integer", "minimum": 0},
+        "initial_selected_bytes": {"type": "integer", "minimum": 0},
+        "final_selected_bytes": {"type": "integer", "minimum": 0},
+        "reduction_percentage": {"type": "number", "minimum": 0, "maximum": 100},
+        "missing_context_detected": {"type": "array", "items": {"type": "string"}},
+        "revision_count": {"type": "integer", "minimum": 0},
+        "final_explicit_sources_complete": {"type": "boolean"},
+        "relevant_source_precision": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "optimality_claimed": {"const": false}
+      }
+    },
+    "consumer_binding": {
+      "type": ["object", "null"],
+      "properties": {
+        "contract_version": {"type": "string"},
+        "mission_id": {"type": ["string", "null"]},
+        "execution_id": {"type": ["string", "null"]},
+        "starting_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "created_at": {"type": "string"}
+  }
+}

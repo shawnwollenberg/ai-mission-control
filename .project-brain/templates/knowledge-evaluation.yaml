@@ -1,0 +1,16 @@
+schema_version: "2.5.0"
+artifact_type: "knowledge-evaluation"
+evaluation_id: ""
+repository_sha: ""
+evaluator: "project-brain-deterministic-v1"
+reviewer: "human-approval-required"
+experience_events: []
+evaluations: []
+summary:
+  proposals_evaluated: 0
+  need_human_review: 0
+  duplicates_or_merges: 0
+  contradictions: 0
+  weak_evidence: 0
+generated_at: ""
+note: "Deterministic recommendation only. No lesson was promoted or moved."

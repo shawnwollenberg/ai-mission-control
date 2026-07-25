@@ -1,0 +1,23 @@
+schema_version: "2.0.0"
+artifact_type: "confirmed-learning"
+id: ""
+title: ""
+scope: []
+status: "confirmed"
+claim: ""
+evidence: []
+confidence:
+  score: 0.0
+validation:
+  observed: 0
+  reused: 0
+  contradicted: 0
+  superseded: false
+last_verified: ""
+observed_at: ""
+verified_at: ""
+superseded_by: null
+recommended_future_behavior: ""
+proposed_by: ""
+reviewed_by: ""
+source_mission: ""
