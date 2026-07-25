@@ -1,0 +1,20 @@
+{
+  "artifactPath": "public/mission-agent-0.7.0.mjs",
+  "artifactSha256": "3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e",
+  "buildCommand": "/usr/local/bin/nvm/versions/node/v22.22.0/bin/node scripts/build-mission-agent-070.mjs --source-commit a6d867f217c6e28ce811fbb5b8bf8778fad193c4",
+  "builder": "scripts/build-mission-agent-070.mjs",
+  "dependencyInputs": {
+    "runtimeDependencies": [],
+    "sourceArtifact": "public/mission-agent-0.6.9.mjs",
+    "sourceArtifactSha256": "a7ecca3bd6f81effa5d17843183cd45d15e1b3c5543e445879c84d503950f8af"
+  },
+  "nodeVersion": "22.22.0",
+  "reproducibility": {
+    "builds": 2,
+    "cleanEnvironment": "two detached clean Git worktrees at the exact source commit",
+    "identical": true,
+    "result": "passed"
+  },
+  "sourceCommit": "a6d867f217c6e28ce811fbb5b8bf8778fad193c4",
+  "version": "0.7.0"
+}

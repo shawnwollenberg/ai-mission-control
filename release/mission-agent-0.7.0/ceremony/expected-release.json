@@ -1,0 +1,6 @@
+{
+  "artifactSha256": "3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e",
+  "expectedKeyId": "mission-agent-release-2026-01",
+  "sourceCommit": "a6d867f217c6e28ce811fbb5b8bf8778fad193c4",
+  "version": "0.7.0"
+}

@@ -3,25 +3,29 @@
     "name": "https",
     "remotes": [{ "name": "origin", "url": "https://github.com/acme/widget.git" }],
     "repositoryName": "widget",
-    "canonicalRemoteUrl": "github.com/acme/widget"
+    "canonicalRemoteUrl": "github.com/acme/widget",
+    "fingerprint": "16f52ff7b63fbd3c2ed4c2fe33526533b12ce273834f4bf4a24f7b22a64bfeed"
   },
   {
     "name": "ssh",
     "remotes": [{ "name": "origin", "url": "ssh://git@github.com:22/acme/widget.git/" }],
     "repositoryName": "widget",
-    "canonicalRemoteUrl": "github.com/acme/widget"
+    "canonicalRemoteUrl": "github.com/acme/widget",
+    "fingerprint": "16f52ff7b63fbd3c2ed4c2fe33526533b12ce273834f4bf4a24f7b22a64bfeed"
   },
   {
     "name": "scp",
     "remotes": [{ "name": "origin", "url": "git@GitHub.COM:acme/widget.git" }],
     "repositoryName": "widget",
-    "canonicalRemoteUrl": "github.com/acme/widget"
+    "canonicalRemoteUrl": "github.com/acme/widget",
+    "fingerprint": "16f52ff7b63fbd3c2ed4c2fe33526533b12ce273834f4bf4a24f7b22a64bfeed"
   },
   {
     "name": "non-default-port",
     "remotes": [{ "name": "origin", "url": "https://git.example.test:8443/acme/widget.git" }],
     "repositoryName": "widget",
-    "canonicalRemoteUrl": "git.example.test:8443/acme/widget"
+    "canonicalRemoteUrl": "git.example.test:8443/acme/widget",
+    "fingerprint": "9f738b9e772278d8ffb6da80cd21cd40ba5f4a9090ec1ee62eaf2a348d5686cb"
   },
   {
     "name": "origin-precedence",
@@ -30,6 +34,7 @@
       { "name": "origin", "url": "https://github.com/acme/widget.git" }
     ],
     "repositoryName": "widget",
-    "canonicalRemoteUrl": "github.com/acme/widget"
+    "canonicalRemoteUrl": "github.com/acme/widget",
+    "fingerprint": "16f52ff7b63fbd3c2ed4c2fe33526533b12ce273834f4bf4a24f7b22a64bfeed"
   }
 ]

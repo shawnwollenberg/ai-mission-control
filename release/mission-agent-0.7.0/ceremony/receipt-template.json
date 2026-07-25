@@ -1,0 +1,14 @@
+{
+  "artifactSha256Confirmed": false,
+  "backupCustodianRecorded": false,
+  "backupRecoveryVerified": false,
+  "ceremonyCompletedAt": "<human-entered>",
+  "custodyApprovalReference": "<human-entered>",
+  "manifestSha256": "<human-entered>",
+  "primaryCustodianRecorded": false,
+  "publicKeyFingerprint": "<human-entered>",
+  "reviewerApproval": "<human-entered>",
+  "signingKeyId": "mission-agent-release-2026-01",
+  "sourceCommitConfirmed": false,
+  "versionConfirmed": false
+}

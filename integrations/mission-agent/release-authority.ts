@@ -73,7 +73,23 @@ export const trustedReleaseKeys: Readonly<Record<string, ReleaseKeyRecord>> = {
     replacedBy: "mission-agent-release-2026-01",
     historicalVersions: ["0.6.8"],
   },
+  // RELEASE_AUTHORITY_V2_PENDING_KEY_INSERTION_POINT
 };
+
+export function validatePendingReleaseKey(record: ReleaseKeyRecord): ReleaseKeyRecord {
+  if (
+    record.keyId !== "mission-agent-release-2026-01" ||
+    record.status !== "pending" ||
+    record.activatedAt !== null ||
+    record.retiresAt !== null ||
+    record.revokedAt !== null ||
+    record.replacedBy !== null ||
+    record.historicalVersions.length !== 0
+  )
+    throw new Error("pending replacement release key record is incomplete");
+  validateTrustStore({ [record.keyId]: record });
+  return record;
+}
 
 export function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;

@@ -8,6 +8,7 @@ import {
   parseReleaseManifestV2,
   publicKeyFingerprint,
   trustedReleaseKeys,
+  validatePendingReleaseKey,
   validateTrustStore,
   verifyReleaseManifestV2,
 } from "../integrations/mission-agent/release-authority.ts";
@@ -38,6 +39,29 @@ test("old trust root is a valid Ed25519 public key retained for historical 0.6.8
   assert.equal(publicKeyFingerprint(old.publicKeySpkiBase64), old.publicKeyFingerprint);
   assert.deepEqual(old.historicalVersions, ["0.6.8"]);
   assert.equal(old.status, "retiring");
+});
+
+test("pending replacement key insertion rejects incomplete or activated records", () => {
+  const base = {
+    keyId: "mission-agent-release-2026-01",
+    algorithm: "Ed25519",
+    publicKeySpkiBase64: trustedReleaseKeys["mission-agent-release-2026-00"].publicKeySpkiBase64,
+    publicKeyFingerprint: trustedReleaseKeys["mission-agent-release-2026-00"].publicKeyFingerprint,
+    status: "pending",
+    purpose: "mission-agent-release",
+    createdAt: "2026-07-25T18:01:20.000Z",
+    activatedAt: null,
+    retiresAt: null,
+    revokedAt: null,
+    replacedBy: null,
+    historicalVersions: [],
+  };
+  assert.deepEqual(validatePendingReleaseKey(base), base);
+  assert.throws(() => validatePendingReleaseKey({ ...base, publicKeySpkiBase64: "" }));
+  assert.throws(() =>
+    validatePendingReleaseKey({ ...base, publicKeyFingerprint: "ed25519-spki-sha256:" + "a".repeat(64) }),
+  );
+  assert.throws(() => validatePendingReleaseKey({ ...base, status: "active", activatedAt: base.createdAt }));
 });
 
 test("v2 canonicalization is deterministic across field insertion order", () => {

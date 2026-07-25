@@ -1,0 +1,20 @@
+{
+  "artifactSha256": "3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e",
+  "builds": [
+    {
+      "environment": "detached clean Git worktree 1",
+      "nodeVersion": "22.22.0",
+      "sha256": "3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e",
+      "sourceCommit": "a6d867f217c6e28ce811fbb5b8bf8778fad193c4"
+    },
+    {
+      "environment": "detached clean Git worktree 2",
+      "nodeVersion": "22.22.0",
+      "sha256": "3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e",
+      "sourceCommit": "a6d867f217c6e28ce811fbb5b8bf8778fad193c4"
+    }
+  ],
+  "byteComparison": "identical",
+  "candidateComparison": "identical",
+  "result": "passed"
+}
