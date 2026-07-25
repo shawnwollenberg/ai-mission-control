@@ -10,6 +10,9 @@ import { startWorkerPresence } from "./worker-presence";
 assertSupportedNodeVersion();
 
 const workerId = process.env.WORKER_ID ?? `worker-${randomUUID().slice(0, 8)}`;
+const simulationJobsEnabled =
+  process.env.WORKER_SIMULATION_JOBS === "enabled" ||
+  (process.env.WORKER_SIMULATION_JOBS === undefined && process.env.APP_ENV !== "production");
 let stopping = false;
 process.on("SIGTERM", () => {
   stopping = true;
@@ -27,7 +30,7 @@ async function main() {
     try {
       if ((await expireDueApprovals(workerId)) > 0) worked = true;
       worked = await processOneOutbox(workerId);
-      const job = await claimJob(workerId, 30, undefined, "simulate_task");
+      const job = simulationJobsEnabled ? await claimJob(workerId, 30, undefined, "simulate_task") : undefined;
       if (job) {
         worked = true;
         try {

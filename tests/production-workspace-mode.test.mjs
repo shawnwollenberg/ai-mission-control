@@ -36,3 +36,11 @@ test("stale registered agents are shown as reconnecting instead of unconfigured"
   assert.match(page, /ReconnectAgentHome/);
   assert.match(page, /Your agent and repositories are still registered/);
 });
+
+test("the production outbox dispatcher cannot consume simulated execution jobs", async () => {
+  const compose = await readFile(new URL("../deploy/production-compose.yml", import.meta.url), "utf8");
+  const worker = await readFile(new URL("../scripts/worker.ts", import.meta.url), "utf8");
+  assert.match(compose, /WORKER_SIMULATION_JOBS: disabled/);
+  assert.match(worker, /process\.env\.APP_ENV !== "production"/);
+  assert.match(worker, /simulationJobsEnabled \? await claimJob/);
+});

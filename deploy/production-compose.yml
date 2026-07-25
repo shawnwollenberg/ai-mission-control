@@ -16,6 +16,7 @@ services:
     environment:
       PROCESS_TYPE: generic
       WORKER_ID: production-generic-worker-1
+      WORKER_SIMULATION_JOBS: disabled
       PROJECT_BRAIN_EXECUTION_MODE: remote
     command:
       - sh
