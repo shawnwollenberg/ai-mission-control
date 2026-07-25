@@ -32,7 +32,35 @@ const RELEASE_TRUST_STORE = Object.freeze({
     revokedAt: null,
   }),
   // RELEASE_AUTHORITY_V2_PENDING_KEY_INSERTION_POINT
-});`,
+});
+const root = process.env.MISSION_AGENT_HOME ?? join(homedir(), ".mission-agent");
+const configPath = join(root, "config.json");
+const statePath = join(root, "state.json");
+const scriptPath = join(root, \`mission-agent-\${VERSION}.mjs\`);
+const artifactMetadataPath = \`\${scriptPath}.artifact.json\`;
+const sourceArtifactPath = fileURLToPath(import.meta.url);
+const sourceArtifactMetadataPath = \`\${sourceArtifactPath}.artifact.json\`;
+const binDirectory = process.env.MISSION_AGENT_BIN_DIR ?? join(homedir(), ".local", "bin");
+const launcherPath = join(binDirectory, "mission-agent");
+const command = process.argv[2] ?? "status";
+const option = (name) => {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : undefined;
+};
+const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const equalChecksum = (left, right) =>
+  /^[a-f0-9]{64}$/.test(String(left)) &&
+  /^[a-f0-9]{64}$/.test(String(right)) &&
+  timingSafeEqual(Buffer.from(left, "hex"), Buffer.from(right, "hex"));
+const canonicalJson = (value) => {
+  if (Array.isArray(value)) return \`[\${value.map(canonicalJson).join(",")}]\`;
+  if (value && typeof value === "object")
+    return \`{\${Object.keys(value)
+      .sort((left, right) => left.localeCompare(right))
+      .map((key) => \`\${JSON.stringify(key)}:\${canonicalJson(value[key])}\`)
+      .join(",")}}\`;
+  return JSON.stringify(value);
+};`,
 );
 
 const legacyVerifierStart = source.indexOf("const RELEASE_PUBLIC_KEY = createPublicKey({");
