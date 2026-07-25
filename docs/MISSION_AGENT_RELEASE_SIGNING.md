@@ -19,8 +19,10 @@ no private material.
 
 ## Custody record
 
-The repository establishes that the private key is offline and absent from
-the repository and production image. It does not identify the custodian,
+Policy requires the private key to remain offline and absent from repositories
+and production images. Repository and history scans found no private material;
+offline custody and production-image absence still require confirmation in
+the restricted custody audit. This repository does not identify the custodian,
 backup custodian, storage medium, creation date, recovery process, or an
 existing signing command. Those fields must be completed in the restricted
 release audit system by the release owner; no recovery secret belongs here.
@@ -102,4 +104,3 @@ publication decision. It must never contain private recovery secrets.
 If the existing key is merely unavailable for the current session, stop with
 publication blocked. Unavailability is not proof of loss and does not
 authorize rotation.
-

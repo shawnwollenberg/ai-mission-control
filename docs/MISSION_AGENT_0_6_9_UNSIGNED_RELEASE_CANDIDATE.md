@@ -72,4 +72,3 @@ material, then perform the offline ceremony described in
 `MISSION_AGENT_RELEASE_SIGNING.md`. If custody confirms that the key is lost,
 the separately authenticated application trust-root rotation path in that
 document applies. A new key cannot self-authorize.
-
