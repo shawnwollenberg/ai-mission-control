@@ -16,6 +16,8 @@ import type { RepositoryObservation } from "@/domain/repository-health";
 import { applyProjectBrainProjection } from "@/application/project-brain-projector";
 import { validateRemoteProjectBrainCapabilities } from "@/integrations/project-brain/remote-protocol";
 import { processRemoteProjectBrainMessage } from "@/application/remote-project-brain-results";
+import { verifyMissionAgentArtifact } from "@/integrations/mission-agent/artifact-manifest";
+import { applyMissionAgentCapabilityProjection } from "@/application/mission-agent-capability-projector";
 
 type Credential = {
   workspace_id: string;
@@ -155,6 +157,17 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       message.payload.projectBrain === undefined
         ? undefined
         : validateRemoteProjectBrainCapabilities(message.payload.projectBrain);
+    const artifactVerification = verifyMissionAgentArtifact(
+      message.payload.missionAgentVersion,
+      message.payload.artifact,
+    );
+    const projectBrainCompatible =
+      artifactVerification.compatible &&
+      !!projectBrainCapabilities?.installed &&
+      !!projectBrainCapabilities.runtimeReady &&
+      projectBrainCapabilities.coreVersion === "0.4.0" &&
+      projectBrainCapabilities.contractVersions.includes("1.0") &&
+      projectBrainCapabilities.schemaVersions.includes("2.5.0");
     await appendEvents({
       workspaceId: credential.workspace_id,
       aggregateType: "agent",
@@ -174,6 +187,22 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
                 eventSchemaVersion: 1,
                 occurredAt: message.sentAt,
                 payload: { capabilities: projectBrainCapabilities },
+              },
+              {
+                eventType:
+                  artifactVerification.status === "verified"
+                    ? "agent.mission_agent_artifact_checksum_verified"
+                    : "agent.mission_agent_artifact_checksum_rejected",
+                eventSchemaVersion: 1,
+                payload: {
+                  advertisedVersion: String(message.payload.missionAgentVersion ?? ""),
+                  advertisedChecksum: artifactVerification.advertisedChecksum,
+                  expectedChecksum: artifactVerification.expectedChecksum,
+                  manifestVersion: artifactVerification.manifestVersion,
+                  status: artifactVerification.status,
+                  rejectionReason: artifactVerification.rejectionReason,
+                  projectBrainCompatible,
+                },
               },
             ]
           : []),
@@ -203,7 +232,15 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
           : []),
       ],
       applyProjections: async (client, appended) => {
+        await applyMissionAgentCapabilityProjection(client, appended);
         const last = appended.at(-1)!;
+        const capabilityObservedAt =
+          appended.find((item) =>
+            [
+              "agent.mission_agent_artifact_checksum_verified",
+              "agent.mission_agent_artifact_checksum_rejected",
+            ].includes(item.eventType),
+          )?.occurredAt ?? last.occurredAt;
         if (eventType === "agent.heartbeat_received") {
           await client.query(
             `UPDATE agents SET last_heartbeat_at=$3,status=CASE WHEN status='disabled' THEN status ELSE 'active' END,
@@ -223,9 +260,28 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
           if (projectBrainCapabilities)
             await client.query(
               `UPDATE agents SET remote_project_brain_capabilities=$3,
-                remote_project_brain_capabilities_at=$4,updated_at=$4
+                remote_project_brain_capabilities_at=$4::timestamptz,
+                mission_agent_artifact_checksum=$5,mission_agent_expected_checksum=$6,
+                mission_agent_checksum_status=$7,mission_agent_manifest_version=$8,
+                mission_agent_project_brain_compatible=$9,
+                mission_agent_checksum_rejection_reason=$10,
+                mission_agent_artifact_verified_at=CASE WHEN $9 THEN $4::timestamptz ELSE NULL END,
+                mission_agent_capability_expires_at=$4::timestamptz + interval '5 minutes',
+                updated_at=$4::timestamptz
                WHERE workspace_id=$1 AND agent_id=$2`,
-              [credential.workspace_id, credential.agent_id, JSON.stringify(projectBrainCapabilities), last.occurredAt],
+              [
+                credential.workspace_id,
+                credential.agent_id,
+                JSON.stringify(projectBrainCapabilities),
+                capabilityObservedAt,
+                artifactVerification.advertisedChecksum,
+                artifactVerification.expectedChecksum,
+                artifactVerification.status,
+                artifactVerification.manifestVersion,
+                projectBrainCompatible,
+                artifactVerification.rejectionReason ??
+                  (projectBrainCompatible ? null : "project_brain_capabilities_incompatible"),
+              ],
             );
           await client.query(
             `INSERT INTO agent_heartbeats(workspace_id,agent_id,credential_id,protocol_version,received_at,reported_at) VALUES($1,$2,$3,'1.0',now(),$4) ON CONFLICT(workspace_id,agent_id) DO UPDATE SET credential_id=EXCLUDED.credential_id,protocol_version=EXCLUDED.protocol_version,received_at=EXCLUDED.received_at,reported_at=EXCLUDED.reported_at`,

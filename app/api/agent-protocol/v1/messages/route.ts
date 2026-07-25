@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       agentId: authenticated.headers.agentId,
       workspaceId: authenticated.credential.workspace_id,
       messageId: authenticated.headers.messageId,
+      sentAt: authenticated.headers.timestamp,
     });
     if (
       message.executionId &&

@@ -83,9 +83,9 @@ export async function POST(request: Request) {
         workspaceName: workspaceName ?? "My Workspace",
       }),
     ).toString("base64url");
-    const missionAgentVersion = "0.6.7";
-    const missionAgentChecksum = "00385c38db1f524ad428095f71d9bbc8eaa4f538c66cc1954bba79fe7981803e";
-    const command = `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && node "$tmp" connect '${config}'`;
+    const missionAgentVersion = "0.6.8";
+    const missionAgentChecksum = "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d";
+    const command = `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && printf '%s\\n' '{"version":"${missionAgentVersion}","sha256":"${missionAgentChecksum}","manifestVersion":"1"}' > "$metadata" && chmod 600 "$metadata" && node "$tmp" connect '${config}'`;
     await recordOnboardingEvent({
       workspaceId: identity.workspaceId,
       actorId: identity.userId,

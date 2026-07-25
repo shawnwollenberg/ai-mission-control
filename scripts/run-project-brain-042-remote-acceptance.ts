@@ -130,7 +130,7 @@ async function main() {
       return undefined;
     }
   });
-  const agent = spawn(process.execPath, [resolve("public/mission-agent-0.6.7.mjs"), "run"], {
+  const agent = spawn(process.execPath, [resolve("public/mission-agent-0.6.8.mjs"), "run"], {
     env: { ...process.env, MISSION_AGENT_HOME: agentHome },
     stdio: ["ignore", "pipe", "pipe"],
   });

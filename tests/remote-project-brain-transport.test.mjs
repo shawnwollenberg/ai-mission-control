@@ -39,6 +39,10 @@ test("remote capability negotiation fails closed for absence, staleness, and inc
       requiredSchemas: ["2.5.0"],
       requestBytes: 100,
       maxOutputBytes: 1000,
+      artifactChecksumStatus: "verified",
+      artifactChecksum: "a".repeat(64),
+      expectedArtifactChecksum: "a".repeat(64),
+      capabilityExpiresAt: new Date(Date.now() + 300_000),
     }),
   );
   for (const changed of [
@@ -57,6 +61,47 @@ test("remote capability negotiation fails closed for absence, staleness, and inc
           requiredSchemas: ["2.5.0"],
           requestBytes: 100,
           maxOutputBytes: 1000,
+          artifactChecksumStatus: "verified",
+          artifactChecksum: "a".repeat(64),
+          expectedArtifactChecksum: "a".repeat(64),
+          capabilityExpiresAt: new Date(Date.now() + 300_000),
+        }),
+      /dispatch is blocked/,
+    );
+  for (const checksumState of [
+    {
+      artifactChecksumStatus: "missing",
+      artifactChecksum: null,
+      expectedArtifactChecksum: "a".repeat(64),
+    },
+    {
+      artifactChecksumStatus: "mismatch",
+      artifactChecksum: "b".repeat(64),
+      expectedArtifactChecksum: "a".repeat(64),
+    },
+    {
+      artifactChecksumStatus: "verified",
+      artifactChecksum: "a".repeat(64),
+      expectedArtifactChecksum: "a".repeat(64),
+      capabilityExpiresAt: new Date(Date.now() - 1),
+    },
+  ])
+    assert.throws(
+      () =>
+        assertCompatibleRemoteProjectBrain({
+          capabilities: valid,
+          advertisedAt: new Date(),
+          operation: "prepare_context",
+          requiredVersion: "0.4.0",
+          requiredContract: "1.0",
+          requiredSchemas: ["2.5.0"],
+          requestBytes: 100,
+          maxOutputBytes: 1000,
+          artifactChecksumStatus: "verified",
+          artifactChecksum: "a".repeat(64),
+          expectedArtifactChecksum: "a".repeat(64),
+          capabilityExpiresAt: new Date(Date.now() + 300_000),
+          ...checksumState,
         }),
       /dispatch is blocked/,
     );
@@ -122,7 +167,7 @@ test("remote requests bind identity, locator, expiry, allowlisted operation, and
 });
 
 test("Mission Agent uses an explicit executable, fixed consumer argv, registered mappings, and no shell", async () => {
-  const source = await readFile(new URL("../public/mission-agent-0.6.7.mjs", import.meta.url), "utf8");
+  const source = await readFile(new URL("../public/mission-agent-0.6.8.mjs", import.meta.url), "utf8");
   assert.match(source, /config\.projectBrainExecutable/);
   assert.match(source, /"consumer",\s*"--operation"/);
   assert.match(source, /config\.repositories\?\.\[request\.repositoryId\]/);
@@ -159,7 +204,7 @@ test("artifact versioning recovers an arbitrary partial index from exact intent"
   execFileSync("git", ["update-index", "--add", "--cacheinfo", `100644,${unrelatedBlob},attacker.txt`], {
     cwd: checkout,
   });
-  const { finishProjectBrainArtifactVersioning } = await import("../public/mission-agent-0.6.7.mjs");
+  const { finishProjectBrainArtifactVersioning } = await import("../public/mission-agent-0.6.8.mjs");
   const checksums = {
     ".project-brain/artifact.yaml": createHash("sha256").update(body).digest("hex"),
   };
@@ -200,7 +245,7 @@ test("durable Project Brain runner writes a restart-readable terminal process re
   execFileSync(
     process.execPath,
     [
-      new URL("../public/mission-agent-0.6.7.mjs", import.meta.url).pathname,
+      new URL("../public/mission-agent-0.6.8.mjs", import.meta.url).pathname,
       "internal-project-brain-runner",
       specPath,
       resultPath,
@@ -218,7 +263,7 @@ test("durable runner evidence survives the state-handoff crash window and preven
   const agentHome = await mkdtemp(join(tmpdir(), "mission-agent-pb-handoff-"));
   const marker = join(agentHome, "invocations.txt");
   const requestId = randomUUID();
-  const moduleUrl = new URL("../public/mission-agent-0.6.7.mjs", import.meta.url).href;
+  const moduleUrl = new URL("../public/mission-agent-0.6.8.mjs", import.meta.url).href;
   const program = `
     import { appendFileSync } from "node:fs";
     import { runDurableProjectBrainProcess } from ${JSON.stringify(moduleUrl)};
@@ -263,7 +308,7 @@ test("stale stdout without terminal exit metadata is never synthesized as succes
   await writeFile(`${prefix}.stdout`, JSON.stringify({ status: "succeeded" }), { mode: 0o600 });
   await writeFile(`${prefix}.stderr`, "nonzero failure after stdout\n", { mode: 0o600 });
   const marker = join(agentHome, "fresh-run.txt");
-  const moduleUrl = new URL("../public/mission-agent-0.6.7.mjs", import.meta.url).href;
+  const moduleUrl = new URL("../public/mission-agent-0.6.8.mjs", import.meta.url).href;
   const program = `
     import { runDurableProjectBrainProcess } from ${JSON.stringify(moduleUrl)};
     const result = await runDurableProjectBrainProcess(
@@ -290,14 +335,14 @@ test("stale stdout without terminal exit metadata is never synthesized as succes
 });
 
 test("Mission Agent state writes use atomic replacement", async () => {
-  const source = await readFile(new URL("../public/mission-agent-0.6.7.mjs", import.meta.url), "utf8");
+  const source = await readFile(new URL("../public/mission-agent-0.6.8.mjs", import.meta.url), "utf8");
   assert.ok(source.includes("const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;"));
   assert.ok(source.includes("await rename(temporary, path);"));
 });
 
 test("concurrent heartbeat and terminal-ledger updates are serialized without lost fields", async () => {
   const agentHome = await mkdtemp(join(tmpdir(), "mission-agent-pb-state-queue-"));
-  const moduleUrl = new URL("../public/mission-agent-0.6.7.mjs", import.meta.url).href;
+  const moduleUrl = new URL("../public/mission-agent-0.6.8.mjs", import.meta.url).href;
   const program = `
     import { readFile } from "node:fs/promises";
     import { updateState } from ${JSON.stringify(moduleUrl)};
@@ -332,7 +377,7 @@ test("concurrent heartbeat and terminal-ledger updates are serialized without lo
 });
 
 test("remote process timeout and output limits terminate the fixed executable", async () => {
-  const { runProjectBrainProcess } = await import("../public/mission-agent-0.6.7.mjs");
+  const { runProjectBrainProcess } = await import("../public/mission-agent-0.6.8.mjs");
   const timedOut = await runProjectBrainProcess(
     process.execPath,
     ["-e", "setTimeout(() => {}, 10000)"],
@@ -354,7 +399,7 @@ test("remote process timeout and output limits terminate the fixed executable", 
 });
 
 test("exact context verification rejects stale HEAD, changed bytes, and reported-size mismatch", async () => {
-  const { verifiedProjectBrainContext } = await import("../public/mission-agent-0.6.7.mjs");
+  const { verifiedProjectBrainContext } = await import("../public/mission-agent-0.6.8.mjs");
   const bytes = Buffer.from("exact remote context");
   const assignment = {
     projectBrainContext: {
@@ -472,7 +517,7 @@ test("central result validation rejects malformed envelopes, changed response ch
 });
 
 test("Mission Agent independently rejects invalid auth, registration, expiry, replay, policy, and approval binding", async () => {
-  const { validateRemoteProjectBrainAuthoritySnapshot } = await import("../public/mission-agent-0.6.7.mjs");
+  const { validateRemoteProjectBrainAuthoritySnapshot } = await import("../public/mission-agent-0.6.8.mjs");
   const secret = "remote-agent-secret";
   const repositoryId = randomUUID();
   const fingerprint = "a".repeat(64);
@@ -636,7 +681,7 @@ test("Mission Agent independently rejects invalid auth, registration, expiry, re
 
 test("dirty worktrees and invalid artifact paths, kinds, schemas, sizes, and checksums fail closed", async () => {
   const { verifiedPriorProjectBrainArtifacts, verifiedRemoteProjectBrainArtifact } =
-    await import("../public/mission-agent-0.6.7.mjs");
+    await import("../public/mission-agent-0.6.8.mjs");
   const checkout = await realpath(await mkdtemp(join(tmpdir(), "mission-agent-pb-artifact-")));
   await writeFile(join(checkout, "dirty.txt"), "unverified");
   await assert.rejects(
@@ -788,7 +833,7 @@ process.stdout.write(JSON.stringify({
     { mode: 0o700 },
   );
   await chmod(executable, 0o700);
-  const moduleUrl = new URL("../public/mission-agent-0.6.7.mjs", import.meta.url).href;
+  const moduleUrl = new URL("../public/mission-agent-0.6.8.mjs", import.meta.url).href;
   const childProgram = `
     import { createHash, createHmac, randomUUID } from "node:crypto";
     import { writeFile } from "node:fs/promises";

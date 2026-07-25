@@ -19,6 +19,7 @@ import { applyEmergencyControlProjection } from "../application/emergency-contro
 import { applyRecommendationProjection } from "../application/recommendation-projector";
 import { applyRepositoryHealthProjection } from "../application/repository-health-projector";
 import { applyProjectBrainProjection } from "../application/project-brain-projector";
+import { applyMissionAgentCapabilityProjection } from "../application/mission-agent-capability-projector";
 const args = process.argv.slice(2);
 const value = (flag: string) => {
   const i = args.indexOf(flag);
@@ -84,6 +85,7 @@ async function snapshot(client: PoolClient) {
     project_brain_operation_projections: { order: "1,2" },
     repository_project_brain_projections: { order: "1,2" },
     mission_project_brain_projections: { order: "1,2" },
+    mission_agent_capability_projections: { order: "1,2" },
   };
   const out: Record<string, unknown> = {};
   for (const [table, definition] of Object.entries(tables))
@@ -99,6 +101,7 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
   const suffix = workspace ? " WHERE workspace_id=$1" : "";
   const params = workspace ? [workspace] : [];
   await client.query(`DELETE FROM approval_projections${suffix}`, params);
+  await client.query(`DELETE FROM mission_agent_capability_projections${suffix}`, params);
   await client.query(`DELETE FROM mission_project_brain_projections${suffix}`, params);
   await client.query(`DELETE FROM repository_project_brain_projections${suffix}`, params);
   await client.query(`DELETE FROM project_brain_operation_projections${suffix}`, params);
@@ -146,6 +149,7 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
     else if (event.aggregateType === "recommendation") await applyRecommendationProjection(client, [event]);
     else if (event.aggregateType === "repository_health") await applyRepositoryHealthProjection(client, [event]);
     else if (event.aggregateType === "project_brain_operation") await applyProjectBrainProjection(client, [event]);
+    else if (event.aggregateType === "agent") await applyMissionAgentCapabilityProjection(client, [event]);
   }
 }
 async function main() {

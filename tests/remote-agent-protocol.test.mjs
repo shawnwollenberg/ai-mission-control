@@ -53,6 +53,16 @@ test("protocol envelope rejects unknown fields and identity mismatch", () => {
     /unsupported fields/,
   );
   assert.throws(() => validateEnvelope(valid, { agentId: randomUUID(), workspaceId, messageId }), /identity mismatch/);
+  assert.throws(
+    () =>
+      validateEnvelope(valid, {
+        agentId,
+        workspaceId,
+        messageId,
+        sentAt: "2027-07-18T12:00:00.000Z",
+      }),
+    /timestamp does not match/,
+  );
 });
 
 test("execution messages require complete correlation fields", () => {

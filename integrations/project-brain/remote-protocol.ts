@@ -68,6 +68,10 @@ export function assertCompatibleRemoteProjectBrain(input: {
   requiredSchemas: string[];
   requestBytes: number;
   maxOutputBytes: number;
+  artifactChecksumStatus?: string | null;
+  artifactChecksum?: string | null;
+  expectedArtifactChecksum?: string | null;
+  capabilityExpiresAt?: Date | null;
   now?: number;
 }) {
   const reasons: string[] = [];
@@ -75,6 +79,15 @@ export function assertCompatibleRemoteProjectBrain(input: {
   else {
     if ((input.now ?? Date.now()) - input.advertisedAt.getTime() > 5 * 60_000)
       reasons.push("remote_project_brain_capabilities_stale");
+    if (!input.capabilityExpiresAt || input.capabilityExpiresAt.getTime() <= (input.now ?? Date.now()))
+      reasons.push("mission_agent_artifact_capability_stale");
+    if (input.artifactChecksumStatus !== "verified") reasons.push("mission_agent_artifact_checksum_unverified");
+    if (
+      !input.artifactChecksum ||
+      !input.expectedArtifactChecksum ||
+      input.artifactChecksum !== input.expectedArtifactChecksum
+    )
+      reasons.push("mission_agent_artifact_checksum_mismatch");
     if (!input.capabilities.installed || !input.capabilities.runtimeReady)
       reasons.push("remote_project_brain_runtime_unavailable");
     if (input.capabilities.coreVersion !== input.requiredVersion)

@@ -36,6 +36,10 @@ type Row = {
   capabilities: string[];
   remote_project_brain_capabilities: Record<string, unknown> | null;
   remote_project_brain_capabilities_at: Date | null;
+  mission_agent_artifact_checksum: string | null;
+  mission_agent_expected_checksum: string | null;
+  mission_agent_checksum_status: string;
+  mission_agent_capability_expires_at: Date | null;
   secret_verifier: string;
 };
 
@@ -49,6 +53,8 @@ export async function dispatchRemoteProjectBrainOperation(input: {
       `SELECT p.*,r.local_path,r.repository_fingerprint,r.observed_commit,r.project_brain_enabled,
         r.read_allowed,r.write_allowed,r.commit_allowed,r.disabled_at,r.allowed_agent_ids,a.status agent_status,
         a.capabilities,a.remote_project_brain_capabilities,a.remote_project_brain_capabilities_at,
+        a.mission_agent_artifact_checksum,a.mission_agent_expected_checksum,
+        a.mission_agent_checksum_status,a.mission_agent_capability_expires_at,
         c.secret_verifier
        FROM project_brain_operation_projections p
        JOIN repositories r ON r.workspace_id=p.workspace_id AND r.repository_id=p.repository_id
@@ -159,6 +165,10 @@ export async function dispatchRemoteProjectBrainOperation(input: {
     requiredSchemas: ["2.5.0"],
     requestBytes,
     maxOutputBytes: Number(row.request.maxOutputBytes),
+    artifactChecksumStatus: row.mission_agent_checksum_status,
+    artifactChecksum: row.mission_agent_artifact_checksum,
+    expectedArtifactChecksum: row.mission_agent_expected_checksum,
+    capabilityExpiresAt: row.mission_agent_capability_expires_at,
   });
   if (row.local_path !== `mission-agent://${row.repository_fingerprint}`)
     throw new Error("remote_project_brain_repository_locator_mismatch");

@@ -5,6 +5,8 @@ import test from "node:test";
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for integration tests");
 const { canonicalJson, canonicalHash } = await import("../lib/canonical-json.ts");
 const { getDatabasePool, closeDatabasePool } = await import("../lib/database.ts");
+const { loadAggregateEvents } = await import("../lib/postgres-event-store.ts");
+const { applyMissionAgentCapabilityProjection } = await import("../application/mission-agent-capability-projector.ts");
 const { registerRemoteAgent } = await import("../application/remote-agent-registry.ts");
 const { registerMissionAgentRepository } = await import("../application/registry.ts");
 const { processRemoteMessage } = await import("../application/remote-agent-messages.ts");
@@ -120,8 +122,9 @@ test.before(async () => {
   await processRemoteMessage(
     agentMessage("AgentHeartbeat", {
       assignmentPull: true,
-      missionAgentVersion: "0.6.7",
+      missionAgentVersion: "0.6.8",
       adapter: "codex",
+      artifact: { sha256: "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d", manifestVersion: "1" },
       projectBrain: capabilities,
     }),
     credential,
@@ -135,6 +138,55 @@ test.after(async () => {
 });
 
 test("compatible remote operation is signed, leased, idempotent, completed, and replayable", async () => {
+  const identity = (
+    await getDatabasePool().query(
+      `SELECT mission_agent_artifact_checksum,mission_agent_expected_checksum,
+        mission_agent_checksum_status,mission_agent_project_brain_compatible,
+        mission_agent_capability_expires_at>now() fresh
+       FROM agents WHERE workspace_id=$1 AND agent_id=$2`,
+      [workspaceId, registration.agentId],
+    )
+  ).rows[0];
+  assert.deepEqual(identity, {
+    mission_agent_artifact_checksum: "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+    mission_agent_expected_checksum: "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+    mission_agent_checksum_status: "verified",
+    mission_agent_project_brain_compatible: true,
+    fresh: true,
+  });
+  const projected = (
+    await getDatabasePool().query(
+      `SELECT checksum_status,project_brain_compatible,freshness_expires_at>now() fresh
+       FROM mission_agent_capability_projections WHERE workspace_id=$1 AND agent_id=$2`,
+      [workspaceId, registration.agentId],
+    )
+  ).rows[0];
+  assert.deepEqual(projected, { checksum_status: "verified", project_brain_compatible: true, fresh: true });
+  const agentEvents = await loadAggregateEvents({
+    workspaceId,
+    aggregateType: "agent",
+    aggregateId: registration.agentId,
+  });
+  const client = await getDatabasePool().connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM mission_agent_capability_projections WHERE workspace_id=$1 AND agent_id=$2", [
+      workspaceId,
+      registration.agentId,
+    ]);
+    await applyMissionAgentCapabilityProjection(client, agentEvents);
+    const replayed = (
+      await client.query(
+        `SELECT checksum_status,project_brain_compatible,freshness_expires_at>now() fresh
+         FROM mission_agent_capability_projections WHERE workspace_id=$1 AND agent_id=$2`,
+        [workspaceId, registration.agentId],
+      )
+    ).rows[0];
+    assert.deepEqual(replayed, projected);
+    await client.query("ROLLBACK");
+  } finally {
+    client.release();
+  }
   const requested = await requestProjectBrainOperation({
     actor: pbActor,
     request: {

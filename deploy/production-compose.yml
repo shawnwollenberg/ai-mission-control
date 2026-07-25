@@ -1,0 +1,50 @@
+services:
+  web:
+    image: ${MISSION_CONTROL_WEB_IMAGE:?immutable web image digest required}
+    container_name: mission-control-web
+    restart: unless-stopped
+    env_file: ${MISSION_CONTROL_ENV_FILE:?production environment file required}
+    environment:
+      PROJECT_BRAIN_EXECUTION_MODE: remote
+    networks: [mission-control]
+
+  generic-worker:
+    image: ${MISSION_CONTROL_WEB_IMAGE:?immutable web image digest required}
+    container_name: mission-control-generic-worker
+    restart: unless-stopped
+    env_file: ${MISSION_CONTROL_ENV_FILE:?production environment file required}
+    environment:
+      PROCESS_TYPE: generic
+      WORKER_ID: production-generic-worker-1
+      PROJECT_BRAIN_EXECUTION_MODE: remote
+    command:
+      - sh
+      - -c
+      - >-
+        node node_modules/tsx/dist/cli.mjs scripts/validate-production-config.ts generic &&
+        exec node node_modules/tsx/dist/cli.mjs scripts/worker.ts
+    networks: [mission-control]
+
+  project-brain-worker:
+    image: ${MISSION_CONTROL_PROJECT_BRAIN_IMAGE:?immutable Project Brain worker image digest required}
+    container_name: mission-control-project-brain-worker
+    restart: unless-stopped
+    env_file: ${MISSION_CONTROL_ENV_FILE:?production environment file required}
+    environment:
+      PROCESS_TYPE: project_brain
+      WORKER_ID: production-project-brain-worker-1
+      PROJECT_BRAIN_EXECUTION_MODE: remote
+      PROJECT_BRAIN_LOCAL_EXECUTION: disabled
+      CODEX_REPOSITORY_ROOT: /opt/mission-control/repositories
+      PROJECT_BRAIN_EXECUTABLE: /opt/project-brain/bin/project-brain
+      PROJECT_BRAIN_REQUIRED_VERSION: 0.4.0
+      PROJECT_BRAIN_CONTRACT_VERSION: "1.0"
+      PROJECT_BRAIN_TIMEOUT_MS: "15000"
+      PROJECT_BRAIN_MAX_OUTPUT_BYTES: "1000000"
+    volumes:
+      - /opt/mission-control/repositories:/opt/mission-control/repositories:ro
+    networks: [mission-control]
+
+networks:
+  mission-control:
+    external: true
