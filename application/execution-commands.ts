@@ -229,14 +229,18 @@ export async function handleRequestRemoteExecution(input: {
       project_brain_enabled: boolean;
       read_allowed: boolean;
       write_allowed: boolean;
+      identity_migration_status: string;
     }>(
-      `SELECT location_mode,observed_commit,repository_fingerprint,project_brain_enabled,read_allowed,write_allowed
+      `SELECT location_mode,observed_commit,repository_fingerprint,project_brain_enabled,read_allowed,write_allowed,
+        identity_migration_status
        FROM repositories WHERE workspace_id=$1 AND repository_id=$2 AND disabled_at IS NULL`,
       [input.actor.workspaceId, repositoryId],
     )
   ).rows[0];
   if (!repository || repository.location_mode !== "mission_agent")
     throw new ValidationFailedError("Remote execution requires a Mission Agent repository");
+  if (!["not_required", "completed"].includes(repository.identity_migration_status))
+    throw new ValidationFailedError("Repository dispatch is blocked during identity migration");
   if (!repository.read_allowed) throw new ValidationFailedError("Repository does not allow required remote access");
   const taskEnvelope = {
     missionType: repositoryChange ? "repository_change" : "repository_analysis",

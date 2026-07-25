@@ -40,6 +40,7 @@ type Row = {
   mission_agent_expected_checksum: string | null;
   mission_agent_checksum_status: string;
   mission_agent_capability_expires_at: Date | null;
+  identity_migration_status: string;
   secret_verifier: string;
 };
 
@@ -51,7 +52,8 @@ export async function dispatchRemoteProjectBrainOperation(input: {
   const row = (
     await getDatabasePool().query<Row>(
       `SELECT p.*,r.local_path,r.repository_fingerprint,r.observed_commit,r.project_brain_enabled,
-        r.read_allowed,r.write_allowed,r.commit_allowed,r.disabled_at,r.allowed_agent_ids,a.status agent_status,
+        r.read_allowed,r.write_allowed,r.commit_allowed,r.disabled_at,r.allowed_agent_ids,
+        r.identity_migration_status,a.status agent_status,
         a.capabilities,a.remote_project_brain_capabilities,a.remote_project_brain_capabilities_at,
         a.mission_agent_artifact_checksum,a.mission_agent_expected_checksum,
         a.mission_agent_checksum_status,a.mission_agent_capability_expires_at,
@@ -73,6 +75,7 @@ export async function dispatchRemoteProjectBrainOperation(input: {
   const policy = projectBrainOperationPolicy(row.operation, args);
   if (
     row.disabled_at ||
+    !["not_required", "completed"].includes(row.identity_migration_status) ||
     !row.project_brain_enabled ||
     !row.read_allowed ||
     row.agent_status !== "active" ||

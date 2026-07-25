@@ -56,6 +56,7 @@ export type AppendEventsInput = {
   events: NewDomainEvent[];
   outbox?: NewOutboxMessage[];
   applyProjections?: (client: PoolClient, events: DomainEvent[]) => Promise<void>;
+  beforeAppend?: (client: PoolClient) => Promise<void>;
 };
 
 export type AppendEventsResult = { events: DomainEvent[]; duplicateCommand: boolean };
@@ -183,6 +184,7 @@ export async function appendEvents(input: AppendEventsInput): Promise<AppendEven
       if (actualVersion !== input.expectedVersion) {
         throw new ConcurrencyConflictError({ expectedVersion: input.expectedVersion, actualVersion });
       }
+      if (input.beforeAppend) await input.beforeAppend(client);
 
       const appended: DomainEvent[] = [];
       for (let index = 0; index < input.events.length; index += 1) {

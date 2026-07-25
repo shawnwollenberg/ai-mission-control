@@ -100,9 +100,12 @@ export async function claimNextAssignment(input: {
         `SELECT p.*,e.status execution_status,t.status task_status FROM pull_assignments p JOIN execution_projections e ON e.workspace_id=p.workspace_id AND e.execution_id=p.execution_id
          JOIN task_projections t ON t.workspace_id=p.workspace_id AND t.task_id=p.task_id
          JOIN agents a ON a.workspace_id=p.workspace_id AND a.agent_id=p.agent_id
+         JOIN repositories r ON r.workspace_id=p.workspace_id
+           AND r.repository_id=(p.payload->>'repositoryId')::uuid
          WHERE p.workspace_id=$1 AND p.agent_id=$2 AND p.status='available' AND e.agent_id=$2
            AND e.status IN('requested','accepted','preparing','running')
            AND t.status IN('assigned','running') AND a.status='active' AND a.capabilities @> t.required_capabilities
+           AND r.identity_migration_status IN('not_required','completed')
            AND NOT EXISTS (
              SELECT 1 FROM jsonb_array_elements(t.required_resources) resource
              WHERE NOT EXISTS (

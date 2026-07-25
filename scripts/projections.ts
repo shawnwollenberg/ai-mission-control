@@ -20,6 +20,7 @@ import { applyRecommendationProjection } from "../application/recommendation-pro
 import { applyRepositoryHealthProjection } from "../application/repository-health-projector";
 import { applyProjectBrainProjection } from "../application/project-brain-projector";
 import { applyMissionAgentCapabilityProjection } from "../application/mission-agent-capability-projector";
+import { applyRepositoryIdentityProjection } from "../application/repository-identity";
 const args = process.argv.slice(2);
 const value = (flag: string) => {
   const i = args.indexOf(flag);
@@ -86,6 +87,8 @@ async function snapshot(client: PoolClient) {
     repository_project_brain_projections: { order: "1,2" },
     mission_project_brain_projections: { order: "1,2" },
     mission_agent_capability_projections: { order: "1,2" },
+    repository_identities: { order: "1,2,3,4" },
+    repository_identity_migrations: { order: "1,2" },
   };
   const out: Record<string, unknown> = {};
   for (const [table, definition] of Object.entries(tables))
@@ -101,6 +104,11 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
   const suffix = workspace ? " WHERE workspace_id=$1" : "";
   const params = workspace ? [workspace] : [];
   await client.query(`DELETE FROM approval_projections${suffix}`, params);
+  await client.query(`DELETE FROM repository_identity_migrations${suffix}`, params);
+  await client.query(
+    `DELETE FROM repository_identities${suffix}${suffix ? " AND" : " WHERE"} migration_event_id IS NOT NULL`,
+    params,
+  );
   await client.query(`DELETE FROM mission_agent_capability_projections${suffix}`, params);
   await client.query(`DELETE FROM mission_project_brain_projections${suffix}`, params);
   await client.query(`DELETE FROM repository_project_brain_projections${suffix}`, params);
@@ -150,6 +158,8 @@ async function replay(client: PoolClient, stream: DomainEvent[]) {
     else if (event.aggregateType === "repository_health") await applyRepositoryHealthProjection(client, [event]);
     else if (event.aggregateType === "project_brain_operation") await applyProjectBrainProjection(client, [event]);
     else if (event.aggregateType === "agent") await applyMissionAgentCapabilityProjection(client, [event]);
+    else if (event.aggregateType === "repository_identity_migration")
+      await applyRepositoryIdentityProjection(client, [event]);
   }
 }
 async function main() {

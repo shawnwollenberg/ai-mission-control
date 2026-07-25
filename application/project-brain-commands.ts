@@ -41,6 +41,7 @@ type RepositoryAuthorization = {
   commit_allowed: boolean;
   project_brain_enabled: boolean;
   allowed_agent_ids: string[];
+  identity_migration_status: string;
 };
 
 export async function requestProjectBrainOperation(input: {
@@ -51,7 +52,7 @@ export async function requestProjectBrainOperation(input: {
   const repository = (
     await getDatabasePool().query<RepositoryAuthorization>(
       `SELECT local_path,location_mode,observed_commit,read_allowed,write_allowed,commit_allowed,
-        project_brain_enabled,allowed_agent_ids
+        project_brain_enabled,allowed_agent_ids,identity_migration_status
        FROM repositories WHERE workspace_id=$1 AND repository_id=$2 AND disabled_at IS NULL`,
       [input.actor.workspaceId, input.request.repositoryId],
     )
@@ -96,6 +97,8 @@ export async function requestProjectBrainOperation(input: {
   if (repository.location_mode === "server" && process.env.PROJECT_BRAIN_LOCAL_EXECUTION === "disabled")
     reasons.push("local_project_brain_execution_disabled");
   if (!repository.project_brain_enabled) reasons.push("project_brain_not_enabled");
+  if (!["not_required", "completed"].includes(repository.identity_migration_status))
+    reasons.push("repository_identity_migration_in_progress");
   if (!repository.read_allowed) reasons.push("repository_read_denied");
   if (policy.requiredPermission === "write" && !repository.write_allowed) reasons.push("repository_write_denied");
   if (repository.location_mode === "mission_agent" && policy.repositoryFilesChanged && !repository.commit_allowed)

@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { NotFoundError, ValidationFailedError } from "@/lib/application-errors";
 import { getDatabasePool } from "@/lib/database";
+import {
+  deriveStableRepositoryIdentity,
+  finalizeRepositoryIdentityActivation,
+  STABLE_IDENTITY_VERSION,
+  type RemoteCandidate,
+} from "@/application/repository-identity";
 
 export type RegistryActor = { workspaceId: string; userId: string; role: "owner" | "member" };
 type DispatchPolicyRow = {
@@ -20,6 +26,7 @@ type DispatchPolicyRow = {
   validation_commands: string[][];
   location_mode: "server" | "mission_agent";
   project_brain_enabled: boolean;
+  identity_migration_status: string;
 };
 function owner(actor: RegistryActor) {
   if (actor.role !== "owner") throw new ValidationFailedError("Workspace owner permission is required");
@@ -238,16 +245,75 @@ export async function registerMissionAgentRepository(input: {
   defaultBranch: string;
   remoteUrl?: string;
   commit?: string;
+  identityVersion?: string;
+  canonicalRemoteUrl?: string;
+  selectedRemote?: string;
+  remotes?: RemoteCandidate[];
 }) {
   if (!input.name.trim() || !/^[a-f0-9]{64}$/.test(input.fingerprint) || !input.defaultBranch.trim())
     throw new ValidationFailedError("Repository identity is invalid");
   const agent = (
     await getDatabasePool().query(
-      "SELECT 1 FROM agents WHERE workspace_id=$1 AND agent_id=$2 AND delivery_mode='pull' AND status<>'disabled'",
+      "SELECT mission_agent_version FROM agents WHERE workspace_id=$1 AND agent_id=$2 AND delivery_mode='pull' AND status<>'disabled'",
       [input.workspaceId, input.agentId],
     )
   ).rows[0];
   if (!agent) throw new NotFoundError("Mission Agent");
+  if (input.identityVersion === STABLE_IDENTITY_VERSION) {
+    const derived = deriveStableRepositoryIdentity({
+      remotes: input.remotes ?? [],
+      repositoryName: input.name,
+    });
+    if (
+      input.fingerprint !== derived.fingerprint ||
+      input.canonicalRemoteUrl !== derived.canonicalRemoteUrl ||
+      input.selectedRemote !== derived.selectedRemote
+    )
+      throw new ValidationFailedError("Stable repository registration does not match server derivation");
+    const repository = (
+      await getDatabasePool().query(
+        `UPDATE repositories SET name=$4,default_branch=$5,observed_remote_url=$6,observed_commit=$7,updated_at=now()
+         WHERE workspace_id=$1 AND repository_fingerprint=$2 AND identity_version='stable-v2'
+           AND identity_migration_status='agent_activated' AND disabled_at IS NULL
+           AND allowed_agent_ids ? $3::text
+         RETURNING repository_id,name,default_branch,repository_fingerprint,observed_commit`,
+        [
+          input.workspaceId,
+          input.fingerprint,
+          input.agentId,
+          input.name.trim().slice(0, 160),
+          input.defaultBranch.trim().slice(0, 200),
+          derived.canonicalRemoteUrl,
+          input.commit?.slice(0, 80) ?? null,
+        ],
+      )
+    ).rows[0];
+    if (!repository) throw new ValidationFailedError("Stable repository registration has no acknowledged activation");
+    await finalizeRepositoryIdentityActivation({
+      workspaceId: input.workspaceId,
+      agentId: input.agentId,
+      repositoryId: repository.repository_id,
+      stableFingerprint: input.fingerprint,
+    });
+    return repository;
+  }
+  // A version string does not prove which identity algorithm produced an
+  // agent-supplied fingerprint. Only governed migration may activate stable-v2.
+  const identityVersion = "legacy-v1";
+  const migrated = (
+    await getDatabasePool().query(
+      `SELECT r.repository_id FROM repository_identities i
+       JOIN repositories r ON r.workspace_id=i.workspace_id AND r.repository_id=i.repository_id
+       WHERE i.workspace_id=$1 AND i.identity_version='legacy-v1' AND i.fingerprint=$2
+         AND r.identity_version='stable-v2' AND r.disabled_at IS NULL
+         AND r.allowed_agent_ids ? $3::text LIMIT 1`,
+      [input.workspaceId, input.fingerprint, input.agentId],
+    )
+  ).rows[0];
+  if (migrated)
+    throw new ValidationFailedError(
+      "Legacy repository identity refresh rejected because this repository has an active stable identity",
+    );
   const repositoryId = randomUUID();
   const result = await getDatabasePool().query(
     `INSERT INTO repositories(workspace_id,repository_id,name,local_path,default_branch,allowed_agent_ids,read_allowed,write_allowed,
@@ -278,6 +344,28 @@ export async function registerMissionAgentRepository(input: {
   const repository = result.rows[0];
   if (!repository) throw new ValidationFailedError("Repository is already associated with another Mission Agent");
   await getDatabasePool().query(
+    `UPDATE repositories SET identity_version=$3,identity_migration_status='not_required'
+     WHERE workspace_id=$1 AND repository_id=$2 AND identity_version='legacy-v1'
+       AND NOT EXISTS(SELECT 1 FROM repository_identities i WHERE i.workspace_id=$1 AND i.repository_id=$2)`,
+    [input.workspaceId, repository.repository_id, identityVersion],
+  );
+  await getDatabasePool().query(
+    `INSERT INTO repository_identities(
+       workspace_id,repository_id,identity_version,fingerprint,canonical_remote_url,repository_name,
+       selected_remote,created_at,verified_at,verification_source,migration_status)
+     VALUES($1,$2,$3,$4,$5,$6,$7,now(),now(),'mission-agent-registration','active')
+     ON CONFLICT DO NOTHING`,
+    [
+      input.workspaceId,
+      repository.repository_id,
+      identityVersion,
+      input.fingerprint,
+      input.remoteUrl ?? null,
+      input.name.trim().slice(0, 160),
+      input.remoteUrl ? "origin" : null,
+    ],
+  );
+  await getDatabasePool().query(
     `INSERT INTO agent_resource_permissions(
        workspace_id,agent_id,resource_type,resource_id,permissions
      ) VALUES($1,$2,'repository',$3,'["read"]')
@@ -295,6 +383,8 @@ export async function getDispatchPolicy(workspaceId: string, agentId: string, re
   const row = result.rows[0];
   if (row.agent_status !== "active") throw new ValidationFailedError("Agent is not active");
   if (row.disabled_at) throw new ValidationFailedError("Repository is disabled");
+  if (!["not_required", "completed"].includes(row.identity_migration_status))
+    throw new ValidationFailedError("Repository dispatch is blocked during identity migration");
   if (!Array.isArray(row.allowed_agent_ids) || !row.allowed_agent_ids.includes(agentId))
     throw new ValidationFailedError("Agent is not allowed to access this repository");
   if (row.current_executions >= row.concurrency_limit)

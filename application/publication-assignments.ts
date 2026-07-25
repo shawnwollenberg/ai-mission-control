@@ -33,8 +33,11 @@ export async function claimPublicationAssignment(workspaceId: string, agentId: s
   return withTransaction(async (client) => {
     const row = (
       await client.query(
-        `SELECT * FROM publication_assignments WHERE workspace_id=$1 AND agent_id=$2 AND status IN('available','claimed','pushed')
-       ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1`,
+        `SELECT p.* FROM publication_assignments p
+         JOIN repositories r ON r.workspace_id=p.workspace_id AND r.repository_id=p.repository_id
+         WHERE p.workspace_id=$1 AND p.agent_id=$2 AND p.status IN('available','claimed','pushed')
+           AND r.identity_migration_status IN('not_required','completed')
+         ORDER BY p.created_at FOR UPDATE OF p SKIP LOCKED LIMIT 1`,
         [workspaceId, agentId],
       )
     ).rows[0];

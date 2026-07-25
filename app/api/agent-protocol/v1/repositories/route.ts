@@ -19,6 +19,17 @@ export async function POST(request: Request) {
       defaultBranch: String(auth.message.payload.defaultBranch ?? ""),
       remoteUrl: auth.message.payload.remoteUrl ? String(auth.message.payload.remoteUrl) : undefined,
       commit: auth.message.payload.commit ? String(auth.message.payload.commit) : undefined,
+      identityVersion: auth.message.payload.identityVersion ? String(auth.message.payload.identityVersion) : undefined,
+      canonicalRemoteUrl: auth.message.payload.canonicalRemoteUrl
+        ? String(auth.message.payload.canonicalRemoteUrl)
+        : undefined,
+      selectedRemote: auth.message.payload.selectedRemote ? String(auth.message.payload.selectedRemote) : undefined,
+      remotes: Array.isArray(auth.message.payload.remotes)
+        ? auth.message.payload.remotes.map((remote) => ({
+            name: String((remote as Record<string, unknown>).name ?? ""),
+            url: String((remote as Record<string, unknown>).url ?? ""),
+          }))
+        : undefined,
     });
     const response = { protocolVersion: "1.0", messageId: auth.message.messageId, repository };
     await completeProtocolMessage(auth.credential, auth.message.messageId, response);
