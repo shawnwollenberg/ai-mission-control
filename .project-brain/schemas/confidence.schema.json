@@ -5,23 +5,31 @@
   "type": "object",
   "required": ["level", "score", "basis", "calculated_at", "algorithm_version", "manual_override_history"],
   "properties": {
-    "level": {"enum": ["low", "medium", "high"]},
-    "score": {"type": "number", "minimum": 0, "maximum": 1},
+    "level": { "enum": ["low", "medium", "high"] },
+    "score": { "type": "number", "minimum": 0, "maximum": 1 },
     "basis": {
       "type": "object",
-      "required": ["supporting_missions", "successful_reuses", "contradictions", "independent_reviews", "encoded_as_test", "freshness", "evidence_quality"],
+      "required": [
+        "supporting_missions",
+        "successful_reuses",
+        "contradictions",
+        "independent_reviews",
+        "encoded_as_test",
+        "freshness",
+        "evidence_quality"
+      ],
       "properties": {
-        "supporting_missions": {"type": "integer", "minimum": 0},
-        "successful_reuses": {"type": "integer", "minimum": 0},
-        "contradictions": {"type": "integer", "minimum": 0},
-        "independent_reviews": {"type": "integer", "minimum": 0},
-        "encoded_as_test": {"type": "boolean"},
-        "freshness": {"enum": ["current", "stale", "superseded"]},
-        "evidence_quality": {"type": "number", "minimum": 0, "maximum": 1}
+        "supporting_missions": { "type": "integer", "minimum": 0 },
+        "successful_reuses": { "type": "integer", "minimum": 0 },
+        "contradictions": { "type": "integer", "minimum": 0 },
+        "independent_reviews": { "type": "integer", "minimum": 0 },
+        "encoded_as_test": { "type": "boolean" },
+        "freshness": { "enum": ["current", "stale", "superseded"] },
+        "evidence_quality": { "type": "number", "minimum": 0, "maximum": 1 }
       }
     },
-    "calculated_at": {"type": "string", "format": "date-time"},
-    "algorithm_version": {"const": 1},
+    "calculated_at": { "type": "string", "format": "date-time" },
+    "algorithm_version": { "const": 1 },
     "manual_override_history": {
       "type": "array",
       "items": {

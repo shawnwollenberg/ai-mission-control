@@ -3,19 +3,31 @@
   "$id": "knowledge-health.schema.json",
   "title": "Inspectable Project Brain knowledge health",
   "type": "object",
-  "required": ["brain_initialized", "validation", "current_state_freshness", "knowledge", "unresolved_contradictions", "awaiting_evaluation", "awaiting_human_approval", "confidence_distribution", "context_pack_count", "schema_versions", "overall_score"],
+  "required": [
+    "brain_initialized",
+    "validation",
+    "current_state_freshness",
+    "knowledge",
+    "unresolved_contradictions",
+    "awaiting_evaluation",
+    "awaiting_human_approval",
+    "confidence_distribution",
+    "context_pack_count",
+    "schema_versions",
+    "overall_score"
+  ],
   "properties": {
-    "brain_initialized": {"type": "boolean"},
-    "validation": {"type": "object"},
-    "current_state_freshness": {"type": "object"},
-    "knowledge": {"type": "object"},
-    "unresolved_contradictions": {"type": "integer", "minimum": 0},
-    "awaiting_evaluation": {"type": "integer", "minimum": 0},
-    "awaiting_human_approval": {"type": "integer", "minimum": 0},
-    "confidence_distribution": {"type": "object"},
-    "context_pack_count": {"type": "integer", "minimum": 0},
-    "schema_versions": {"type": "array", "items": {"type": "string"}},
-    "overall_score": {"type": "null"}
+    "brain_initialized": { "type": "boolean" },
+    "validation": { "type": "object" },
+    "current_state_freshness": { "type": "object" },
+    "knowledge": { "type": "object" },
+    "unresolved_contradictions": { "type": "integer", "minimum": 0 },
+    "awaiting_evaluation": { "type": "integer", "minimum": 0 },
+    "awaiting_human_approval": { "type": "integer", "minimum": 0 },
+    "confidence_distribution": { "type": "object" },
+    "context_pack_count": { "type": "integer", "minimum": 0 },
+    "schema_versions": { "type": "array", "items": { "type": "string" } },
+    "overall_score": { "type": "null" }
   },
   "additionalProperties": true
 }

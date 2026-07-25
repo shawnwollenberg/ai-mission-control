@@ -3,33 +3,52 @@
   "$id": "review-findings.schema.json",
   "type": "object",
   "additionalProperties": true,
-  "required": ["schema_version", "artifact_type", "review_id", "mission_id", "reviewer", "repository_sha", "review_scope", "findings", "reviewed_at"],
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "review_id",
+    "mission_id",
+    "reviewer",
+    "repository_sha",
+    "review_scope",
+    "findings",
+    "reviewed_at"
+  ],
   "properties": {
-    "schema_version": {"type": "string", "pattern": "^2\\."},
-    "artifact_type": {"const": "review-findings"},
-    "review_id": {"type": "string", "minLength": 1},
-    "mission_id": {"type": "string", "minLength": 1},
-    "reviewer": {"type": "string", "minLength": 1},
-    "repository_sha": {"type": "string", "minLength": 7},
-    "review_scope": {"type": "string", "minLength": 1},
+    "schema_version": { "type": "string", "pattern": "^2\\." },
+    "artifact_type": { "const": "review-findings" },
+    "review_id": { "type": "string", "minLength": 1 },
+    "mission_id": { "type": "string", "minLength": 1 },
+    "reviewer": { "type": "string", "minLength": 1 },
+    "repository_sha": { "type": "string", "minLength": 7 },
+    "review_scope": { "type": "string", "minLength": 1 },
     "findings": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["finding_id", "severity", "category", "claim", "evidence", "required_resolution_or_acceptance_rationale", "status", "disposition"],
+        "required": [
+          "finding_id",
+          "severity",
+          "category",
+          "claim",
+          "evidence",
+          "required_resolution_or_acceptance_rationale",
+          "status",
+          "disposition"
+        ],
         "properties": {
-          "finding_id": {"type": "string", "minLength": 1},
-          "severity": {"enum": ["critical", "high", "medium", "low", "info"]},
-          "category": {"type": "string", "minLength": 1},
-          "file_location": {"type": ["string", "null"]},
-          "claim": {"type": "string", "minLength": 1},
-          "evidence": {"type": "array", "minItems": 1},
-          "required_resolution_or_acceptance_rationale": {"type": "string", "minLength": 1},
-          "status": {"enum": ["open", "resolved", "accepted"]},
-          "disposition": {"type": "string", "minLength": 1}
+          "finding_id": { "type": "string", "minLength": 1 },
+          "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+          "category": { "type": "string", "minLength": 1 },
+          "file_location": { "type": ["string", "null"] },
+          "claim": { "type": "string", "minLength": 1 },
+          "evidence": { "type": "array", "minItems": 1 },
+          "required_resolution_or_acceptance_rationale": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["open", "resolved", "accepted"] },
+          "disposition": { "type": "string", "minLength": 1 }
         }
       }
     },
-    "reviewed_at": {"type": "string", "minLength": 1}
+    "reviewed_at": { "type": "string", "minLength": 1 }
   }
 }

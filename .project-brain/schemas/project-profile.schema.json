@@ -2,15 +2,27 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "project-profile.schema.json",
   "type": "object",
-  "required": ["schema_version", "artifact_type", "repository", "detected", "observations", "inferences", "uncertainties", "updated_at"],
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "repository",
+    "detected",
+    "observations",
+    "inferences",
+    "uncertainties",
+    "updated_at"
+  ],
   "properties": {
-    "schema_version": {"type": "string", "pattern": "^2\\."},
-    "artifact_type": {"const": "project-profile"},
-    "repository": {"type": "object", "required": ["id", "name", "identity_source", "checkout_path", "root", "head_sha"]},
-    "detected": {"type": "object"},
-    "observations": {"type": "array"},
-    "inferences": {"type": "array"},
-    "uncertainties": {"type": "array", "items": {"type": "string"}},
-    "updated_at": {"type": "string"}
+    "schema_version": { "type": "string", "pattern": "^2\\." },
+    "artifact_type": { "const": "project-profile" },
+    "repository": {
+      "type": "object",
+      "required": ["id", "name", "identity_source", "checkout_path", "root", "head_sha"]
+    },
+    "detected": { "type": "object" },
+    "observations": { "type": "array" },
+    "inferences": { "type": "array" },
+    "uncertainties": { "type": "array", "items": { "type": "string" } },
+    "updated_at": { "type": "string" }
   }
 }
