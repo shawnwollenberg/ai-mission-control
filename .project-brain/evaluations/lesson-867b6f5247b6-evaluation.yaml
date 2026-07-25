@@ -1,0 +1,80 @@
+schema_version: 2.5.0
+artifact_type: knowledge-evaluation
+evaluation_id: knowledge-evaluation-a13338e06bb171ad
+repository_sha: 59223eccd8a95ad5b60e33d4acbbf990f7b29e95
+evaluator: project-brain-deterministic-v1
+reviewer: human-approval-required
+experience_events: []
+evaluations:
+- learning_id: lesson-867b6f5247b6
+  proposal_fingerprint: 7a861f6a58567bef503e071ff2d7b1b98d46d8793e103a317c9a699e651a4aae
+  claim: Cryptographic release authorities require documented custody, encrypted backup,
+    recovery, rotation, revocation, and separation between build and signing before
+    becoming production trust roots.
+  scope:
+  - repository
+  scope_classification: repository
+  novelty:
+    score: 1.0
+    classification: new
+    matches: []
+  evidence_quality:
+    score: 0.78
+    classification: strong
+    inspectable: 4
+    total: 4
+    evidence_kinds:
+    - file
+    claim_terms_supported:
+    - backup
+    - build
+    - cryptographic
+    - custody
+    - encrypted
+    - recovery
+    - release
+    - revocation
+    - rotation
+    - signing
+    - trust
+    issues: []
+  contradictions: []
+  confidence:
+    level: low
+    score: 0.39
+    observed: 1
+    reused: 0
+    contradicted: 0
+    superseded: false
+    basis:
+      supporting_missions: 1
+      successful_reuses: 0
+      contradictions: 0
+      independent_reviews: 0
+      encoded_as_test: false
+      freshness: current
+      evidence_quality: 0.78
+    calculated_at: '2026-07-25T13:37:59-04:00'
+    algorithm_version: 1
+    manual_override_history: []
+    formula: evidence_quality * (observed + 2*reused + 1) / (observed + 2*reused +
+      2*contradicted + 2*superseded + 3)
+  encoding:
+    primary: lesson
+    primary_score: 0.5
+    rationale: lesson has the strongest deterministic keyword, evidence-kind, and
+      evidence-quality signals.
+    alternatives: []
+  promotion:
+    recommendation: mission_local
+    rationale: The claim has limited evidence-backed validation experience.
+    human_approval: required
+    automatic_promotion: false
+summary:
+  proposals_evaluated: 1
+  need_human_review: 0
+  duplicates_or_merges: 0
+  contradictions: 0
+  weak_evidence: 0
+generated_at: '2026-07-25T13:37:59-04:00'
+note: Deterministic recommendation only. No lesson was promoted or moved.

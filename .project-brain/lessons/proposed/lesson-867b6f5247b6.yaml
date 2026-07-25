@@ -1,0 +1,31 @@
+schema_version: 2.5.0
+artifact_type: proposed-learning
+id: lesson-867b6f5247b6
+title: 'Cryptographic release authorities require documented custody, encrypted backup, '
+scope:
+- repository
+status: proposed
+claim: Cryptographic release authorities require documented custody, encrypted backup,
+  recovery, rotation, revocation, and separation between build and signing before
+  becoming production trust roots.
+evidence:
+- kind: file
+  reference: integrations/mission-agent/release-authority.ts
+- kind: file
+  reference: tests/release-authority-v2.test.mjs
+- kind: file
+  reference: docs/security/MISSION_AGENT_OLD_KEY_DISPOSITION.md
+- kind: file
+  reference: docs/security/RELEASE_KEY_CEREMONY.md
+confidence: medium
+observed_at: '2026-07-25'
+verified_at: null
+superseded_by: null
+recommended_future_behavior: Cryptographic release authorities require documented
+  custody, encrypted backup, recovery, rotation, revocation, and separation between
+  build and signing before becoming production trust roots.
+proposed_by: agent
+source_mission: 2026-07-25-prepare-release-authority-v2-without-exposing-private-keys-or-ac
+suggested_disposition: human-review
+contradiction_check: pending independent curation
+duplicate_check: pending independent curation
