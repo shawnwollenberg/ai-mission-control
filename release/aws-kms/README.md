@@ -19,6 +19,9 @@ wildcard, must replace `__KMS_KEY_ARN__`.
   It is deliberately rejected until generated from `GetPublicKey`.
 - `trust-activation-evidence.template.json`: a separately approved, deployed
   activation record required by the signer. A pending record alone cannot sign.
+- `disposable-conformance-permission-set/`: raw IAM, CloudFormation, and
+  Terraform review-only definitions for the narrowly scoped live conformance
+  session.
 
 No production application role, worker role, deployment role, Mission Agent,
 Project Brain process, ordinary developer role, or CI builder may assume the
