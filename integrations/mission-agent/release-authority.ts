@@ -5,6 +5,20 @@ export const RELEASE_MANIFEST_VERSION = "2" as const;
 
 export type ReleaseKeyStatus = "pending" | "active" | "retiring" | "retired" | "revoked";
 
+export type KmsReleaseKeyProvenance = {
+  provider: "aws-kms";
+  accountId: string;
+  region: string;
+  keyArn: string;
+  keyId: string;
+  keySpec: "ECC_NIST_EDWARDS25519";
+  keyUsage: "SIGN_VERIFY";
+  signingAlgorithm: "ED25519_SHA_512";
+  origin: "AWS_KMS";
+  keyManager: "CUSTOMER";
+  multiRegion: false;
+};
+
 export type ReleaseKeyRecord = {
   keyId: string;
   algorithm: "Ed25519";
@@ -18,6 +32,7 @@ export type ReleaseKeyRecord = {
   revokedAt: string | null;
   replacedBy: string | null;
   historicalVersions: readonly string[];
+  kms: KmsReleaseKeyProvenance | null;
 };
 
 export type ReleaseManifestV2 = {
@@ -72,6 +87,7 @@ export const trustedReleaseKeys: Readonly<Record<string, ReleaseKeyRecord>> = {
     revokedAt: null,
     replacedBy: "mission-agent-release-2026-01",
     historicalVersions: ["0.6.8"],
+    kms: null,
   },
   // RELEASE_AUTHORITY_V2_PENDING_KEY_INSERTION_POINT
 };
@@ -84,7 +100,11 @@ export function validatePendingReleaseKey(record: ReleaseKeyRecord): ReleaseKeyR
     record.retiresAt !== null ||
     record.revokedAt !== null ||
     record.replacedBy !== null ||
-    record.historicalVersions.length !== 0
+    record.historicalVersions.length !== 0 ||
+    record.kms?.provider !== "aws-kms" ||
+    record.kms.keySpec !== "ECC_NIST_EDWARDS25519" ||
+    record.kms.keyUsage !== "SIGN_VERIFY" ||
+    record.kms.signingAlgorithm !== "ED25519_SHA_512"
   )
     throw new Error("pending replacement release key record is incomplete");
   validateTrustStore({ [record.keyId]: record });
@@ -167,6 +187,20 @@ export function validateTrustStore(keys: Readonly<Record<string, ReleaseKeyRecor
     if (id !== key.keyId || !KEY_ID.test(id)) throw new Error(`invalid release key ID: ${id}`);
     if (key.algorithm !== "Ed25519" || key.purpose !== "mission-agent-release")
       throw new Error(`invalid release key purpose: ${id}`);
+    if (
+      key.kms &&
+      (key.kms.provider !== "aws-kms" ||
+        !/^\d{12}$/.test(key.kms.accountId) ||
+        key.kms.region === "" ||
+        key.kms.keyArn !== `arn:aws:kms:${key.kms.region}:${key.kms.accountId}:key/${key.kms.keyId}` ||
+        key.kms.keySpec !== "ECC_NIST_EDWARDS25519" ||
+        key.kms.keyUsage !== "SIGN_VERIFY" ||
+        key.kms.signingAlgorithm !== "ED25519_SHA_512" ||
+        key.kms.origin !== "AWS_KMS" ||
+        key.kms.keyManager !== "CUSTOMER" ||
+        key.kms.multiRegion !== false)
+    )
+      throw new Error(`invalid AWS KMS provenance: ${id}`);
     const publicKey = createPublicKey({
       key: Buffer.from(key.publicKeySpkiBase64, "base64"),
       format: "der",

@@ -1,0 +1,79 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowRootBreakGlassKeyAdministrationWithoutSigning",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::__AWS_ACCOUNT_ID__:root"
+      },
+      "Action": [
+        "kms:CancelKeyDeletion",
+        "kms:DescribeKey",
+        "kms:DisableKey",
+        "kms:EnableKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:ListAliases",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:UpdateKeyDescription"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowSeparateKeyAdministratorsWithoutSigning",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "__KEY_ADMIN_ROLE_ARN__"
+      },
+      "Action": [
+        "kms:CancelKeyDeletion",
+        "kms:DescribeKey",
+        "kms:DisableKey",
+        "kms:EnableKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:ListAliases",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:UpdateKeyDescription"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowExactHumanReleaseSigner",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "__RELEASE_SIGNER_ROLE_ARN__"
+      },
+      "Action": ["kms:DescribeKey", "kms:GetPublicKey", "kms:Sign", "kms:Verify"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenySigningToEveryPrincipalExceptExactReleaseSigner",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "kms:Sign",
+      "Resource": "*",
+      "Condition": {
+        "ArnNotEquals": {
+          "aws:PrincipalArn": "__RELEASE_SIGNER_ROLE_ARN__"
+        }
+      }
+    },
+    {
+      "Sid": "DenyGrantsForThisKey",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "kms:CreateGrant",
+      "Resource": "*"
+    }
+  ]
+}

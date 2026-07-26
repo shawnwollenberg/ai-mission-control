@@ -4,7 +4,7 @@
 
 Mission Agent release manifests use Ed25519. Artifact construction and
 release signing are separate duties. Build systems produce immutable bytes
-and a checksum; an offline custodian signs the canonical manifest. Mission
+and a checksum; a human-authorized AWS KMS role signs the canonical manifest. Mission
 Control, onboarding, and the updater accept only an explicitly trusted public
 key and approved version/checksum mapping.
 
@@ -19,51 +19,46 @@ no private material.
 
 ## Custody record
 
-Policy requires the private key to remain offline and absent from repositories
-and production images. Repository and history scans found no private material;
-offline custody and production-image absence still require confirmation in
-the restricted custody audit. This repository does not identify the custodian,
-backup custodian, storage medium, creation date, recovery process, or an
-existing signing command. Those fields must be completed in the restricted
-release audit system by the release owner; no recovery secret belongs here.
+The replacement private key remains non-exportable inside AWS KMS. No PEM,
+private-key backup, access key, or session token belongs in repositories,
+production images, Project Brain, Mission Agents, CI, or signing receipts.
 
 Future production signing should require two people where practical:
 
 1. a build reviewer confirms source commit, reproducible artifact checksum,
    protocol versions, and completed tests;
-2. a signing custodian confirms approvals and signs in the offline
-   environment.
+2. a release signer confirms approvals, authenticates with MFA, and calls KMS
+   using short-lived credentials.
 
-## Existing-key ceremony
+## KMS signing ceremony
 
 1. The release owner approves the exact source commit and unsigned candidate
    record.
 2. Rebuild with the recorded command in the approved Node 22 environment.
 3. Require the artifact checksum to equal the candidate record.
-4. Construct only the canonical fields: `version`, `path`, `sha256`, and
-   `manifestVersion`. A future key-ID contract must be introduced through an
-   authenticated application release before adding `signingKeyId`.
-5. Sign the canonical UTF-8 JSON bytes with the offline Ed25519 key.
-6. Verify using the public key embedded in the currently trusted updater.
-7. Run modified-artifact, modified-checksum, modified-version, wrong-key,
+4. Confirm manifest v2, the Release Authority key ID, and protocol fields.
+5. Authenticate through IAM Identity Center with the registered FIDO2 factor.
+6. Assume the dedicated signer role and run the interactive KMS command.
+7. Verify locally and through AWS KMS.
+8. Run modified-artifact, modified-checksum, modified-version, wrong-key,
    invalid-signature, replay, stale-capability, unknown-key, manifest-mismatch,
    and onboarding-equality tests.
-8. Have a reviewer compare the signature, source commit, checksum, version,
+9. Have a reviewer compare the signature, source commit, checksum, version,
    path, manifest version, identity protocol `2`, and activation
    acknowledgement version `1`.
-9. Prepare onboarding and latest-manifest changes without publishing them.
-10. Record the ceremony in the restricted audit system and stop for explicit
+10. Prepare onboarding and latest-manifest changes without publishing them.
+11. Record the ceremony in the restricted audit system and stop for explicit
     publication authorization.
 
-Private-key bytes, signing environment variables, device identifiers,
-recovery phrases, and raw command history must not enter source control,
-application logs, or agent context.
+AWS access keys, session tokens, identity recovery data, device identifiers,
+and raw environment dumps must not enter source control, logs, receipts, or
+agent context.
 
 ## Key rotation when loss is confirmed
 
-Key loss must be confirmed by the release owner or documented custodian before
-rotation begins. Generate the replacement Ed25519 key offline and retain only
-its public key and safe identifier in source control.
+AWS KMS asymmetric keys rotate manually through a new non-exportable KMS key
+and a new Release Authority key ID. Automatic key-material rotation does not
+apply to asymmetric KMS signing keys.
 
 Because a replacement key cannot authorize itself, introduce it through a
 reviewed and authenticated Mission Control application release. That release
@@ -96,11 +91,10 @@ assessment.
 
 ## Recovery and audit
 
-The restricted audit record must capture approvals, key identifier, custodian,
-backup custody, creation date, offline storage class, source commit, artifact
-checksum, canonical manifest hash, signature verification result, and
-publication decision. It must never contain private recovery secrets.
+The restricted audit record captures approvals, key identifier and ARN, signer
+principal, KMS request ID, source commit, artifact checksum, canonical manifest
+hash, verification result, and publication decision. It must never contain AWS
+credentials or recovery secrets.
 
-If the existing key is merely unavailable for the current session, stop with
-publication blocked. Unavailability is not proof of loss and does not
-authorize rotation.
+If AWS, Identity Center, MFA, or the signer role is unavailable, stop with
+publication blocked. Unavailability does not authorize a weaker signing path.

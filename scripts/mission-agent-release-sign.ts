@@ -1,10 +1,15 @@
-import { createPrivateKey, createPublicKey, sign } from "node:crypto";
-import { lstat, readFile, realpath, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readFile } from "node:fs/promises";
+import { createInterface } from "node:readline/promises";
+import { stdin, stdout } from "node:process";
 import {
-  canonicalJson,
+  awsKmsSigningClients,
+  humanSigningConfirmation,
+  parseKmsKeyArn,
+  signReleaseWithKms,
+} from "../integrations/mission-agent/kms-release-signer";
+import {
   parseCanonicalReleaseManifestJson,
-  publicKeyFingerprint,
+  type ReleaseKeyRecord,
 } from "../integrations/mission-agent/release-authority";
 
 function option(name: string): string {
@@ -15,38 +20,59 @@ function option(name: string): string {
 }
 
 async function main() {
-  if (process.env.APP_ENV === "production" || process.env.CI)
-    throw new Error("Offline signing is disabled in production and CI");
-  const manifestPath = resolve(option("--manifest"));
-  const privateKeyPath = resolve(option("--private-key"));
-  const output = resolve(option("--output"));
-  const confirmedChecksum = option("--confirm-artifact-sha256");
-  const expectedFingerprint = option("--expected-public-key-fingerprint");
+  if (!stdin.isTTY || !stdout.isTTY) throw new Error("KMS release signing requires an interactive human terminal");
+  const manifestPath = option("--manifest");
+  const artifactPath = option("--artifact");
+  const keyRecordPath = option("--pending-key-record");
+  const kmsKeyArn = option("--kms-key-arn");
   const manifest = parseCanonicalReleaseManifestJson(await readFile(manifestPath, "utf8"));
-  if (manifest.artifactSha256 !== confirmedChecksum) throw new Error("Explicit artifact-checksum confirmation failed");
-  const keyInfo = await lstat(privateKeyPath);
-  if (keyInfo.isSymbolicLink() || (keyInfo.mode & 0o077) !== 0)
-    throw new Error("Private key must be a non-symlink file with permissions 0600 or stricter");
-  if ((await realpath(privateKeyPath)) !== privateKeyPath) throw new Error("Private-key path must be canonical");
-  const key = createPrivateKey(await readFile(privateKeyPath));
-  if (key.asymmetricKeyType !== "ed25519") throw new Error("Signing key must be Ed25519");
-  const spki = createPublicKey(key).export({ format: "der", type: "spki" }) as unknown as Uint8Array;
-  const derivedFingerprint = publicKeyFingerprint(Buffer.from(Uint8Array.from(spki)).toString("base64"));
-  if (derivedFingerprint !== expectedFingerprint)
-    throw new Error("Signing key does not match the approved fingerprint");
-  const signature = sign(null, Uint8Array.from(Buffer.from(canonicalJson(manifest))), key).toString("base64");
-  await writeFile(output, `${canonicalJson({ ...manifest, signature })}\n`, { flag: "wx", mode: 0o644 });
-  console.log(
-    JSON.stringify({
-      output,
-      artifactSha256: manifest.artifactSha256,
-      manifestSha256: await import("node:crypto").then(({ createHash }) =>
-        createHash("sha256").update(canonicalJson(manifest)).digest("hex"),
-      ),
-      signingKeyId: manifest.signingKeyId,
-      signatureVerified: "requires-public-verifier",
-    }),
+  const pendingKeyRecord = JSON.parse(await readFile(keyRecordPath, "utf8")) as ReleaseKeyRecord;
+  const trustActivationEvidence = JSON.parse(
+    await readFile(option("--trust-activation-evidence"), "utf8"),
+  ) as Parameters<typeof signReleaseWithKms>[0]["trustActivationEvidence"];
+  const confirmation = humanSigningConfirmation({
+    releaseVersion: manifest.agentVersion,
+    artifactSha256: manifest.artifactSha256,
+    releaseAuthorityKeyId: manifest.signingKeyId,
+  });
+  stdout.write(
+    `${JSON.stringify(
+      {
+        releaseVersion: manifest.agentVersion,
+        sourceCommit: manifest.sourceCommit,
+        artifactSha256: manifest.artifactSha256,
+        signingKeyId: manifest.signingKeyId,
+        kmsKeyArn,
+      },
+      null,
+      2,
+    )}\n`,
   );
+  const prompt = createInterface({ input: stdin, output: stdout });
+  const entered = await prompt.question(`Type exactly:\n${confirmation}\n> `);
+  prompt.close();
+  const { region } = parseKmsKeyArn(kmsKeyArn);
+  const receipt = await signReleaseWithKms(
+    {
+      manifestPath,
+      artifactPath,
+      outputBundlePath: option("--output-bundle"),
+      outputSignaturePath: option("--output-signature"),
+      outputReceiptPath: option("--output-receipt"),
+      expectedArtifactSha256: option("--expected-artifact-sha256"),
+      expectedSourceCommit: option("--expected-source-commit"),
+      expectedReleaseVersion: option("--expected-release-version"),
+      releaseAuthorityKeyId: option("--release-authority-key-id"),
+      kmsKeyArn,
+      pendingKeyRecord,
+      trustActivationEvidence,
+      expectedSignerRoleArn: option("--expected-signer-role-arn"),
+      approvalReference: option("--approval-reference"),
+      humanConfirmation: entered,
+    },
+    awsKmsSigningClients({ region }),
+  );
+  stdout.write(`${JSON.stringify(receipt)}\n`);
 }
 
 void main().catch((error: unknown) => {

@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SignOnlyWithExactMissionAgentReleaseKey",
+      "Effect": "Allow",
+      "Action": ["kms:DescribeKey", "kms:GetPublicKey", "kms:Sign", "kms:Verify"],
+      "Resource": "__KMS_KEY_ARN__"
+    },
+    {
+      "Sid": "InspectCallerIdentity",
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    }
+  ]
+}

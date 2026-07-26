@@ -1,23 +1,17 @@
-# Mission Agent 0.7.0 offline ceremony package
+# Mission Agent 0.7.0 KMS ceremony package
 
-This directory contains only public release inputs and human instructions. It
-contains no private key and is not signing or publication authority.
+This package is unsigned. Possession of it contains no AWS credentials and is
+not signing, trust-activation, or publication authority.
 
-The authorized human must:
+1. Obtain separate authorization to create the KMS key and signer role.
+2. Create an `ECC_NIST_EDWARDS25519`/`SIGN_VERIFY` KMS key.
+3. Generate the pending record with
+   `mission-agent:release:kms-key-record`.
+4. Verify source, version, artifact checksum, DER-SPKI fingerprint, and policy.
+5. Deploy the public trust record as `pending` through a separately approved
+   Mission Control change.
+6. Activate it only through a distinct authenticated approval.
+7. Sign only after trust activation and all publication gates pass.
 
-1. Move this package to an approved offline system.
-2. Generate Ed25519 key material offline.
-3. Store the private key in encrypted primary custody.
-4. Create an independently stored encrypted backup and verify recovery.
-5. Record primary and backup custodians in the restricted custody record.
-6. Derive the DER SPKI public key and its
-   `ed25519-spki-sha256:<lowercase-sha256>` fingerprint.
-7. Return only the public key, fingerprint, completed non-secret custody
-   approval, and ceremony receipt.
-8. Retain all private material offline.
-9. Wait until production Mission Control trusts the returned public key.
-10. Only then sign the exact canonical manifest after explicitly confirming
-    checksum `3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e`.
-
-Do not run signing or key-generation commands through Codex, CI, chat,
-application environments, or network-connected release hosts.
+The included verifier contacts no AWS service and does not create a key, sign,
+activate trust, or publish.

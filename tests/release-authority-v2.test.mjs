@@ -55,6 +55,19 @@ test("pending replacement key insertion rejects incomplete or activated records"
     revokedAt: null,
     replacedBy: null,
     historicalVersions: [],
+    kms: {
+      provider: "aws-kms",
+      accountId: "123456789012",
+      region: "us-east-1",
+      keyArn: "arn:aws:kms:us-east-1:123456789012:key/11111111-1111-1111-1111-111111111111",
+      keyId: "11111111-1111-1111-1111-111111111111",
+      keySpec: "ECC_NIST_EDWARDS25519",
+      keyUsage: "SIGN_VERIFY",
+      signingAlgorithm: "ED25519_SHA_512",
+      origin: "AWS_KMS",
+      keyManager: "CUSTOMER",
+      multiRegion: false,
+    },
   };
   assert.deepEqual(validatePendingReleaseKey(base), base);
   assert.throws(() => validatePendingReleaseKey({ ...base, publicKeySpkiBase64: "" }));

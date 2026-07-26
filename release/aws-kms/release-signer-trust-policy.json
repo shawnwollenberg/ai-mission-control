@@ -1,0 +1,13 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "HumanIdentityCenterReleaseSignerOnly",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "__EXACT_IDENTITY_CENTER_RELEASE_SIGNER_ROLE_ARN__"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}

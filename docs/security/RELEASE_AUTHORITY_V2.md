@@ -1,7 +1,8 @@
 # Release Authority v2
 
-Release Authority v2 separates reproducible artifact construction from human,
-offline signing and supports overlapping, identified Ed25519 trust roots.
+Release Authority v2 separates reproducible artifact construction from
+human-authorized AWS KMS signing and supports overlapping, identified Ed25519
+trust roots. KMS is only the private-key custody and signing backend.
 
 ## Trust model
 
@@ -11,8 +12,8 @@ Control application release may add or change a trust record. A manifest can
 never introduce or activate its own key.
 
 The planned replacement ID is `mission-agent-release-2026-01`. It is not yet in
-the application trust store because no authorized human public key or completed
-custody record has been provided.
+the application trust store because no authorized KMS key has been created and
+its DER SubjectPublicKeyInfo has not been approved.
 
 - `pending`: public key is installed but cannot verify release publication.
 - `active`: may authorize new releases.
@@ -73,20 +74,31 @@ npm run mission-agent:release:build -- \
   --signing-key-id mission-agent-release-2026-01
 ```
 
-Only the authorized human runs the sign command in the offline environment:
+Only the authorized human runs the sign command from an interactive terminal
+using a short-lived AWS IAM Identity Center session:
 
 ```sh
 npm run mission-agent:release:sign -- \
-  --manifest /offline-transfer/mission-agent-0.6.9.unsigned.json \
-  --private-key /offline-custody/private-key.pem \
-  --output /offline-transfer/mission-agent-0.6.9.signed.json \
-  --confirm-artifact-sha256 a7ecca3bd6f81effa5d17843183cd45d15e1b3c5543e445879c84d503950f8af \
-  --expected-public-key-fingerprint '<approved-ed25519-spki-sha256-fingerprint>'
+  --manifest release/mission-agent-0.7.0/unsigned-manifest-v2.json \
+  --artifact public/mission-agent-0.7.0.mjs \
+  --pending-key-record /approved/release-key-2026-01.pending.json \
+  --trust-activation-evidence /approved/release-key-2026-01.active.json \
+  --kms-key-arn '<exact-kms-key-arn>' \
+  --expected-signer-role-arn '<exact-release-signer-role-arn>' \
+  --expected-artifact-sha256 3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e \
+  --expected-source-commit a6d867f217c6e28ce811fbb5b8bf8778fad193c4 \
+  --expected-release-version 0.7.0 \
+  --release-authority-key-id mission-agent-release-2026-01 \
+  --approval-reference '<approved-release-record>' \
+  --output-signature /approved/mission-agent-0.7.0.signature \
+  --output-bundle /approved/mission-agent-0.7.0.signed.json \
+  --output-receipt /approved/mission-agent-0.7.0.signing-receipt.json
 ```
 
-The private-key path is illustrative and must never be copied into an agent
-session, source control, CI, or an application environment. The sign tool is
-disabled in CI and production and never generates a key.
+The command checks the pending trust record, requires a release-specific human
+confirmation, signs exact canonical bytes with `MessageType=RAW`, and verifies
+through both Node Ed25519 and KMS Verify. It is disabled in CI and production,
+never creates a key, and never activates trust or publishes.
 
 After the public key is installed and active, connected systems may verify:
 
