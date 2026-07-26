@@ -2,6 +2,12 @@
   "Version": "2012-10-17",
   "Statement": [
     {
+      "Sid": "InspectCallerIdentity",
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    },
+    {
       "Sid": "InspectExactProductionReleaseAuthorityKey",
       "Effect": "Allow",
       "Action": ["kms:DescribeKey", "kms:GetPublicKey"],
@@ -68,7 +74,7 @@
     {
       "Sid": "DenyEveryUnrelatedAwsAction",
       "Effect": "Deny",
-      "NotAction": ["kms:DescribeKey", "kms:GetPublicKey", "kms:Sign", "kms:Verify"],
+      "NotAction": ["sts:GetCallerIdentity", "kms:DescribeKey", "kms:GetPublicKey", "kms:Sign", "kms:Verify"],
       "Resource": "*"
     }
   ]
