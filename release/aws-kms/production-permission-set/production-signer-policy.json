@@ -1,0 +1,52 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SignOnlyWithExactProductionReleaseAuthorityKey",
+      "Effect": "Allow",
+      "Action": ["kms:DescribeKey", "kms:GetPublicKey", "kms:Sign", "kms:Verify"],
+      "Resource": "__PRODUCTION_KMS_KEY_ARN__",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/purpose": "mission-agent-release-authority",
+          "aws:ResourceTag/environment": "production",
+          "aws:ResourceTag/authority-version": "v2",
+          "aws:ResourceTag/owner": "Shawn",
+          "aws:ResourceTag/key-id": "mission-agent-release-2026-01",
+          "aws:ResourceTag/rotation-mode": "manual-governed",
+          "kms:KeySpec": "ECC_NIST_EDWARDS25519",
+          "kms:KeyUsage": "SIGN_VERIFY",
+          "kms:KeyOrigin": "AWS_KMS",
+          "kms:SigningAlgorithm": "ED25519_SHA_512",
+          "kms:MessageType": "RAW"
+        },
+        "Bool": {
+          "kms:MultiRegion": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenySignerKeyAdministration",
+      "Effect": "Deny",
+      "Action": [
+        "kms:CancelKeyDeletion",
+        "kms:CreateGrant",
+        "kms:DisableKey",
+        "kms:EnableKey",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:UpdateKeyDescription"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyEveryUnrelatedAwsAction",
+      "Effect": "Deny",
+      "NotAction": ["kms:DescribeKey", "kms:GetPublicKey", "kms:Sign", "kms:Verify"],
+      "Resource": "*"
+    }
+  ]
+}

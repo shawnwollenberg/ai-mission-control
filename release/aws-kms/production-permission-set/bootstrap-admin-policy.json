@@ -1,0 +1,121 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CreateOnlyTaggedProductionReleaseAuthorityKey",
+      "Effect": "Allow",
+      "Action": ["kms:CreateKey", "kms:TagResource"],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "kms:KeySpec": "ECC_NIST_EDWARDS25519",
+          "kms:KeyUsage": "SIGN_VERIFY",
+          "kms:KeyOrigin": "AWS_KMS",
+          "aws:RequestTag/purpose": "mission-agent-release-authority",
+          "aws:RequestTag/environment": "production",
+          "aws:RequestTag/authority-version": "v2",
+          "aws:RequestTag/owner": "Shawn",
+          "aws:RequestTag/key-id": "mission-agent-release-2026-01",
+          "aws:RequestTag/rotation-mode": "manual-governed"
+        },
+        "Bool": {
+          "kms:MultiRegion": "false"
+        },
+        "ForAllValues:StringEquals": {
+          "aws:TagKeys": ["purpose", "environment", "authority-version", "owner", "key-id", "rotation-mode"]
+        }
+      }
+    },
+    {
+      "Sid": "AdministerOnlyTaggedProductionReleaseAuthorityKeyDuringBootstrap",
+      "Effect": "Allow",
+      "Action": [
+        "kms:DescribeKey",
+        "kms:DisableKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:GetPublicKey",
+        "kms:ListGrants",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:Verify"
+      ],
+      "Resource": "arn:aws:kms:us-east-1:661452835066:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/purpose": "mission-agent-release-authority",
+          "aws:ResourceTag/environment": "production",
+          "aws:ResourceTag/authority-version": "v2",
+          "aws:ResourceTag/owner": "Shawn",
+          "aws:ResourceTag/key-id": "mission-agent-release-2026-01",
+          "aws:ResourceTag/rotation-mode": "manual-governed",
+          "kms:KeySpec": "ECC_NIST_EDWARDS25519",
+          "kms:KeyUsage": "SIGN_VERIFY",
+          "kms:KeyOrigin": "AWS_KMS"
+        },
+        "Bool": {
+          "kms:MultiRegion": "false"
+        }
+      }
+    },
+    {
+      "Sid": "InspectAliasesInApprovedAccountAndRegion",
+      "Effect": "Allow",
+      "Action": "kms:ListAliases",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "kms:CallerAccount": "661452835066"
+        }
+      }
+    },
+    {
+      "Sid": "InspectKmsCloudTrailEvidence",
+      "Effect": "Allow",
+      "Action": "cloudtrail:LookupEvents",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "DenyProductionSigningFromKeyAdministrator",
+      "Effect": "Deny",
+      "Action": "kms:Sign",
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyGrantCreation",
+      "Effect": "Deny",
+      "Action": "kms:CreateGrant",
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyEveryUnrelatedAwsAction",
+      "Effect": "Deny",
+      "NotAction": [
+        "kms:CreateKey",
+        "kms:TagResource",
+        "kms:DescribeKey",
+        "kms:DisableKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:GetPublicKey",
+        "kms:ListAliases",
+        "kms:ListGrants",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:Verify",
+        "cloudtrail:LookupEvents"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
