@@ -31,7 +31,7 @@
     "Explicit authorization to sign the Mission Agent 0.7.0 manifest"
   ],
   "recovery": {
-    "administrativePrincipal": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MIssionAgentReleaseAdmin_87b0b5ae62ce37f3",
+    "administrativePrincipal": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1",
     "accountRecoveryPrincipal": "arn:aws:iam::661452835066:root",
     "rotationMode": "manual-governed"
   },

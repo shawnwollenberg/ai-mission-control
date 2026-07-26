@@ -1,0 +1,4 @@
+MISSION AGENT RELEASE AUTHORITY BOUNDARY VALIDATION ONLY
+This is not a release manifest, artifact, trust record, activation, or publication authorization.
+Key: mission-agent-release-2026-01
+Purpose: validate the production signer role's KMS Sign and Verify boundary.

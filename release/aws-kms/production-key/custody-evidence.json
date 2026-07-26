@@ -47,13 +47,15 @@
   },
   "policy": {
     "accountRecoveryPrincipal": "arn:aws:iam::661452835066:root",
-    "administrativePrincipal": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MIssionAgentReleaseAdmin_87b0b5ae62ce37f3",
-    "signingPrincipals": [],
-    "signingDeniedUntilSeparateActivation": true,
+    "administrativePrincipal": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1",
+    "signingPrincipals": [
+      "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d"
+    ],
+    "signingDeniedUntilSeparateActivation": false,
     "grantCreationDenied": true,
     "policyHashMethod": "SHA-256 of UTF-8 bytes emitted by jq -cS . (recursive object-key sorting, compact JSON, trailing newline retained)",
-    "committedPolicySha256": "751eaa5b540d8d3c49d2f44534e72d3d434922089bc2b437f018b8f36d2034d6",
-    "effectivePolicySha256": "751eaa5b540d8d3c49d2f44534e72d3d434922089bc2b437f018b8f36d2034d6",
+    "committedPolicySha256": "4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7",
+    "effectivePolicySha256": "4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7",
     "effectivePolicyMatchesCommittedPolicy": true,
     "applicationPrincipals": [],
     "deploymentPrincipals": []
@@ -73,12 +75,17 @@
       "eventTime": "2026-07-26T16:50:37-04:00",
       "requestId": "41e9bd16-b8d3-4d7b-a8f9-e916bdd7468e",
       "principalType": "AssumedRole"
+    },
+    "putFinalKeyPolicy": {
+      "eventTime": "2026-07-26T17:18:29-04:00",
+      "requestId": "9b2659dd-159d-46c0-b1eb-43d48eff7eaa",
+      "principalType": "AssumedRole"
     }
   },
   "releaseState": {
     "trustStatus": "pending",
-    "productionSignerConfigured": false,
-    "cloudTrailSignEventsForKey": 0,
+    "productionSignerConfigured": true,
+    "cloudTrailSignEventsForKey": 1,
     "manifestSigned": false,
     "trustActivated": false,
     "published": false,

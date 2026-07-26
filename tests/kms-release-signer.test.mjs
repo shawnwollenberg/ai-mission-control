@@ -23,6 +23,11 @@ const manifestPath = new URL("../release/mission-agent-0.7.0/unsigned-manifest-v
 const expectedArtifactSha256 = "3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e";
 const expectedSourceCommit = "a6d867f217c6e28ce811fbb5b8bf8778fad193c4";
 const expectedReleaseVersion = "0.7.0";
+const productionKeyArn = "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee";
+const productionAdminPrincipal =
+  "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1";
+const productionSignerPrincipal =
+  "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d";
 
 function mockAws(overrides = {}) {
   const { publicKey, privateKey } = generateKeyPairSync("ed25519");
@@ -81,6 +86,49 @@ function mockAws(overrides = {}) {
     calls,
   };
 }
+
+test("production signer policies preserve exact-key and separation-of-duties boundaries", async () => {
+  const identityPolicy = JSON.parse(
+    await readFile(
+      new URL("../release/aws-kms/production-permission-set/production-signer-policy.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const keyPolicy = JSON.parse(
+    await readFile(
+      new URL("../release/aws-kms/production-permission-set/final-production-key-policy.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const allows = identityPolicy.Statement.filter(({ Effect }) => Effect === "Allow");
+  assert.deepEqual(
+    allows.flatMap(({ Action }) => (Array.isArray(Action) ? Action : [Action])).sort(),
+    ["kms:DescribeKey", "kms:GetPublicKey", "kms:Sign", "kms:Verify", "sts:GetCallerIdentity"].sort(),
+  );
+  assert.ok(
+    allows
+      .filter(({ Action }) => Action !== "sts:GetCallerIdentity")
+      .every(({ Resource }) => Resource === productionKeyArn),
+  );
+  assert.match(JSON.stringify(identityPolicy), /ED25519_SHA_512/);
+  assert.match(JSON.stringify(identityPolicy), /RAW/);
+
+  const serialized = JSON.stringify(keyPolicy);
+  assert.match(serialized, new RegExp(productionAdminPrincipal));
+  assert.match(serialized, new RegExp(productionSignerPrincipal));
+  assert.doesNotMatch(serialized, /MIssionAgentReleaseAdmin_87b0b5ae62ce37f3/);
+  const signerAdminDeny = keyPolicy.Statement.find(({ Sid }) => Sid === "DenySignerKeyAdministration");
+  assert.equal(signerAdminDeny.Principal.AWS, productionSignerPrincipal);
+  for (const action of [
+    "kms:CreateGrant",
+    "kms:DisableKey",
+    "kms:EnableKey",
+    "kms:PutKeyPolicy",
+    "kms:ScheduleKeyDeletion",
+    "kms:TagResource",
+  ])
+    assert.ok(signerAdminDeny.Action.includes(action));
+});
 
 async function signingInput(temp, pendingKeyRecord, overrides = {}) {
   return {
