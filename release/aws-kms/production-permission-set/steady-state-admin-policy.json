@@ -16,7 +16,7 @@
         "kms:ScheduleKeyDeletion",
         "kms:Verify"
       ],
-      "Resource": "__PRODUCTION_KMS_KEY_ARN__",
+      "Resource": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "us-east-1",

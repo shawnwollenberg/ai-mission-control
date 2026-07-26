@@ -1,0 +1,66 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowAccountRootBreakGlassAdministrationWithoutSigning",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::661452835066:root"
+      },
+      "Action": [
+        "kms:CancelKeyDeletion",
+        "kms:DescribeKey",
+        "kms:DisableKey",
+        "kms:EnableKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:GetPublicKey",
+        "kms:ListAliases",
+        "kms:ListGrants",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:UpdateKeyDescription",
+        "kms:Verify"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowExactIdentityCenterKeyAdministratorWithoutSigning",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MIssionAgentReleaseAdmin_87b0b5ae62ce37f3"
+      },
+      "Action": [
+        "kms:DescribeKey",
+        "kms:DisableKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:GetPublicKey",
+        "kms:ListAliases",
+        "kms:ListGrants",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:Verify"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyAllSigningUntilSeparatelyAuthorizedSignerActivation",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "kms:Sign",
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyGrantCreation",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "kms:CreateGrant",
+      "Resource": "*"
+    }
+  ]
+}

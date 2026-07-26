@@ -89,6 +89,33 @@ export const trustedReleaseKeys: Readonly<Record<string, ReleaseKeyRecord>> = {
     historicalVersions: ["0.6.8"],
     kms: null,
   },
+  "mission-agent-release-2026-01": {
+    keyId: "mission-agent-release-2026-01",
+    algorithm: "Ed25519",
+    publicKeySpkiBase64: "MCowBQYDK2VwAyEAvSkEoddFoGfJn2PauL+KEl4ykZ+5WM5B2PklJOZOAKE=",
+    publicKeyFingerprint: "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+    status: "pending",
+    purpose: "mission-agent-release",
+    createdAt: "2026-07-26T20:50:15.575Z",
+    activatedAt: null,
+    retiresAt: null,
+    revokedAt: null,
+    replacedBy: null,
+    historicalVersions: [],
+    kms: {
+      provider: "aws-kms",
+      accountId: "661452835066",
+      region: "us-east-1",
+      keyArn: "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+      keyId: "cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+      keySpec: "ECC_NIST_EDWARDS25519",
+      keyUsage: "SIGN_VERIFY",
+      signingAlgorithm: "ED25519_SHA_512",
+      origin: "AWS_KMS",
+      keyManager: "CUSTOMER",
+      multiRegion: false,
+    },
+  },
   // RELEASE_AUTHORITY_V2_PENDING_KEY_INSERTION_POINT
 };
 

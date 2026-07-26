@@ -2,10 +2,33 @@
   "Version": "2012-10-17",
   "Statement": [
     {
+      "Sid": "InspectExactProductionReleaseAuthorityKey",
+      "Effect": "Allow",
+      "Action": ["kms:DescribeKey", "kms:GetPublicKey"],
+      "Resource": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/purpose": "mission-agent-release-authority",
+          "aws:ResourceTag/environment": "production",
+          "aws:ResourceTag/authority-version": "v2",
+          "aws:ResourceTag/owner": "Shawn",
+          "aws:ResourceTag/key-id": "mission-agent-release-2026-01",
+          "aws:ResourceTag/rotation-mode": "manual-governed",
+          "kms:KeySpec": "ECC_NIST_EDWARDS25519",
+          "kms:KeyUsage": "SIGN_VERIFY",
+          "kms:KeyOrigin": "AWS_KMS"
+        },
+        "Bool": {
+          "kms:MultiRegion": "false"
+        }
+      }
+    },
+    {
       "Sid": "SignOnlyWithExactProductionReleaseAuthorityKey",
       "Effect": "Allow",
-      "Action": ["kms:DescribeKey", "kms:GetPublicKey", "kms:Sign", "kms:Verify"],
-      "Resource": "__PRODUCTION_KMS_KEY_ARN__",
+      "Action": ["kms:Sign", "kms:Verify"],
+      "Resource": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "us-east-1",

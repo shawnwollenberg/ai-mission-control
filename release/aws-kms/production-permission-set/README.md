@@ -29,12 +29,13 @@ cannot create grants or use unrelated AWS services.
 
 ## After key creation
 
-1. Replace `__PRODUCTION_KMS_KEY_ARN__` in
-   `steady-state-admin-policy.json` with the exact recorded key ARN.
-2. Update `MissionAgentReleaseAdmin` to that policy. This removes
+1. Confirm the exact recorded key ARN in `steady-state-admin-policy.json` and
+   `production-signer-policy.json` is
+   `arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee`.
+2. Update `MissionAgentReleaseAdmin` to the steady-state policy. This removes
    `kms:CreateKey` and `kms:TagResource` and removes `key/*`.
-3. Create a separate production signer role from
-   `production-signer-policy.json`, replacing the same placeholder.
+3. After separate authorization, create a production signer role from
+   `production-signer-policy.json`.
 4. Put a key policy on the key naming the exact administrator and signer role
    ARNs. The administrator must not sign; the signer must not mutate policy,
    grants, tags, enablement, or deletion state.

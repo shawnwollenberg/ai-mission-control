@@ -31,6 +31,17 @@ const RELEASE_TRUST_STORE = Object.freeze({
     retiresAt: null,
     revokedAt: null,
   }),
+  "mission-agent-release-2026-01": Object.freeze({
+    keyId: "mission-agent-release-2026-01",
+    algorithm: "Ed25519",
+    publicKeySpkiBase64: "MCowBQYDK2VwAyEAvSkEoddFoGfJn2PauL+KEl4ykZ+5WM5B2PklJOZOAKE=",
+    publicKeyFingerprint: "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+    status: "pending",
+    purpose: "mission-agent-release",
+    activatedAt: null,
+    retiresAt: null,
+    revokedAt: null,
+  }),
   // RELEASE_AUTHORITY_V2_PENDING_KEY_INSERTION_POINT
 });
 const root = process.env.MISSION_AGENT_HOME ?? join(homedir(), ".mission-agent");
