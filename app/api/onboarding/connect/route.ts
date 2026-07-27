@@ -83,9 +83,20 @@ export async function POST(request: Request) {
         workspaceName: workspaceName ?? "My Workspace",
       }),
     ).toString("base64url");
-    const missionAgentVersion = "0.6.8";
-    const missionAgentChecksum = "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d";
-    const command = `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && printf '%s\\n' '{"version":"${missionAgentVersion}","sha256":"${missionAgentChecksum}","manifestVersion":"1"}' > "$metadata" && chmod 600 "$metadata" && node "$tmp" connect '${config}'`;
+    const missionAgentVersion = "0.7.2";
+    const missionAgentChecksum = "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09";
+    const artifactMetadata = JSON.stringify({
+      artifactByteLength: 148063,
+      canonicalizationVersion: "release-manifest-json-v3",
+      manifestVersion: "3",
+      publicKeyFingerprint: "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+      releaseAuthorityVersion: "v2",
+      sha256: missionAgentChecksum,
+      signingKeyId: "mission-agent-release-2026-01",
+      sourceCommit: "31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
+      version: missionAgentVersion,
+    });
+    const command = `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && printf '%s\\n' '${artifactMetadata}' > "$metadata" && chmod 600 "$metadata" && node "$tmp" connect '${config}'`;
     await recordOnboardingEvent({
       workspaceId: identity.workspaceId,
       actorId: identity.userId,

@@ -1,7 +1,1 @@
-{
-  "version": "0.6.8",
-  "path": "/mission-agent-0.6.8.mjs",
-  "sha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
-  "manifestVersion": "1",
-  "signature": "r54U/Z5zofB1E5EUSAppOybPT/P4xsC18YsRQ9MZcfuSlXuwph45F6E1xSgk9652uhh7VV7l6A12yEC1dCQrBQ=="
-}
+{"artifactByteLength":148063,"artifactName":"mission-agent-0.7.2.mjs","artifactSha256":"108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09","build":{"buildId":"mission-agent-0.7.2-31b45c98","sourceCommit":"31b45c98f2ffba613b56cd23819ba8b0c9c09a43"},"canonicalizationVersion":"release-manifest-json-v3","compatibility":{"activationProtocolVersion":"1","identityProtocolVersion":"2","minimumMissionControlVersion":"0.1.0"},"createdAt":"2026-07-27T20:00:00.000Z","expiresAt":"2026-08-26T20:00:00.000Z","manifestVersion":"3","platform":{"architecture":"universal","artifactFormat":"esm","operatingSystem":"darwin-linux","runtime":"node","runtimeMajorVersion":22},"provenance":{"builderSha256":"4a3e9b186f60cf2d6f9c6b34582a6c6898d5819df2522c71855a0d97ecad333b","containerImageDigest":"node@sha256:20a424ecd1d2064a44e12fe287bf3dae443aab31dc5e0c0cb6c74bef9c78911c","manifestSchemaSha256":"e4731d44f5b1e35ad7bd3ba9b429609af3bd8a095ac43daa1c0c1bc0e82e90d7","nodeVersion":"22.22.0","packageLockSha256":"b280c5b76c590b613fb82b3ceda4e323efaabcbbbc432fcc605d56b23856a1ea","reproducibilityEvidenceSha256":"244c1fdfb1fe700f3374aed0e40e132b663c17335cb42ea06550385920467320"},"publicKeyFingerprint":"ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b","releaseAuthorityVersion":"v2","releaseVersion":"0.7.2","signature":"1OSpJnBTL/jupeLi2xMCEY+xZGRUdRE665k95By8mfpwf+NzH3kNY4oDs0ZAwNWkazvvnbbZGQzxAgFbjALwBw==","signingKeyId":"mission-agent-release-2026-01"}
