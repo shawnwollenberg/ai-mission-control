@@ -48,8 +48,9 @@
   },
   "independentReview": {
     "criticalFindings": 0,
-    "highFindings": 1,
-    "acceptanceBlockingMediumFindings": 0,
+    "highFindings": 0,
+    "resolvedHighFindings": 1,
+    "acceptanceBlockingMediumFindings": 1,
     "resolvedFindings": [
       "The updater now compares signed platform metadata with the actual Node major, operating system, and architecture before release eligibility.",
       "The production KMS signing and human signing CLI paths now require strict Manifest v3 for new releases.",
@@ -57,7 +58,7 @@
       "Build provenance hashes and minimum Mission Control compatibility are now signed and enforced.",
       "The activation evidence is being rebound from the pre-activation base to an immutable trust-enabled commit."
     ],
-    "disposition": "pending-final-evidence-binding-review"
+    "disposition": "signed-candidate-valid-publication-blocked-pending-cloudtrail-correlation"
   },
   "signingStatus": "signed-candidate-unpublished",
   "productionSignature": {

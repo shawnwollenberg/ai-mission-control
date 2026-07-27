@@ -11,7 +11,8 @@
     "pendingPath": "release/aws-kms/production-key/pending-trust-record.json",
     "pendingCanonicalSha256": "91e8774f38bb64b4715169928fec4fe4a03ca861c687241795c93e706a3f7b6b",
     "activePath": "release/aws-kms/production-key/active-trust-record.json",
-    "activeCanonicalSha256": "8bdc37c0030136e2d9339d87c0ca506d2cb41310fe1d5bc003ecffc4acd64fba"
+    "activeCanonicalSha256": "8bdc37c0030136e2d9339d87c0ca506d2cb41310fe1d5bc003ecffc4acd64fba",
+    "trustEnabledReleaseSha": "6894601268a6571143f6cc9fd5a3667e31507403"
   },
   "identity": {
     "activationAuthority": "Explicit user authorization recorded in the Codex task",

@@ -4,7 +4,7 @@
   "releaseAuthorityKeyId": "mission-agent-release-2026-01",
   "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
   "kmsKeyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
-  "missionControlReleaseSha": "b52afa7921ae5a0b8f2b9f26cf5d2e4cb682e369",
+  "missionControlReleaseSha": "6894601268a6571143f6cc9fd5a3667e31507403",
   "activatedAt": "2026-07-27T16:58:06.000Z",
   "approvalReference": "Activate Production Trust and Sign Mission Agent 0.7.2 Manifest v3"
 }

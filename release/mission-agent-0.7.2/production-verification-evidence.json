@@ -45,7 +45,8 @@
     "missionControlReleaseAuthority": "passed",
     "missionControlOperationalSelection": "passed",
     "missionAgent072Verifier": "passed",
-    "missionAgent072DefaultUpdater": "passed"
+    "missionAgent072DefaultUpdater": "passed",
+    "immutableTrustEnabledReleaseSha": "6894601268a6571143f6cc9fd5a3667e31507403"
   },
   "cloudTrail": {
     "lookupStatus": "not-readable-by-design",
