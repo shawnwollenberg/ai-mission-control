@@ -1,0 +1,222 @@
+{
+  "evidenceVersion": "1",
+  "recordedAt": "2026-07-27T18:55:00.000Z",
+  "authorization": "Authorize Production Migration 0028 and One Isolated Candidate Reattempt",
+  "disposition": "isolated-candidate-ready-awaiting-separate-canary-authorization",
+  "repository": {
+    "branch": "codex/aws-kms-release-authority-v2",
+    "evidenceBaseCommit": "47babc62589ecac88c9fb38fc30a05592abc4ae2",
+    "productionSourceCommit": "046c40e7747f3e5b72c600064d9402936abf238a",
+    "releaseTag": "release-authority-v1"
+  },
+  "migration": {
+    "filename": "0028_repository_identity_migration.sql",
+    "sha256": "c23e2b826dbdf8be0b8d54ff914b33c18d1d6740ea4df613a13d0e94d58c6b44",
+    "classification": "additive-forward-compatible",
+    "purpose": "Add stable-v2 repository identity state, identity history, and two-phase identity migration records.",
+    "affectedTables": ["repositories", "repository_identities", "repository_identity_migrations"],
+    "addedRepositoryColumns": ["identity_version", "identity_migration_status", "identity_last_verified_at"],
+    "createdIndexes": ["repository_identity_active_migration_idx"],
+    "constraints": [
+      "Allowed-value checks on identity and migration status fields",
+      "Lowercase 64-character hexadecimal fingerprint checks",
+      "Workspace, repository, and migration primary and foreign keys",
+      "One previewed or approved migration per workspace and repository"
+    ],
+    "backfill": {
+      "sourceRows": 6,
+      "insertedIdentityRows": 6,
+      "matchingFingerprintRows": 6,
+      "identityVersion": "legacy-v1",
+      "migrationStatus": "not_required"
+    },
+    "locking": "ALTER TABLE repositories takes an ACCESS EXCLUSIVE lock. With six rows and constant defaults on the deployed PostgreSQL version, expected duration was brief; the new-table backfill does not rewrite the repositories table.",
+    "transactionBehavior": "The approved migration runner executes each migration in one transaction under advisory transaction lock 1296743201 and records the checksum before commit.",
+    "destructive": false,
+    "requiresDowntime": false,
+    "oldApplicationCompatible": true,
+    "newApplicationCompatible": true,
+    "rollbackLimitations": "Do not destructively reverse migration 0028. The prior application is forward-compatible; restore the verified pre-migration backup only under separately justified recovery authority.",
+    "recoveryIfCandidateFailed": "Keep the routed prior image active, preserve the isolated candidate and evidence, and request targeted repair authorization."
+  },
+  "livePreflight": {
+    "awsAccount": "661452835066",
+    "region": "us-east-1",
+    "instanceId": "i-0f9f584fddf6be617",
+    "database": "mission_control",
+    "migrationCount": 27,
+    "latestMigration": "0027_mission_agent_artifact_identity.sql",
+    "migrationChecksumsThrough0027Matched": true,
+    "migration0028PreviouslyApplied": false,
+    "partial0028ObjectsPresent": false,
+    "schemaDriftDetected": false,
+    "concurrentMigrationDetected": false,
+    "repositoryRows": 6,
+    "fingerprintedRepositoryRows": 6,
+    "inspectionCommandId": "aec40fe2-0d8f-4e5e-8eb3-6126b387808c"
+  },
+  "productionLikeValidation": {
+    "source": "Fresh custom-format pg_dump of production restored into a disposable database on the same encrypted production host",
+    "upgradePath0027To0028": "passed",
+    "migrationAppliedExactlyOnce": true,
+    "frameworkRerunIdempotent": true,
+    "emptyDatabase0001Through0028": "passed",
+    "oldProductionImage": "661452835066.dkr.ecr.us-east-1.amazonaws.com/mission-control@sha256:943fb676166a03819f4bc596cbedcadf9ea002e57d1e8d2bce1f0d49ba7cc9aa",
+    "oldApplicationHealth": 200,
+    "oldApplicationReadiness": 200,
+    "oldApplicationRestarts": 0,
+    "newCandidateCompatibility": "passed against the identical reviewed post-0028 schema in production during the authorized isolated reattempt",
+    "unexpectedDataLoss": false,
+    "unexpectedSchemaDrift": false,
+    "disposableDatabasesRemovedAfterValidation": [
+      "mission_control_0028_dryrun_20260727",
+      "mission_control_0028_empty_20260727"
+    ],
+    "commandIds": {
+      "restore": "62f368fa-4167-4c4e-b17c-615268f41283",
+      "upgradePath": "dba14d6e-a86c-4db1-9750-a1c30567f3b3",
+      "idempotencyAndBackfill": "eb6c9442-b7d6-46b7-9fb3-dea69574458b",
+      "oldApplicationCompatibility": "a877e2c3-263e-4963-8b80-56333c7b65d7",
+      "emptyDatabase": "0dc354c9-085c-4629-9c83-04d721f4be33",
+      "cleanup": "13166e8a-bdfd-4613-aa55-c446826a9024"
+    }
+  },
+  "backup": {
+    "identifier": "/opt/mission-control/backups/pre-migration-0028-20260727T184410Z.dump",
+    "format": "PostgreSQL custom-format pg_dump, compression level 9",
+    "startedAt": "2026-07-27T18:44:21.334Z",
+    "completedAt": "2026-07-27T18:44:23.334Z",
+    "sizeBytes": 13762055,
+    "sha256": "44d8d297b65cd2f0eb468c9a745f5fba17dc019bd21afb1215700b3717c5a63c",
+    "owner": "root:root",
+    "mode": "0600",
+    "storageVolumeId": "vol-0a413eb4a49a53293",
+    "storageEncrypted": true,
+    "storageKmsKeyArn": "arn:aws:kms:us-east-1:661452835066:key/3e03e34c-47b9-4567-a995-d116ef968285",
+    "region": "us-east-1",
+    "database": "mission_control",
+    "verification": "pg_restore --list completed successfully and the backup was successfully restored for the dry run",
+    "retention": "Retained until a separately approved backup-retention decision",
+    "restoreProcedureReference": "docs/PHASE_6_RUNBOOKS.md",
+    "administrativeAccessPath": "AWS Systems Manager to the production EC2 host using the approved AWS Identity Center session",
+    "commandId": "84a73e22-a983-4fa1-bed3-f788d4f9c833"
+  },
+  "productionApplication": {
+    "migrationStateBefore": 27,
+    "migrationStateAfter": 28,
+    "migrationStartedAt": "2026-07-27T18:48:02.814Z",
+    "migrationCompletedAt": "2026-07-27T18:48:03.814Z",
+    "migrationAppliedAt": "2026-07-27T18:48:03.735232Z",
+    "migrationRunner": "scripts/migrate.ts from the exact candidate image and source commit 046c40e7747f3e5b72c600064d9402936abf238a",
+    "migrationCommandId": "64053bb5-7ecc-4e0e-9f1f-4d36d5cea59b",
+    "warnings": [],
+    "postMigrationSchemaMatched": true,
+    "migrationRecordCount": 1,
+    "routedImage": "661452835066.dkr.ecr.us-east-1.amazonaws.com/mission-control@sha256:943fb676166a03819f4bc596cbedcadf9ea002e57d1e8d2bce1f0d49ba7cc9aa",
+    "containerReplaced": false,
+    "healthStatus": 200,
+    "readinessStatus": 200,
+    "restartCount": 0,
+    "databaseErrors": "No migration, lock, deadlock, fatal, or panic errors. Two logged SQL syntax errors came from failed read-only inspection commands before migration and did not modify data.",
+    "workers": {
+      "generic": {
+        "running": true,
+        "restartCount": 0
+      },
+      "action": {
+        "running": true,
+        "restartCount": 0
+      },
+      "projectBrain": {
+        "running": true,
+        "restartCount": 0
+      }
+    },
+    "postMigrationValidationCommandId": "300daebc-4a13-4f3b-9177-8d7ea33b097f"
+  },
+  "isolatedCandidate": {
+    "image": "661452835066.dkr.ecr.us-east-1.amazonaws.com/mission-control@sha256:c01a64219adf0e315cc597e84ed9b89cab55c9e8939548d3240a647982c74d5d",
+    "containerName": "mission-control-web-ma072",
+    "containerImageId": "sha256:f390061004133b20684a715afebaff684d0306aeab393bce7927a675a106a1a7",
+    "startedAt": "2026-07-27T18:36:24.030966882Z",
+    "network": "mission-control",
+    "publicPortBindings": {},
+    "publiclyRouted": false,
+    "processType": "web-default",
+    "backgroundWorkerStarted": false,
+    "migrationAutoRunObserved": false,
+    "healthSamples": [200, 200, 200],
+    "readinessSamples": [200, 200, 200],
+    "migrationGateSatisfied": true,
+    "restartCount": 0,
+    "applicationExceptions": [],
+    "migrationWarnings": [],
+    "databaseConnectionFailures": [],
+    "manifestVerificationFailures": [],
+    "duplicateJobExecutionObserved": false,
+    "resourceSample": {
+      "cpu": "0.00%",
+      "memory": "56.86MiB / 1.803GiB",
+      "pids": 11
+    },
+    "releaseAssets": {
+      "releaseVersion": "0.7.2",
+      "manifestVersion": "3",
+      "artifactSha256Advertised": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+      "artifactSha256Served": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+      "signingKeyId": "mission-agent-release-2026-01"
+    },
+    "observationCommandId": "977aeddf-26a2-4b15-815a-ddca5aee02fe",
+    "assetVerificationCommandId": "ffe7560e-45d8-4847-a9df-af60d52c74f0",
+    "diagnosticsCommandId": "75c7dd30-c03d-4073-b18d-1ed72885e1af",
+    "finalStoppingVerificationCommandId": "2a9d251f-36f7-47d1-b23b-94829036fdfe"
+  },
+  "safety": {
+    "routedProductionMissionAgentVersion": "0.6.8",
+    "routedProductionManifestVersion": "1",
+    "routedProductionArtifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+    "productionTrafficRoutedToCandidate": false,
+    "namedCanaryAgentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+    "namedCanaryModified": false,
+    "smokeMissionStarted": false,
+    "broaderRolloutStarted": false,
+    "migration0029Applied": false,
+    "automaticRemediationAttempted": false,
+    "artifactManifestSignatureTagOrReleaseModified": false
+  },
+  "validation": {
+    "jsonSyntax": "passed",
+    "prettierEvidenceFile": "passed",
+    "gitDiffCheck": "passed",
+    "secretScan": "passed; no credential, token, connection-string, or private-key patterns found",
+    "evidenceConsistency": "passed",
+    "migrationChecksumConsistency": "passed",
+    "repositoryIdentityUnitTests": {
+      "runtime": "local Node.js 24.10.0",
+      "passed": 14,
+      "failed": 0
+    },
+    "missionAgent072AndManifestV3Tests": {
+      "runtime": "immutable Node.js 22.22.0 build-runtime container",
+      "passed": 13,
+      "failed": 0
+    },
+    "runtimeQualificationNote": "The 0.7.2 suite was first invoked under local Node.js 24.10.0 and correctly failed its Node 22 platform gate. It passed completely under the exact declared Node.js 22.22.0 runtime.",
+    "integrationQualificationNote": "A local repository-identity integration invocation without DATABASE_URL failed before database operations. The authorized production-like upgrade, idempotency, backfill, empty-database, old-application, and new-candidate database validations all passed against PostgreSQL.",
+    "additionalLegacySuiteNote": "An exploratory combined 0.7.0/0.7.1/artifact suite reported three stale-fixture/environment failures: two 0.7.0 tests consumed the now-v3 latest manifest or lacked a writable Git fixture, and one legacy artifact test expected mission-agent-latest.json to remain 0.6.8. Direct historical immutability checks for 0.6.8 and 0.6.9 passed, and no historical bytes changed."
+  },
+  "independentReview": {
+    "reviewer": "release_authority_security_review",
+    "disposition": "accepted",
+    "criticalFindings": 0,
+    "highFindings": 0,
+    "acceptanceBlockingMediumFindings": 0,
+    "lowFindings": [
+      "The verified backup is retained on the encrypted production host volume rather than an independently demonstrated failure domain. This is sufficient for the narrowly authorized additive migration gate, but separately governed off-host retention would improve resilience before broader rollout."
+    ],
+    "awsMutationsPerformedByReviewer": false,
+    "filesEditedByReviewer": false
+  },
+  "stoppingReason": "Migration 0028 is applied, routed production remains healthy, and the exact isolated candidate is healthy and ready. Authorization stops before canary installation.",
+  "nextAuthorizationRequired": "Explicit authorization to install Mission Agent 0.7.2 on canary 0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8 and execute the governed acceptance smoke test; no broader rollout."
+}
