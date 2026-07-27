@@ -112,7 +112,10 @@ Manifest v3 signs every release-acceptance input: manifest, Release Authority,
 and canonicalization versions; release version; artifact name, checksum, and
 byte length; build ID and source commit; signing key ID and public fingerprint;
 creation and expiration timestamps; structured platform metadata; and
-identity, activation, and minimum Mission Control compatibility.
+identity, activation, and minimum Mission Control compatibility. It also binds
+the builder, lockfile, schema, reproducibility-evidence hashes, exact Node
+version, and container image digest. Test results and human review remain
+separately authenticated Git evidence rather than runtime selection inputs.
 
 The platform is the actual portable ESM artifact target: Node.js major 22,
 `darwin-linux`, `universal`, and `esm`. These exact case-sensitive values are
@@ -130,6 +133,14 @@ The verifier selects a key by exact key ID, requires active state, compares the
 signed fingerprint with the trust record, derives the fingerprint again from
 the stored DER SPKI key, and verifies with that same key. Any disagreement
 fails closed.
+
+Mission Control's production release-selection boundary is
+`application/mission-agent-release-selection.ts`. It requires a canonical
+signed v3 bundle and checks the signature, minimum Mission Control version,
+artifact name, byte length, and checksum. The operational verification command
+uses this boundary. The KMS signing adapter parses only Manifest v3 for new
+production signing; its v2 mode requires an explicit historical-test flag that
+the human signing command does not expose.
 
 Manifest v1 remains available only for the explicitly governed 0.6.8 rollback.
 Manifest v2 remains parseable for historical fixtures but is prohibited for
@@ -309,7 +320,12 @@ every affected artifact and longer when incident or compliance policy requires.
 - Pending repository trust-record checksum:
   `91e8774f38bb64b4715169928fec4fe4a03ca861c687241795c93e706a3f7b6b`
 - Active repository trust-record checksum: not available; activation is blocked
-- Unsigned 0.7.2 canonical manifest checksum: pending deterministic build
+- Unsigned 0.7.2 canonical manifest checksum:
+  `b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace`
 - Signed 0.7.2 manifest checksum: not available; signing is not authorized
+- 0.7.2 artifact checksum:
+  `108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09`
+- 0.7.2 artifact source commit:
+  `31b45c98f2ffba613b56cd23819ba8b0c9c09a43`
 - 0.7.1 artifact checksum:
   `279365e5d1bcd18ce9bd8ac84d4b7e512cd3ff2f7f559e9892cd6fda3bf17803`
