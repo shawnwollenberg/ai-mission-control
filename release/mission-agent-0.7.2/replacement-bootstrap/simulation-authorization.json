@@ -16,6 +16,30 @@
   "targetSigningKeyId": "mission-agent-release-2026-01",
   "targetPublicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
   "requiredNodeVersion": "22.22.0",
+  "nodeRuntime": {
+    "version": "22.22.0",
+    "platform": "darwin-arm64",
+    "distributionUrl": "https://nodejs.org/dist/v22.22.0/node-v22.22.0-darwin-arm64.tar.gz",
+    "archiveSha256": "5ed4db0fcf1eaf84d91ad12462631d73bf4576c1377e192d222e48026a902640",
+    "archiveByteLength": 49923798,
+    "installationDirectory": "/opt/mission-agent/runtime/node-22/22.22.0",
+    "executablePath": "/opt/mission-agent/runtime/node-22/22.22.0/bin/node",
+    "executableSha256": "913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4"
+  },
+  "serviceReplacement": {
+    "serviceManager": "launchd",
+    "serviceIdentifier": "com.wallyweb.mission-agent",
+    "currentDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
+    "targetDefinitionSha256": "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50",
+    "targetDefinitionPath": "/Users/shawnwollenberg/.mission-agent/staged-0.7.2/com.wallyweb.mission-agent.plist",
+    "rollbackDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898"
+  },
+  "smokeMission": {
+    "templateId": "replacement-bootstrap-read-only-v1",
+    "operation": "repository-analysis",
+    "readOnly": true
+  },
+  "evidenceDestination": "/Users/shawnwollenberg/.mission-agent/evidence/replacement-bootstrap-11111111",
   "approvalId": "3d6af321-7773-4f87-9f5a-093155bf2b35",
   "operatorIdentity": "disposable-operator-fixture",
   "approvedBy": "authorized-release-owner-fixture",

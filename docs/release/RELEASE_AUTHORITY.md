@@ -445,3 +445,50 @@ agents are transitioned or retired.
 
 This procedure is transitional infrastructure and must not be used for agents
 already capable of native Manifest v3 verification.
+
+### Canonical replacement operator
+
+The authorization checksum binds the complete `nodeRuntime`,
+`serviceReplacement`, `smokeMission`, and `evidenceDestination` objects. This
+includes the immutable Node URL, archive length/checksum, executable checksum,
+absolute versioned installation paths, current/target/rollback LaunchAgent
+checksums, fixed read-only smoke template, and governed evidence destination.
+Unknown fields and mutable or relative paths fail closed. Any field change
+invalidates the approval action hash.
+
+The only reviewed entrypoint is:
+
+```text
+npm run replacement-bootstrap -- \
+  --mode production \
+  --authorization-id <uuid> \
+  --agent-id 0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8 \
+  --acknowledge operator-replacement-bootstrap-v1 \
+  --evidence-output <governed-absolute-path>
+```
+
+It accepts only authorization ID, the redundant fixed agent assertion, mode,
+the protocol acknowledgment, and a governed evidence location. Artifact,
+manifest, signature, Node, service, trust, repository, workspace, version, and
+rollback overrides are not command options.
+
+The mutation-free preflight loads the durable authorization, locks and
+revalidates its approval fingerprint and database-clock expiry, confirms the
+one-shot state, verifies the named agent and repository, verifies the exact
+release through both verification paths, and requires schema 0028. The
+operator owns the verified backup and exact 0029 migration before host work.
+
+Host operations use the fixed `ReplacementHost` contract, not free-form shell
+text. Each operation returns an authorization-bound structured receipt. The
+operator advances the existing CAS state machine, stages Node/release/service,
+drains only the named agent, switches once, verifies identity/heartbeats/
+capabilities, runs the bound read-only smoke mission, observes, and completes.
+After a non-idempotent boundary, ambiguous recovery always rolls back.
+
+The checksum-bound host journal and database state are reconciled before
+resumption. Only the next canonical idempotent operation may resume. A corrupt,
+out-of-order, differently authorized, or terminal journal halts; any journal at
+or beyond the atomic switch rolls back to exact 0.6.8. The evidence bundle
+contains preflight, backup, migration, receipts, transitions, journal,
+identity, heartbeat, capability, smoke, observation, and final fleet safety
+state without credentials.

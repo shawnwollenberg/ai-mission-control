@@ -1,0 +1,384 @@
+{
+  "evidenceVersion": "1",
+  "operatorVersion": "replacement-bootstrap-operator-v1",
+  "mode": "disposable",
+  "authorizationId": "11111111-1111-4111-8111-111111111111",
+  "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+  "disposition": "completed",
+  "preflight": {
+    "operatorVersion": "replacement-bootstrap-operator-v1",
+    "mode": "disposable",
+    "mutationPerformed": false,
+    "authorizationId": "11111111-1111-4111-8111-111111111111",
+    "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+    "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+    "databaseTime": "2026-07-28T00:00:00.000Z",
+    "schemaVersion": "0028",
+    "checks": {
+      "authorizationSchema": true,
+      "protocol": true,
+      "approvalFingerprint": true,
+      "databaseExpiry": true,
+      "preMigrationAuthorizationUnique": true,
+      "namedAgent": true,
+      "currentRelease": true,
+      "hostIdentity": true,
+      "repositoryIdentity": true,
+      "agentHealth": true,
+      "noActiveMissionOrLease": true,
+      "schema0028": true,
+      "exactTargetRelease": true,
+      "productionTrust": true,
+      "nodeRuntimeBinding": true,
+      "serviceDefinitionBinding": true,
+      "rollbackAvailable": true,
+      "operatorRole": true,
+      "noConcurrentExecution": true
+    },
+    "checksum": "1aa14381e77f474b6c262b69047facd000af40d6181a38aa83daa3545fcf7009"
+  },
+  "backup": {
+    "backupId": "disposable-442c3394-b025-4c54-83e4-4e12bf8c78ff",
+    "sha256": "2e10e73a41b0dfc2c48ce51b2674d015913c8d9188230d6bd3727a05cbb5f070",
+    "sizeBytes": 4096,
+    "encrypted": true,
+    "mode": "0600",
+    "verified": true,
+    "owner": "fixture:fixture",
+    "storageIdentity": "disposable-encrypted-volume",
+    "encryptionIdentity": "disposable-kms-fixture",
+    "retention": "until disposable validation completes",
+    "restoreValidation": "pg_restore --list fixture passed",
+    "preMigrationSchema": "0028",
+    "completedAt": "2026-07-28T00:00:00.000Z"
+  },
+  "migration": {
+    "from": "0028",
+    "to": "0029",
+    "checksum": "56c593fd43bedb8b8056f1e210e0eca9c56a94dfae22d84b1cfa4c3ad9ad0bb1",
+    "health": 200,
+    "readiness": 200
+  },
+  "transitions": [
+    {
+      "from": "approved",
+      "to": "draining",
+      "evidenceChecksum": "598c576b25bb819fddb3f6d863f2f2c19bab4a0b1947adf1c8338de5c9fcbc15"
+    },
+    {
+      "from": "draining",
+      "to": "verified",
+      "evidenceChecksum": "3a2e3c6156144f2f8ce74c77446fe5be26cab01e4f12e58f65e8e5eefdccb843"
+    },
+    {
+      "from": "verified",
+      "to": "staged",
+      "evidenceChecksum": "2d65b446412b73ef674adef645073111895afc649e2e9fa4653c2a401a14c109"
+    },
+    {
+      "from": "staged",
+      "to": "replacing",
+      "evidenceChecksum": "30d58c497b6ce0a7d320d04378a54133bbdb23785ed4f69b361c475ef76b9223"
+    },
+    {
+      "from": "replacing",
+      "to": "starting",
+      "evidenceChecksum": "cbbaa324fa4262d90d5b2ac2e3939d1a0e2fa7ba46f0fff8c19f3c1d90ac62d4"
+    },
+    {
+      "from": "starting",
+      "to": "connected",
+      "evidenceChecksum": "d9d49ef547cc28679bb298357c3cf91143991d14af36a23f0b0cd8255602c1e6"
+    },
+    {
+      "from": "connected",
+      "to": "accepted",
+      "evidenceChecksum": "2637724ef8d20d88b43adca35d299ae80d82e78c5399964c7b5288d3b1c77763"
+    },
+    {
+      "from": "accepted",
+      "to": "completed",
+      "evidenceChecksum": "62d03b1a15e090e4699af99e7aaf86c7251e5345185fc44d5df613c6e48a26db"
+    }
+  ],
+  "hostReceipts": [
+    {
+      "operationId": "116fa7ea-7e4a-4ae9-afa3-977b08d5ff25",
+      "operation": "inventory",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "6c1275833a63cd614b291d586dc367e98aca6ebdd3cc8b64297914ac75c5505e",
+      "completedAt": "2026-07-28T00:00:01.000Z",
+      "details": {
+        "artifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+        "serviceDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
+        "nodeExecutableSha256": null,
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 100
+      }
+    },
+    {
+      "operationId": "cc128f4d-f267-4a3d-b6c1-790f34c4e8cf",
+      "operation": "verify_rollback",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "0a0592f1017236ee7d95fa930db74c456ba24dc677d6cb8835029617868dd930",
+      "completedAt": "2026-07-28T00:00:02.000Z",
+      "details": {
+        "artifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+        "serviceDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
+        "nodeExecutableSha256": null,
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 100
+      }
+    },
+    {
+      "operationId": "c7d64a2e-66a5-48d8-b3bb-5c20a949293d",
+      "operation": "drain",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "d987df8d954690253bc0eb5e770c9334cfc3cdf06569abd2d9516f3141de27da",
+      "completedAt": "2026-07-28T00:00:03.000Z",
+      "details": {
+        "artifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+        "serviceDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
+        "nodeExecutableSha256": null,
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 100
+      }
+    },
+    {
+      "operationId": "9f66de89-5c32-48f3-985c-3323bca15054",
+      "operation": "stage_node",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "e895acefab8f785c8bee5cd44dc0c7447ab805fd0fac27e83d80e76c2b0f8b6c",
+      "completedAt": "2026-07-28T00:00:04.000Z",
+      "details": {
+        "artifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+        "serviceDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
+        "nodeExecutableSha256": null,
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 100
+      }
+    },
+    {
+      "operationId": "18e89a49-f83b-4e13-948b-31420ca4f5fd",
+      "operation": "stage_release",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "1f5bf4c8c1993071654ebc4dec509731f934ac13b9b882bd2a0155b43860fb8d",
+      "completedAt": "2026-07-28T00:00:05.000Z",
+      "details": {
+        "artifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+        "serviceDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
+        "nodeExecutableSha256": null,
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 100
+      }
+    },
+    {
+      "operationId": "2795a1db-1cc7-4d19-826c-685ae8fb1100",
+      "operation": "stage_service",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "0360fa22e253c8b907f7a57aa723a1abbdb3fe9c7977595a836ac4b0b7d1a7a5",
+      "completedAt": "2026-07-28T00:00:06.000Z",
+      "details": {
+        "artifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+        "serviceDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
+        "nodeExecutableSha256": null,
+        "owner": "fixture:fixture",
+        "mode": "0600",
+        "identityPreserved": true,
+        "heartbeatSequence": 100
+      }
+    },
+    {
+      "operationId": "3061440b-d9ce-40d8-96ac-5fefc9a0d357",
+      "operation": "stop",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "145078e0f8d09e6f9220eb51440c9751e203af8109b916995979653c5d26b58f",
+      "completedAt": "2026-07-28T00:00:07.000Z",
+      "details": {
+        "artifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+        "serviceDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
+        "nodeExecutableSha256": null,
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 100
+      }
+    },
+    {
+      "operationId": "d20ca893-6404-4543-bd40-c7f6f95beb2c",
+      "operation": "atomic_switch",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "c93a6a81f356eef18ec9586f3165138df79356bf385701b67b4aa6b8bd11a098",
+      "completedAt": "2026-07-28T00:00:08.000Z",
+      "details": {
+        "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+        "serviceDefinitionSha256": "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50",
+        "nodeExecutableSha256": null,
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 100
+      }
+    },
+    {
+      "operationId": "67c937e2-3515-4a78-9633-6417d65e5ee1",
+      "operation": "start",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "f49c96659245ed8646aec0a088dd98bf879b36f4c62c6a3d108f845daacb86ba",
+      "completedAt": "2026-07-28T00:00:09.000Z",
+      "details": {
+        "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+        "serviceDefinitionSha256": "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50",
+        "nodeExecutableSha256": "913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4",
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 101
+      }
+    },
+    {
+      "operationId": "9aa6b7af-39e4-4a23-9987-5937532f957a",
+      "operation": "verify_identity",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "141505d6960adcfc3d400727f76044feeae1193045e10fe23d12f18246601c0f",
+      "completedAt": "2026-07-28T00:00:10.000Z",
+      "details": {
+        "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+        "serviceDefinitionSha256": "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50",
+        "nodeExecutableSha256": "913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4",
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 101
+      }
+    },
+    {
+      "operationId": "7e1abf25-0833-418e-9807-8d6e5da36cc2",
+      "operation": "verify_heartbeats",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "d68525f975d4aa3e493027e99511ae76ca045e179517021b40fb14037104618f",
+      "completedAt": "2026-07-28T00:00:11.000Z",
+      "details": {
+        "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+        "serviceDefinitionSha256": "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50",
+        "nodeExecutableSha256": "913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4",
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 104
+      }
+    },
+    {
+      "operationId": "08bb90c9-3991-48ad-8ba2-405a86688429",
+      "operation": "verify_capabilities",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "e2c590a454452bae13432d32af1e1d55834d11cb79367df6dd09b96ea8212a15",
+      "completedAt": "2026-07-28T00:00:12.000Z",
+      "details": {
+        "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+        "serviceDefinitionSha256": "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50",
+        "nodeExecutableSha256": "913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4",
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 104
+      }
+    },
+    {
+      "operationId": "5d226399-ee61-4f5e-b1b7-2dbd86a7b197",
+      "operation": "observe",
+      "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+      "authorizationChecksum": "6298dd9f31d46b9db4e8886e159d12e885994c0ba6ce033a4b8a116019c4c462",
+      "status": "succeeded",
+      "evidenceChecksum": "1555846f79a7c798863b3dd822503a3c69a58ee0d0e1e5ee3ab314f1240a6848",
+      "completedAt": "2026-07-28T00:00:13.000Z",
+      "details": {
+        "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+        "serviceDefinitionSha256": "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50",
+        "nodeExecutableSha256": "913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4",
+        "owner": "fixture:fixture",
+        "mode": "0700",
+        "identityPreserved": true,
+        "heartbeatSequence": 104
+      }
+    }
+  ],
+  "smoke": {
+    "missionId": "7fc37d83-2a95-4186-a4e0-b85bcd8fbc98",
+    "executionId": "e5011f7e-a282-4e80-a86f-e930eb7311af",
+    "finalState": "completed",
+    "readOnly": true,
+    "projectionConsistent": true,
+    "duplicateExecution": false,
+    "unauthorizedSideEffect": false,
+    "evidenceChecksum": "979eb97e4618adf325df2e308258d2e74f2648d728d63572b08c7dccbf172f76",
+    "repositoryId": "f5ecf573-643e-4829-8d57-249a8b7d1acf",
+    "repositoryFingerprint": "9c9372afecfd0561aa389ed89daa7607fe8bf60b0f659d4f19be108715f02cf4",
+    "assignedAt": "2026-07-28T00:00:00.000Z",
+    "startedAt": "2026-07-28T00:00:01.000Z",
+    "completedAt": "2026-07-28T00:00:02.000Z",
+    "heartbeatSequence": 104,
+    "policyDecision": "allowed-read-only",
+    "approvalDecision": "not-required-read-only",
+    "liveProjectionHash": "1b250ea199bec73d392caad39d1167d6edc43c81f20edead86eea52c52b94fc1",
+    "replayProjectionHash": "1b250ea199bec73d392caad39d1167d6edc43c81f20edead86eea52c52b94fc1"
+  },
+  "finalSnapshot": {
+    "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+    "hostIdentity": "disposable-macos-arm64-fixture",
+    "workspaceId": "b82d5fbd-13ba-4ee0-b66a-551f433caa58",
+    "repositoryId": "f5ecf573-643e-4829-8d57-249a8b7d1acf",
+    "repositoryFingerprint": "9c9372afecfd0561aa389ed89daa7607fe8bf60b0f659d4f19be108715f02cf4",
+    "version": "0.7.2",
+    "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+    "serviceDefinitionSha256": "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50",
+    "healthy": true,
+    "connected": true,
+    "activeMission": false,
+    "activeLease": false,
+    "duplicateAgent": false,
+    "heartbeatSequence": 104,
+    "runtimeVersion": "22.22.0",
+    "runtimeExecutable": "/opt/mission-agent/runtime/node-22/22.22.0/bin/node",
+    "capabilityCompatible": true,
+    "rollbackAvailable": true
+  },
+  "otherAgentsModified": false,
+  "productionTrafficChanged": false,
+  "broaderRolloutStarted": false,
+  "checksum": "07675fd052b0f1d6e2858ee609fb2bbca65739eb201a71a5c2e8147af5d02a87"
+}

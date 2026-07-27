@@ -130,3 +130,35 @@ legacy signing authority is unavailable.
 **Never:** use this bootstrap for a Manifest-v3-capable agent, imply continuity
 from the lost key, substitute a trust root, use an ambiguous `node` path,
 automatically retry, or expose the workflow as ordinary fleet discovery.
+
+### Operator commands
+
+Dry-run preflight:
+
+```text
+npm run replacement-bootstrap -- --mode dry-run --authorization-id <uuid> --agent-id 0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8 --evidence-output <governed-path>
+```
+
+Disposable simulation:
+
+```text
+npm run replacement-bootstrap -- --mode disposable --authorization-id 11111111-1111-4111-8111-111111111111 --agent-id 0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8 --acknowledge operator-replacement-bootstrap-v1 --evidence-output /tmp/replacement-bootstrap-disposable.json
+```
+
+Production execution, only under a new commit-bound authorization:
+
+```text
+npm run replacement-bootstrap -- --mode production --authorization-id <uuid> --agent-id 0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8 --acknowledge operator-replacement-bootstrap-v1 --evidence-output <governed-path>
+```
+
+Evidence validation:
+
+```text
+jq empty <evidence.json> && shasum -a 256 <evidence.json>
+```
+
+Failure and rollback status inspection:
+
+```text
+jq '{disposition,transitions,hostReceipts,finalSnapshot}' <evidence.json>
+```

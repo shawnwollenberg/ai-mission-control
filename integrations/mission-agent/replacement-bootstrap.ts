@@ -1,7 +1,7 @@
 import { createHash, createPublicKey, verify } from "node:crypto";
 import { constants } from "node:fs";
 import { chmod, copyFile, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
-import { isAbsolute, join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import {
   canonicalJson,
   canonicalReleaseManifestV3,
@@ -30,6 +30,15 @@ export const NODE_ARCHIVE_URL = "https://nodejs.org/dist/v22.22.0/node-v22.22.0-
 export const NODE_EXECUTABLE_SHA256 = "913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4" as const;
 export const NODE_INSTALL_ROOT = "/opt/mission-agent/runtime/node-22/22.22.0" as const;
 export const NODE_EXECUTABLE = `${NODE_INSTALL_ROOT}/bin/node` as const;
+export const NODE_PLATFORM = "darwin-arm64" as const;
+export const NODE_ARCHIVE_LENGTH = 49_923_798 as const;
+export const SERVICE_MANAGER = "launchd" as const;
+export const SERVICE_IDENTIFIER = "com.wallyweb.mission-agent" as const;
+export const APPROVED_AGENT_ROOT = "/Users/shawnwollenberg/.mission-agent" as const;
+export const TARGET_SERVICE_PATH =
+  "/Users/shawnwollenberg/.mission-agent/staged-0.7.2/com.wallyweb.mission-agent.plist" as const;
+export const CURRENT_SERVICE_SHA256 = "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898" as const;
+export const TARGET_SERVICE_SHA256 = "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50" as const;
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -90,6 +99,30 @@ export type ReplacementAuthorization = {
   targetSigningKeyId: typeof TARGET_KEY_ID;
   targetPublicKeyFingerprint: typeof TARGET_KEY_FINGERPRINT;
   requiredNodeVersion: typeof NODE_VERSION;
+  nodeRuntime: {
+    version: typeof NODE_VERSION;
+    platform: typeof NODE_PLATFORM;
+    distributionUrl: typeof NODE_ARCHIVE_URL;
+    archiveSha256: typeof NODE_ARCHIVE_SHA256;
+    archiveByteLength: typeof NODE_ARCHIVE_LENGTH;
+    installationDirectory: typeof NODE_INSTALL_ROOT;
+    executablePath: typeof NODE_EXECUTABLE;
+    executableSha256: typeof NODE_EXECUTABLE_SHA256;
+  };
+  serviceReplacement: {
+    serviceManager: typeof SERVICE_MANAGER;
+    serviceIdentifier: typeof SERVICE_IDENTIFIER;
+    currentDefinitionSha256: typeof CURRENT_SERVICE_SHA256;
+    targetDefinitionSha256: typeof TARGET_SERVICE_SHA256;
+    targetDefinitionPath: typeof TARGET_SERVICE_PATH;
+    rollbackDefinitionSha256: typeof CURRENT_SERVICE_SHA256;
+  };
+  smokeMission: {
+    templateId: "replacement-bootstrap-read-only-v1";
+    operation: "repository-analysis";
+    readOnly: true;
+  };
+  evidenceDestination: string;
   approvalId: string;
   operatorIdentity: string;
   approvedBy: string;
@@ -138,6 +171,66 @@ export function validateReplacementAuthorization(
   options: { now?: Date } = {},
 ): ReplacementAuthorization {
   const now = options.now ?? new Date();
+  const exactKeys = [
+    "protocolVersion",
+    "authorizationId",
+    "agentId",
+    "hostIdentity",
+    "workspaceId",
+    "repositoryId",
+    "repositoryFingerprint",
+    "currentVersion",
+    "currentArtifactSha256",
+    "targetVersion",
+    "targetArtifactSha256",
+    "targetArtifactByteLength",
+    "targetManifestSha256",
+    "targetSignatureSha256",
+    "targetSigningKeyId",
+    "targetPublicKeyFingerprint",
+    "requiredNodeVersion",
+    "nodeRuntime",
+    "serviceReplacement",
+    "smokeMission",
+    "evidenceDestination",
+    "approvalId",
+    "operatorIdentity",
+    "approvedBy",
+    "approvedAt",
+    "expiresAt",
+    "maximumExecutionCount",
+    "rollbackVersion",
+    "rollbackArtifactSha256",
+    "reason",
+    "legacyCryptographicContinuity",
+    "evidenceReferences",
+  ].sort();
+  const exactNodeKeys = [
+    "version",
+    "platform",
+    "distributionUrl",
+    "archiveSha256",
+    "archiveByteLength",
+    "installationDirectory",
+    "executablePath",
+    "executableSha256",
+  ].sort();
+  const exactServiceKeys = [
+    "serviceManager",
+    "serviceIdentifier",
+    "currentDefinitionSha256",
+    "targetDefinitionSha256",
+    "targetDefinitionPath",
+    "rollbackDefinitionSha256",
+  ].sort();
+  if (
+    canonicalJson(Object.keys(value).sort()) !== canonicalJson(exactKeys) ||
+    canonicalJson(Object.keys(value.nodeRuntime ?? {}).sort()) !== canonicalJson(exactNodeKeys) ||
+    canonicalJson(Object.keys(value.serviceReplacement ?? {}).sort()) !== canonicalJson(exactServiceKeys) ||
+    canonicalJson(Object.keys(value.smokeMission ?? {}).sort()) !==
+      canonicalJson(["operation", "readOnly", "templateId"])
+  )
+    throw new Error("Replacement authorization contains missing or unknown fields.");
   if (
     value.protocolVersion !== REPLACEMENT_BOOTSTRAP_PROTOCOL ||
     !UUID.test(value.authorizationId) ||
@@ -152,6 +245,23 @@ export function validateReplacementAuthorization(
     value.targetSigningKeyId !== TARGET_KEY_ID ||
     value.targetPublicKeyFingerprint !== TARGET_KEY_FINGERPRINT ||
     value.requiredNodeVersion !== NODE_VERSION ||
+    value.nodeRuntime?.version !== NODE_VERSION ||
+    value.nodeRuntime?.platform !== NODE_PLATFORM ||
+    value.nodeRuntime?.distributionUrl !== NODE_ARCHIVE_URL ||
+    value.nodeRuntime?.archiveSha256 !== NODE_ARCHIVE_SHA256 ||
+    value.nodeRuntime?.archiveByteLength !== NODE_ARCHIVE_LENGTH ||
+    value.nodeRuntime?.installationDirectory !== NODE_INSTALL_ROOT ||
+    value.nodeRuntime?.executablePath !== NODE_EXECUTABLE ||
+    value.nodeRuntime?.executableSha256 !== NODE_EXECUTABLE_SHA256 ||
+    value.serviceReplacement?.serviceManager !== SERVICE_MANAGER ||
+    value.serviceReplacement?.serviceIdentifier !== SERVICE_IDENTIFIER ||
+    value.serviceReplacement?.currentDefinitionSha256 !== CURRENT_SERVICE_SHA256 ||
+    value.serviceReplacement?.targetDefinitionSha256 !== TARGET_SERVICE_SHA256 ||
+    value.serviceReplacement?.targetDefinitionPath !== TARGET_SERVICE_PATH ||
+    value.serviceReplacement?.rollbackDefinitionSha256 !== CURRENT_SERVICE_SHA256 ||
+    value.smokeMission?.templateId !== "replacement-bootstrap-read-only-v1" ||
+    value.smokeMission?.operation !== "repository-analysis" ||
+    value.smokeMission?.readOnly !== true ||
     value.maximumExecutionCount !== 1 ||
     value.rollbackVersion !== SOURCE_VERSION ||
     value.rollbackArtifactSha256 !== SOURCE_SHA256 ||
@@ -167,6 +277,9 @@ export function validateReplacementAuthorization(
     !SHA256.test(value.repositoryFingerprint) ||
     !value.operatorIdentity ||
     !value.approvedBy ||
+    !isAbsolute(value.evidenceDestination) ||
+    resolve(value.evidenceDestination) !== value.evidenceDestination ||
+    !value.evidenceDestination.startsWith(`${APPROVED_AGENT_ROOT}/evidence/`) ||
     value.evidenceReferences.length === 0
   )
     throw new Error("Replacement authorization scope is incomplete.");

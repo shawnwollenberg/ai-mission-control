@@ -1,0 +1,100 @@
+{
+  "evidenceVersion": "1",
+  "recordedAt": "2026-07-27T21:15:00.000Z",
+  "disposition": "provider-neutral-workflow-validated-production-mode-disabled",
+  "baseCommit": "d9c27fc02b550376b77f7bae471c976d93fd1c44",
+  "protocol": "operator-replacement-bootstrap-v1",
+  "implementation": {
+    "coreSha256": "121ee04eb9d36476f66b217009e1d47bb15539051cadfb66f4971c74f0a66e6a",
+    "operatorSha256": "95c3cc1dbd77310608cd0483f244ea4770b1e294e1c855edcdf1123de63fd400",
+    "disposableProviderSha256": "2402db3659d462a7b035b06d493e6c2821ce01d6e3d0368e86c9c04529ed2203",
+    "cliSha256": "4b754166d15972cc0fbc717b73c8deb693df75c38640571df98eff17c314a557",
+    "schemaSha256": "45316555f3572d972db1c05a0f7e0453c1e292781c010ce0d99a82bddf39120e",
+    "fixtureSha256": "15274ca14e6ccda1dd7f0ecc62a328ed9d22bdd9aba4084b01edc1f5692ce68a"
+  },
+  "authorizationBindings": {
+    "nodeRuntime": [
+      "version",
+      "platform",
+      "distributionUrl",
+      "archiveSha256",
+      "archiveByteLength",
+      "installationDirectory",
+      "executablePath",
+      "executableSha256"
+    ],
+    "serviceReplacement": [
+      "serviceManager",
+      "serviceIdentifier",
+      "currentDefinitionSha256",
+      "targetDefinitionSha256",
+      "targetDefinitionPath",
+      "rollbackDefinitionSha256"
+    ],
+    "smokeMission": true,
+    "evidenceDestination": true,
+    "unknownFieldsRejected": true,
+    "approvalInvalidatedByAnyBindingChange": true
+  },
+  "operator": {
+    "command": "npm run replacement-bootstrap",
+    "acceptedSecurityArguments": ["authorization-id", "agent-id", "mode", "acknowledge", "evidence-output", "resume"],
+    "freeFormSecurityOverrides": false,
+    "productionMode": "fail-closed pending separately reviewed concrete provider and new commit-bound authorization",
+    "pre0029Source": "existing governed approval requested-action payload",
+    "post0029Initialization": "durable authorization created and one-shot eligibility revalidated after migration"
+  },
+  "validation": {
+    "focusedTests": { "passed": 25, "failed": 0 },
+    "fullRepositoryTests": {
+      "passed": 154,
+      "failed": 5,
+      "basePassed": 154,
+      "baseFailed": 5,
+      "classification": "All failures reproduce on the untouched base and are legacy latest-manifest or Git-fixture failures."
+    },
+    "emptyDatabaseMigrations0001Through0029": "passed",
+    "migration0028To0029": "previously validated; migration source unchanged",
+    "typecheck": "passed",
+    "eslint": "passed",
+    "productionBuild": "passed",
+    "nextVersion": "16.2.11",
+    "productionDependencyAudit": "zero vulnerabilities",
+    "formatting": "passed",
+    "jsonValidation": "passed",
+    "secretScan": "passed",
+    "historicalChecksums": "passed"
+  },
+  "simulations": {
+    "successEvidence": "release/mission-agent-0.7.2/replacement-bootstrap/operator-e2e-success.json",
+    "successFileSha256": "7ffdcf1b12a6e55b498d75595d9bf2fb1014c5073f4c68a47f0ac45b908d395e",
+    "rollbackEvidence": "release/mission-agent-0.7.2/replacement-bootstrap/operator-e2e-rollback.json",
+    "rollbackFileSha256": "2f0c9d058bd2c80814c480f27b0447a050995227ccd569bf96a132c7a4286331",
+    "successfulCompletion": true,
+    "failedSmokeRestoredExact068": true,
+    "uncertainDrainUndrained": true,
+    "freshProcessIdempotentResume": true,
+    "freshProcessPostSwitchRollback": true,
+    "databaseJournalBoundaryMatrix": "passed"
+  },
+  "independentReview": {
+    "reviewer": "release_authority_security_review",
+    "disposition": "pass for scoped repair",
+    "criticalFindingsOpen": 0,
+    "highFindingsOpen": 0,
+    "acceptanceBlockingMediumFindingsOpen": 0,
+    "productionProviderReviewed": false,
+    "productionProviderRequiredBeforeExecution": true
+  },
+  "safety": {
+    "productionMigrationApplied": false,
+    "productionBackupCreated": false,
+    "productionAuthorizationCreated": false,
+    "realCanaryModified": false,
+    "productionTrafficChanged": false,
+    "otherAgentModified": false,
+    "rolloutStarted": false,
+    "signedReleaseModified": false
+  },
+  "nextAuthorizationRequired": "Authorize implementation and review of one concrete fixed-operation local-macOS/PostgreSQL/production-smoke provider, then issue a new commit-bound execution authorization naming that provider-enabled commit before production migration 0029, authorization creation, or canary replacement."
+}

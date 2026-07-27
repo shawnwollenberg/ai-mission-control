@@ -16,6 +16,7 @@
     "mission-agent:release:sign": "tsx scripts/mission-agent-release-sign.ts",
     "mission-agent:release:kms-key-record": "tsx scripts/mission-agent-kms-key-record.ts",
     "mission-agent:release:verify": "tsx scripts/mission-agent-release-verify.ts",
+    "replacement-bootstrap": "tsx scripts/replacement-bootstrap-operator.ts",
     "auth:hash": "tsx scripts/hash-password.ts",
     "dev": "next dev",
     "build": "next build",
