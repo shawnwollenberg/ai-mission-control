@@ -49,9 +49,10 @@
     "immutableTrustEnabledReleaseSha": "6894601268a6571143f6cc9fd5a3667e31507403"
   },
   "cloudTrail": {
-    "lookupStatus": "not-readable-by-design",
-    "reason": "The signer identity has an explicit deny for cloudtrail:LookupEvents; no broader AWS profile was used.",
-    "correlation": "KMS request IDs and signing timestamp are recorded for an independently authorized audit reader."
+    "lookupStatus": "verified",
+    "auditorPermissionSet": "MissionAgentReleaseAuditor",
+    "correlationEvidence": "release/mission-agent-0.7.2/cloudtrail-correlation.json",
+    "unexpectedSignEventsInCeremonyWindow": 0
   },
   "custody": {
     "privateKeyNonExportable": true,

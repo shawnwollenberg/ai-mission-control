@@ -374,9 +374,11 @@ every affected artifact and longer when incident or compliance policy requires.
   advertising, installation, deployment, and rollout remain unauthorized
 - Trust-enabled signed-candidate commit:
   `6894601268a6571143f6cc9fd5a3667e31507403`
-- CloudTrail correlation: blocked for the least-privilege signer identity;
-  publication remains blocked until a separately authorized audit reader
-  correlates the recorded Sign and Verify request IDs
+- CloudTrail correlation: independently verified by the read-only
+  `MissionAgentReleaseAuditor` identity for Sign request
+  `6fb8434a-668a-46d0-a883-e55a5edb810b` and Verify request
+  `54e4158f-c01c-40c0-8293-1059f2cc8eeb`; publication remains separately
+  unauthorized
 - 0.7.2 artifact checksum:
   `108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09`
 - 0.7.2 artifact source commit:

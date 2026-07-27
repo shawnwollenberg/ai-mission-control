@@ -50,15 +50,16 @@
     "criticalFindings": 0,
     "highFindings": 0,
     "resolvedHighFindings": 1,
-    "acceptanceBlockingMediumFindings": 1,
+    "acceptanceBlockingMediumFindings": 0,
     "resolvedFindings": [
       "The updater now compares signed platform metadata with the actual Node major, operating system, and architecture before release eligibility.",
       "The production KMS signing and human signing CLI paths now require strict Manifest v3 for new releases.",
       "Mission Control production release selection now invokes the strict signed Manifest v3 gate.",
       "Build provenance hashes and minimum Mission Control compatibility are now signed and enforced.",
-      "The activation evidence is being rebound from the pre-activation base to an immutable trust-enabled commit."
+      "The activation evidence is bound to an immutable trust-enabled commit.",
+      "An independent read-only auditor correlated the exact KMS Sign and Verify request IDs and found no unexpected Sign event in the ceremony window."
     ],
-    "disposition": "signed-candidate-valid-publication-blocked-pending-cloudtrail-correlation"
+    "disposition": "signed-candidate-accepted-unpublished"
   },
   "signingStatus": "signed-candidate-unpublished",
   "productionSignature": {
@@ -68,6 +69,6 @@
     "kmsVerifyRequestId": "54e4158f-c01c-40c0-8293-1059f2cc8eeb",
     "activeTrustRecordSha256": "8bdc37c0030136e2d9339d87c0ca506d2cb41310fe1d5bc003ecffc4acd64fba"
   },
-  "publicationStatus": "blocked",
+  "publicationStatus": "not-authorized",
   "deploymentStatus": "blocked"
 }
