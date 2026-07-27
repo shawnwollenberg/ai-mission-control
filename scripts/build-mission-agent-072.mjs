@@ -68,7 +68,7 @@ const v3Verifier = String.raw`
 const RELEASE_MANIFEST_V3_FIELDS = [
   "artifactByteLength", "artifactName", "artifactSha256", "build", "canonicalizationVersion",
   "compatibility", "createdAt", "expiresAt", "manifestVersion", "platform",
-  "publicKeyFingerprint", "releaseAuthorityVersion", "releaseVersion", "signingKeyId",
+  "provenance", "publicKeyFingerprint", "releaseAuthorityVersion", "releaseVersion", "signingKeyId",
 ];
 const RELEASE_MANIFEST_V3_BUILD_FIELDS = ["buildId", "sourceCommit"];
 const RELEASE_MANIFEST_V3_COMPATIBILITY_FIELDS = [
@@ -76,6 +76,10 @@ const RELEASE_MANIFEST_V3_COMPATIBILITY_FIELDS = [
 ];
 const RELEASE_MANIFEST_V3_PLATFORM_FIELDS = [
   "architecture", "artifactFormat", "operatingSystem", "runtime", "runtimeMajorVersion",
+];
+const RELEASE_MANIFEST_V3_PROVENANCE_FIELDS = [
+  "builderSha256", "containerImageDigest", "manifestSchemaSha256", "nodeVersion",
+  "packageLockSha256", "reproducibilityEvidenceSha256",
 ];
 function exactReleaseFields(record, fields) {
   return Object.keys(record).sort().join("\n") === [...fields].sort().join("\n");
@@ -133,9 +137,11 @@ function parseReleaseManifestV3(value) {
       !value.build || typeof value.build !== "object" || Array.isArray(value.build) ||
       !value.compatibility || typeof value.compatibility !== "object" || Array.isArray(value.compatibility) ||
       !value.platform || typeof value.platform !== "object" || Array.isArray(value.platform) ||
+      !value.provenance || typeof value.provenance !== "object" || Array.isArray(value.provenance) ||
       !exactReleaseFields(value.build, RELEASE_MANIFEST_V3_BUILD_FIELDS) ||
       !exactReleaseFields(value.compatibility, RELEASE_MANIFEST_V3_COMPATIBILITY_FIELDS) ||
-      !exactReleaseFields(value.platform, RELEASE_MANIFEST_V3_PLATFORM_FIELDS))
+      !exactReleaseFields(value.platform, RELEASE_MANIFEST_V3_PLATFORM_FIELDS) ||
+      !exactReleaseFields(value.provenance, RELEASE_MANIFEST_V3_PROVENANCE_FIELDS))
     throw new Error("Release manifest v3 fields are malformed.");
   if (value.manifestVersion !== "3" || value.releaseAuthorityVersion !== "v2" ||
       value.canonicalizationVersion !== RELEASE_CANONICALIZATION_VERSION ||
@@ -152,13 +158,30 @@ function parseReleaseManifestV3(value) {
       value.platform.artifactFormat !== "esm" ||
       value.compatibility.identityProtocolVersion !== "2" ||
       value.compatibility.activationProtocolVersion !== "1" ||
-      !/^\d+\.\d+\.\d+$/.test(value.compatibility.minimumMissionControlVersion) ||
+      value.compatibility.minimumMissionControlVersion !== "0.1.0" ||
+      !/^[a-f0-9]{64}$/.test(value.provenance.builderSha256) ||
+      !/^node@sha256:[a-f0-9]{64}$/.test(value.provenance.containerImageDigest) ||
+      !/^[a-f0-9]{64}$/.test(value.provenance.manifestSchemaSha256) ||
+      value.provenance.nodeVersion !== "22.22.0" ||
+      !/^[a-f0-9]{64}$/.test(value.provenance.packageLockSha256) ||
+      !/^[a-f0-9]{64}$/.test(value.provenance.reproducibilityEvidenceSha256) ||
       new Date(value.createdAt).toISOString() !== value.createdAt ||
       new Date(value.expiresAt).toISOString() !== value.expiresAt ||
       Date.parse(value.expiresAt) <= Date.parse(value.createdAt))
     throw new Error("Release manifest v3 is malformed.");
   assertCanonicalReleaseUnicode(value);
   return value;
+}
+function assertReleasePlatformEligibility(manifest, runtime = {
+  nodeMajorVersion: Number(process.versions.node.split(".")[0]),
+  operatingSystem: platform(),
+  architecture: process.arch,
+}) {
+  if (runtime.nodeMajorVersion !== manifest.platform.runtimeMajorVersion ||
+      !manifest.platform.operatingSystem.split("-").includes(runtime.operatingSystem) ||
+      !["arm64", "x64"].includes(runtime.architecture) ||
+      manifest.platform.architecture !== "universal")
+    throw new Error("Release platform is incompatible with this Mission Agent runtime.");
 }
 function canonicalReleaseManifestV3(value) {
   return canonicalJson(parseReleaseManifestV3(value));
@@ -169,6 +192,7 @@ function verifyReleaseManifestV3(bundle, options = {}) {
   const { signature, ...unsigned } = bundle;
   if (typeof signature !== "string" || !signature) throw new Error("Release manifest signature is required.");
   const manifest = parseReleaseManifestV3(unsigned);
+  assertReleasePlatformEligibility(manifest);
   if (options.trustStore && options.allowTestTrustStoreOverride !== true)
     throw new Error("External release trust-store override is not authorized.");
   const store = validateReleaseTrustStore(
@@ -305,7 +329,8 @@ source = source
     `  verifyReleaseManifestV2,
   verifyReleaseManifestV3,
   parseReleaseManifestV3,
-  canonicalReleaseManifestV3,`,
+  canonicalReleaseManifestV3,
+  assertReleasePlatformEligibility,`,
   );
 
 if (

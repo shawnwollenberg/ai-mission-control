@@ -11,6 +11,7 @@ import {
   signReleaseWithKms,
 } from "../integrations/mission-agent/kms-release-signer.ts";
 import {
+  canonicalReleaseManifestV3,
   canonicalJson,
   parseCanonicalSignedReleaseManifestJson,
   validatePendingReleaseKey,
@@ -160,6 +161,7 @@ async function signingInput(temp, pendingKeyRecord, overrides = {}) {
       artifactSha256: expectedArtifactSha256,
       releaseAuthorityKeyId,
     }),
+    allowHistoricalManifestV2: true,
     signingTime: new Date("2026-07-26T16:00:00.000Z"),
     ...overrides,
   };
@@ -197,6 +199,50 @@ test("AWS KMS Ed25519 RAW conformance yields DER SPKI fingerprint, raw signature
       aws.calls.map((command) => command.constructor.name),
       ["DescribeKeyCommand", "GetPublicKeyCommand", "SignCommand", "VerifyCommand"],
     );
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test("production signing adapter signs exact canonical Manifest v3 bytes", async () => {
+  const temp = await mkdtemp(join(tmpdir(), "kms-release-v3-"));
+  try {
+    const aws = mockAws();
+    const pending = pendingKmsReleaseKeyRecord({
+      releaseAuthorityKeyId,
+      kmsKeyArn: keyArn,
+      publicKeySpkiDer: aws.publicKeyDer,
+      createdAt: "2026-07-26T15:00:00.000Z",
+    });
+    const artifact = new URL("../public/mission-agent-0.7.2.mjs", import.meta.url);
+    const candidate = JSON.parse(
+      await readFile(new URL("../release/mission-agent-0.7.2/unsigned-manifest-v3.json", import.meta.url), "utf8"),
+    );
+    const manifest = { ...candidate, publicKeyFingerprint: pending.publicKeyFingerprint };
+    const manifestFile = join(temp, "unsigned-manifest-v3.json");
+    await writeFile(manifestFile, canonicalReleaseManifestV3(manifest));
+    const receipt = await signReleaseWithKms(
+      await signingInput(temp, pending, {
+        manifestPath: manifestFile,
+        artifactPath: artifact.pathname,
+        expectedArtifactSha256: manifest.artifactSha256,
+        expectedSourceCommit: manifest.build.sourceCommit,
+        expectedReleaseVersion: manifest.releaseVersion,
+        humanConfirmation: humanSigningConfirmation({
+          releaseVersion: manifest.releaseVersion,
+          artifactSha256: manifest.artifactSha256,
+          releaseAuthorityKeyId,
+        }),
+        allowHistoricalManifestV2: false,
+      }),
+      aws,
+    );
+    assert.equal(receipt.releaseVersion, "0.7.2");
+    assert.equal(
+      receipt.canonicalManifestSha256,
+      createHash("sha256").update(canonicalReleaseManifestV3(manifest)).digest("hex"),
+    );
+    assert.equal(aws.calls.filter((command) => command.constructor.name === "SignCommand").length, 1);
   } finally {
     await rm(temp, { recursive: true, force: true });
   }

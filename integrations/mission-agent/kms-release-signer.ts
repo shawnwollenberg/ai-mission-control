@@ -11,8 +11,10 @@ import { createHash, createPublicKey, verify } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import {
+  canonicalReleaseManifestV3,
   canonicalJson,
   parseCanonicalReleaseManifestJson,
+  parseCanonicalReleaseManifestV3Json,
   publicKeyFingerprint,
   type KmsReleaseKeyProvenance,
   type ReleaseKeyRecord,
@@ -63,6 +65,7 @@ export type KmsSignReleaseInput = {
   expectedSignerRoleArn: string;
   approvalReference: string;
   humanConfirmation: string;
+  allowHistoricalManifestV2?: boolean;
   signingTime?: Date;
 };
 
@@ -196,26 +199,39 @@ export async function signReleaseWithKms(
   validateTrustActivationEvidence(input.trustActivationEvidence, input.pendingKeyRecord);
 
   const manifestText = await readFile(resolve(input.manifestPath), "utf8");
-  const manifest = parseCanonicalReleaseManifestJson(manifestText);
-  const canonicalManifest = canonicalJson(manifest);
-  if (manifest.artifactSha256 !== input.expectedArtifactSha256)
+  const parsedVersion = (JSON.parse(manifestText) as { manifestVersion?: unknown }).manifestVersion;
+  const manifest =
+    parsedVersion === "3"
+      ? parseCanonicalReleaseManifestV3Json(manifestText)
+      : input.allowHistoricalManifestV2 === true
+        ? parseCanonicalReleaseManifestJson(manifestText)
+        : (() => {
+            throw new Error("New production KMS signing requires Manifest v3");
+          })();
+  const isV3 = manifest.manifestVersion === "3";
+  const canonicalManifest = isV3 ? canonicalReleaseManifestV3(manifest) : canonicalJson(manifest);
+  const artifactSha256 = manifest.artifactSha256;
+  const sourceCommit = isV3 ? manifest.build.sourceCommit : manifest.sourceCommit;
+  const releaseVersion = isV3 ? manifest.releaseVersion : manifest.agentVersion;
+  const artifactName = isV3 ? manifest.artifactName : manifest.artifactPath.slice(1);
+  if (artifactSha256 !== input.expectedArtifactSha256)
     throw new Error("Explicit artifact-checksum confirmation failed");
-  if (manifest.sourceCommit !== input.expectedSourceCommit) throw new Error("Source-commit confirmation failed");
-  if (manifest.agentVersion !== input.expectedReleaseVersion) throw new Error("Release-version confirmation failed");
+  if (sourceCommit !== input.expectedSourceCommit) throw new Error("Source-commit confirmation failed");
+  if (releaseVersion !== input.expectedReleaseVersion) throw new Error("Release-version confirmation failed");
   if (manifest.signingKeyId !== input.releaseAuthorityKeyId)
     throw new Error("Release Authority key-ID confirmation failed");
   const expectedConfirmation = humanSigningConfirmation({
-    releaseVersion: manifest.agentVersion,
-    artifactSha256: manifest.artifactSha256,
+    releaseVersion,
+    artifactSha256,
     releaseAuthorityKeyId: manifest.signingKeyId,
   });
   if (input.humanConfirmation !== expectedConfirmation) throw new Error("Explicit human confirmation failed");
 
   const artifactBytes = Uint8Array.from(await readFile(resolve(input.artifactPath)));
-  if (sha256(artifactBytes) !== manifest.artifactSha256)
-    throw new Error("Artifact bytes do not match manifest checksum");
-  if (basename(input.artifactPath) !== manifest.artifactPath.slice(1))
-    throw new Error("Artifact filename does not match manifest path");
+  if (sha256(artifactBytes) !== artifactSha256) throw new Error("Artifact bytes do not match manifest checksum");
+  if (isV3 && artifactBytes.byteLength !== manifest.artifactByteLength)
+    throw new Error("Artifact bytes do not match manifest byte length");
+  if (basename(input.artifactPath) !== artifactName) throw new Error("Artifact filename does not match manifest path");
 
   const arn = parseKmsKeyArn(input.kmsKeyArn);
   const described = await dependencies.kms.send(new DescribeKeyCommand({ KeyId: input.kmsKeyArn }));
@@ -250,6 +266,8 @@ export async function signReleaseWithKms(
     input.pendingKeyRecord.status !== "pending"
   )
     throw new Error("KMS public key does not match the pending trust record");
+  if (isV3 && pendingRecord.publicKeyFingerprint !== manifest.publicKeyFingerprint)
+    throw new Error("KMS public key does not match the signed manifest fingerprint");
 
   const caller = await dependencies.sts.send(new GetCallerIdentityCommand({}));
   const signerPrincipalArn = requiredString(caller.Arn, "signer principal ARN");
@@ -289,9 +307,9 @@ export async function signReleaseWithKms(
   const signatureBase64 = Buffer.from(signature).toString("base64");
   const receipt: KmsSigningReceipt = {
     receiptVersion: "1",
-    releaseVersion: manifest.agentVersion,
-    sourceSha: manifest.sourceCommit,
-    artifactSha256: manifest.artifactSha256,
+    releaseVersion,
+    sourceSha: sourceCommit,
+    artifactSha256,
     canonicalManifestSha256: sha256(canonicalManifest),
     releaseAuthorityKeyId: manifest.signingKeyId,
     kmsKeyArn: input.kmsKeyArn,

@@ -73,6 +73,15 @@ export type ReleaseManifestBuildV3 = {
   sourceCommit: string;
 };
 
+export type ReleaseManifestProvenanceV3 = {
+  builderSha256: string;
+  containerImageDigest: string;
+  manifestSchemaSha256: string;
+  nodeVersion: "22.22.0";
+  packageLockSha256: string;
+  reproducibilityEvidenceSha256: string;
+};
+
 export type ReleaseManifestV3 = {
   artifactByteLength: number;
   artifactName: string;
@@ -84,6 +93,7 @@ export type ReleaseManifestV3 = {
   expiresAt: string;
   manifestVersion: "3";
   platform: ReleaseManifestPlatformV3;
+  provenance: ReleaseManifestProvenanceV3;
   publicKeyFingerprint: `ed25519-spki-sha256:${string}`;
   releaseAuthorityVersion: "v2";
   releaseVersion: string;
@@ -121,6 +131,7 @@ const V3_FIELDS = [
   "expiresAt",
   "manifestVersion",
   "platform",
+  "provenance",
   "publicKeyFingerprint",
   "releaseAuthorityVersion",
   "releaseVersion",
@@ -138,6 +149,14 @@ const V3_PLATFORM_FIELDS = [
   "operatingSystem",
   "runtime",
   "runtimeMajorVersion",
+] as const;
+const V3_PROVENANCE_FIELDS = [
+  "builderSha256",
+  "containerImageDigest",
+  "manifestSchemaSha256",
+  "nodeVersion",
+  "packageLockSha256",
+  "reproducibilityEvidenceSha256",
 ] as const;
 const SUPPORTED_IDENTITY_PROTOCOLS = new Set(["2"]);
 const SUPPORTED_ACTIVATION_PROTOCOLS = new Set(["1"]);
@@ -331,7 +350,10 @@ export function parseReleaseManifestV3(value: unknown): ReleaseManifestV3 {
     Array.isArray(record.compatibility) ||
     !record.platform ||
     typeof record.platform !== "object" ||
-    Array.isArray(record.platform)
+    Array.isArray(record.platform) ||
+    !record.provenance ||
+    typeof record.provenance !== "object" ||
+    Array.isArray(record.provenance)
   )
     throw new Error("manifest v3 nested metadata is required");
   assertExactFields(record.build as Record<string, unknown>, V3_BUILD_FIELDS, "manifest v3 build");
@@ -341,6 +363,7 @@ export function parseReleaseManifestV3(value: unknown): ReleaseManifestV3 {
     "manifest v3 compatibility",
   );
   assertExactFields(record.platform as Record<string, unknown>, V3_PLATFORM_FIELDS, "manifest v3 platform");
+  assertExactFields(record.provenance as Record<string, unknown>, V3_PROVENANCE_FIELDS, "manifest v3 provenance");
   const manifest = record as ReleaseManifestV3;
   if (manifest.manifestVersion !== RELEASE_MANIFEST_V3_VERSION) throw new Error("unsupported manifest version");
   if (manifest.releaseAuthorityVersion !== "v2") throw new Error("unsupported Release Authority version");
@@ -366,10 +389,21 @@ export function parseReleaseManifestV3(value: unknown): ReleaseManifestV3 {
     manifest.platform.artifactFormat !== "esm"
   )
     throw new Error("unsupported Mission Agent platform");
+  if (
+    !SHA256.test(manifest.provenance.builderSha256) ||
+    !SHA256.test(manifest.provenance.manifestSchemaSha256) ||
+    !SHA256.test(manifest.provenance.packageLockSha256) ||
+    !SHA256.test(manifest.provenance.reproducibilityEvidenceSha256) ||
+    manifest.provenance.nodeVersion !== "22.22.0" ||
+    !/^node@sha256:[a-f0-9]{64}$/.test(manifest.provenance.containerImageDigest)
+  )
+    throw new Error("invalid build provenance");
   if (!SUPPORTED_IDENTITY_PROTOCOLS.has(manifest.compatibility.identityProtocolVersion))
     throw new Error("unsupported identity protocol version");
   if (!SUPPORTED_ACTIVATION_PROTOCOLS.has(manifest.compatibility.activationProtocolVersion))
     throw new Error("unsupported activation protocol version");
+  if (manifest.compatibility.minimumMissionControlVersion !== "0.1.0")
+    throw new Error("Mission Control version is incompatible");
   requireIsoDate(manifest.createdAt, "createdAt");
   requireIsoDate(manifest.expiresAt, "expiresAt");
   if (Date.parse(manifest.expiresAt) <= Date.parse(manifest.createdAt))
@@ -389,6 +423,20 @@ export function parseCanonicalReleaseManifestV3Json(text: string): ReleaseManife
   const manifest = parseReleaseManifestV3(parsed);
   if (text !== canonicalJson(manifest)) throw new Error("manifest v3 bytes are not canonical");
   return manifest;
+}
+
+export function parseCanonicalSignedReleaseManifestV3Json(text: string): SignedReleaseManifestV3 {
+  const canonicalText = text.endsWith("\n") && !text.endsWith("\n\n") ? text.slice(0, -1) : text;
+  assertNoDuplicateJsonKeys(canonicalText);
+  const parsed = JSON.parse(canonicalText) as Record<string, unknown>;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    throw new Error("signed manifest v3 must be an object");
+  const { signature, ...unsigned } = parsed;
+  if (typeof signature !== "string" || signature === "") throw new Error("manifest signature is required");
+  const manifest = parseReleaseManifestV3(unsigned);
+  const bundle = { ...manifest, signature };
+  if (canonicalText !== canonicalJson(bundle)) throw new Error("signed manifest v3 bytes are not canonical");
+  return bundle;
 }
 
 export function parseCanonicalReleaseManifestJson(text: string): ReleaseManifestV2 {

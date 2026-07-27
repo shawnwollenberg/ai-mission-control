@@ -8,7 +8,7 @@ import {
   signReleaseWithKms,
 } from "../integrations/mission-agent/kms-release-signer";
 import {
-  parseCanonicalReleaseManifestJson,
+  parseCanonicalReleaseManifestV3Json,
   type ReleaseKeyRecord,
 } from "../integrations/mission-agent/release-authority";
 
@@ -25,21 +25,21 @@ async function main() {
   const artifactPath = option("--artifact");
   const keyRecordPath = option("--pending-key-record");
   const kmsKeyArn = option("--kms-key-arn");
-  const manifest = parseCanonicalReleaseManifestJson(await readFile(manifestPath, "utf8"));
+  const manifest = parseCanonicalReleaseManifestV3Json(await readFile(manifestPath, "utf8"));
   const pendingKeyRecord = JSON.parse(await readFile(keyRecordPath, "utf8")) as ReleaseKeyRecord;
   const trustActivationEvidence = JSON.parse(
     await readFile(option("--trust-activation-evidence"), "utf8"),
   ) as Parameters<typeof signReleaseWithKms>[0]["trustActivationEvidence"];
   const confirmation = humanSigningConfirmation({
-    releaseVersion: manifest.agentVersion,
+    releaseVersion: manifest.releaseVersion,
     artifactSha256: manifest.artifactSha256,
     releaseAuthorityKeyId: manifest.signingKeyId,
   });
   stdout.write(
     `${JSON.stringify(
       {
-        releaseVersion: manifest.agentVersion,
-        sourceCommit: manifest.sourceCommit,
+        releaseVersion: manifest.releaseVersion,
+        sourceCommit: manifest.build.sourceCommit,
         artifactSha256: manifest.artifactSha256,
         signingKeyId: manifest.signingKeyId,
         kmsKeyArn,

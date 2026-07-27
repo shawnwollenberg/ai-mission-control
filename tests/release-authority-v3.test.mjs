@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
+import { acceptMissionAgentProductionRelease } from "../application/mission-agent-release-selection.ts";
 import {
   canonicalReleaseManifestV3,
+  canonicalJson,
   parseCanonicalReleaseManifestV3Json,
   parseReleaseManifestV3,
   publicKeyFingerprint,
@@ -50,6 +52,14 @@ const manifest = {
     operatingSystem: "darwin-linux",
     runtime: "node",
     runtimeMajorVersion: 22,
+  },
+  provenance: {
+    builderSha256: "c".repeat(64),
+    containerImageDigest: "node@sha256:" + "d".repeat(64),
+    manifestSchemaSha256: "e".repeat(64),
+    nodeVersion: "22.22.0",
+    packageLockSha256: "f".repeat(64),
+    reproducibilityEvidenceSha256: "1".repeat(64),
   },
   publicKeyFingerprint: fingerprint,
   releaseAuthorityVersion: "v2",
@@ -114,6 +124,8 @@ test("Manifest v3 schema and trust mutation matrix fails closed", () => {
     { platform: { ...manifest.platform, operatingSystem: "macos" } },
     { platform: { ...manifest.platform, architecture: "arm64" } },
     { platform: { ...manifest.platform, artifactFormat: "commonjs" } },
+    { provenance: { ...manifest.provenance, nodeVersion: "24.0.0" } },
+    { provenance: { ...manifest.provenance, builderSha256: "C".repeat(64) } },
     { compatibility: { ...manifest.compatibility, identityProtocolVersion: "1" } },
     { compatibility: { ...manifest.compatibility, activationProtocolVersion: "2" } },
     { build: { ...manifest.build, sourceCommit: "C".repeat(40) } },
@@ -161,4 +173,31 @@ test("Mission Control eligibility requires the complete Manifest v3 capability",
   for (const field of Object.keys(capability))
     assert.equal(supportsManifestV3ProductionRelease({ ...capability, [field]: "unsupported" }), false);
   assert.equal(supportsManifestV3ProductionRelease(null), false);
+});
+
+test("Mission Control production selection enforces v3 signature, compatibility, name, length, and checksum", () => {
+  const artifactBytes = Buffer.from("manifest-v3-production-selection-fixture");
+  const selectedManifest = {
+    ...manifest,
+    artifactByteLength: artifactBytes.byteLength,
+    artifactSha256: createHash("sha256").update(artifactBytes).digest("hex"),
+  };
+  const bundle = signed(selectedManifest);
+  const accepted = acceptMissionAgentProductionRelease({
+    signedManifestText: canonicalJson(bundle),
+    artifactBytes,
+    artifactName: selectedManifest.artifactName,
+    keys: { [keyId]: key },
+    now: new Date("2026-07-28T00:00:00.000Z"),
+  });
+  assert.equal(accepted.releaseVersion, "0.7.2");
+  assert.throws(() =>
+    acceptMissionAgentProductionRelease({
+      signedManifestText: canonicalJson(bundle),
+      artifactBytes: Buffer.from("different bytes with same-ish length"),
+      artifactName: selectedManifest.artifactName,
+      keys: { [keyId]: key },
+      now: new Date("2026-07-28T00:00:00.000Z"),
+    }),
+  );
 });

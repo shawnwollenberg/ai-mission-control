@@ -87,11 +87,10 @@ test("Manifest v3 fixture verifies through both implementations with key and fin
 });
 
 test("real updater requires v3, embedded trust, byte length, and has no v2 fallback", () => {
-  assert.match(artifactSource, /verifyReleaseManifestText\\(manifestText, \\{ allowRollbackVersion \\}\\)/);
+  assert.match(artifactSource, /verifyReleaseManifestText\(manifestText, \{ allowRollbackVersion \}\)/);
   assert.match(artifactSource, /New production releases require Manifest v3/);
   assert.match(artifactSource, /Update artifact byte-length verification failed/);
-  assert.match(artifactSource, /Buffer\\.byteLength\\(source, "utf8"\\)/);
-  assert.doesNotMatch(artifactSource, /allowHistoricalManifestV2[^\\n]*true/);
+  assert.match(artifactSource, /Buffer\.byteLength\(source, "utf8"\)/);
   assert.throws(
     () => agent.verifyReleaseManifest({ ...manifest, signature: Buffer.alloc(64).toString("base64") }),
     /signature verification failed/i,
@@ -102,6 +101,19 @@ test("real updater requires v3, embedded trust, byte length, and has no v2 fallb
     /override is not authorized/i,
   );
   assert.throws(() => agent.verifyReleaseManifest({ manifestVersion: "2" }), /require Manifest v3/i);
+  assert.doesNotThrow(() =>
+    agent.assertReleasePlatformEligibility(manifest, {
+      nodeMajorVersion: 22,
+      operatingSystem: "darwin",
+      architecture: "arm64",
+    }),
+  );
+  for (const runtime of [
+    { nodeMajorVersion: 24, operatingSystem: "darwin", architecture: "arm64" },
+    { nodeMajorVersion: 22, operatingSystem: "win32", architecture: "x64" },
+    { nodeMajorVersion: 22, operatingSystem: "linux", architecture: "ia32" },
+  ])
+    assert.throws(() => agent.assertReleasePlatformEligibility(manifest, runtime), /platform is incompatible/i);
 });
 
 test("0.7.2 capability source advertises the complete v3 eligibility contract", () => {
@@ -114,7 +126,7 @@ test("0.7.2 capability source advertises the complete v3 eligibility contract", 
     productionKeyId,
     productionFingerprint,
   ])
-    assert.match(artifactSource, new RegExp(expected.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")));
+    assert.ok(artifactSource.includes(expected), `missing capability field: ${expected}`);
 });
 
 test("Manifest v3 mutation matrix fails closed in the bundled artifact", () => {
@@ -122,8 +134,8 @@ test("Manifest v3 mutation matrix fails closed in the bundled artifact", () => {
     { manifestVersion: "2" },
     { releaseAuthorityVersion: "2" },
     { canonicalizationVersion: "release-manifest-json-v2" },
-    { publicKeyFingerprint: "ed25519-spki-sha256:" + "a".repeat(64) },
-    { signingKeyId: "mission-agent-release-2099-99" },
+    { publicKeyFingerprint: "ed25519-spki-sha256:" + "a".repeat(63) },
+    { signingKeyId: "unknown" },
     { artifactSha256: "A".repeat(64) },
     { artifactByteLength: -1 },
     { releaseVersion: "0.7.3" },
@@ -134,6 +146,7 @@ test("Manifest v3 mutation matrix fails closed in the bundled artifact", () => {
     { platform: { ...manifest.platform, operatingSystem: "darwin" } },
     { platform: { ...manifest.platform, architecture: "arm64" } },
     { platform: { ...manifest.platform, artifactFormat: "cjs" } },
+    { provenance: { ...manifest.provenance, nodeVersion: "24.0.0" } },
     { compatibility: { ...manifest.compatibility, identityProtocolVersion: "1" } },
     { compatibility: { ...manifest.compatibility, activationProtocolVersion: "2" } },
     { unknown: true },

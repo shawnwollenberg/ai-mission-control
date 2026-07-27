@@ -15,6 +15,7 @@
     "expiresAt",
     "manifestVersion",
     "platform",
+    "provenance",
     "publicKeyFingerprint",
     "releaseAuthorityVersion",
     "releaseVersion",
@@ -57,6 +58,26 @@
         "operatingSystem": { "const": "darwin-linux" },
         "runtime": { "const": "node" },
         "runtimeMajorVersion": { "const": 22 }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "builderSha256",
+        "containerImageDigest",
+        "manifestSchemaSha256",
+        "nodeVersion",
+        "packageLockSha256",
+        "reproducibilityEvidenceSha256"
+      ],
+      "properties": {
+        "builderSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "containerImageDigest": { "type": "string", "pattern": "^node@sha256:[a-f0-9]{64}$" },
+        "manifestSchemaSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "nodeVersion": { "const": "22.22.0" },
+        "packageLockSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "reproducibilityEvidenceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
       }
     },
     "publicKeyFingerprint": {
