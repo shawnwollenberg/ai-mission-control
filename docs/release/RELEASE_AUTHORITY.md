@@ -14,6 +14,10 @@ records. Private signing material never enters either system. Project Brain
 uses the resulting Mission Agent identity and capability evidence but does not
 hold release-signing authority.
 
+For the five-minute operator flow, use
+[`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md). This document remains the
+authoritative architecture, policy, recovery, and troubleshooting reference.
+
 ## 2. Architecture
 
 ```text
