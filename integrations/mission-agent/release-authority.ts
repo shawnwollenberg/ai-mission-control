@@ -2,6 +2,8 @@ import { createHash, createPublicKey, verify } from "node:crypto";
 
 export const RELEASE_AUTHORITY_VERSION = "2" as const;
 export const RELEASE_MANIFEST_VERSION = "2" as const;
+export const RELEASE_MANIFEST_V3_VERSION = "3" as const;
+export const RELEASE_CANONICALIZATION_V3 = "release-manifest-json-v3" as const;
 
 export type ReleaseKeyStatus = "pending" | "active" | "retiring" | "retired" | "revoked";
 
@@ -52,6 +54,44 @@ export type ReleaseManifestV2 = {
 
 export type SignedReleaseManifestV2 = ReleaseManifestV2 & { signature: string };
 
+export type ReleaseManifestPlatformV3 = {
+  architecture: "universal";
+  artifactFormat: "esm";
+  operatingSystem: "darwin-linux";
+  runtime: "node";
+  runtimeMajorVersion: 22;
+};
+
+export type ReleaseManifestCompatibilityV3 = {
+  activationProtocolVersion: "1";
+  identityProtocolVersion: "2";
+  minimumMissionControlVersion: string;
+};
+
+export type ReleaseManifestBuildV3 = {
+  buildId: string;
+  sourceCommit: string;
+};
+
+export type ReleaseManifestV3 = {
+  artifactByteLength: number;
+  artifactName: string;
+  artifactSha256: string;
+  build: ReleaseManifestBuildV3;
+  canonicalizationVersion: "release-manifest-json-v3";
+  compatibility: ReleaseManifestCompatibilityV3;
+  createdAt: string;
+  expiresAt: string;
+  manifestVersion: "3";
+  platform: ReleaseManifestPlatformV3;
+  publicKeyFingerprint: `ed25519-spki-sha256:${string}`;
+  releaseAuthorityVersion: "v2";
+  releaseVersion: string;
+  signingKeyId: string;
+};
+
+export type SignedReleaseManifestV3 = ReleaseManifestV3 & { signature: string };
+
 const KEY_ID = /^mission-agent-release-\d{4}-\d{2}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const SEMVER = /^\d+\.\d+\.\d+$/;
@@ -69,6 +109,35 @@ const V2_FIELDS = [
   "minimumMissionControlVersion",
   "signingKeyId",
   "sourceCommit",
+] as const;
+const V3_FIELDS = [
+  "artifactByteLength",
+  "artifactName",
+  "artifactSha256",
+  "build",
+  "canonicalizationVersion",
+  "compatibility",
+  "createdAt",
+  "expiresAt",
+  "manifestVersion",
+  "platform",
+  "publicKeyFingerprint",
+  "releaseAuthorityVersion",
+  "releaseVersion",
+  "signingKeyId",
+] as const;
+const V3_BUILD_FIELDS = ["buildId", "sourceCommit"] as const;
+const V3_COMPATIBILITY_FIELDS = [
+  "activationProtocolVersion",
+  "identityProtocolVersion",
+  "minimumMissionControlVersion",
+] as const;
+const V3_PLATFORM_FIELDS = [
+  "architecture",
+  "artifactFormat",
+  "operatingSystem",
+  "runtime",
+  "runtimeMajorVersion",
 ] as const;
 const SUPPORTED_IDENTITY_PROTOCOLS = new Set(["2"]);
 const SUPPORTED_ACTIVATION_PROTOCOLS = new Set(["1"]);
@@ -149,6 +218,72 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function assertExactFields(record: Record<string, unknown>, fields: readonly string[], label: string): void {
+  if (Object.keys(record).sort().join("\n") !== [...fields].sort().join("\n"))
+    throw new Error(`${label} fields must exactly match the schema`);
+}
+
+function assertCanonicalUnicode(value: unknown): void {
+  if (typeof value === "string" && value.normalize("NFC") !== value)
+    throw new Error("manifest strings must use Unicode NFC");
+  if (Array.isArray(value)) {
+    for (const item of value) assertCanonicalUnicode(item);
+  } else if (value && typeof value === "object") {
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      if (key.normalize("NFC") !== key) throw new Error("manifest keys must use Unicode NFC");
+      assertCanonicalUnicode(item);
+    }
+  }
+}
+
+function assertNoDuplicateJsonKeys(text: string): void {
+  const stack: Array<Set<string> | null> = [];
+  let index = 0;
+  let expectingKey = false;
+  while (index < text.length) {
+    const character = text[index];
+    if (character === '"') {
+      const start = index;
+      index += 1;
+      let escaped = false;
+      while (index < text.length) {
+        const current = text[index];
+        if (!escaped && current === '"') break;
+        escaped = !escaped && current === "\\";
+        if (current !== "\\") escaped = false;
+        index += 1;
+      }
+      if (index >= text.length) throw new Error("manifest JSON string is unterminated");
+      const literal = text.slice(start, index + 1);
+      let after = index + 1;
+      while (/\s/.test(text[after] ?? "")) after += 1;
+      if (expectingKey && text[after] === ":") {
+        const key = JSON.parse(literal) as string;
+        const keys = stack.at(-1);
+        if (!(keys instanceof Set)) throw new Error("manifest JSON object state is malformed");
+        if (keys.has(key)) throw new Error(`manifest contains duplicate field: ${key}`);
+        keys.add(key);
+        expectingKey = false;
+      }
+      index += 1;
+      continue;
+    }
+    if (character === "{") {
+      stack.push(new Set());
+      expectingKey = true;
+    } else if (character === "[") {
+      stack.push(null);
+      expectingKey = false;
+    } else if (character === "}" || character === "]") {
+      stack.pop();
+      expectingKey = false;
+    } else if (character === "," && stack.at(-1) instanceof Set) {
+      expectingKey = true;
+    }
+    index += 1;
+  }
+}
+
 function requireIsoDate(value: string, field: string): void {
   if (!value || Number.isNaN(Date.parse(value)) || new Date(value).toISOString() !== value)
     throw new Error(`${field} must be a canonical ISO-8601 timestamp`);
@@ -180,6 +315,79 @@ export function parseReleaseManifestV2(value: unknown): ReleaseManifestV2 {
   requireIsoDate(manifest.expiresAt, "expiresAt");
   if (Date.parse(manifest.expiresAt) <= Date.parse(manifest.createdAt))
     throw new Error("manifest must expire after creation");
+  return manifest;
+}
+
+export function parseReleaseManifestV3(value: unknown): ReleaseManifestV3 {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("manifest v3 must be an object");
+  const record = value as Record<string, unknown>;
+  assertExactFields(record, V3_FIELDS, "manifest v3");
+  if (
+    !record.build ||
+    typeof record.build !== "object" ||
+    Array.isArray(record.build) ||
+    !record.compatibility ||
+    typeof record.compatibility !== "object" ||
+    Array.isArray(record.compatibility) ||
+    !record.platform ||
+    typeof record.platform !== "object" ||
+    Array.isArray(record.platform)
+  )
+    throw new Error("manifest v3 nested metadata is required");
+  assertExactFields(record.build as Record<string, unknown>, V3_BUILD_FIELDS, "manifest v3 build");
+  assertExactFields(
+    record.compatibility as Record<string, unknown>,
+    V3_COMPATIBILITY_FIELDS,
+    "manifest v3 compatibility",
+  );
+  assertExactFields(record.platform as Record<string, unknown>, V3_PLATFORM_FIELDS, "manifest v3 platform");
+  const manifest = record as ReleaseManifestV3;
+  if (manifest.manifestVersion !== RELEASE_MANIFEST_V3_VERSION) throw new Error("unsupported manifest version");
+  if (manifest.releaseAuthorityVersion !== "v2") throw new Error("unsupported Release Authority version");
+  if (manifest.canonicalizationVersion !== RELEASE_CANONICALIZATION_V3)
+    throw new Error("unsupported manifest canonicalization");
+  if (!SEMVER.test(manifest.releaseVersion) || !SEMVER.test(manifest.compatibility.minimumMissionControlVersion))
+    throw new Error("release and Mission Control versions must be canonical semver");
+  if (manifest.artifactName !== `mission-agent-${manifest.releaseVersion}.mjs`)
+    throw new Error("artifact name does not match release version");
+  if (!SHA256.test(manifest.artifactSha256)) throw new Error("artifact checksum must be lowercase SHA-256");
+  if (!Number.isSafeInteger(manifest.artifactByteLength) || manifest.artifactByteLength <= 0)
+    throw new Error("artifact byte length must be a positive safe integer");
+  if (!COMMIT.test(manifest.build.sourceCommit)) throw new Error("source commit must be a full lowercase Git SHA");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(manifest.build.buildId)) throw new Error("invalid build ID");
+  if (!KEY_ID.test(manifest.signingKeyId)) throw new Error("invalid signing key ID");
+  if (!/^ed25519-spki-sha256:[a-f0-9]{64}$/.test(manifest.publicKeyFingerprint))
+    throw new Error("invalid public-key fingerprint");
+  if (
+    manifest.platform.runtime !== "node" ||
+    manifest.platform.runtimeMajorVersion !== 22 ||
+    manifest.platform.operatingSystem !== "darwin-linux" ||
+    manifest.platform.architecture !== "universal" ||
+    manifest.platform.artifactFormat !== "esm"
+  )
+    throw new Error("unsupported Mission Agent platform");
+  if (!SUPPORTED_IDENTITY_PROTOCOLS.has(manifest.compatibility.identityProtocolVersion))
+    throw new Error("unsupported identity protocol version");
+  if (!SUPPORTED_ACTIVATION_PROTOCOLS.has(manifest.compatibility.activationProtocolVersion))
+    throw new Error("unsupported activation protocol version");
+  requireIsoDate(manifest.createdAt, "createdAt");
+  requireIsoDate(manifest.expiresAt, "expiresAt");
+  if (Date.parse(manifest.expiresAt) <= Date.parse(manifest.createdAt))
+    throw new Error("manifest must expire after creation");
+  assertCanonicalUnicode(manifest);
+  return manifest;
+}
+
+export function canonicalReleaseManifestV3(value: unknown): string {
+  return canonicalJson(parseReleaseManifestV3(value));
+}
+
+export function parseCanonicalReleaseManifestV3Json(text: string): ReleaseManifestV3 {
+  if (text.endsWith("\n") || text.endsWith("\r")) throw new Error("manifest v3 must not have a trailing newline");
+  assertNoDuplicateJsonKeys(text);
+  const parsed = JSON.parse(text);
+  const manifest = parseReleaseManifestV3(parsed);
+  if (text !== canonicalJson(manifest)) throw new Error("manifest v3 bytes are not canonical");
   return manifest;
 }
 
@@ -281,4 +489,72 @@ export function verifyReleaseManifestV2(
   if (!verify(null, Uint8Array.from(Buffer.from(canonicalJson(manifest))), publicKey, Uint8Array.from(signatureBytes)))
     throw new Error("manifest signature verification failed");
   return manifest;
+}
+
+export function verifyReleaseManifestV3(
+  bundle: unknown,
+  options: { now?: Date; keys?: Readonly<Record<string, ReleaseKeyRecord>> } = {},
+): ReleaseManifestV3 {
+  if (!bundle || typeof bundle !== "object" || Array.isArray(bundle))
+    throw new Error("signed manifest v3 must be an object");
+  const { signature, ...unsigned } = bundle as Record<string, unknown>;
+  if (typeof signature !== "string" || signature === "") throw new Error("manifest signature is required");
+  const manifest = parseReleaseManifestV3(unsigned);
+  const keys = options.keys ?? trustedReleaseKeys;
+  validateTrustStore(keys);
+  const key = keys[manifest.signingKeyId];
+  if (!key) throw new Error("manifest signing key is unknown");
+  if (key.keyId !== manifest.signingKeyId) throw new Error("manifest signing key ID mismatch");
+  if (key.status !== "active") throw new Error(`manifest signing key is ${key.status}`);
+  if (key.publicKeyFingerprint !== manifest.publicKeyFingerprint)
+    throw new Error("signed public-key fingerprint does not match trust record");
+  const derivedFingerprint = publicKeyFingerprint(key.publicKeySpkiBase64);
+  if (derivedFingerprint !== manifest.publicKeyFingerprint)
+    throw new Error("signed public-key fingerprint does not match public key");
+  const now = options.now ?? new Date();
+  if (key.activatedAt && Date.parse(key.activatedAt) > now.getTime())
+    throw new Error("manifest signing key is not active yet");
+  if (key.retiresAt && Date.parse(key.retiresAt) <= now.getTime()) throw new Error("manifest signing key is retired");
+  if (Date.parse(manifest.expiresAt) <= now.getTime()) throw new Error("manifest is expired");
+  const signatureBytes = Buffer.from(signature, "base64");
+  if (signatureBytes.length !== 64 || signatureBytes.toString("base64") !== signature)
+    throw new Error("manifest signature must be canonical Ed25519 base64");
+  const publicKey = createPublicKey({
+    key: Buffer.from(key.publicKeySpkiBase64, "base64"),
+    format: "der",
+    type: "spki",
+  });
+  if (
+    !verify(
+      null,
+      Uint8Array.from(Buffer.from(canonicalReleaseManifestV3(manifest), "utf8")),
+      publicKey,
+      Uint8Array.from(signatureBytes),
+    )
+  )
+    throw new Error("manifest signature verification failed");
+  return manifest;
+}
+
+export function verifyNewProductionReleaseManifest(
+  bundle: unknown,
+  options: { now?: Date; keys?: Readonly<Record<string, ReleaseKeyRecord>> } = {},
+): ReleaseManifestV3 {
+  if ((bundle as { manifestVersion?: unknown } | null)?.manifestVersion !== RELEASE_MANIFEST_V3_VERSION)
+    throw new Error("new production releases require Manifest v3");
+  return verifyReleaseManifestV3(bundle, options);
+}
+
+export function supportsManifestV3ProductionRelease(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const release = value as Record<string, unknown>;
+  return (
+    release.authorityVersion === "v2" &&
+    release.manifestVersion === "3" &&
+    release.canonicalizationVersion === RELEASE_CANONICALIZATION_V3 &&
+    release.minimumProductionManifestVersion === "3" &&
+    release.signingKeyId === "mission-agent-release-2026-01" &&
+    release.publicKeyFingerprint ===
+      "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b"
+  );
 }

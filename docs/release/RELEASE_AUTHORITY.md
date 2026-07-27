@@ -9,7 +9,7 @@ manifest binds an artifact checksum and source commit. It does not prove that
 the artifact is defect-free, approved for publication, deployed, or safe for a
 particular environment.
 
-Mission Control and Mission Agent consume manifest v2 and the public trust
+Mission Control and Mission Agent consume Manifest v3 and the public trust
 records. Private signing material never enters either system. Project Brain
 uses the resulting Mission Agent identity and capability evidence but does not
 hold release-signing authority.
@@ -21,17 +21,18 @@ Human signer with FIDO2 MFA
 → AWS IAM Identity Center
 → Temporary MissionAgentReleaseSigner role
 → AWS KMS Ed25519 key
-→ Canonical Release Authority v2 manifest
+→ Canonical Release Authority v2 / Manifest v3
 → KMS signature and non-secret receipt
 → Mission Control verification
 → Mission Agent verification
 → separately authorized publication and rollout
 ```
 
-Release Authority v2 uses manifest v2, raw Ed25519 signatures, and explicit key
-IDs. Key administration, signing, verification, publication, deployment, and
-fleet rollout are separate authorities. A signing authorization is never a
-publication authorization.
+Release Authority v2 uses Manifest v3, canonicalization
+`release-manifest-json-v3`, raw Ed25519 signatures, and explicit key ID plus
+public-key fingerprint binding. Key administration, signing, verification,
+publication, deployment, and fleet rollout are separate authorities. A signing
+authorization is never a publication authorization.
 
 ## 3. Production identities
 
@@ -57,7 +58,7 @@ long-lived IAM-user signing credentials.
 - Fingerprint: `ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b`
 - Rotation: manual and governed
 - Repository trust state: `pending`
-- 0.7.1 embedded bootstrap state: `active`
+- 0.7.1 and 0.7.2 embedded bootstrap state: `active`
 - Key-policy checksum: `4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7`
 
 The ARN, public key, fingerprint, algorithms, and public policy evidence are
@@ -72,13 +73,19 @@ It contains the intended signing key ID as metadata but not the production
 public key in its embedded runtime trust store, so its default updater cannot
 authenticate a manifest signed by that key.
 
-Mission Agent 0.7.1 is the bootstrap release. It embeds the approved production
+Mission Agent 0.7.1 embeds the approved production
 Ed25519 public key as the only active/bootstrap key while retaining the
-historical key in retiring state for compatibility. The artifact cannot sign or
-activate anything; it only contains public verification material. Repository
-trust remains `pending` until the separate
-activation-and-signing authorization. At signing time, Mission Control trust
-must first become active so both verifiers agree.
+historical key in retiring state for compatibility, but it understands only
+Manifest v2. Pre-signing review found that v2 did not directly bind the public
+fingerprint, Release Authority version, canonicalization version, platform,
+artifact length, or structured compatibility/build metadata. It was therefore
+never signed or published.
+
+Mission Agent 0.7.2 is the first signing candidate with both the embedded
+production bootstrap trust and native Manifest v3 verification. The artifact
+cannot sign or activate anything; it contains public verification material
+only. Repository trust remains `pending` until a separate
+activation-and-signing authorization.
 
 This avoids circular trust: the governed source build embeds a previously
 validated public key, reproducibility proves the artifact bytes, and a later
@@ -94,10 +101,40 @@ compatible verifier support, activates it separately, and only then signs.
 Revocation remains fail-closed. Historical 0.6.8 verification retains its
 historical public key; 0.7.0 is never represented as KMS-signed.
 
-Before signing 0.7.1, confirm the exact artifact and manifest checksums,
+Before signing 0.7.2, confirm the exact artifact and Manifest v3 checksums,
 reproducibility, embedded key/fingerprint, repository activation evidence,
 live KMS policy checksum, signer identity, four-path verification plan, and
 separate publication hold.
+
+## Manifest v3 contract
+
+Manifest v3 signs every release-acceptance input: manifest, Release Authority,
+and canonicalization versions; release version; artifact name, checksum, and
+byte length; build ID and source commit; signing key ID and public fingerprint;
+creation and expiration timestamps; structured platform metadata; and
+identity, activation, and minimum Mission Control compatibility.
+
+The platform is the actual portable ESM artifact target: Node.js major 22,
+`darwin-linux`, `universal`, and `esm`. These exact case-sensitive values are
+required. Aliases and unknown fields are rejected.
+
+Canonicalization `release-manifest-json-v3` validates the schema before
+serialization, requires UTF-8 and Unicode NFC strings, recursively orders
+object keys, preserves schema-defined array order, uses compact JSON escaping,
+permits only required positive safe integers, uses lowercase hexadecimal
+checksums and canonical ISO-8601 timestamps, and emits no whitespace or
+trailing newline. Duplicate and unknown keys are rejected before signature
+verification.
+
+The verifier selects a key by exact key ID, requires active state, compares the
+signed fingerprint with the trust record, derives the fingerprint again from
+the stored DER SPKI key, and verifies with that same key. Any disagreement
+fails closed.
+
+Manifest v1 remains available only for the explicitly governed 0.6.8 rollback.
+Manifest v2 remains parseable for historical fixtures but is prohibited for
+new production selection. A v3 parse or verification failure never falls back
+to v2.
 
 ## 5. Normal release procedure
 
@@ -105,7 +142,7 @@ separate publication hold.
 2. Build again in an independent clean environment and compare bytes.
 3. Record the artifact checksum, byte length, platform, toolchain, and lockfile.
 4. Run tests, dependency audit, secret scan, and independent security review.
-5. Construct and review strict canonical manifest v2 bytes.
+5. Construct and review strict canonical Manifest v3 bytes.
 6. Authenticate to Identity Center using FIDO2 MFA and the signer profile.
 7. Run `aws sts get-caller-identity`; stop on account, Region, role, or session
    mismatch.
@@ -238,6 +275,15 @@ every affected artifact and longer when incident or compliance policy requires.
   the administrator role.
 - Fingerprint or artifact mismatch: stop; never sign substitute bytes.
 - Canonicalization mismatch: regenerate with canonical tooling; do not hand-edit.
+- Unsupported manifest version: confirm the agent advertises Manifest v3; do
+  not downgrade to v2.
+- Release Authority or canonicalization mismatch: stop and compare the exact
+  signed values with the supported `v2` and `release-manifest-json-v3`.
+- Signed fingerprint mismatch: compare key ID, signed fingerprint, trust record,
+  and independently derived DER SPKI fingerprint.
+- Platform mismatch: use the exact structured target values; do not normalize
+  aliases after signing.
+- Agent capability lacks Manifest v3: the agent is ineligible for the release.
 - Signature failure: stop and preserve evidence; do not retry signing until the
   cause is understood.
 - Trust still pending: stop; obtain explicit activation authorization.
@@ -258,12 +304,12 @@ every affected artifact and longer when incident or compliance policy requires.
 - Administrator: `arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1`
 - Signer: `arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d`
 - KMS policy checksum: `4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7`
-- Release Authority / manifest: `2` / `2`
+- Release Authority / manifest / canonicalization: `v2` / `v3` /
+  `release-manifest-json-v3`
 - Pending repository trust-record checksum:
   `91e8774f38bb64b4715169928fec4fe4a03ca861c687241795c93e706a3f7b6b`
 - Active repository trust-record checksum: not available; activation is blocked
-- Unsigned 0.7.1 canonical manifest checksum:
-  `8fc90fb63b1b6440e590a58e7c3eda5318b2fbd7c96c41a6cb97636bc9882275`
-- Signed 0.7.1 manifest checksum: not available; signing is blocked
+- Unsigned 0.7.2 canonical manifest checksum: pending deterministic build
+- Signed 0.7.2 manifest checksum: not available; signing is not authorized
 - 0.7.1 artifact checksum:
   `279365e5d1bcd18ce9bd8ac84d4b7e512cd3ff2f7f559e9892cd6fda3bf17803`
