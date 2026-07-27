@@ -97,3 +97,36 @@ leasing, S3 verification, or projections fail.
 for different bytes, expose credentials, destructively roll back migrations,
 or treat signing, publication, canary, deployment, and fleet rollout as one
 authorization.
+
+## 8. Legacy replacement trust bootstrap
+
+This procedure is only for agents that cannot verify Manifest v3 and whose
+legacy signing authority is unavailable.
+
+- [ ] State explicitly that legacy cryptographic continuity is unavailable.
+- [ ] Obtain a durable human authorization binding one agent, host, workspace,
+      repository fingerprint, exact source and target bytes, expiry, one use, and
+      rollback.
+- [ ] Confirm no ordinary updater or Manifest v1 authorization is claimed.
+- [ ] Revalidate the granted approval action hash and expiry against the
+      authoritative database clock when consuming the one shot.
+- [ ] Verify Manifest v3 through Mission Control and standalone Ed25519.
+- [ ] Verify signed key ID, signed/recorded/derived fingerprints, signature,
+      artifact length/checksum, provenance, platform, compatibility, and expiry.
+- [ ] Verify the official Node 22 archive and executable checksums.
+- [ ] Pin the LaunchAgent to the absolute isolated Node 22 executable.
+- [ ] Inventory non-secret configuration checksums and preserve identity,
+      credentials, registrations, logs, 0.6.8 bytes, and service configuration.
+- [ ] Drain only the named agent and prove no active mission or lease.
+- [ ] Stage and verify all files before the atomic switch.
+- [ ] Verify the checksum-bound host phase journal and interruption recovery.
+- [ ] Verify restart, original identity, heartbeats, capabilities, and one
+      governed read-only smoke mission.
+- [ ] Mark the authorization consumed and keep broader rollout blocked.
+- [ ] On any failure, roll back once, verify 0.6.8 and heartbeats, and require
+      new authorization before retry.
+- [ ] Remove replacement controls after the bounded legacy transition ends.
+
+**Never:** use this bootstrap for a Manifest-v3-capable agent, imply continuity
+from the lost key, substitute a trust root, use an ambiguous `node` path,
+automatically retry, or expose the workflow as ordinary fleet discovery.

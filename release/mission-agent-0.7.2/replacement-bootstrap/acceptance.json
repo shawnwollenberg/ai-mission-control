@@ -1,0 +1,191 @@
+{
+  "evidenceVersion": "1",
+  "recordedAt": "2026-07-27T20:25:58.000Z",
+  "disposition": "validated-not-authorized-for-production-execution",
+  "protocol": {
+    "name": "operator-mediated replacement trust bootstrap",
+    "version": "operator-replacement-bootstrap-v1",
+    "legacyCryptographicContinuity": "unavailable",
+    "ordinaryUpdaterAuthorization": false,
+    "transitionalOnly": true
+  },
+  "implementation": {
+    "corePath": "integrations/mission-agent/replacement-bootstrap.ts",
+    "coreSizeBytes": 26863,
+    "coreSha256": "c98c7f67945c84c65cf8961070423c0d52b40889f9e0c239f670770d1a65a74d",
+    "operatorStorePath": "application/mission-agent-replacement-bootstrap.ts",
+    "operatorStoreSha256": "15dd06d1bad34e2da52a07dd21bb8b32487b3370c49f3e3fbd6f1cc9bd45680a",
+    "authorizationSchemaPath": "release/schemas/mission-agent-replacement-bootstrap-authorization.schema.json",
+    "authorizationSchemaSha256": "f9b8a1a6bb6b115d09e7390e1b7605fe8fcb7d3453223352cd4dcb6df60dd148",
+    "proposedMigrationPath": "db/migrations/0029_mission_agent_replacement_bootstrap.sql",
+    "proposedMigrationSha256": "56c593fd43bedb8b8056f1e210e0eca9c56a94dfae22d84b1cfa4c3ad9ad0bb1",
+    "productionMigrationApplied": false
+  },
+  "authorization": {
+    "simulationRecordPath": "release/mission-agent-0.7.2/replacement-bootstrap/simulation-authorization.json",
+    "simulationRecordSha256": "6e94705efda915e3de2e2ac0b79454f94ba11077187b876505b60990ca2800fe",
+    "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+    "hostIdentity": "disposable-macos-arm64-fixture",
+    "workspaceId": "b82d5fbd-13ba-4ee0-b66a-551f433caa58",
+    "repositoryId": "f5ecf573-643e-4829-8d57-249a8b7d1acf",
+    "repositoryFingerprint": "9c9372afecfd0561aa389ed89daa7607fe8bf60b0f659d4f19be108715f02cf4",
+    "maximumExecutionCount": 1,
+    "expiresAt": "2026-08-03T20:00:00.000Z",
+    "revocableBeforeExecution": true,
+    "humanApprovalRequired": true,
+    "governedApprovalActionHashRequired": true,
+    "approvalRevalidatedAtConsumptionUsingDatabaseClock": true
+  },
+  "source": {
+    "version": "0.6.8",
+    "artifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+    "rollbackTarget": "0.6.8",
+    "rollbackArtifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d"
+  },
+  "target": {
+    "version": "0.7.2",
+    "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+    "artifactByteLength": 148063,
+    "canonicalManifestSha256": "b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace",
+    "signatureBytesSha256": "4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583",
+    "signingKeyId": "mission-agent-release-2026-01",
+    "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+    "manifestVersion": "3",
+    "releaseAuthorityVersion": "v2",
+    "canonicalizationVersion": "release-manifest-json-v3",
+    "identityProtocolVersion": "2",
+    "activationProtocolVersion": "1"
+  },
+  "verification": {
+    "missionControlReleaseAuthority": "passed",
+    "standaloneEd25519": "passed",
+    "canonicalManifest": "passed",
+    "signedAndRecordedFingerprint": "passed",
+    "derivedSpkiFingerprint": "passed",
+    "artifactChecksumAndLength": "passed",
+    "platformAndCompatibility": "passed",
+    "buildProvenance": "passed",
+    "externalTrustSubstitutionAllowed": false,
+    "manifestV1OrV2TargetAllowed": false
+  },
+  "nodeRuntime": {
+    "version": "22.22.0",
+    "platform": "darwin-arm64",
+    "distributionUrl": "https://nodejs.org/dist/v22.22.0/node-v22.22.0-darwin-arm64.tar.gz",
+    "archiveSha256": "5ed4db0fcf1eaf84d91ad12462631d73bf4576c1377e192d222e48026a902640",
+    "executableSha256": "913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4",
+    "archiveVerification": "passed against official Node distribution checksum",
+    "executableVerification": "passed after extraction",
+    "installationPath": "/opt/mission-agent/runtime/node-22/22.22.0",
+    "serviceExecutable": "/opt/mission-agent/runtime/node-22/22.22.0/bin/node",
+    "globalNodeModified": false
+  },
+  "stateMachine": {
+    "happyPath": [
+      "prepared",
+      "approved",
+      "draining",
+      "verified",
+      "staged",
+      "replacing",
+      "starting",
+      "connected",
+      "accepted",
+      "completed"
+    ],
+    "failureStates": ["failed", "rolling_back", "rolled_back", "revoked", "expired"],
+    "compareAndSet": true,
+    "eventChecksumChain": true,
+    "durableHostPhaseJournal": true,
+    "interruptionRecovery": "deterministic rollback to exact 0.6.8",
+    "singleActiveAuthorizationPerAgent": true,
+    "singleExecution": true,
+    "automaticRetry": false,
+    "completionAndRollbackTerminal": true
+  },
+  "simulation": {
+    "environment": "Disposable filesystem and PostgreSQL 17 containers with Darwin arm64 service-definition validation",
+    "authorizationValidation": "passed",
+    "canaryScopedEligibility": "passed",
+    "releaseVerification": "passed",
+    "nodeRuntimeVerification": "passed",
+    "launchdAbsoluteExecutable": "passed",
+    "atomicArtifactStaging": "passed",
+    "atomicActiveSwitch": "passed with disposable active artifact and LaunchAgent paths",
+    "rollbackBytePreservation": "passed",
+    "identityPreservation": "passed through exact authorization and eligibility bindings",
+    "startup": "simulated service definition accepted; no real process replacement performed",
+    "heartbeat": "simulated original-identity continuity accepted",
+    "capabilities": "Manifest v3, Release Authority v2, identity 2, activation 1 verified",
+    "smokeMission": "simulated governed read-only lifecycle with no publication, deployment, duplicate execution, or approval bypass",
+    "rollback": "explicit failed to rolling_back to rolled_back path passed and remained terminal"
+  },
+  "databaseValidation": {
+    "migrations0001Through0028": "passed in disposable PostgreSQL",
+    "productionSchemaChanged": false,
+    "proposed0029SyntaxAndObjects": "passed in separate disposable PostgreSQL",
+    "production0029Applied": false
+  },
+  "tests": {
+    "focusedReplacementBootstrap": {
+      "passed": 13,
+      "failed": 0
+    },
+    "negativeCategories": [
+      "authorization identity, source, target, expiry, approval, and use",
+      "state transition, replay, compare-and-set, and terminal behavior",
+      "canary, host, workspace, repository, health, drain, mission, lease, and duplicate scope",
+      "manifest, signature, key, fingerprint, artifact, provenance, platform, protocol, and trust",
+      "Node archive, executable, major version, path, and permissions",
+      "atomic staging, partial bytes, and rollback preservation"
+    ],
+    "fullRepositorySuite": {
+      "passed": 154,
+      "failed": 5,
+      "basePassed": 154,
+      "baseFailed": 5,
+      "classification": "All five failures reproduce at untouched base ba51756d34cc6f6621741ac24476cb12a2dcf38b and are stale 0.6.8/latest-manifest or existing Git-fixture harness failures."
+    },
+    "typecheck": "passed",
+    "eslint": "passed",
+    "productionBuild": "passed",
+    "nextVersion": "16.2.11",
+    "productionDependencyAudit": "zero vulnerabilities"
+  },
+  "independentReview": {
+    "reviewer": "release_authority_security_review",
+    "disposition": "pass",
+    "criticalFindingsOpen": 0,
+    "highFindingsOpen": 0,
+    "acceptanceBlockingMediumFindingsOpen": 0,
+    "resolvedAreas": [
+      "governed approval and authoritative expiry",
+      "locked one-shot consumption",
+      "exact release binding",
+      "operator-attributed checksum chain",
+      "Node runtime ownership and TOCTOU",
+      "rollback source verification",
+      "durable interruption recovery",
+      "monotonic event chronology"
+    ]
+  },
+  "documentation": {
+    "runbook": "docs/release/RELEASE_AUTHORITY.md",
+    "checklist": "docs/release/RELEASE_CHECKLIST.md"
+  },
+  "safety": {
+    "falseLegacyContinuityClaimed": false,
+    "realCanaryModified": false,
+    "realCanaryRestarted": false,
+    "node22InstalledOnRealCanary": false,
+    "productionAgentInstalled": false,
+    "productionTrafficRouted": false,
+    "productionDeploymentAttempted": false,
+    "migration0029AppliedToProduction": false,
+    "otherAgentModified": false,
+    "rolloutStarted": false,
+    "signedAssetsModified": false,
+    "kmsOrTrustRecordModified": false
+  },
+  "nextAuthorizationRequired": "Explicit authorization to apply reviewed migration 0029, create and approve the exact one-agent production authorization record, stage the pinned Node 22 runtime and exact signed 0.7.2 assets, and execute the operator-mediated replacement on only canary 0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8 with immediate governed rollback on any failed gate."
+}

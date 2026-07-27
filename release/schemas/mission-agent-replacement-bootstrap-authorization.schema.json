@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://missioncontrol.wallyweb.com/schemas/mission-agent-replacement-bootstrap-authorization-v1.json",
+  "title": "Operator-mediated Mission Agent replacement bootstrap authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocolVersion",
+    "authorizationId",
+    "agentId",
+    "hostIdentity",
+    "workspaceId",
+    "repositoryId",
+    "repositoryFingerprint",
+    "currentVersion",
+    "currentArtifactSha256",
+    "targetVersion",
+    "targetArtifactSha256",
+    "targetArtifactByteLength",
+    "targetManifestSha256",
+    "targetSignatureSha256",
+    "targetSigningKeyId",
+    "targetPublicKeyFingerprint",
+    "requiredNodeVersion",
+    "approvalId",
+    "operatorIdentity",
+    "approvedBy",
+    "approvedAt",
+    "expiresAt",
+    "maximumExecutionCount",
+    "rollbackVersion",
+    "rollbackArtifactSha256",
+    "reason",
+    "legacyCryptographicContinuity",
+    "evidenceReferences"
+  ],
+  "properties": {
+    "protocolVersion": { "const": "operator-replacement-bootstrap-v1" },
+    "authorizationId": { "type": "string", "format": "uuid" },
+    "agentId": { "const": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8" },
+    "hostIdentity": { "type": "string", "minLength": 1 },
+    "workspaceId": { "type": "string", "format": "uuid" },
+    "repositoryId": { "type": "string", "format": "uuid" },
+    "repositoryFingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "currentVersion": { "const": "0.6.8" },
+    "currentArtifactSha256": {
+      "const": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d"
+    },
+    "targetVersion": { "const": "0.7.2" },
+    "targetArtifactSha256": {
+      "const": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09"
+    },
+    "targetArtifactByteLength": { "const": 148063 },
+    "targetManifestSha256": {
+      "const": "b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace"
+    },
+    "targetSignatureSha256": {
+      "const": "4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583"
+    },
+    "targetSigningKeyId": { "const": "mission-agent-release-2026-01" },
+    "targetPublicKeyFingerprint": {
+      "const": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b"
+    },
+    "requiredNodeVersion": { "const": "22.22.0" },
+    "approvalId": { "type": "string", "format": "uuid" },
+    "operatorIdentity": { "type": "string", "minLength": 1 },
+    "approvedBy": { "type": "string", "minLength": 1 },
+    "approvedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "maximumExecutionCount": { "const": 1 },
+    "rollbackVersion": { "const": "0.6.8" },
+    "rollbackArtifactSha256": {
+      "const": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d"
+    },
+    "reason": { "const": "legacy-signing-authority-unavailable" },
+    "legacyCryptographicContinuity": { "const": "unavailable" },
+    "evidenceReferences": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

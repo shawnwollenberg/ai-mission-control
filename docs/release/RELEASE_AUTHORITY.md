@@ -389,3 +389,59 @@ every affected artifact and longer when incident or compliance policy requires.
   `31b45c98f2ffba613b56cd23819ba8b0c9c09a43`
 - 0.7.1 artifact checksum:
   `279365e5d1bcd18ce9bd8ac84d4b7e512cd3ff2f7f559e9892cd6fda3bf17803`
+
+## 17. Replacement Trust Bootstrap for Legacy Agents
+
+Mission Agent 0.6.8 cannot verify Manifest v3, and its Manifest v1 private key
+is presumed unrecoverable. There is no cryptographic continuity from that lost
+key. A human operator may establish the new production trust root only through
+the separately governed `operator-replacement-bootstrap-v1` procedure.
+
+This is not an updater flow. The existing 0.6.8 updater authorizes nothing in
+the transition. A durable human authorization binds one named agent, its exact
+0.6.8 checksum, host, workspace and repository identity, the exact signed 0.7.2
+release, Node 22.22.0, expiry, one execution, rollback, and evidence. It is
+revocable before execution.
+
+Mission Control requires a granted approval projection whose action hash is the
+authorization checksum. It locks and revalidates that approval, its approver,
+and its expiry against the database clock in the same transaction that consumes
+the one-shot execution.
+
+The operator verifies the canonical Manifest v3 and artifact through both the
+Mission Control Release Authority verifier and standalone Ed25519 using the
+embedded active production key. External trust roots, redirects to unknown
+origins, Manifest v1/v2 targets, and substituted bytes fail closed.
+
+The macOS service uses the absolute executable
+`/opt/mission-agent/runtime/node-22/22.22.0/bin/node`. The official Darwin arm64
+archive and installed executable are checksum-pinned. Global Node, shell
+profiles, and unrelated services remain unchanged.
+
+Before replacement, drain only the named agent, preserve its 0.6.8 artifact,
+LaunchAgent, non-secret configuration checksums, identity, registrations,
+credential storage, and logs. Stage 0.7.2 and the new LaunchAgent using
+temporary paths, verify them, then atomically rename. Stop and roll back on
+runtime, verification, switch, startup, identity, heartbeat, capability, or
+smoke-test failure. Migration 0028 is never rolled back.
+
+The state machine is checksummed and compare-and-set:
+`prepared → approved → draining → verified → staged → replacing → starting →
+connected → accepted → completed`, with explicit failure, rollback, revocation,
+and expiry states. One active authorization per agent and one replacement
+execution are allowed. Completion or rollback is terminal; failure never
+automatically retries.
+
+The host writes a checksum-bound phase journal before every service or
+filesystem boundary. On restart, any nonterminal journal deterministically
+restores the preserved 0.6.8 artifact and LaunchAgent before the operator may
+request a new authorization.
+
+After 0.7.2 connects, verify the original agent and repository identities,
+stable heartbeats, Manifest v3/Release Authority v2 capabilities, and one
+governed read-only smoke mission. Future updates then use only the native
+Manifest v3 path. Remove the replacement controls after all authorized legacy
+agents are transitioned or retired.
+
+This procedure is transitional infrastructure and must not be used for agents
+already capable of native Manifest v3 verification.
