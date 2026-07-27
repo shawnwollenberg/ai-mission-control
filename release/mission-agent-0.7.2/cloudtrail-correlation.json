@@ -1,0 +1,33 @@
+{
+  "evidenceVersion": "1",
+  "accountId": "661452835066",
+  "region": "us-east-1",
+  "keyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+  "principal": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+  "events": [
+    {
+      "eventSource": "kms.amazonaws.com",
+      "eventName": "Sign",
+      "eventTime": "2026-07-27T17:02:28.756Z",
+      "requestId": "6fb8434a-668a-46d0-a883-e55a5edb810b",
+      "lookupStatus": "correlation-ready"
+    },
+    {
+      "eventSource": "kms.amazonaws.com",
+      "eventName": "Verify",
+      "eventTime": "2026-07-27T17:02:28.756Z",
+      "requestId": "54e4158f-c01c-40c0-8293-1059f2cc8eeb",
+      "lookupStatus": "correlation-ready"
+    }
+  ],
+  "supportingCalls": {
+    "describeKey": "Completed successfully immediately before signing; CLI response does not expose its request ID.",
+    "getPublicKey": "Completed successfully immediately before signing; DER SPKI fingerprint matched the approved trust record."
+  },
+  "cloudTrailLookup": {
+    "attemptedWith": "wallyweb-kms-production-signer",
+    "result": "explicitly-denied",
+    "reason": "The least-privilege signer policy explicitly denies unrelated AWS services, including cloudtrail:LookupEvents.",
+    "nextStep": "An independently authorized CloudTrail audit reader must correlate the recorded KMS request IDs. Do not broaden the signer role."
+  }
+}

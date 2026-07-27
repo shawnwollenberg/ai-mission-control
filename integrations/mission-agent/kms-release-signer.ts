@@ -39,6 +39,7 @@ export type KmsSigningReceipt = {
   publicKeyFingerprint: string;
   signingAlgorithm: "ED25519_SHA_512";
   awsRequestId: string;
+  awsVerifyRequestId: string;
   signerPrincipalArn: string;
   signingTime: string;
   signatureSha256: string;
@@ -304,6 +305,10 @@ export async function signReleaseWithKms(
     }),
   );
   if (kmsVerification.SignatureValid !== true) throw new Error("Independent AWS KMS verification failed");
+  const verifyRequestId = requiredString(
+    (kmsVerification.$metadata as Record<string, unknown> | undefined)?.requestId,
+    "KMS verify request ID",
+  );
   const signatureBase64 = Buffer.from(signature).toString("base64");
   const receipt: KmsSigningReceipt = {
     receiptVersion: "1",
@@ -316,6 +321,7 @@ export async function signReleaseWithKms(
     publicKeyFingerprint: pendingRecord.publicKeyFingerprint,
     signingAlgorithm: "ED25519_SHA_512",
     awsRequestId: requestId,
+    awsVerifyRequestId: verifyRequestId,
     signerPrincipalArn,
     signingTime: (input.signingTime ?? new Date()).toISOString(),
     signatureSha256: sha256(signature),
@@ -328,7 +334,7 @@ export async function signReleaseWithKms(
   // that appears complete while its receipt is absent.
   await writeFile(resolve(input.outputReceiptPath), `${canonicalJson(receipt)}\n`, { flag: "wx", mode: 0o644 });
   await writeFile(resolve(input.outputSignaturePath), `${signatureBase64}\n`, { flag: "wx", mode: 0o644 });
-  await writeFile(resolve(input.outputBundlePath), `${canonicalJson({ ...manifest, signature: signatureBase64 })}\n`, {
+  await writeFile(resolve(input.outputBundlePath), canonicalJson({ ...manifest, signature: signatureBase64 }), {
     flag: "wx",
     mode: 0o644,
   });

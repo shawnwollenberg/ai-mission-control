@@ -14,26 +14,25 @@
   "defaultUpdaterChecksArtifactByteLength": true,
   "defaultUpdaterChecksArtifactSha256": true,
   "manifestV2ProductionDowngradeRejected": true,
-  "productionKmsContacted": false,
-  "productionSignatureCreated": false,
-  "repositoryTrustActivated": false,
+  "productionKmsContacted": true,
+  "productionSignatureCreated": true,
+  "repositoryTrustActivated": true,
   "validation": {
     "focusedManifestAndAgentTests": {
       "passed": 22,
       "failed": 0
     },
     "fullUnitSuite": {
-      "passed": 157,
-      "failed": 1,
-      "classification": "pre-existing Docker Git-worktree path assumption in the immutable Mission Agent 0.7.0 rollback test"
+      "passed": 159,
+      "failed": 0,
+      "classification": "passed under Node 22.23.1"
     },
     "integrationSuite": {
-      "passed": 52,
-      "failed": 5,
+      "passed": 53,
+      "failed": 4,
       "classification": [
         "Two authentication failures require the integration owner seed/password harness.",
-        "Two Mission Agent pull failures are previously documented untouched-base failures.",
-        "One Codex publication failure is caused by the Docker container being unable to resolve the host worktree Git directory."
+        "Two Mission Agent pull failures are previously documented untouched-base failures."
       ]
     },
     "migrations": "0001-0028 passed on a disposable empty PostgreSQL database",
@@ -49,15 +48,25 @@
   },
   "independentReview": {
     "criticalFindings": 0,
-    "highFindings": 0,
+    "highFindings": 1,
     "acceptanceBlockingMediumFindings": 0,
     "resolvedFindings": [
       "The updater now compares signed platform metadata with the actual Node major, operating system, and architecture before release eligibility.",
       "The production KMS signing and human signing CLI paths now require strict Manifest v3 for new releases.",
       "Mission Control production release selection now invokes the strict signed Manifest v3 gate.",
-      "Build provenance hashes and minimum Mission Control compatibility are now signed and enforced."
+      "Build provenance hashes and minimum Mission Control compatibility are now signed and enforced.",
+      "The activation evidence is being rebound from the pre-activation base to an immutable trust-enabled commit."
     ],
-    "disposition": "accepted-unsigned-manifest-v3-candidate"
+    "disposition": "pending-final-evidence-binding-review"
   },
-  "signingStatus": "unsigned"
+  "signingStatus": "signed-candidate-unpublished",
+  "productionSignature": {
+    "signatureByteLength": 64,
+    "signatureSha256": "4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583",
+    "kmsSignRequestId": "6fb8434a-668a-46d0-a883-e55a5edb810b",
+    "kmsVerifyRequestId": "54e4158f-c01c-40c0-8293-1059f2cc8eeb",
+    "activeTrustRecordSha256": "8bdc37c0030136e2d9339d87c0ca506d2cb41310fe1d5bc003ecffc4acd64fba"
+  },
+  "publicationStatus": "blocked",
+  "deploymentStatus": "blocked"
 }

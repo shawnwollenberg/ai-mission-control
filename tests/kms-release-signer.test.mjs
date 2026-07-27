@@ -70,6 +70,7 @@ function mockAws(overrides = {}) {
         case "VerifyCommand":
           return {
             SignatureValid: verify(null, command.input.Message, publicKey, command.input.Signature),
+            $metadata: { requestId: "00000000-0000-0000-0000-000000000002" },
           };
         default:
           throw new Error(`Unexpected KMS command: ${command.constructor.name}`);
@@ -183,9 +184,11 @@ test("AWS KMS Ed25519 RAW conformance yields DER SPKI fingerprint, raw signature
     assert.match(pending.publicKeyFingerprint, /^ed25519-spki-sha256:[a-f0-9]{64}$/);
     assert.equal(Buffer.from(await readFile(join(temp, "signature.txt"), "utf8"), "base64").length, 64);
     const bundle = parseCanonicalSignedReleaseManifestJson(await readFile(join(temp, "signed.json"), "utf8"));
+    assert.equal((await readFile(join(temp, "signed.json"))).at(-1), "}".charCodeAt(0));
     assert.equal(bundle.signature, (await readFile(join(temp, "signature.txt"), "utf8")).trim());
     assert.deepEqual(receipt.independentVerification, { localEd25519: true, awsKms: true });
     assert.equal(receipt.awsRequestId, "00000000-0000-0000-0000-000000000001");
+    assert.equal(receipt.awsVerifyRequestId, "00000000-0000-0000-0000-000000000002");
     assert.equal(receipt.signerPrincipalArn, "arn:aws:sts::123456789012:assumed-role/release-signer/shawn");
     assert.equal(receipt.artifactSha256, expectedArtifactSha256);
     assert.equal(receipt.sourceSha, expectedSourceCommit);

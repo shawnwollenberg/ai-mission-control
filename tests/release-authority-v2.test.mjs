@@ -10,6 +10,7 @@ import {
   trustedReleaseKeys,
   validatePendingReleaseKey,
   validateTrustStore,
+  verifyNewProductionReleaseManifest,
   verifyReleaseManifestV2,
 } from "../integrations/mission-agent/release-authority.ts";
 
@@ -77,17 +78,18 @@ test("pending replacement key insertion rejects incomplete or activated records"
   assert.throws(() => validatePendingReleaseKey({ ...base, status: "active", activatedAt: base.createdAt }));
 });
 
-test("production KMS replacement key is complete, pending, and ineligible for release verification", async () => {
-  const pending = trustedReleaseKeys["mission-agent-release-2026-01"];
-  assert.deepEqual(validatePendingReleaseKey(pending), pending);
+test("production KMS replacement key is complete and active while Manifest v2 remains ineligible for new releases", async () => {
+  const active = trustedReleaseKeys["mission-agent-release-2026-01"];
+  assert.equal(active.status, "active");
+  assert.equal(active.activatedAt, "2026-07-27T16:58:06.000Z");
   assert.equal(
-    pending.publicKeyFingerprint,
+    active.publicKeyFingerprint,
     "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
   );
-  assert.equal(pending.kms.keyArn, "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee");
+  assert.equal(active.kms.keyArn, "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee");
   assert.throws(
-    () => verifyReleaseManifestV2({ ...base, signature: "AA==" }, { now: new Date(base.createdAt) }),
-    /pending/,
+    () => verifyNewProductionReleaseManifest({ ...base, signature: "AA==" }, { now: new Date(base.createdAt) }),
+    /require Manifest v3/,
   );
 
   const builder = await readFile(new URL("../scripts/build-mission-agent-070.mjs", import.meta.url), "utf8");
@@ -95,8 +97,8 @@ test("production KMS replacement key is complete, pending, and ineligible for re
     new URL("../public/mission-agent-0.7.0.mjs", import.meta.url),
     "utf8",
   );
-  assert.match(builder, new RegExp(pending.publicKeyFingerprint));
-  assert.doesNotMatch(existingUnsignedArtifact, new RegExp(pending.publicKeyFingerprint));
+  assert.match(builder, new RegExp(active.publicKeyFingerprint));
+  assert.doesNotMatch(existingUnsignedArtifact, new RegExp(active.publicKeyFingerprint));
 });
 
 test("v2 canonicalization is deterministic across field insertion order", () => {

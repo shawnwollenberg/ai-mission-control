@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { acceptMissionAgentProductionRelease } from "../application/mission-agent-release-selection.ts";
 import {
   canonicalReleaseManifestV3 as missionControlCanonicalV3,
   publicKeyFingerprint,
@@ -127,6 +128,25 @@ test("0.7.2 capability source advertises the complete v3 eligibility contract", 
     productionFingerprint,
   ])
     assert.ok(artifactSource.includes(expected), `missing capability field: ${expected}`);
+});
+
+test("exact production-signed 0.7.2 bundle passes selection and the default updater trust path", async () => {
+  const signedManifestText = await readFile(
+    new URL("../release/mission-agent-0.7.2/signed-manifest-v3.json", import.meta.url),
+    "utf8",
+  );
+  assert.equal(signedManifestText.at(-1), "}");
+  const selected = acceptMissionAgentProductionRelease({
+    signedManifestText,
+    artifactBytes,
+    artifactName: "mission-agent-0.7.2.mjs",
+  });
+  const updater = agent.verifyReleaseManifestText(signedManifestText);
+  assert.equal(selected.releaseVersion, "0.7.2");
+  assert.equal(updater.version, "0.7.2");
+  assert.equal(updater.manifestVersion, "3");
+  assert.equal(updater.artifactByteLength, artifactBytes.byteLength);
+  assert.equal(updater.sha256, createHash("sha256").update(artifactBytes).digest("hex"));
 });
 
 test("Manifest v3 mutation matrix fails closed in the bundled artifact", () => {

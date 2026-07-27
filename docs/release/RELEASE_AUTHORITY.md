@@ -57,7 +57,7 @@ long-lived IAM-user signing credentials.
 - Origin and topology: `AWS_KMS`, customer managed, single-region
 - Fingerprint: `ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b`
 - Rotation: manual and governed
-- Repository trust state: `pending`
+- Repository trust state: `active` as of `2026-07-27T16:58:06.000Z`
 - 0.7.1 and 0.7.2 embedded bootstrap state: `active`
 - Key-policy checksum: `4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7`
 
@@ -81,11 +81,12 @@ fingerprint, Release Authority version, canonicalization version, platform,
 artifact length, or structured compatibility/build metadata. It was therefore
 never signed or published.
 
-Mission Agent 0.7.2 is the first signing candidate with both the embedded
+Mission Agent 0.7.2 is the first production KMS-signed release candidate with both the embedded
 production bootstrap trust and native Manifest v3 verification. The artifact
 cannot sign or activate anything; it contains public verification material
-only. Repository trust remains `pending` until a separate
-activation-and-signing authorization.
+only. Repository trust was activated under the separate activation-and-signing
+authorization. The signed candidate remains unpublished and unadvertised until
+a separate publication authorization.
 
 This avoids circular trust: the governed source build embeds a previously
 validated public key, reproducibility proves the artifact bytes, and a later
@@ -101,7 +102,7 @@ compatible verifier support, activates it separately, and only then signs.
 Revocation remains fail-closed. Historical 0.6.8 verification retains its
 historical public key; 0.7.0 is never represented as KMS-signed.
 
-Before signing 0.7.2, confirm the exact artifact and Manifest v3 checksums,
+The 0.7.2 signing ceremony confirmed the exact artifact and Manifest v3 checksums,
 reproducibility, embedded key/fingerprint, repository activation evidence,
 live KMS policy checksum, signer identity, four-path verification plan, and
 separate publication hold.
@@ -116,6 +117,14 @@ identity, activation, and minimum Mission Control compatibility. It also binds
 the builder, lockfile, schema, reproducibility-evidence hashes, exact Node
 version, and container image digest. Test results and human review remain
 separately authenticated Git evidence rather than runtime selection inputs.
+
+`createdAt` is the governed release-candidate effective timestamp, not the KMS
+ceremony timestamp. A candidate may be signed before that scheduled timestamp;
+it remains unpublished and must not be made available before `createdAt`.
+`expiresAt` is the verifier-enforced upper validity bound. For 0.7.2,
+`createdAt` is `2026-07-27T20:00:00.000Z`, after the signing ceremony at
+`2026-07-27T17:02:28.756Z`; this was preserved because authorization required
+signing the exact previously approved canonical bytes.
 
 The platform is the actual portable ESM artifact target: Node.js major 22,
 `darwin-linux`, `universal`, and `esm`. These exact case-sensitive values are
@@ -258,6 +267,40 @@ signer or administrator responsibility according to need. Never share
 credentials. Test positive and denied boundaries, record custody approval, and
 remove access promptly when responsibility ends.
 
+## Appendix A: Current signed release candidate
+
+Mission Agent 0.7.0 remains unchanged and unsigned because it lacked the
+production trust root. Mission Agent 0.7.1 remains unchanged and unsigned
+because it lacked Manifest v3. Mission Agent 0.7.2 is the first production
+KMS-signed Mission Agent release candidate. It has not been published,
+advertised, installed, upgraded, deployed, or rolled out.
+
+- Version: `0.7.2`
+- Artifact source commit: `31b45c98f2ffba613b56cd23819ba8b0c9c09a43`
+- Artifact: `public/mission-agent-0.7.2.mjs`
+- Artifact byte length: `148063`
+- Artifact SHA-256: `108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09`
+- Manifest version: `3`
+- Release Authority version: `v2`
+- Canonicalization: `release-manifest-json-v3`
+- Canonical manifest byte length: `1386`
+- Canonical manifest SHA-256: `b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace`
+- Signature byte length: `64`
+- Signature SHA-256: `4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583`
+- KMS Sign request ID: `6fb8434a-668a-46d0-a883-e55a5edb810b`
+- KMS Verify request ID: `54e4158f-c01c-40c0-8293-1059f2cc8eeb`
+- KMS key ARN: `arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee`
+- Public-key fingerprint: `ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b`
+- Signer principal: `arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d`
+- Administrator principal: `arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1`
+- KMS key-policy checksum: `4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7`
+- Platform: Node.js 22, `darwin-linux`, `universal`, `esm`
+
+The active trust-record checksum and final commit are recorded in the
+repository evidence generated alongside this appendix. Manifest v2 is
+prohibited for new production releases. Manifest v1 remains limited to the
+governed Mission Agent 0.6.8 rollback path.
+
 ## 14. Audit and evidence
 
 Expected CloudTrail events include `GetPublicKey`, `GetKeyPolicy`,
@@ -319,10 +362,16 @@ every affected artifact and longer when incident or compliance policy requires.
   `release-manifest-json-v3`
 - Pending repository trust-record checksum:
   `91e8774f38bb64b4715169928fec4fe4a03ca861c687241795c93e706a3f7b6b`
-- Active repository trust-record checksum: not available; activation is blocked
+- Active repository trust-record checksum:
+  `8bdc37c0030136e2d9339d87c0ca506d2cb41310fe1d5bc003ecffc4acd64fba`
 - Unsigned 0.7.2 canonical manifest checksum:
   `b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace`
-- Signed 0.7.2 manifest checksum: not available; signing is not authorized
+- Production signature SHA-256:
+  `4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583`
+- KMS Sign / Verify request IDs: `6fb8434a-668a-46d0-a883-e55a5edb810b` /
+  `54e4158f-c01c-40c0-8293-1059f2cc8eeb`
+- Signed candidate status: locally committed evidence pending; publication,
+  advertising, installation, deployment, and rollout remain unauthorized
 - 0.7.2 artifact checksum:
   `108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09`
 - 0.7.2 artifact source commit:
