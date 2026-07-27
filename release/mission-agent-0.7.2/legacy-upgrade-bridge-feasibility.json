@@ -1,0 +1,139 @@
+{
+  "evidenceVersion": "1",
+  "recordedAt": "2026-07-27T19:36:40.000Z",
+  "authorization": "Build a Governed Mission Agent 0.6.8 to 0.7.2 Upgrade Bridge",
+  "disposition": "blocked-before-bridge-implementation",
+  "repository": {
+    "branch": "codex/aws-kms-release-authority-v2",
+    "baseCommit": "ba51756d34cc6f6621741ac24476cb12a2dcf38b",
+    "worktreeCleanBeforeInspection": true
+  },
+  "releaseState": {
+    "sourceVersion": "0.6.8",
+    "sourceArtifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+    "targetVersion": "0.7.2",
+    "targetArtifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+    "targetArtifactByteLength": 148063,
+    "targetCanonicalManifestSha256": "b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace",
+    "targetSignedManifestFileSha256": "b4665c84f9cd987d7a2e22c577bf9cae2f45d1559ec316bffb0bbfcf129e3616",
+    "targetSignatureBytesSha256": "4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583",
+    "targetSigningKeyId": "mission-agent-release-2026-01",
+    "targetPublicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+    "releaseAssetsChanged": false
+  },
+  "legacyManifestV1Authority": {
+    "publicKeyFingerprint": "ed25519-spki-sha256:ad7dcb56c9eea2493af236b1d4c9e393d2d4df4e9a6347c3fe3fd627d788140a",
+    "releaseKeyId": "mission-agent-release-2026-00",
+    "trustStatus": "retiring",
+    "historicalVersions": ["0.6.8"],
+    "privateKeyAvailability": "presumed-unrecoverable",
+    "futureSigningAuthority": false,
+    "compromiseEvidenceFound": false,
+    "custodyDispositionPath": "docs/security/MISSION_AGENT_OLD_KEY_DISPOSITION.md",
+    "custodyDispositionSha256": "797278a4e470613e7e4b3ff4402578f3c48b855a1b754cc53914c374f0e800d6",
+    "custodyDispositionCommit": "d4200d643c5fdcab1a4a2453dfad5a85db518958",
+    "custodyDispositionStatement": "No matching private key was recovered after the authorized local custody investigation; the key is valid only for historical 0.6.8 verification and cannot authorize a new release."
+  },
+  "replacementAuthority": {
+    "keyId": "mission-agent-release-2026-01",
+    "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+    "backend": "AWS KMS",
+    "status": "active",
+    "acceptedByMissionAgent068": false,
+    "reason": "Mission Agent 0.6.8 embeds only the legacy Ed25519 public key and verifies only the Manifest v1 canonical field set.",
+    "activeTrustRecordRawFileSha256": "dce392c7bfec39cab7ed6bec13dd5e59006c8932a665fd0f3381412e86a3152b"
+  },
+  "securityProof": {
+    "requiredChain": [
+      "Mission Agent 0.6.8 verifies a newly signed Manifest v1 bridge envelope",
+      "The exact bridge independently verifies Release Authority v2 and Manifest v3",
+      "The bridge installs the exact signed Mission Agent 0.7.2 artifact"
+    ],
+    "failedLink": "A new Manifest v1 bridge envelope cannot be signed by the only key Mission Agent 0.6.8 trusts.",
+    "existing068SignatureReusable": false,
+    "existing068SignatureReason": "Ed25519 signatures bind the exact canonical Manifest v1 bytes for the historical 0.6.8 release and cannot authenticate a different bridge envelope.",
+    "replacementKmsSignatureAcceptedBy068": false,
+    "replacementKmsSignatureReason": "The replacement KMS public key is absent from Mission Agent 0.6.8 and a replacement key cannot self-authorize.",
+    "unsignedBridgeAllowed": false,
+    "adHocTrustPathAllowed": false,
+    "manifestV1ScopeBroadeningAllowed": false
+  },
+  "blockingFinding": {
+    "severity": "critical-trust-prerequisite",
+    "code": "LEGACY_MANIFEST_V1_SIGNING_AUTHORITY_UNAVAILABLE",
+    "finding": "The exact private signing authority required to authenticate a new one-time bridge to Mission Agent 0.6.8 is unavailable and formally barred from future signing.",
+    "authorizationStopRule": "Phase 4 requires stopping if production Manifest v1 signing is unavailable rather than creating a replacement trust path.",
+    "impact": "No bridge artifact or bridge envelope can be created that the unmodified production Mission Agent 0.6.8 will authenticate under the required security model.",
+    "safeResolutionOptions": [
+      "Recover the exact legacy private key under a separately authorized custody process and reverse the formal presumed-unrecoverable disposition only with new evidence and human approval.",
+      "Authorize a different application-mediated trust-bootstrap architecture that does not claim to be authenticated by the unavailable Manifest v1 authority and receives a fresh independent security review."
+    ]
+  },
+  "productionPreflight": {
+    "schemaMigrationCount": 28,
+    "latestMigration": "0028_repository_identity_migration.sql",
+    "migration0029Applied": false,
+    "routedHealthStatus": 200,
+    "routedReadinessStatus": 200,
+    "routedMissionAgentVersion": "0.6.8",
+    "isolatedCandidateHealthStatus": 200,
+    "isolatedCandidateReadinessStatus": 200,
+    "isolatedCandidateRouted": false,
+    "isolatedCandidateRestartCount": 0,
+    "commandId": "6f22ea58-67b5-48e8-8a85-87298de55ffc"
+  },
+  "namedCanary": {
+    "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+    "version": "0.6.8",
+    "artifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+    "connected": true,
+    "activeAssignment": false,
+    "lastError": null,
+    "modified": false,
+    "restarted": false
+  },
+  "implementation": {
+    "bridgeIdentifierAssigned": false,
+    "bridgeArtifactCreated": false,
+    "manifestV1EnvelopeCreated": false,
+    "manifestV1SignatureCreated": false,
+    "node22InstalledOnCanary": false,
+    "canaryDiscoveryImplemented": false,
+    "databaseMigrationCreated": false,
+    "productionDeploymentAttempted": false,
+    "reason": "Implementation stopped at the mandatory legacy signing-authority prerequisite before any bridge design could become an unauthenticated alternate release channel."
+  },
+  "safety": {
+    "privateKeyGenerated": false,
+    "replacementLegacyKeyCreated": false,
+    "kmsSignatureCreated": false,
+    "releaseAssetsModified": false,
+    "trustRecordsModified": false,
+    "realCanaryModified": false,
+    "otherAgentsModified": false,
+    "productionTrafficRouted": false,
+    "migration0029Applied": false,
+    "smokeMissionStarted": false,
+    "rolloutStarted": false
+  },
+  "validation": {
+    "jsonSyntax": "passed",
+    "prettierEvidenceFile": "passed",
+    "gitDiffCheck": "passed",
+    "secretScan": "passed",
+    "sourceArtifactChecksumConsistency": "passed",
+    "targetArtifactChecksumConsistency": "passed",
+    "custodyDispositionChecksumConsistency": "passed"
+  },
+  "independentReview": {
+    "reviewer": "release_authority_security_review",
+    "disposition": "pass-stop-required",
+    "conclusion": "The authorized bridge is impossible under the stated security model while the legacy private key remains unavailable. No safe in-scope alternative exists without introducing a separately authorized replacement trust architecture.",
+    "criticalTrustPrerequisitesUnresolved": ["LEGACY_MANIFEST_V1_SIGNING_AUTHORITY_UNAVAILABLE"],
+    "evidenceConsistency": "passed",
+    "secretMaterialFound": false,
+    "filesEditedByReviewer": false,
+    "mutationsPerformedByReviewer": false
+  },
+  "nextAuthorizationRequired": "A human trust-architecture decision is required. Either authorize a new evidence-based custody recovery of the exact legacy key, or authorize design of an application-mediated bootstrap that explicitly replaces—rather than purports to use—the unavailable Manifest v1 signing authority."
+}
