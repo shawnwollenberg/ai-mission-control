@@ -1,0 +1,198 @@
+{
+  "evidenceVersion": "1",
+  "recordedAt": "2026-07-27T19:04:34.000Z",
+  "authorization": "Install Mission Agent 0.7.2 on One Named Canary and Run Governed Acceptance",
+  "disposition": "halted-before-drain-or-installation",
+  "repository": {
+    "branch": "codex/aws-kms-release-authority-v2",
+    "authorizationBaseCommit": "f24c77ea35279ee2a59a2d277561fa7718047284",
+    "productionSourceCommit": "046c40e7747f3e5b72c600064d9402936abf238a",
+    "releaseTag": "release-authority-v1",
+    "worktreeCleanBeforeInspection": true
+  },
+  "releasePreflight": {
+    "releaseVersion": "0.7.2",
+    "provider": "GitHub release release-authority-v1",
+    "providerArtifactUrl": "https://github.com/shawnwollenberg/ai-mission-control/releases/download/release-authority-v1/mission-agent-0.7.2.mjs",
+    "providerSignedManifestUrl": "https://github.com/shawnwollenberg/ai-mission-control/releases/download/release-authority-v1/signed-manifest-v3.json",
+    "providerSignatureUrl": "https://github.com/shawnwollenberg/ai-mission-control/releases/download/release-authority-v1/signature.ed25519.base64",
+    "artifactByteLengthExpected": 148063,
+    "artifactByteLengthProvider": 148063,
+    "artifactSha256Expected": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+    "artifactSha256Provider": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+    "canonicalUnsignedManifestSha256": "b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace",
+    "signedManifestFileSha256Expected": "b4665c84f9cd987d7a2e22c577bf9cae2f45d1559ec316bffb0bbfcf129e3616",
+    "signedManifestFileSha256Provider": "b4665c84f9cd987d7a2e22c577bf9cae2f45d1559ec316bffb0bbfcf129e3616",
+    "signatureBytesSha256Expected": "4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583",
+    "signatureBytesSha256Provider": "4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583",
+    "providerBytesMatch": true,
+    "manifestVersion": "3",
+    "releaseAuthorityVersion": "v2",
+    "canonicalizationVersion": "release-manifest-json-v3",
+    "signingKeyId": "mission-agent-release-2026-01",
+    "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+    "trustStatus": "active",
+    "activeTrustRecordRawFileSha256": "dce392c7bfec39cab7ed6bec13dd5e59006c8932a665fd0f3381412e86a3152b",
+    "releaseOrTrustFilesChangedAfterPublicationCommit": false
+  },
+  "productionPreflight": {
+    "awsAccount": "661452835066",
+    "region": "us-east-1",
+    "schemaMigrationCount": 28,
+    "latestMigration": "0028_repository_identity_migration.sql",
+    "migration0029Applied": false,
+    "routedHealthStatus": 200,
+    "routedReadinessStatus": 200,
+    "routedWebImage": "661452835066.dkr.ecr.us-east-1.amazonaws.com/mission-control@sha256:943fb676166a03819f4bc596cbedcadf9ea002e57d1e8d2bce1f0d49ba7cc9aa",
+    "routedWebRestartCount": 0,
+    "isolatedCandidateImage": "661452835066.dkr.ecr.us-east-1.amazonaws.com/mission-control@sha256:c01a64219adf0e315cc597e84ed9b89cab55c9e8939548d3240a647982c74d5d",
+    "isolatedCandidateHealthStatus": 200,
+    "isolatedCandidateReadinessStatus": 200,
+    "isolatedCandidateRestartCount": 0,
+    "isolatedCandidatePortBindings": {},
+    "isolatedCandidateRouted": false,
+    "commandId": "fed121c3-d91b-4b67-b997-1ae7d824a00c"
+  },
+  "namedCanary": {
+    "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+    "agentName": "Shawn's Computer – Codex",
+    "workspaceId": "b82d5fbd-13ba-4ee0-b66a-551f433caa58",
+    "host": "mac.lan",
+    "operatingSystem": "macOS 26.5.2",
+    "kernel": "Darwin 25.5.0",
+    "architecture": "arm64",
+    "nodeVersion": "24.10.0",
+    "requiredNodeMajorVersion": 22,
+    "currentVersion": "0.6.8",
+    "currentArtifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+    "currentManifestVersion": "1",
+    "installedArtifactMode": "0700",
+    "configurationMode": "0600",
+    "secretStorage": "macOS Keychain",
+    "installationPath": "/Users/shawnwollenberg/.mission-agent/mission-agent-0.6.8.mjs",
+    "launcherPath": "/Users/shawnwollenberg/.local/bin/mission-agent",
+    "serviceManager": "launchd LaunchAgent com.wallyweb.mission-agent",
+    "serviceProcessIdAtInspection": 38905,
+    "serviceStartedAt": "2026-07-25T12:22:25.000Z",
+    "serviceRestartLoop": false,
+    "connected": true,
+    "pullReady": true,
+    "lastHeartbeatLocalState": "2026-07-27T19:03:41.526Z",
+    "lastHeartbeatProductionProjection": "2026-07-27T19:03:40.810Z",
+    "status": "active",
+    "currentStage": "completed",
+    "activeAssignment": false,
+    "activeProjectBrainAssignment": false,
+    "activePullAssignmentCount": 0,
+    "activeExecutionCount": 0,
+    "productionCriticalWorkInProgress": false,
+    "configurationSha256": "8db02e81b4b09945e164d7789e690ea7c3ad97ffb5e892ab7de559de38517742",
+    "serviceConfigurationSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
+    "productionStateCommandId": "b35b21a9-c539-4c7a-8577-71a78a2a0df6",
+    "registeredRepositories": [
+      {
+        "repositoryId": "fcd9ede1-62ea-4bc4-b5cf-78474d0ae39f",
+        "name": "wallyweb",
+        "fingerprint": "238183506fc387a8d65737bacc85337777f733eda1d928f899219447a12acb0b"
+      },
+      {
+        "repositoryId": "f5ecf573-643e-4829-8d57-249a8b7d1acf",
+        "name": "mission-control-acceptance-07",
+        "fingerprint": "9c9372afecfd0561aa389ed89daa7607fe8bf60b0f659d4f19be108715f02cf4"
+      },
+      {
+        "repositoryId": "424e2b53-8b5d-4f22-a3fe-ecaa287493ad",
+        "name": "mission-control-acceptance-07",
+        "fingerprint": "4578b1650608a13317e896b473c1f3bbf94f706a2b1102add9f685396594b722"
+      }
+    ]
+  },
+  "rollbackReadiness": {
+    "priorArtifactPreserved": true,
+    "priorArtifactPath": "/Users/shawnwollenberg/.mission-agent/mission-agent-0.6.8.mjs",
+    "priorArtifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+    "priorArtifactMetadataPreserved": true,
+    "configurationPreserved": true,
+    "serviceConfigurationPreserved": true,
+    "credentialsStoredOutsideArtifact": true,
+    "registrationDataStoredOutsideArtifact": true,
+    "databaseRollbackRequired": false,
+    "schema28ForwardCompatible": true,
+    "rollbackExecuted": false,
+    "reasonRollbackNotExecuted": "No canary mutation or installation occurred."
+  },
+  "blockingFindings": [
+    {
+      "severity": "acceptance-blocking",
+      "code": "CANARY_RUNTIME_MAJOR_MISMATCH",
+      "finding": "The canary LaunchAgent and updater run under Node.js 24.10.0, but the signed Manifest v3 requires Node.js major version 22.",
+      "evidence": "The active launchd program is /usr/local/Cellar/node/24.10.0/bin/node. No installed native Node 22 executable was found in the approved runtime paths.",
+      "requiredResolution": "Separately authorize and validate a pinned native Node.js 22 runtime for this canary, preserve Node 24 rollback, and run the real updater under Node 22."
+    },
+    {
+      "severity": "acceptance-blocking",
+      "code": "UPDATER_RELEASE_SURFACE_NOT_ROUTED",
+      "finding": "The real 0.6.8 updater fetches only the configured Mission Control /mission-agent-latest.json endpoint, and routed production still advertises signed Manifest v1 for 0.6.8.",
+      "evidence": "The updater source hard-codes config.missionControlUrl + /mission-agent-latest.json. The routed endpoint returned 0.6.8 with artifact checksum e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d.",
+      "requiredResolution": "Authorize a narrowly governed canary release-discovery mechanism without globally advertising 0.7.2. This must be combined with the separately recorded cryptographic v1-to-v3 upgrade bridge."
+    },
+    {
+      "severity": "acceptance-blocking",
+      "code": "UPDATER_V1_TO_V3_BRIDGE_MISSING",
+      "finding": "The installed 0.6.8 updater strictly parses and verifies only Manifest v1 and cannot consume the signed 0.7.2 Manifest v3 even if a canary-scoped endpoint exposes it.",
+      "evidence": "The installed verifier requires manifestVersion === \"1\" and canonical signed fields version, path, sha256, and manifestVersion. It has no Release Authority v2 trust store or Manifest v3 parser.",
+      "requiredResolution": "Authorize and validate a governed cryptographic upgrade bridge that the real 0.6.8 updater can verify, without weakening Release Authority policy, bypassing embedded trust, hand-installing substitute bytes, or globally routing 0.7.2."
+    }
+  ],
+  "attempt": {
+    "canaryDrained": false,
+    "maintenanceStateChanged": false,
+    "manifestFetchedByCanaryUpdater": false,
+    "artifactDownloadedByCanaryUpdater": false,
+    "installationStarted": false,
+    "installationCompleted": false,
+    "canaryRestarted": false,
+    "canaryModified": false,
+    "smokeMissionStarted": false,
+    "smokeMissionId": null,
+    "executionId": null,
+    "observationPeriodStarted": false
+  },
+  "safety": {
+    "productionTrafficRoutedToCandidate": false,
+    "routedProductionWebReplaced": false,
+    "otherMissionAgentsModified": false,
+    "otherMissionAgentsRestarted": false,
+    "broaderRolloutStarted": false,
+    "migration0029Applied": false,
+    "releaseAssetsModified": false,
+    "trustRecordModified": false,
+    "automaticRemediationAttempted": false,
+    "localTrustOverrideUsed": false,
+    "manualArtifactSubstitutionUsed": false
+  },
+  "validation": {
+    "jsonSyntax": "passed",
+    "prettierEvidenceFile": "passed",
+    "gitDiffCheck": "passed",
+    "secretScan": "passed",
+    "artifactChecksumConsistency": "passed",
+    "installed068ChecksumConsistency": "passed"
+  },
+  "independentReview": {
+    "reviewer": "release_authority_security_review",
+    "disposition": "stop-required",
+    "criticalFindings": 0,
+    "highFindings": 0,
+    "acceptanceBlockingFindings": [
+      "CANARY_RUNTIME_MAJOR_MISMATCH",
+      "UPDATER_RELEASE_SURFACE_NOT_ROUTED",
+      "UPDATER_V1_TO_V3_BRIDGE_MISSING"
+    ],
+    "evidenceConsistency": "passed after explicitly recording the v1-to-v3 bridge requirement and raw-file trust-record checksum convention",
+    "filesEditedByReviewer": false,
+    "mutationsPerformedByReviewer": false
+  },
+  "stoppingReason": "The named canary failed mandatory pre-installation suitability and updater-compatibility gates. Per authorization, work stopped before drain, install, restart, or smoke testing and no replacement canary was selected.",
+  "nextAuthorizationRequired": "Targeted repair authorization for a pinned native Node.js 22 canary runtime plus a governed 0.6.8 Manifest-v1 to Release-Authority-v2/Manifest-v3 cryptographic upgrade bridge and canary-scoped release discovery, without globally routing Mission Agent 0.7.2."
+}
