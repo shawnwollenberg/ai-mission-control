@@ -1,0 +1,73 @@
+{
+  "evidenceVersion": "1",
+  "recordedAt": "2026-07-27T20:45:49Z",
+  "authorization": "Execute Operator-Mediated Replacement Bootstrap on One Production Canary",
+  "disposition": "stopped-before-production-mutation",
+  "repository": {
+    "branch": "codex/aws-kms-release-authority-v2",
+    "implementationCommit": "a5215fdaed45363248df65f281ee8896d67e6fc4",
+    "worktreeCleanAtPreflight": true
+  },
+  "approvedCanary": {
+    "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+    "sourceVersion": "0.6.8",
+    "sourceArtifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+    "targetVersion": "0.7.2",
+    "targetArtifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09"
+  },
+  "immutableInputChecks": {
+    "branchMatched": true,
+    "commitMatched": true,
+    "worktreeClean": true,
+    "authorizationSchemaPath": "release/schemas/mission-agent-replacement-bootstrap-authorization.schema.json",
+    "authorizationSchemaSha256": "f9b8a1a6bb6b115d09e7390e1b7605fe8fcb7d3453223352cd4dcb6df60dd148",
+    "operatorStoreSha256": "15dd06d1bad34e2da52a07dd21bb8b32487b3370c49f3e3fbd6f1cc9bd45680a",
+    "replacementCoreSha256": "c98c7f67945c84c65cf8961070423c0d52b40889f9e0c239f670770d1a65a74d",
+    "migration0029Sha256": "56c593fd43bedb8b8056f1e210e0eca9c56a94dfae22d84b1cfa4c3ad9ad0bb1"
+  },
+  "blockingDiscrepancies": [
+    {
+      "severity": "acceptance-blocking",
+      "code": "AUTHORIZATION_SCHEMA_CANNOT_BIND_APPROVED_NODE_ARTIFACT",
+      "finding": "The execution authorization requires the durable record to bind the exact Node archive checksum and installation path, but the approved schema contains neither field and sets additionalProperties to false.",
+      "requiredRepair": "Add exact nodeArchiveSha256 and nodeInstallationPath bindings to the schema, TypeScript authorization type, validation, checksum fixture, tests, and acceptance evidence; independently review and authorize the new implementation commit."
+    },
+    {
+      "severity": "acceptance-blocking",
+      "code": "NO_REVIEWED_OPERATOR_EXECUTION_ENTRYPOINT",
+      "finding": "The approved commit contains reusable store and replacement modules but no reviewed command, worker, or route that creates the governed approval and authorization, advances durable transitions, invokes the host executor, and resumes from its journal.",
+      "requiredRepair": "Add one canary-scoped operator command with authenticated governance integration, explicit dry-run output, production guardrails, durable resume and rollback handling, and end-to-end disposable validation."
+    }
+  ],
+  "safety": {
+    "productionInspectionBeyondAwsIdentity": false,
+    "backupCreated": false,
+    "migration0029Applied": false,
+    "authorizationRecordCreated": false,
+    "approvalCreated": false,
+    "node22StagedOnCanary": false,
+    "releaseAssetsStagedOnCanary": false,
+    "canaryDrained": false,
+    "canaryStoppedOrRestarted": false,
+    "canaryModified": false,
+    "smokeMissionStarted": false,
+    "otherAgentModified": false,
+    "productionTrafficChanged": false,
+    "broaderRolloutStarted": false
+  },
+  "independentReview": {
+    "reviewer": "release_authority_security_review",
+    "disposition": "pass; halt required",
+    "criticalFindingsOpen": 0,
+    "highFindingsOpen": 0,
+    "acceptanceBlockingEvidenceInconsistenciesOpen": 0,
+    "confirmedBlockers": [
+      "AUTHORIZATION_SCHEMA_CANNOT_BIND_APPROVED_NODE_ARTIFACT",
+      "NO_REVIEWED_OPERATOR_EXECUTION_ENTRYPOINT"
+    ],
+    "productionOrAwsContactByReviewer": false,
+    "filesEditedByReviewer": false
+  },
+  "stoppingReason": "Phase 1 requires an immediate stop on any immutable-input discrepancy. Proceeding would require either omitting mandatory authorization bindings or using an unreviewed ad hoc production execution path.",
+  "nextAuthorizationRequired": "Authorize a targeted repair that adds the missing immutable Node archive and installation-path bindings plus a reviewed canary-scoped operator execution entrypoint, followed by disposable end-to-end validation and independent review. A new explicit execution authorization must then name the repaired commit."
+}
