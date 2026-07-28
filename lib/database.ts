@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type PoolConfig } from "pg";
+import { verifyV1StagingDatabaseBinding } from "@/lib/v1-staging-database-binding";
 
 declare global {
   var missionControlPool: Pool | undefined;
@@ -7,6 +8,19 @@ declare global {
 function databaseConfig(): PoolConfig {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error("DATABASE_URL is required for PostgreSQL operations");
+  if (process.env.MC_V1_STAGING_ISOLATION === "required")
+    verifyV1StagingDatabaseBinding(
+      JSON.parse(process.env.MC_V1_STAGING_DATABASE_BINDING_RECEIPT ?? ""),
+      process.env.MC_V1_STAGING_ATTESTATION_PUBLIC_KEY ?? "",
+      connectionString,
+      process.env.V1_CONTROLLER_DATABASE_URL,
+      {
+        runId: process.env.MC_V1_STAGING_RUN_ID ?? "",
+        manifestDigest: process.env.MC_V1_STAGING_BOOTSTRAP_MANIFEST_DIGEST ?? "",
+        accountId: process.env.MC_V1_STAGING_AWS_ACCOUNT_ID ?? "",
+        region: process.env.MC_V1_STAGING_AWS_REGION ?? "",
+      },
+    );
   return {
     connectionString,
     max: Number(process.env.DATABASE_POOL_SIZE ?? 10),

@@ -5,15 +5,31 @@ import { parseArgs } from "node:util";
 import pg from "pg";
 
 async function main() {
-  const parsed = parseArgs({ options: { through: { type: "string" } }, strict: true });
+  const parsed = parseArgs({
+    options: {
+      through: { type: "string" },
+      "staging-run-id": { type: "string" },
+      "expected-host": { type: "string" },
+      "expected-database": { type: "string" },
+    },
+    strict: true,
+  });
   const through = parsed.values.through;
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl || !through) throw new Error("DATABASE_URL and --through are required.");
   const database = new URL(databaseUrl);
-  if (
-    !["127.0.0.1", "localhost", "::1"].includes(database.hostname) ||
-    !database.pathname.slice(1).startsWith("mission_control_replacement_disposable_")
-  )
+  const loopback =
+    ["127.0.0.1", "localhost", "::1"].includes(database.hostname) &&
+    database.pathname.slice(1).startsWith("mission_control_replacement_disposable_");
+  const staging =
+    process.env.MC_V1_STAGING_ISOLATION === "required" &&
+    /^[a-z0-9][a-z0-9-]{7,15}$/.test(parsed.values["staging-run-id"] ?? "") &&
+    database.hostname === parsed.values["expected-host"] &&
+    database.pathname.slice(1) === parsed.values["expected-database"] &&
+    database.hostname.startsWith(`mission-control-v1-staging-${parsed.values["staging-run-id"]}-postgres.`) &&
+    database.pathname.slice(1) ===
+      `mission_control_v1_staging_${parsed.values["staging-run-id"]?.replaceAll("-", "_")}_upgrade`;
+  if (!loopback && !staging)
     throw new Error("Partial migration rehearsal only supports a loopback disposable database.");
   const client = new pg.Client({ connectionString: databaseUrl });
   await client.connect();

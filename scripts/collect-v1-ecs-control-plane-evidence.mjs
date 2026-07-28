@@ -1,5 +1,8 @@
 import { execFile } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { parseArgs, promisify } from "node:util";
 import {
   canonicalJson,
@@ -18,13 +21,22 @@ const parsed = parseArgs({
     service: { type: "string" },
     expected: { type: "string" },
     output: { type: "string" },
-    "kms-key-id": { type: "string" },
+    "signer-function": { type: "string" },
     "build-receipts": { type: "string" },
   },
   strict: true,
 });
 const options = parsed.values;
-for (const key of ["profile", "region", "cluster", "service", "expected", "output", "kms-key-id", "build-receipts"])
+for (const key of [
+  "profile",
+  "region",
+  "cluster",
+  "service",
+  "expected",
+  "output",
+  "signer-function",
+  "build-receipts",
+])
   if (!options[key]) throw new Error(`--${key} is required.`);
 if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(options.region)) throw new Error("AWS region is invalid.");
 
@@ -70,10 +82,13 @@ for (const key of [
   "maximumEvidenceAgeMs",
   "deploymentAttestationKeyArn",
   "missionAgentReleaseKeyArn",
+  "stagingRunId",
+  "bootstrapManifestDigest",
+  "signerFunctionArn",
 ])
   if (expected[key] === undefined) throw new Error(`Expected identity is incomplete: ${key}.`);
 if (
-  options["kms-key-id"] !== expected.deploymentAttestationKeyArn ||
+  options["signer-function"] !== expected.signerFunctionArn ||
   expected.deploymentAttestationKeyArn === expected.missionAgentReleaseKeyArn
 )
   throw new Error("Deployment attestation requires its exact purpose-bound non-release KMS key.");
@@ -171,6 +186,9 @@ for (const containerDigest of new Set(Object.values(containers).map(({ imageDige
   if (
     !receipt ||
     receipt.schemaVersion !== "mission-control-image-provenance-receipt-v1" ||
+    receipt.ociManifestDigest !== containerDigest ||
+    !/^sha256:[a-f0-9]{64}$/.test(receipt.ociPlatformManifestDigest) ||
+    !/^sha256:[a-f0-9]{64}$/.test(receipt.ociImageConfigurationDigest) ||
     receipt.signingKeyArn !== expected.deploymentAttestationKeyArn ||
     receipt.embeddedProvenanceVerified !== true
   )
@@ -184,7 +202,14 @@ for (const containerDigest of new Set(Object.values(containers).map(({ imageDige
   )
     throw new Error(`Container digest ${containerDigest} has contradictory build provenance.`);
   const receiptPayload = { ...receipt };
+  delete receiptPayload.attestationRequest;
   delete receiptPayload.signature;
+  if (
+    receipt.attestationRequest?.kind !== "image-provenance" ||
+    canonicalJson(receipt.attestationRequest.evidence) !== canonicalJson(receiptPayload) ||
+    receipt.attestationRequest.bootstrapManifestDigest !== expected.bootstrapManifestDigest
+  )
+    throw new Error(`Container digest ${containerDigest} has a malformed provenance attestation envelope.`);
   const receiptVerification = await aws([
     "kms",
     "verify",
@@ -195,7 +220,7 @@ for (const containerDigest of new Set(Object.values(containers).map(({ imageDige
     "--signing-algorithm",
     "ED25519_SHA_512",
     "--message",
-    Buffer.from(canonicalJson(receiptPayload), "utf8").toString("base64"),
+    Buffer.from(canonicalJson(receipt.attestationRequest), "utf8").toString("base64"),
     "--signature",
     receipt.signature,
   ]);
@@ -233,55 +258,91 @@ const evidence = {
   configurationDigest: environment.MC_V1_PRODUCTION_CONFIGURATION_DIGEST,
   applicationCommit: environment.MC_V1_APPLICATION_COMMIT,
   buildIdentityDigest: environment.MC_V1_BUILD_IDENTITY_DIGEST,
+  bootstrapManifestDigest: environment.MC_V1_STAGING_BOOTSTRAP_MANIFEST_DIGEST,
 };
 validateEcsControlPlaneIdentity(evidence, expected);
 const contradictions = Object.entries(expected).filter(
   ([key, value]) =>
-    !["maximumEvidenceAgeMs", "deploymentAttestationKeyArn", "missionAgentReleaseKeyArn"].includes(key) &&
-    canonicalJson(evidence[key]) !== canonicalJson(value),
+    ![
+      "maximumEvidenceAgeMs",
+      "deploymentAttestationKeyArn",
+      "missionAgentReleaseKeyArn",
+      "stagingRunId",
+      "signerFunctionArn",
+    ].includes(key) && canonicalJson(evidence[key]) !== canonicalJson(value),
 );
 if (contradictions.length)
   throw new Error(`ECS control-plane evidence contradicts expected identity: ${contradictions[0][0]}.`);
 const canonicalEvidence = canonicalJson(evidence);
 const evidenceChecksum = sha256(canonicalEvidence);
-const signResult = await aws([
-  "kms",
-  "sign",
-  "--key-id",
-  options["kms-key-id"],
-  "--message-type",
-  "RAW",
-  "--signing-algorithm",
-  "ED25519_SHA_512",
-  "--message",
-  Buffer.from(canonicalEvidence, "utf8").toString("base64"),
-]);
+const attestationRequest = {
+  schemaVersion: "mission-control-v1-staging-attestation-request/1",
+  kind: "runtime-evidence",
+  runId: expected.stagingRunId,
+  accountId: expected.awsAccountId,
+  region: options.region,
+  bootstrapManifestDigest: expected.bootstrapManifestDigest,
+  observedAt: evidence.observedAt,
+  expiresAt: evidence.expiresAt,
+  nonce: randomUUID(),
+  sequence: 4,
+  evidence,
+};
+const scratch = await mkdtemp(join(tmpdir(), "mission-control-v1-attestation-"));
+const responsePath = join(scratch, "response.json");
+let signResult;
+try {
+  const invocation = await exec("aws", [
+    "--profile",
+    options.profile,
+    "--region",
+    options.region,
+    "--no-cli-pager",
+    "lambda",
+    "invoke",
+    "--function-name",
+    options["signer-function"],
+    "--cli-binary-format",
+    "raw-in-base64-out",
+    "--payload",
+    canonicalJson({ canonicalEnvelope: canonicalJson(attestationRequest) }),
+    responsePath,
+    "--output",
+    "json",
+  ]);
+  if (JSON.parse(invocation.stdout).FunctionError)
+    throw new Error("Staging attestation signer rejected runtime evidence.");
+  signResult = JSON.parse(await readFile(responsePath, "utf8"));
+} finally {
+  await rm(scratch, { recursive: true, force: true });
+}
 const verifyResult = await aws([
   "kms",
   "verify",
   "--key-id",
-  options["kms-key-id"],
+  expected.deploymentAttestationKeyArn,
   "--message-type",
   "RAW",
   "--signing-algorithm",
   "ED25519_SHA_512",
   "--message",
-  Buffer.from(canonicalEvidence, "utf8").toString("base64"),
+  Buffer.from(canonicalJson(attestationRequest), "utf8").toString("base64"),
   "--signature",
-  signResult.Signature,
+  signResult.signature,
 ]);
 if (verifyResult.SignatureValid !== true) throw new Error("Deployment-attestation signature did not verify.");
 if (
-  signResult.KeyId !== expected.deploymentAttestationKeyArn ||
+  signResult.keyId !== expected.deploymentAttestationKeyArn ||
   verifyResult.KeyId !== expected.deploymentAttestationKeyArn
 )
   throw new Error("KMS response used an unapproved deployment-attestation key.");
 const receipt = {
   evidence,
   evidenceChecksum,
-  signature: signResult.Signature,
-  signingKeyId: options["kms-key-id"],
-  signingAlgorithm: signResult.SigningAlgorithm,
+  attestationRequest,
+  signature: signResult.signature,
+  signingKeyId: signResult.keyId,
+  signingAlgorithm: signResult.signingAlgorithm,
   signatureVerified: true,
 };
 await writeFile(options.output, `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o600 });

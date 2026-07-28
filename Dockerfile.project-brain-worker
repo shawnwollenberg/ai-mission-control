@@ -7,6 +7,10 @@ COPY package.json package-lock.json ./
 COPY scripts/require-node22.mjs ./scripts/require-node22.mjs
 RUN npm ci
 
+FROM ${NODE_IMAGE} AS rds-trust
+RUN node -e "fetch('https://truststore.pki.rds.amazonaws.com/us-east-1/us-east-1-bundle.pem').then(r=>{if(!r.ok)throw new Error(String(r.status));return r.arrayBuffer()}).then(b=>require('fs').writeFileSync('/rds-us-east-1-bundle.pem',Buffer.from(b)))" \
+    && echo "b1711d12bae51838581281e23b6cb97b1074016873b4dafc80ed14002462dd77  /rds-us-east-1-bundle.pem" | sha256sum --check
+
 FROM ${NODE_IMAGE} AS project-brain-builder
 ARG PROJECT_BRAIN_COMMIT=09cae9482712decc20f043aecb38d944beacfe20
 ARG PROJECT_BRAIN_SOURCE_SHA256=1d127947f5a0ca5497d4a06c1497e36e00057d0551839ac2855b798c275c0d26
@@ -35,6 +39,11 @@ RUN curl --fail --location --silent --show-error \
       --requirement /build/requirements.lock --dest /wheelhouse \
     && python3 source/scripts/install_skill.py install --target /project-brain-skill
 
+FROM ${NODE_IMAGE} AS source-verifier
+WORKDIR /source
+COPY . .
+RUN node scripts/verify-v1-source-input.mjs
+
 FROM ${NODE_IMAGE} AS runner
 ARG PROJECT_BRAIN_COMMIT=09cae9482712decc20f043aecb38d944beacfe20
 ARG MC_SOURCE_COMMIT
@@ -55,6 +64,7 @@ ENV NODE_ENV=production \
     MC_BUILDER_IDENTITY=${MC_BUILDER_IDENTITY} \
     MC_REPOSITORY_IDENTITY=${MC_REPOSITORY_IDENTITY} \
     MC_APPLICATION_BUNDLE_ROOT=/app \
+    NODE_EXTRA_CA_CERTS=/etc/ssl/certs/aws-rds-us-east-1-bundle.pem \
     PROJECT_BRAIN_EXECUTABLE=/opt/project-brain/bin/project-brain \
     PROJECT_BRAIN_SKILL_PATH=/opt/project-brain-skill \
     PROJECT_BRAIN_REQUIRED_VERSION=0.4.0 \
@@ -78,6 +88,8 @@ RUN /opt/project-brain/bin/python -m pip install --no-cache-dir --no-index \
     && /opt/project-brain/bin/python -m pip check
 
 WORKDIR /app
+COPY --from=source-verifier /source/mission-control-source-input.json ./
+COPY --from=rds-trust /rds-us-east-1-bundle.pem /etc/ssl/certs/aws-rds-us-east-1-bundle.pem
 COPY --from=node-dependencies /app/node_modules ./node_modules
 COPY scripts ./scripts
 COPY lib ./lib

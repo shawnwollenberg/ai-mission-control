@@ -62,6 +62,40 @@ export async function validateProductionConfiguration(
   checks.push(
     check("database_configuration", configured("DATABASE_URL"), "Dedicated database connection is configured"),
   );
+  if (process.env.MC_V1_STAGING_ISOLATION === "required" && configured("DATABASE_URL")) {
+    try {
+      const { verifyV1StagingDatabaseBinding } = await import("@/lib/v1-staging-database-binding");
+      verifyV1StagingDatabaseBinding(
+        JSON.parse(process.env.MC_V1_STAGING_DATABASE_BINDING_RECEIPT ?? ""),
+        process.env.MC_V1_STAGING_ATTESTATION_PUBLIC_KEY ?? "",
+        process.env.DATABASE_URL!,
+        process.env.V1_CONTROLLER_DATABASE_URL,
+        {
+          runId: process.env.MC_V1_STAGING_RUN_ID ?? "",
+          manifestDigest: process.env.MC_V1_STAGING_BOOTSTRAP_MANIFEST_DIGEST ?? "",
+          accountId: process.env.MC_V1_STAGING_AWS_ACCOUNT_ID ?? "",
+          region: process.env.MC_V1_STAGING_AWS_REGION ?? "",
+        },
+      );
+      checks.push(check("staging_database_binding", true, "Database secret matches signed staging RDS authority"));
+    } catch {
+      checks.push(check("staging_database_binding", false, "Database secret contradicts staging RDS authority"));
+    }
+  }
+  if (process.env.MC_V1_STAGING_ISOLATION === "required") {
+    const { safeEmbeddedV1BuildIdentity } = await import("@/lib/v1-embedded-build-provenance");
+    const embedded = safeEmbeddedV1BuildIdentity();
+    checks.push(
+      check(
+        "staging_embedded_build_identity",
+        !!embedded &&
+          embedded.buildMode === "production" &&
+          embedded.sourceCommit === process.env.MC_V1_APPLICATION_COMMIT &&
+          embedded.buildIdentityDigest === process.env.MC_V1_BUILD_IDENTITY_DIGEST,
+        "Runtime environment agrees with immutable embedded build provenance",
+      ),
+    );
+  }
   if (configured("DATABASE_URL")) {
     try {
       await getDatabasePool().query("SELECT 1");

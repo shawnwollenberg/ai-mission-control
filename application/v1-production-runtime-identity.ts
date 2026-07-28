@@ -8,14 +8,22 @@ const IMAGE_DIGEST = /^sha256:[a-f0-9]{64}$/;
 const COMMIT = /^[a-f0-9]{40}$/;
 
 export type V1BuildProvenance = {
-  schemaVersion: "mission-control-build-provenance-v1";
+  schemaVersion: "mission-control-build-provenance-v2";
   sourceCommit: string;
+  sourceTreeObject: string;
+  sourceArchiveDigest: string;
+  sourceInputManifestDigest: string;
   sourceState: "clean" | "dirty";
   buildMode: "production" | "disposable";
   buildTimestamp: string;
   builderIdentity: string;
   repositoryIdentity: string;
+  buildWorkflowIdentity: string;
   lockfileDigest: string;
+  dockerfileDigests: { web: string; projectBrain: string };
+  baseImageDigests: { webNode: string; projectBrainNode: string };
+  buildScriptDigests: { generateProvenance: string; verifySourceInput: string };
+  configurationTemplateDigests: { ecs: string; bootstrap: string };
   applicationBundleDigest: string;
   productionContractVersion: typeof V1_PRODUCTION_CONTRACT_VERSION;
   databaseCompatibility: typeof V1_DATABASE_COMPATIBILITY;
@@ -48,6 +56,7 @@ export type V1EcsControlPlaneEvidence = {
   configurationDigest: string;
   applicationCommit: string;
   buildIdentityDigest: string;
+  bootstrapManifestDigest: string;
 };
 
 export type V1ExpectedRuntimeIdentity = Omit<
@@ -72,15 +81,23 @@ export function sha256(value: string): string {
 
 export function validateBuildProvenance(value: V1BuildProvenance): void {
   if (
-    value.schemaVersion !== "mission-control-build-provenance-v1" ||
+    value.schemaVersion !== "mission-control-build-provenance-v2" ||
     !COMMIT.test(value.sourceCommit) ||
+    !COMMIT.test(value.sourceTreeObject) ||
+    !SHA256.test(value.sourceArchiveDigest) ||
+    !SHA256.test(value.sourceInputManifestDigest) ||
     !["clean", "dirty"].includes(value.sourceState) ||
     !["production", "disposable"].includes(value.buildMode) ||
     (value.buildMode === "production" && value.sourceState !== "clean") ||
     !Number.isFinite(Date.parse(value.buildTimestamp)) ||
     !value.builderIdentity ||
     !value.repositoryIdentity ||
+    !value.buildWorkflowIdentity ||
     !SHA256.test(value.lockfileDigest) ||
+    Object.values(value.dockerfileDigests).some((digest) => !SHA256.test(digest)) ||
+    Object.values(value.baseImageDigests).some((digest) => !IMAGE_DIGEST.test(digest)) ||
+    Object.values(value.buildScriptDigests).some((digest) => !SHA256.test(digest)) ||
+    Object.values(value.configurationTemplateDigests).some((digest) => !SHA256.test(digest)) ||
     !SHA256.test(value.applicationBundleDigest) ||
     value.productionContractVersion !== V1_PRODUCTION_CONTRACT_VERSION ||
     value.databaseCompatibility.minimum !== V1_DATABASE_COMPATIBILITY.minimum ||
@@ -121,6 +138,7 @@ export function validateEcsControlPlaneIdentity(
     canonicalJson(evidence.containers) !== canonicalJson(expected.containers) ||
     !SHA256.test(evidence.configurationDigest) ||
     !SHA256.test(evidence.buildIdentityDigest) ||
+    !SHA256.test(evidence.bootstrapManifestDigest) ||
     !COMMIT.test(evidence.applicationCommit)
   )
     throw new Error("Mission Control ECS control-plane evidence is stale, malformed, or not single-task.");
@@ -147,6 +165,7 @@ export function validateEcsControlPlaneIdentity(
     "configurationDigest",
     "applicationCommit",
     "buildIdentityDigest",
+    "bootstrapManifestDigest",
   ] as const)
     if (evidence[field] !== expected[field])
       throw new Error(`Mission Control ECS control-plane identity mismatch: ${field}.`);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDatabasePool } from "@/lib/database";
 import { getProjectBrainConfiguration } from "@/integrations/project-brain/config";
+import { safeEmbeddedV1BuildIdentity } from "@/lib/v1-embedded-build-provenance";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,7 @@ export async function GET() {
       status: "ok",
       environment: process.env.APP_ENV ?? "unset",
       database: "reachable",
+      build: safeEmbeddedV1BuildIdentity(),
       projectBrain: projectBrain.enabled
         ? {
             status: projectBrain.status,
