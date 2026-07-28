@@ -1,0 +1,218 @@
+{
+  "schemaVersion": "mission-control-v1-staging-evidence-index/1",
+  "runId": "stg-20260728e",
+  "createdAt": "2026-07-28T21:43:40.666Z",
+  "candidate": {
+    "acceptedBaseCommit": "8922b5520ef0ad22b1e28240e9c55a5284a701b5",
+    "sourceCommit": "4f5e88cdd5d9ab62d739e012fe732866b9ca95e0",
+    "sourceTree": "dcb9b5dfe1d3411b2c9ffb996d4886078a2c9294",
+    "sourceBundle": "release-source.bundle",
+    "sourceBundleRequiredBase": "8922b5520ef0ad22b1e28240e9c55a5284a701b5",
+    "webImageDigest": "sha256:c18a0f41ab886d9124ac7cb1d2688e47c36e8c5557d95e02f3ed25840e6c3317",
+    "projectBrainImageDigest": "sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d"
+  },
+  "publicKeySpkiSha256": "355a00543c1f6cacd112f7ebfe7f7e59ad1f7f9f050ad38b12a22338d612f418",
+  "bootstrapManifest": {
+    "canonicalJsonSha256": "21161b79be8479318a27768b354a782e305856df81a59e50a6f668e6590cb766",
+    "byteSha256": "4e7cb26b49394f81a0fc81a189a634345636a61ab096f27d952097a0ecbf819f",
+    "clarification": "The canonical digest signs semantic compact canonical JSON; the byte digest covers the retained pretty-printed file."
+  },
+  "integrity": {
+    "kmsSignedReceipts": [
+      "web-image-receipt.json",
+      "project-brain-image-receipt.json",
+      "database-binding-receipt.json",
+      "runtime-evidence-receipt.json"
+    ],
+    "kmsSignaturesOfflineVerified": true,
+    "aggregateIndexBinding": "The repository commit containing this index content-addresses the complete retained bundle. The purpose-bound staging signer contract does not accept an aggregate-index kind and was not bypassed or broadened."
+  },
+  "entries": [
+    {
+      "path": "attestation-public-key.pem",
+      "bytes": 113,
+      "sha256": "15615abf0e13b83ab091d25e00e360f68aabbe94f10acc35896f895ecf047b02",
+      "kind": "public-key"
+    },
+    {
+      "path": "authority-initial-outputs.json",
+      "bytes": 469,
+      "sha256": "4347f34307bfa5ce9b1711cd6535f3e3bea5012340fe53f810baeedf8cf2c67b",
+      "kind": "json"
+    },
+    {
+      "path": "authority-live-verification.json",
+      "bytes": 2660,
+      "sha256": "2764a6795a401adfa9f5d080951082e7cc1bf8a4396dfe1b302797ea7680d765",
+      "kind": "json"
+    },
+    {
+      "path": "bootstrap-manifest.canonical-json.sha256",
+      "bytes": 65,
+      "sha256": "2e738314fabb293a06497819e6f9d3331e9ad8ce889f348879d548f957979386",
+      "kind": "text"
+    },
+    {
+      "path": "bootstrap-manifest.json",
+      "bytes": 17391,
+      "sha256": "4e7cb26b49394f81a0fc81a189a634345636a61ab096f27d952097a0ecbf819f",
+      "kind": "json"
+    },
+    {
+      "path": "build-receipts.json",
+      "bytes": 13627,
+      "sha256": "e1a66ff2a027ee9a227156fc19d51750b2ceeef266f554aa22bd53013d00f5f2",
+      "kind": "json"
+    },
+    {
+      "path": "certificate-receipt.json",
+      "bytes": 768,
+      "sha256": "4a72d00c8e8a3dc79102b06b35b7db4b6ecfe9658a3a6f779041bf38162a5049",
+      "kind": "json"
+    },
+    {
+      "path": "collector-iam-verification.json",
+      "bytes": 371,
+      "sha256": "ca88903ee8984cc1fbdd102cc184c683e9f37c4a68c0d94dd445642e3f75035a",
+      "kind": "json"
+    },
+    {
+      "path": "database-binding-receipt.json",
+      "bytes": 3060,
+      "sha256": "d50c24db51bb1c24af16f3942177751fb8e7542f3060305f0d89238391997754",
+      "kind": "json"
+    },
+    {
+      "path": "database-preparation.json",
+      "bytes": 1093,
+      "sha256": "c096c929cebd8da6c03b9df39b5945fabe77a3d52874b18883d727e2a046132a",
+      "kind": "json"
+    },
+    {
+      "path": "deployment-outputs.json",
+      "bytes": 491,
+      "sha256": "cfaf4df68487a7bf19531e237166882d608e42a6c275bb0876fbec8099dfa830",
+      "kind": "json"
+    },
+    {
+      "path": "expected-identity-pre-runtime.json",
+      "bytes": 582,
+      "sha256": "c2111e4b43b527fe9788532b453469b815499188a1f956c59da49c146d32f6c8",
+      "kind": "json"
+    },
+    {
+      "path": "expected-runtime-identity.json",
+      "bytes": 2918,
+      "sha256": "55900466ddfba07bd94457faaa50566afecea30b668f4e12d4e5c60e6b70d063",
+      "kind": "json"
+    },
+    {
+      "path": "full-suite-classification.json",
+      "bytes": 1406,
+      "sha256": "f321306e6b1daba4c02668f7e12b5e8ed2854e0af0527547909ba59af13393ed",
+      "kind": "json"
+    },
+    {
+      "path": "https-acceptance.json",
+      "bytes": 6025,
+      "sha256": "0f6fafa94180a3a3e74bcd5521b98ea4265befed4b713893d0ac242967e985eb",
+      "kind": "json"
+    },
+    {
+      "path": "iam-preflight.json",
+      "bytes": 3401,
+      "sha256": "242227196fbefec95c3d11f83d0e7dd4c0c33e01d1c009cbf7e12d946bf3b0dc",
+      "kind": "json"
+    },
+    {
+      "path": "offline-signature-verification.json",
+      "bytes": 1711,
+      "sha256": "c1befd293bf2bd17a7ce0f42868690b8ad192c5b12cf1e5a575245b7b76f7515",
+      "kind": "json"
+    },
+    {
+      "path": "project-brain-diagnostics.json",
+      "bytes": 4606,
+      "sha256": "69fa5f810da5aa36a573ad9d4795926a978c086aa24b2cd46f0001c708b01e24",
+      "kind": "json"
+    },
+    {
+      "path": "project-brain-image-policy.json",
+      "bytes": 2897,
+      "sha256": "346bc73394fbe80b54e3dee5b68ff3f5e48ba577010dbdf473bbaf896c26f9e9",
+      "kind": "json"
+    },
+    {
+      "path": "project-brain-image-receipt.json",
+      "bytes": 6593,
+      "sha256": "8b866ef6129951fce1b9106560e78f3f0711b7b747ddcfc4802210df85cdf9a8",
+      "kind": "json"
+    },
+    {
+      "path": "release-source.bundle",
+      "bytes": 66566,
+      "sha256": "aecea46957ddc204fc2a99858012fc84d5eca2d8a0973e7452399ab5360c35e3",
+      "kind": "git-thin-bundle"
+    },
+    {
+      "path": "replay-recovery-rehearsal.json",
+      "bytes": 2091,
+      "sha256": "0cc0a0a57c7677d231569a32e8fca93bf472edfac04e4c388db7b875b709db42",
+      "kind": "json"
+    },
+    {
+      "path": "run-summary.json",
+      "bytes": 2992,
+      "sha256": "8432a3aaa6aea33b20eaa038d447ecc477890f57d226f4fc93d281e341868ea3",
+      "kind": "json"
+    },
+    {
+      "path": "runtime-evidence-receipt.json",
+      "bytes": 7204,
+      "sha256": "cd03913672b24cf5e3e6144f6838d93277d3e1adcea84ad1c0e67ae00bc9f830",
+      "kind": "json"
+    },
+    {
+      "path": "staging-configuration.json",
+      "bytes": 699,
+      "sha256": "40843348bef5151ea63aada8e999c27c1df6b44f6a653a7ef4566d1aa626f148",
+      "kind": "json"
+    },
+    {
+      "path": "teardown-evidence.json",
+      "bytes": 2810,
+      "sha256": "a9b6f2f7e54a31fdf8cf4794c57df50a05abb1a5d65fb897e7f8f15899ec5f46",
+      "kind": "json"
+    },
+    {
+      "path": "teardown-recovery.json",
+      "bytes": 1581,
+      "sha256": "bbb8f6f8b138d4379c2b53c0bedb3574e4b8b4df3792ee5e5801025f585b44da",
+      "kind": "json"
+    },
+    {
+      "path": "vpc-https-probe.json",
+      "bytes": 1434,
+      "sha256": "0b33c2ffa431546d22fe399b234e713ffe2d38f675019dec9f3660573977da06",
+      "kind": "json"
+    },
+    {
+      "path": "web-image-policy.json",
+      "bytes": 2897,
+      "sha256": "2296d4b6f7c666cee3bb488a36525a238ac849d8260de41ff99b2774969ce32c",
+      "kind": "json"
+    },
+    {
+      "path": "web-image-receipt.json",
+      "bytes": 6593,
+      "sha256": "8663fbd35c433b7d84e9ad45e538cd639757de07771cd8e68b2607b2c68cfac0",
+      "kind": "json"
+    },
+    {
+      "path": "zero-residue-verification.json",
+      "bytes": 2194,
+      "sha256": "ee5659ccdb2bf2984e32621d8d1180cc99d1b7d554683e404bc722479cc7aa88",
+      "kind": "json"
+    }
+  ]
+}

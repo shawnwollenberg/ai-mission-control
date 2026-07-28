@@ -1,0 +1,170 @@
+[
+  {
+    "event": "production_configuration_validation",
+    "processType": "project_brain",
+    "environment": "production",
+    "ready": true,
+    "checks": [
+      {
+        "name": "node",
+        "ok": true,
+        "summary": "Supported Node 22.23.1",
+        "required": true
+      },
+      {
+        "name": "environment",
+        "ok": true,
+        "summary": "APP_ENV is explicitly local, test, or production",
+        "required": true
+      },
+      {
+        "name": "database_configuration",
+        "ok": true,
+        "summary": "Dedicated database connection is configured",
+        "required": true
+      },
+      {
+        "name": "staging_database_binding",
+        "ok": true,
+        "summary": "Database secret matches signed staging RDS authority",
+        "required": true
+      },
+      {
+        "name": "staging_embedded_build_identity",
+        "ok": true,
+        "summary": "Runtime environment agrees with immutable embedded build provenance",
+        "required": true
+      },
+      {
+        "name": "database_connectivity",
+        "ok": true,
+        "summary": "Database connection succeeded",
+        "required": true
+      },
+      {
+        "name": "migrations",
+        "ok": true,
+        "summary": "Database schema is current",
+        "required": true
+      },
+      {
+        "name": "worker_identity",
+        "ok": true,
+        "summary": "Stable worker identity is configured",
+        "required": true
+      },
+      {
+        "name": "project_brain_configuration",
+        "ok": true,
+        "summary": "Project Brain is explicitly configured",
+        "required": true
+      },
+      {
+        "name": "project_brain_version",
+        "ok": true,
+        "summary": "Project Brain 0.4.0 is required",
+        "required": true
+      },
+      {
+        "name": "project_brain_contract",
+        "ok": true,
+        "summary": "Project Brain consumer contract 1.0 is required",
+        "required": true
+      },
+      {
+        "name": "project_brain_timeout",
+        "ok": true,
+        "summary": "Project Brain timeout is pinned to 15000 ms",
+        "required": true
+      },
+      {
+        "name": "project_brain_output_limit",
+        "ok": true,
+        "summary": "Project Brain output is limited to 1000000 bytes",
+        "required": true
+      },
+      {
+        "name": "project_brain_diagnostics",
+        "ok": true,
+        "summary": "Project Brain doctor and capabilities are compatible",
+        "required": true
+      },
+      {
+        "name": "project_brain_dependencies",
+        "ok": true,
+        "summary": "Repository root and artifact storage are accessible",
+        "required": true
+      },
+      {
+        "name": "project_brain_local_execution",
+        "ok": true,
+        "summary": "Local Project Brain execution mode is explicitly enabled or disabled",
+        "required": true
+      },
+      {
+        "name": "repository_root",
+        "ok": true,
+        "summary": "Registered repository root is an explicit non-home absolute path",
+        "required": true
+      },
+      {
+        "name": "artifact_provider",
+        "ok": true,
+        "summary": "Production object storage provider is configured",
+        "required": true
+      },
+      {
+        "name": "artifact_artifact_s3_bucket",
+        "ok": true,
+        "summary": "Setting ARTIFACT_S3_BUCKET is configured",
+        "required": true
+      },
+      {
+        "name": "artifact_artifact_s3_region",
+        "ok": true,
+        "summary": "Setting ARTIFACT_S3_REGION is configured",
+        "required": true
+      },
+      {
+        "name": "artifact_artifact_s3_endpoint",
+        "ok": true,
+        "summary": "Setting ARTIFACT_S3_ENDPOINT is configured",
+        "required": true
+      },
+      {
+        "name": "artifact_credentials",
+        "ok": true,
+        "summary": "Artifact storage uses the workload IAM role",
+        "required": true
+      },
+      {
+        "name": "secret_provider",
+        "ok": true,
+        "summary": "Secret provider is explicitly identified",
+        "required": true
+      }
+    ],
+    "failed": [],
+    "secretsPrinted": false
+  },
+  {
+    "event": "project_brain_dependency_diagnostic",
+    "ready": true,
+    "repositoryRootReady": true,
+    "artifactStorageReady": true,
+    "secretsPrinted": false
+  },
+  {
+    "event": "project_brain_runtime_diagnostic",
+    "ready": true,
+    "coreVersion": "0.4.0",
+    "adapterVersion": "0.4.0",
+    "contractVersion": "1.0",
+    "schemaVersions": [
+      "2.5.0"
+    ],
+    "schemaCount": 13,
+    "implementationDrift": [],
+    "secretsPrinted": false
+  }
+]

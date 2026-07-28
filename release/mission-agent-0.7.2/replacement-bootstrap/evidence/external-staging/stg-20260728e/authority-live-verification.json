@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "mission-control-v1-staging-authority-live-verification/1",
+  "runId": "stg-20260728e",
+  "collectedAt": "2026-07-28T21:16:36.208Z",
+  "authorityStack": "mission-control-v1-staging-stg-20260728e-authority",
+  "signingEnabled": true,
+  "reviewedTemplate": {
+    "localCanonicalSha256": "cad80c5bdbdc448a36ad90c141a7767a652173d89451f7cf280819f5acd13c92",
+    "liveCanonicalSha256": "cad80c5bdbdc448a36ad90c141a7767a652173d89451f7cf280819f5acd13c92",
+    "match": true
+  },
+  "signer": {
+    "functionArn": "arn:aws:lambda:us-east-1:661452835066:function:mcv1-stg-20260728e-signer",
+    "runtime": "nodejs22.x",
+    "architecture": [
+      "x86_64"
+    ],
+    "codeSha256Base64": "AabAZAClUmPUFNBJp3Xgsj2RTGVIa1y/b6CKwrNN1vo=",
+    "localSourceSha256": "37b462448379a3b16080ef494e0d850757bb836db03dcce0cca83822a53d9a1f",
+    "liveSourceSha256": "37b462448379a3b16080ef494e0d850757bb836db03dcce0cca83822a53d9a1f",
+    "sourceMatch": true,
+    "environmentVariableNames": [
+      "ACCOUNT_ID",
+      "APPLICATION_COMMIT",
+      "BOOTSTRAP_MANIFEST_DIGEST",
+      "CLUSTER_ARN",
+      "DATABASE_ARN",
+      "DATABASE_ENDPOINT",
+      "DATABASE_ID",
+      "EVIDENCE_BUCKET",
+      "IMAGE_POLICY_DIGESTS_JSON",
+      "KEY_ARN",
+      "PROJECT_BRAIN_IMAGE_DIGEST",
+      "REPOSITORY_ARN",
+      "REPOSITORY_URI",
+      "RUNTIME_IDENTITY_POLICY_DIGEST",
+      "RUN_ID",
+      "SIGNING_ENABLED",
+      "TARGET_GROUP_ARN",
+      "WEB_IMAGE_DIGEST"
+    ],
+    "environmentCanonicalSha256": "3ceb95c5c3a3bd7459b7132322f558c10771703fbd4df66144cdf100bddfcd8c",
+    "imagePolicyDigestsSha256": "1eff337659de89fb0c2ecb237470fb8c93d2db76e3083150e856f77a82483a41",
+    "runtimeIdentityPolicyDigest": "1d9d09fc784952fbaeba2aca2b39ea85599396e174dd6a6e90897b403150c615",
+    "roleArn": "arn:aws:iam::661452835066:role/mission-control-v1-staging-stg-20260728e-authority-signer",
+    "trustPolicyCanonicalSha256": "f3502e8666443cacc9bec965f5cc2886f9ed0e884c87714821fdc6872835efd0",
+    "inlinePolicyCanonicalSha256": "a64ea73af4582b04b27850a6e0a10ffe6e762f7b0e9d94c2b9b66845a643ffb9",
+    "permissionsBoundaryArn": "arn:aws:iam::661452835066:policy/mission-control-v1-staging-stg-20260728e-authority-signer-boundary",
+    "permissionsBoundaryCanonicalSha256": "19311e35bc0ad562681c9716c634f94f15a5d113fe06ed7a23bec22d69ec3512"
+  },
+  "kms": {
+    "keyArn": "arn:aws:kms:us-east-1:661452835066:key/3c048637-bbdc-4ac1-bb95-bdfde273e53d",
+    "keyPolicyCanonicalSha256": "b99d1935fd2b455b1da3cb4bcaad1e5e7070a313e89b426fe7be5468fc1ac45d",
+    "publicKeySpkiSha256": "355a00543c1f6cacd112f7ebfe7f7e59ad1f7f9f050ad38b12a22338d612f418"
+  },
+  "safeMetadataOnly": true
+}

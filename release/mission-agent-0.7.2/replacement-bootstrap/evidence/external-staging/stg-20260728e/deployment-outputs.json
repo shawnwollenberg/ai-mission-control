@@ -1,0 +1,8 @@
+{
+  "mission-control-v1-staging-stg-20260728e-deployment": {
+    "CloudFormationRoleArn": "arn:aws:iam::661452835066:role/mission-control-v1-staging-stg-20260728e-cloudformation",
+    "TemplateBucketName": "mc-v1-cfn-stg-20260728e-661452835066",
+    "DeployerRoleArn": "arn:aws:iam::661452835066:role/mission-control-v1-staging-stg-20260728e-deployer",
+    "WorkloadPermissionsBoundaryArn": "arn:aws:iam::661452835066:policy/mission-control-v1-staging-stg-20260728e-workload-boundary"
+  }
+}

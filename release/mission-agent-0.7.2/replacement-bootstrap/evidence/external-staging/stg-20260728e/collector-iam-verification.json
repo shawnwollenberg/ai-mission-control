@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "mission-control-v1-staging-collector-iam-verification/1",
+  "runId": "stg-20260728e",
+  "checks": [
+    {
+      "name": "exact_signer_invoke",
+      "decision": "allowed"
+    },
+    {
+      "name": "qualified_signer_invoke",
+      "decision": "implicitDeny"
+    },
+    {
+      "name": "direct_kms_sign",
+      "decision": "explicitDeny"
+    }
+  ]
+}

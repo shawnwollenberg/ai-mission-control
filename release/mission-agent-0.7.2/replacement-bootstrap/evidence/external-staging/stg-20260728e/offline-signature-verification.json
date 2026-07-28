@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "mission-control-v1-staging-offline-signature-verification/1",
+  "runId": "stg-20260728e",
+  "verifiedAt": "2026-07-28T21:16:48.538Z",
+  "canonicalization": "recursive object-key sort using localeCompare; compact JSON; signature covers canonical attestationRequest bytes",
+  "publicKeyPath": "attestation-public-key.pem",
+  "publicKeyType": "Ed25519 SPKI",
+  "publicKeySpkiSha256": "355a00543c1f6cacd112f7ebfe7f7e59ad1f7f9f050ad38b12a22338d612f418",
+  "receipts": [
+    {
+      "path": "web-image-receipt.json",
+      "requestSha256": "9c818d40860bf25a55434f8b1fd318d1ce95adb45471799f09bb03fc7a7d8749",
+      "signatureSha256": "1f464fa1f3c19a9d5559bd68515ba2847a74b281b23a97b5f024edaf3d3822b8",
+      "verified": true
+    },
+    {
+      "path": "project-brain-image-receipt.json",
+      "requestSha256": "ad8ae76c25a3e0e3e074c7a80e2539943866422add6884dfad6c80a30f48729b",
+      "signatureSha256": "7781b782617cb81917f92866d1df536907e5cd1a7eb9b17b2e048fca9afafbaa",
+      "verified": true
+    },
+    {
+      "path": "database-binding-receipt.json",
+      "requestSha256": "e829277dcc88fa87bf9404e63d028260ed9c182dc34f2b01d2976b0f66069c8c",
+      "signatureSha256": "e43f31b0c74321a0005975b9f84e9c4bfb7785b4bb7598055d9f9bef47ccc788",
+      "verified": true
+    },
+    {
+      "path": "runtime-evidence-receipt.json",
+      "requestSha256": "f1ec98eb3effa3c163dae474ee9f10278f224986330c1f1078b0df707efe80b6",
+      "signatureSha256": "a965c104a1c117b20ec1915b1db5347a5046137387bae597137c970cd34cd8cd",
+      "verified": true,
+      "keyId": "arn:aws:kms:us-east-1:661452835066:key/3c048637-bbdc-4ac1-bb95-bdfde273e53d",
+      "algorithm": "ED25519_SHA_512"
+    }
+  ],
+  "allVerified": true
+}

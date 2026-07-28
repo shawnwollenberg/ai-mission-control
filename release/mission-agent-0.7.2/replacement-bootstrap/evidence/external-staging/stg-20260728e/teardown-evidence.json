@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "mission-control-v1-staging-teardown/1",
+  "runId": "stg-20260728e",
+  "deletedStacks": [
+    "mission-control-v1-staging-stg-20260728e-runtime",
+    "mission-control-v1-staging-stg-20260728e-bootstrap",
+    "mission-control-v1-staging-stg-20260728e-deployment",
+    "mission-control-v1-staging-stg-20260728e-authority"
+  ],
+  "certificateDeleted": "arn:aws:acm:us-east-1:661452835066:certificate/24959cbf-c152-470f-8388-add1bc9828d2",
+  "kmsKeyArn": "arn:aws:kms:us-east-1:661452835066:key/3c048637-bbdc-4ac1-bb95-bdfde273e53d",
+  "kmsKeyState": "PendingDeletion",
+  "kmsDeletionDate": "2026-08-04T17:39:27.365000-04:00",
+  "inactiveEcsHistory": [
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-https-probe:2",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-https-probe:3",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-task:3",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-task:2",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-https-probe:1",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-task:1"
+  ],
+  "terminalEcsControlPlaneHistory": [
+    "arn:aws:ecs:us-east-1:661452835066:cluster/mission-control-v1-staging-stg-20260728e-cluster",
+    "arn:aws:ecs:us-east-1:661452835066:service/mission-control-v1-staging-stg-20260728e-cluster/mission-control-v1-staging-stg-20260728e-service"
+  ],
+  "remainingRunTaggedResources": [
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-https-probe:2",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-https-probe:3",
+    "arn:aws:kms:us-east-1:661452835066:key/3c048637-bbdc-4ac1-bb95-bdfde273e53d",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-task:3",
+    "arn:aws:ecs:us-east-1:661452835066:service/mission-control-v1-staging-stg-20260728e-cluster/mission-control-v1-staging-stg-20260728e-service",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-task:2",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-https-probe:1",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-task:1",
+    "arn:aws:ecs:us-east-1:661452835066:cluster/mission-control-v1-staging-stg-20260728e-cluster"
+  ],
+  "productionResourcesInspected": false,
+  "productionResourcesModified": false,
+  "checksum": "7efd5cda043a1086afb1ea6da416b62a8a1b0b23b25028c62f1bc41710f1146d"
+}

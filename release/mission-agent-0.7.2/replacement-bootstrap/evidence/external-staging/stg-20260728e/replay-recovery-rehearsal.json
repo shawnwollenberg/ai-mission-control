@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "mission-control-v1-staging-replay-recovery/1",
+  "runId": "stg-20260728e",
+  "rehearsedAt": "2026-07-28T21:17:53.481Z",
+  "attempt": {
+    "kind": "runtime-evidence",
+    "sequence": 4,
+    "nonce": "4ddc675b-c7ed-477e-a57c-cd8636440053",
+    "canonicalEnvelopeSha256": "7f7ccb3f4e26797c5138a603f953aab668616477333ae06b0da6c3386989bfc5",
+    "classification": "duplicate-receipt-retry",
+    "lambdaStatusCode": 200,
+    "functionError": "Unhandled",
+    "errorType": "PreconditionFailed",
+    "errorMessage": "At least one of the pre-conditions you specified did not hold"
+  },
+  "safety": {
+    "rejectedBeforeKmsSign": "Signer performs conditional nonce write before KMS Sign; duplicate nonce returned S3 PreconditionFailed.",
+    "signingLedgerObjectCount": 8,
+    "signingLedgerObjects": [
+      "staging/v1/signing-nonces/stg-20260728e/1ea3c426-b1bb-4272-9c75-7f2ac44a85bf",
+      "staging/v1/signing-nonces/stg-20260728e/4ddc675b-c7ed-477e-a57c-cd8636440053",
+      "staging/v1/signing-nonces/stg-20260728e/8f0d82b6-d919-4a73-acae-738f2a6b7567",
+      "staging/v1/signing-nonces/stg-20260728e/c42c4636-3289-4722-8235-555fd9d0dce0",
+      "staging/v1/signing-sequences/stg-20260728e/1",
+      "staging/v1/signing-sequences/stg-20260728e/2",
+      "staging/v1/signing-sequences/stg-20260728e/3",
+      "staging/v1/signing-sequences/stg-20260728e/4"
+    ],
+    "exactFourNoncesAndFourSequences": true,
+    "duplicateProviderMutation": false,
+    "partialMutation": false
+  },
+  "recovery": {
+    "method": "reuse durable original signed runtime receipt; do not repeat provider mutation",
+    "durableReceiptPath": "runtime-evidence-receipt.json",
+    "durableReceiptChecksum": "49f3406f875d7f103198b2ef62a7617b0039079417533aeccaae9c4790cdea09",
+    "offlineSignatureVerified": true,
+    "service": {
+      "desiredCount": 1,
+      "runningCount": 1,
+      "pendingCount": 0,
+      "deploymentId": "ecs-svc/9321221066782642428",
+      "rolloutState": "COMPLETED"
+    },
+    "sameRun": true,
+    "sameCandidateCommit": "4f5e88cdd5d9ab62d739e012fe732866b9ca95e0"
+  }
+}

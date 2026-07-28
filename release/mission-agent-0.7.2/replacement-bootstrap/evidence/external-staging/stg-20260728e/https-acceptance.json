@@ -1,0 +1,142 @@
+{
+  "schemaVersion": "mission-control-v1-staging-https-acceptance/1",
+  "runId": "stg-20260728e",
+  "bootstrapManifestDigest": "21161b79be8479318a27768b354a782e305856df81a59e50a6f668e6590cb766",
+  "endpoint": "https://mcv1-stg-20260728e-alb-1141954088.us-east-1.elb.amazonaws.com",
+  "loadBalancerArn": "arn:aws:elasticloadbalancing:us-east-1:661452835066:loadbalancer/app/mcv1-stg-20260728e-alb/4840683aca62c8f2",
+  "certificateArn": "arn:aws:acm:us-east-1:661452835066:certificate/24959cbf-c152-470f-8388-add1bc9828d2",
+  "certificateReceiptSha256": "4a72d00c8e8a3dc79102b06b35b7db4b6ecfe9658a3a6f779041bf38162a5049",
+  "dns": {
+    "ipv4": [
+      "34.231.188.34",
+      "54.84.59.8"
+    ],
+    "ipv6": []
+  },
+  "certificateDerSha256": "7e49263e33e486e9eba8f84a7594579299e340551ddc64f129302ac78bf74aa1",
+  "health": {
+    "path": "/api/health",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "date": "Tue, 28 Jul 2026 21:05:17 GMT",
+      "content-type": "application/json",
+      "transfer-encoding": "chunked",
+      "connection": "keep-alive",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "referrer-policy": "no-referrer",
+      "permissions-policy": "camera=(), microphone=(), geolocation=()",
+      "content-security-policy": "default-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'",
+      "cache-control": "private, no-store, max-age=0",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+    },
+    "body": {
+      "status": "ok",
+      "environment": "production",
+      "database": "reachable",
+      "build": {
+        "sourceCommit": "4f5e88cdd5d9ab62d739e012fe732866b9ca95e0",
+        "sourceTreeObject": "dcb9b5dfe1d3411b2c9ffb996d4886078a2c9294",
+        "buildIdentityDigest": "f5ac9084a327e926afb7fce124a3768f459826bbdc67fdb74d2e047b4f1b3164",
+        "buildMode": "production"
+      },
+      "projectBrain": {
+        "status": "not_configured"
+      }
+    },
+    "tlsVersion": "TLSv1.2",
+    "cipher": "ECDHE-RSA-AES128-GCM-SHA256",
+    "certificateSubject": {
+      "CN": "*.us-east-1.elb.amazonaws.com",
+      "O": "Mission Control Disposable Staging"
+    },
+    "certificateIssuer": {
+      "CN": "*.us-east-1.elb.amazonaws.com",
+      "O": "Mission Control Disposable Staging"
+    },
+    "certificateValidFrom": "Jul 28 19:49:58 2026 GMT",
+    "certificateValidTo": "Jul 30 19:49:58 2026 GMT",
+    "certificateDerSha256": "7e49263e33e486e9eba8f84a7594579299e340551ddc64f129302ac78bf74aa1",
+    "authorized": true
+  },
+  "readiness": {
+    "path": "/api/readiness",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "date": "Tue, 28 Jul 2026 21:05:18 GMT",
+      "content-type": "application/json",
+      "transfer-encoding": "chunked",
+      "connection": "keep-alive",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "referrer-policy": "no-referrer",
+      "permissions-policy": "camera=(), microphone=(), geolocation=()",
+      "content-security-policy": "default-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'",
+      "cache-control": "private, no-store, max-age=0",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+    },
+    "body": {
+      "status": "ready",
+      "environment": "production",
+      "failed": [],
+      "build": {
+        "sourceCommit": "4f5e88cdd5d9ab62d739e012fe732866b9ca95e0",
+        "sourceTreeObject": "dcb9b5dfe1d3411b2c9ffb996d4886078a2c9294",
+        "buildIdentityDigest": "f5ac9084a327e926afb7fce124a3768f459826bbdc67fdb74d2e047b4f1b3164",
+        "buildMode": "production"
+      },
+      "secretsPrinted": false
+    },
+    "tlsVersion": "TLSv1.2",
+    "cipher": "ECDHE-RSA-AES128-GCM-SHA256",
+    "certificateSubject": {
+      "CN": "*.us-east-1.elb.amazonaws.com",
+      "O": "Mission Control Disposable Staging"
+    },
+    "certificateIssuer": {
+      "CN": "*.us-east-1.elb.amazonaws.com",
+      "O": "Mission Control Disposable Staging"
+    },
+    "certificateValidFrom": "Jul 28 19:49:58 2026 GMT",
+    "certificateValidTo": "Jul 30 19:49:58 2026 GMT",
+    "certificateDerSha256": "7e49263e33e486e9eba8f84a7594579299e340551ddc64f129302ac78bf74aa1",
+    "authorized": true
+  },
+  "operatorProtocolFailClosed": {
+    "path": "/api/mission-agent/replacement-bootstrap/status",
+    "method": "POST",
+    "status": 403,
+    "headers": {
+      "date": "Tue, 28 Jul 2026 21:05:18 GMT",
+      "content-type": "application/json",
+      "transfer-encoding": "chunked",
+      "connection": "keep-alive",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "referrer-policy": "no-referrer",
+      "permissions-policy": "camera=(), microphone=(), geolocation=()",
+      "content-security-policy": "default-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'",
+      "cache-control": "private, no-store, max-age=0",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+    },
+    "body": {
+      "error": "replacement_status_rejected"
+    },
+    "tlsVersion": "TLSv1.2",
+    "cipher": "ECDHE-RSA-AES128-GCM-SHA256",
+    "certificateSubject": {
+      "CN": "*.us-east-1.elb.amazonaws.com",
+      "O": "Mission Control Disposable Staging"
+    },
+    "certificateIssuer": {
+      "CN": "*.us-east-1.elb.amazonaws.com",
+      "O": "Mission Control Disposable Staging"
+    },
+    "certificateValidFrom": "Jul 28 19:49:58 2026 GMT",
+    "certificateValidTo": "Jul 30 19:49:58 2026 GMT",
+    "certificateDerSha256": "7e49263e33e486e9eba8f84a7594579299e340551ddc64f129302ac78bf74aa1",
+    "authorized": true
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "mission-control-v1-staging-full-suite-classification/1",
+  "runId": "stg-20260728e",
+  "candidate": {
+    "tests": 227,
+    "passed": 220,
+    "failed": 7
+  },
+  "untouchedBase": {
+    "commit": "8922b5520ef0ad22b1e28240e9c55a5284a701b5",
+    "tests": 227,
+    "passed": 220,
+    "failed": 7
+  },
+  "classification": "pre-existing",
+  "platform": {
+    "runtime": "darwin",
+    "architecture": "arm64",
+    "effect": "Three Mission Agent 0.7.2 failures are platform eligibility failures on the non-release build platform; four historical 0.6.8/0.7.0 identity or signature fixture failures are byte-for-byte identical on the untouched base."
+  },
+  "identicalFailures": [
+    "legacy v1 is accepted only for explicit governed rollback to exact signed 0.6.8",
+    "Manifest v3 fixture verifies through both implementations with key and fingerprint binding",
+    "real updater requires v3, embedded trust, byte length, and has no v2 fallback",
+    "exact production-signed 0.7.2 bundle passes selection and the default updater trust path",
+    "0.6.8 artifact, detached manifest, and approved registry agree",
+    "packaging repair preserves contracts and publishes the checksum-bound Mission Agent",
+    "0.6.8 artifact and published signed v1 manifest remain byte-for-byte valid"
+  ],
+  "regressions": 0,
+  "productionResourcesContacted": false,
+  "productionCanaryContacted": false
+}

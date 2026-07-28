@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "mission-control-v1-staging-teardown-recovery/1",
+  "runId": "stg-20260728e",
+  "attempts": [
+    {
+      "classification": "temporary_session_expired",
+      "boundary": "CloudFormation runtime-stack deletion waiter",
+      "effect": "The runtime deletion continued in AWS; no resource was recreated.",
+      "resolution": "The same exact run-scoped deployer role was re-assumed with temporary credentials and the idempotent teardown resumed."
+    },
+    {
+      "classification": "missing_exact_bucket_teardown_permission",
+      "boundary": "Evidence-bucket version inventory",
+      "effect": "The restricted deployer was denied s3:ListBucketVersions; no object or stack mutation occurred in the failed attempt.",
+      "resolution": "The deployment-control owner added ListBucketVersions and DeleteObject/DeleteObjectVersion only for the exact run evidence bucket."
+    },
+    {
+      "classification": "missing_exact_listener_teardown_permission",
+      "boundary": "CloudFormation HTTPS-listener deletion",
+      "effect": "All independently deletable bootstrap resources were removed; the exact run listener remained in DELETE_FAILED.",
+      "resolution": "The deployment-control owner added DeleteListener only for the exact run-scoped ALB listener ARN, then resumed stack deletion."
+    }
+  ],
+  "authorityResourcesBroadened": false,
+  "signingPermissionsBroadened": false,
+  "productionResourcesContacted": false,
+  "productionResourcesModified": false,
+  "finalEvidence": [
+    "teardown-evidence.json",
+    "zero-residue-verification.json"
+  ]
+}

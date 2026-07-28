@@ -1,0 +1,10 @@
+{
+  "applicationCommit": "4f5e88cdd5d9ab62d739e012fe732866b9ca95e0",
+  "awsAccountId": "661452835066",
+  "bootstrapManifestDigest": "21161b79be8479318a27768b354a782e305856df81a59e50a6f668e6590cb766",
+  "deploymentAttestationKeyArn": "arn:aws:kms:us-east-1:661452835066:key/3c048637-bbdc-4ac1-bb95-bdfde273e53d",
+  "missionAgentReleaseKeyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+  "region": "us-east-1",
+  "signerFunctionArn": "arn:aws:lambda:us-east-1:661452835066:function:mcv1-stg-20260728e-signer",
+  "stagingRunId": "stg-20260728e"
+}

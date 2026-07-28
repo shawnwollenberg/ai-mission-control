@@ -1,0 +1,109 @@
+{
+  "schemaVersion": "mission-control-image-provenance-receipt-v1",
+  "imageDigest": "sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d",
+  "imageReference": "661452835066.dkr.ecr.us-east-1.amazonaws.com/mission-control-v1-staging-stg-20260728e@sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d",
+  "ociManifestDigest": "sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d",
+  "ociPlatformManifestDigest": "sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d",
+  "ociImageConfigurationDigest": "sha256:d46245fd1b5183dd24c56dc46259b758e0a75718cda611946bfcbebf4c74cf3d",
+  "bootstrapManifestDigest": "21161b79be8479318a27768b354a782e305856df81a59e50a6f668e6590cb766",
+  "buildIdentityDigest": "acf1f1a132b508b2422f16dc900e01b7e204d1dc818ad76959d0f41c622fb4ba",
+  "provenance": {
+    "schemaVersion": "mission-control-build-provenance-v2",
+    "sourceCommit": "4f5e88cdd5d9ab62d739e012fe732866b9ca95e0",
+    "sourceTreeObject": "dcb9b5dfe1d3411b2c9ffb996d4886078a2c9294",
+    "sourceArchiveDigest": "a3cd1c53c24223bdfe57d9b00e5c0cb0ce86afffc46e36f52ccaace200622279",
+    "sourceInputManifestDigest": "308529b302dd1c71b5f0d2e79c25f07eeeea28fc8cc528870ae77aa1bb578fc3",
+    "sourceState": "clean",
+    "buildMode": "production",
+    "buildTimestamp": "2026-07-28T20:35:00.000Z",
+    "builderIdentity": "local-owner-controlled-staging-builder",
+    "repositoryIdentity": "wallyweb/mission-control",
+    "buildWorkflowIdentity": "external-staging-stg-20260728e",
+    "lockfileDigest": "b280c5b76c590b613fb82b3ceda4e323efaabcbbbc432fcc605d56b23856a1ea",
+    "dockerfileDigests": {
+      "web": "ae886d4390b3926d2f4900feb047459504ddecce711bb00d5551b0b7251994a0",
+      "projectBrain": "2f5a274ac7589f93baa42982b1c686e878c6e3e13ed44f68ebf635205eda1858"
+    },
+    "baseImageDigests": {
+      "webNode": "sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3",
+      "projectBrainNode": "sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3"
+    },
+    "buildScriptDigests": {
+      "generateProvenance": "6efa7be3b5bf4dd134f6915a08509b80030dfe6801454f4b89c759478d6942de",
+      "verifySourceInput": "2ee3e81081bea0474bf22b0a85a8c246b595613b2fd884c9678024259a25b00c"
+    },
+    "configurationTemplateDigests": {
+      "ecs": "6a139876b156fb21cfd019ef22c9999d96757d93fea4186e521b16aa5a123693",
+      "bootstrap": "8ac45a1ba98d16037bb448b2f203deaa5dd8e636092a8e4c8b68f2be8d826f39"
+    },
+    "applicationBundleDigest": "f9fd886a053dbdd67ac075e3939890a025d9c79f5be9ff83aabaa1015a39d427",
+    "productionContractVersion": "mission-control-production-rollout-v1",
+    "databaseCompatibility": {
+      "minimum": "0028",
+      "maximum": "0030"
+    }
+  },
+  "embeddedProvenanceVerified": true,
+  "signingKeyArn": "arn:aws:kms:us-east-1:661452835066:key/3c048637-bbdc-4ac1-bb95-bdfde273e53d",
+  "attestationRequest": {
+    "schemaVersion": "mission-control-v1-staging-attestation-request/1",
+    "kind": "image-provenance",
+    "runId": "stg-20260728e",
+    "accountId": "661452835066",
+    "region": "us-east-1",
+    "bootstrapManifestDigest": "21161b79be8479318a27768b354a782e305856df81a59e50a6f668e6590cb766",
+    "observedAt": "2026-07-28T20:40:00.377Z",
+    "expiresAt": "2026-07-28T20:45:00.377Z",
+    "nonce": "c42c4636-3289-4722-8235-555fd9d0dce0",
+    "sequence": 2,
+    "evidence": {
+      "schemaVersion": "mission-control-image-provenance-receipt-v1",
+      "imageDigest": "sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d",
+      "imageReference": "661452835066.dkr.ecr.us-east-1.amazonaws.com/mission-control-v1-staging-stg-20260728e@sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d",
+      "ociManifestDigest": "sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d",
+      "ociPlatformManifestDigest": "sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d",
+      "ociImageConfigurationDigest": "sha256:d46245fd1b5183dd24c56dc46259b758e0a75718cda611946bfcbebf4c74cf3d",
+      "bootstrapManifestDigest": "21161b79be8479318a27768b354a782e305856df81a59e50a6f668e6590cb766",
+      "buildIdentityDigest": "acf1f1a132b508b2422f16dc900e01b7e204d1dc818ad76959d0f41c622fb4ba",
+      "provenance": {
+        "schemaVersion": "mission-control-build-provenance-v2",
+        "sourceCommit": "4f5e88cdd5d9ab62d739e012fe732866b9ca95e0",
+        "sourceTreeObject": "dcb9b5dfe1d3411b2c9ffb996d4886078a2c9294",
+        "sourceArchiveDigest": "a3cd1c53c24223bdfe57d9b00e5c0cb0ce86afffc46e36f52ccaace200622279",
+        "sourceInputManifestDigest": "308529b302dd1c71b5f0d2e79c25f07eeeea28fc8cc528870ae77aa1bb578fc3",
+        "sourceState": "clean",
+        "buildMode": "production",
+        "buildTimestamp": "2026-07-28T20:35:00.000Z",
+        "builderIdentity": "local-owner-controlled-staging-builder",
+        "repositoryIdentity": "wallyweb/mission-control",
+        "buildWorkflowIdentity": "external-staging-stg-20260728e",
+        "lockfileDigest": "b280c5b76c590b613fb82b3ceda4e323efaabcbbbc432fcc605d56b23856a1ea",
+        "dockerfileDigests": {
+          "web": "ae886d4390b3926d2f4900feb047459504ddecce711bb00d5551b0b7251994a0",
+          "projectBrain": "2f5a274ac7589f93baa42982b1c686e878c6e3e13ed44f68ebf635205eda1858"
+        },
+        "baseImageDigests": {
+          "webNode": "sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3",
+          "projectBrainNode": "sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3"
+        },
+        "buildScriptDigests": {
+          "generateProvenance": "6efa7be3b5bf4dd134f6915a08509b80030dfe6801454f4b89c759478d6942de",
+          "verifySourceInput": "2ee3e81081bea0474bf22b0a85a8c246b595613b2fd884c9678024259a25b00c"
+        },
+        "configurationTemplateDigests": {
+          "ecs": "6a139876b156fb21cfd019ef22c9999d96757d93fea4186e521b16aa5a123693",
+          "bootstrap": "8ac45a1ba98d16037bb448b2f203deaa5dd8e636092a8e4c8b68f2be8d826f39"
+        },
+        "applicationBundleDigest": "f9fd886a053dbdd67ac075e3939890a025d9c79f5be9ff83aabaa1015a39d427",
+        "productionContractVersion": "mission-control-production-rollout-v1",
+        "databaseCompatibility": {
+          "minimum": "0028",
+          "maximum": "0030"
+        }
+      },
+      "embeddedProvenanceVerified": true,
+      "signingKeyArn": "arn:aws:kms:us-east-1:661452835066:key/3c048637-bbdc-4ac1-bb95-bdfde273e53d"
+    }
+  },
+  "signature": "zaLXhnP5jOKVErXDta/9aakPpUh041XGMWgE4d/ooIdGjeqbzbnmReg+sLo2ah+PzkIWRA7fXJiekf5AYsNdDQ=="
+}

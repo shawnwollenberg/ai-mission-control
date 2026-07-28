@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "mission-control-v1-external-staging-rehearsal/1",
+  "acceptedCommit": "8922b5520ef0ad22b1e28240e9c55a5284a701b5",
+  "accountId": "661452835066",
+  "region": "us-east-1",
+  "disposition": "blocked_external_https",
+  "images": {
+    "web": "sha256:0e6a3da78f434a72566ec7bffa11656b067f4d1df71ef48501c5c23925f8847f",
+    "projectBrain": "sha256:0b16f8a48a0f479a4a09447834a40d3690f17044c741fd05691689360115d07a"
+  },
+  "configurationDigest": "a0fca8b9060a8b98ab89c51dcb116cc9f4e3b0dc653332de809a358bb24cc8fa",
+  "controlPlaneEvidenceChecksum": "af36fae53919671633eb28267dd71ae74d14f56ff5b3c08553b3b929f2b26fcb",
+  "migration": {
+    "freshDatabaseThrough": "0030",
+    "upgradePath": "0028-to-0030",
+    "appliedCount": 30,
+    "idempotentRerunPending": 0,
+    "representativeDataPreserved": true
+  },
+  "runtime": {
+    "desiredTasks": 1,
+    "runningTasks": 1,
+    "taskHealth": "HEALTHY",
+    "targetHealth": "healthy",
+    "projectBrainVersion": "0.4.0",
+    "projectBrainContract": "1.0",
+    "artifactSchema": "2.5.0",
+    "diagnosticsReady": true
+  },
+  "https": {
+    "certificateStatus": "ISSUED",
+    "localCurl": "ECONNREFUSED",
+    "browser": "ERR_CONNECTION_REFUSED",
+    "ephemeralStagingEcsProbe": "ECONNREFUSED",
+    "accepted": false
+  },
+  "macos": {
+    "disposableTargetAvailable": false,
+    "currentHostUsed": false,
+    "realCanaryUsed": false,
+    "physicalAcceptanceCompleted": false
+  },
+  "auditExceptions": [
+    {
+      "kind": "read_only_metadata_scope",
+      "summary": "One broad DescribeLoadBalancers call returned metadata for an unrelated load balancer. No unrelated resource was modified and no further unrelated inspection was performed."
+    }
+  ],
+  "teardown": {
+    "runtimeStackDeleted": true,
+    "bootstrapStackDeleted": true,
+    "vpcDeleted": true,
+    "databaseDeleted": true,
+    "ecrDeleted": true,
+    "evidenceBucketDeleted": true,
+    "secretsDeleted": true,
+    "certificateDeleted": true,
+    "iamRolesDeleted": true,
+    "logGroupDeleted": true,
+    "attestationKeyState": "PendingDeletion",
+    "attestationKeyDeletionDate": "2026-08-04T17:58:44.635Z"
+  },
+  "productionModified": false,
+  "productionDataAccessed": false,
+  "productionCanaryContacted": false
+}

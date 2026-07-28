@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "mission-control-v1-staging-vpc-https-probe/1",
+  "runId": "stg-20260728e",
+  "clusterArn": "arn:aws:ecs:us-east-1:661452835066:cluster/mission-control-v1-staging-stg-20260728e-cluster",
+  "taskDefinitionArn": "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-https-probe:3",
+  "taskArn": "arn:aws:ecs:us-east-1:661452835066:task/mission-control-v1-staging-stg-20260728e-cluster/713a143494d24e54a882dd8fc5c73e23",
+  "startedAt": "2026-07-28T17:08:41.423000-04:00",
+  "stoppedAt": "2026-07-28T17:10:00.403000-04:00",
+  "exitCode": 0,
+  "tlsAuthority": "leaf-der-sha256-pin-only",
+  "satisfiesIndependentTlsAcceptance": false,
+  "results": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "cert": "7e49263e33e486e9eba8f84a7594579299e340551ddc64f129302ac78bf74aa1"
+    },
+    {
+      "path": "/api/readiness",
+      "status": 200,
+      "cert": "7e49263e33e486e9eba8f84a7594579299e340551ddc64f129302ac78bf74aa1"
+    }
+  ],
+  "logMessages": [
+    "{\"event\":\"v1_vpc_https_leaf_pin_reachability_probe\",\"tlsAuthority\":\"leaf-der-sha256-pin-only\",\"satisfiesIndependentTlsAcceptance\":false,\"results\":[{\"path\":\"/api/health\",\"status\":200,\"cert\":\"7e49263e33e486e9eba8f84a7594579299e340551ddc64f129302ac78bf74aa1\"},{\"path\":\"/api/readiness\",\"status\":200,\"cert\":\"7e49263e33e486e9eba8f84a7594579299e340551ddc64f129302ac78bf74aa1\"}]}"
+  ]
+}

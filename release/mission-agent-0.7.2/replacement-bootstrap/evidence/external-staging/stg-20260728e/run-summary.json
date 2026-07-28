@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "mission-control-v1-external-staging-run-summary/1",
+  "runId": "stg-20260728e",
+  "disposition": "accepted_external_ecs_staging",
+  "acceptedBaseCommit": "8922b5520ef0ad22b1e28240e9c55a5284a701b5",
+  "stagedSourceCommit": "4f5e88cdd5d9ab62d739e012fe732866b9ca95e0",
+  "stagedSourceTree": "dcb9b5dfe1d3411b2c9ffb996d4886078a2c9294",
+  "sourceBundle": {
+    "path": "release-source.bundle",
+    "requiredBase": "8922b5520ef0ad22b1e28240e9c55a5284a701b5"
+  },
+  "bootstrapManifestCanonicalDigest": "21161b79be8479318a27768b354a782e305856df81a59e50a6f668e6590cb766",
+  "bootstrapManifestByteSha256": "4e7cb26b49394f81a0fc81a189a634345636a61ab096f27d952097a0ecbf819f",
+  "images": {
+    "web": "sha256:c18a0f41ab886d9124ac7cb1d2688e47c36e8c5557d95e02f3ed25840e6c3317",
+    "projectBrainWorker": "sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d"
+  },
+  "buildIdentities": {
+    "web": "f5ac9084a327e926afb7fce124a3768f459826bbdc67fdb74d2e047b4f1b3164",
+    "projectBrainWorker": "acf1f1a132b508b2422f16dc900e01b7e204d1dc818ad76959d0f41c622fb4ba"
+  },
+  "configurationDigest": "1523c5f8210466f7640f54c882a951c81fd20d18b81c34298203c86829a8362f",
+  "runtimeEvidenceChecksum": "49f3406f875d7f103198b2ef62a7617b0039079417533aeccaae9c4790cdea09",
+  "databaseBindingReceiptChecksum": "b5b8c79d15f0deefa0f26a0eecfc26208f62ba8c26b4790fe6ad6b44d8f659eb",
+  "attestationPublicKeySpkiSha256": "355a00543c1f6cacd112f7ebfe7f7e59ad1f7f9f050ad38b12a22338d612f418",
+  "migration": {
+    "emptyDatabaseThrough": "0030",
+    "upgradePath": "0028-to-0030",
+    "idempotentRerunPending": 0,
+    "representativeDataPreserved": true,
+    "directRuntimeMutationDenied": true
+  },
+  "https": {
+    "tlsMinimum": "TLSv1.2",
+    "certificatePinning": "exact staging certificate",
+    "health": 200,
+    "readiness": 200,
+    "unauthenticatedProductionRoute": 403,
+    "accepted": true
+  },
+  "projectBrain": {
+    "ready": true,
+    "coreVersion": "0.4.0",
+    "consumerContract": "1.0",
+    "artifactSchema": "2.5.0",
+    "implementationDrift": false
+  },
+  "validation": {
+    "focusedTrustAndProvenance": "28/28",
+    "typecheck": "passed",
+    "eslint": "passed",
+    "productionBuild": "passed with one pre-existing NFT trace warning",
+    "productionDependencyAudit": "0 vulnerabilities",
+    "fullSuite": "220/227; all seven failures reproduced identically on untouched base",
+    "regressions": 0
+  },
+  "estimatedAwsCostUsd": {
+    "range": "0.10-0.50",
+    "basis": "Short-lived single-task Fargate, ALB, db.t4g.micro RDS, KMS, ECR, S3, logs, and public IPv4 usage; final billing data was not yet available."
+  },
+  "teardown": {
+    "activeInfrastructureAbsent": true,
+    "kmsState": "PendingDeletion",
+    "kmsDeletionDate": "2026-08-04T17:39:27.365000-04:00",
+    "inactiveTaskDefinitionHistoryCount": 6
+  },
+  "macosRehearsalPerformed": false,
+  "productionResourcesContacted": false,
+  "productionResourcesModified": false,
+  "productionCanaryContacted": false
+}

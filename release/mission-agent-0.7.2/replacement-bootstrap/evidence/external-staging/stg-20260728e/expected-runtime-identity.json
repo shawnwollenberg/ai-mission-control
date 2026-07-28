@@ -1,0 +1,60 @@
+{
+  "awsAccountId": "661452835066",
+  "region": "us-east-1",
+  "clusterArn": "arn:aws:ecs:us-east-1:661452835066:cluster/mission-control-v1-staging-stg-20260728e-cluster",
+  "serviceArn": "arn:aws:ecs:us-east-1:661452835066:service/mission-control-v1-staging-stg-20260728e-cluster/mission-control-v1-staging-stg-20260728e-service",
+  "deploymentId": "ecs-svc/9321221066782642428",
+  "taskDefinitionArn": "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-task:3",
+  "taskArn": "arn:aws:ecs:us-east-1:661452835066:task/mission-control-v1-staging-stg-20260728e-cluster/4c751e398bb24988ad6c43387bf2219b",
+  "desiredCount": 1,
+  "runningCount": 1,
+  "pendingCount": 0,
+  "deploymentCount": 1,
+  "primaryRolloutState": "COMPLETED",
+  "taskLastStatus": "RUNNING",
+  "taskHealthStatus": "HEALTHY",
+  "targetHealth": "healthy",
+  "ecrRepositoryArn": "arn:aws:ecr:us-east-1:661452835066:repository/mission-control-v1-staging-stg-20260728e",
+  "imageDigest": "sha256:c18a0f41ab886d9124ac7cb1d2688e47c36e8c5557d95e02f3ed25840e6c3317",
+  "containers": {
+    "generic-worker": {
+      "imageDigest": "sha256:c18a0f41ab886d9124ac7cb1d2688e47c36e8c5557d95e02f3ed25840e6c3317",
+      "command": [
+        "node",
+        "node_modules/tsx/dist/cli.mjs",
+        "scripts/worker.ts"
+      ],
+      "essential": true
+    },
+    "project-brain-worker": {
+      "imageDigest": "sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d",
+      "command": [],
+      "essential": true
+    },
+    "remote-agent-worker": {
+      "imageDigest": "sha256:c18a0f41ab886d9124ac7cb1d2688e47c36e8c5557d95e02f3ed25840e6c3317",
+      "command": [
+        "node",
+        "node_modules/tsx/dist/cli.mjs",
+        "scripts/remote-agent-worker.ts"
+      ],
+      "essential": true
+    },
+    "web": {
+      "imageDigest": "sha256:c18a0f41ab886d9124ac7cb1d2688e47c36e8c5557d95e02f3ed25840e6c3317",
+      "command": [],
+      "essential": true
+    }
+  },
+  "taskRoleArn": "arn:aws:iam::661452835066:role/mission-control-v1-staging-stg-20260728e-task",
+  "executionRoleArn": "arn:aws:iam::661452835066:role/mission-control-v1-staging-stg-20260728e-execution",
+  "configurationDigest": "1523c5f8210466f7640f54c882a951c81fd20d18b81c34298203c86829a8362f",
+  "applicationCommit": "4f5e88cdd5d9ab62d739e012fe732866b9ca95e0",
+  "buildIdentityDigest": "f5ac9084a327e926afb7fce124a3768f459826bbdc67fdb74d2e047b4f1b3164",
+  "maximumEvidenceAgeMs": 300000,
+  "deploymentAttestationKeyArn": "arn:aws:kms:us-east-1:661452835066:key/3c048637-bbdc-4ac1-bb95-bdfde273e53d",
+  "missionAgentReleaseKeyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+  "stagingRunId": "stg-20260728e",
+  "bootstrapManifestDigest": "21161b79be8479318a27768b354a782e305856df81a59e50a6f668e6590cb766",
+  "signerFunctionArn": "arn:aws:lambda:us-east-1:661452835066:function:mcv1-stg-20260728e-signer"
+}

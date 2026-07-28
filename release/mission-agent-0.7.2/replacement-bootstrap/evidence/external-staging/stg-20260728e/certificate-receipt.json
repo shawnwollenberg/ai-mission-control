@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "mission-control-v1-staging-tls-certificate/1",
+  "runId": "stg-20260728e",
+  "region": "us-east-1",
+  "certificateArn": "arn:aws:acm:us-east-1:661452835066:certificate/24959cbf-c152-470f-8388-add1bc9828d2",
+  "domainName": "*.us-east-1.elb.amazonaws.com",
+  "certificateSha256": "9614b3110cb13e1c3d03955d8e6f92b8c0507d5e9bdfeaf1cea578190b785613",
+  "certificateDerSha256": "7e49263e33e486e9eba8f84a7594579299e340551ddc64f129302ac78bf74aa1",
+  "notBefore": "2026-07-28T15:49:58-04:00",
+  "notAfter": "2026-07-30T15:49:58-04:00",
+  "tags": {
+    "Environment": "staging",
+    "Project": "mission-control",
+    "Purpose": "v1-external-acceptance",
+    "Disposable": "true",
+    "ProductionAccess": "false",
+    "StagingRunId": "stg-20260728e"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "mission-control-v1-staging-zero-residue-verification/1",
+  "runId": "stg-20260728e",
+  "verifiedAt": "2026-07-28T21:42:18.569Z",
+  "stacks": {
+    "mission-control-v1-staging-stg-20260728e-runtime": true,
+    "mission-control-v1-staging-stg-20260728e-bootstrap": true,
+    "mission-control-v1-staging-stg-20260728e-deployment": true,
+    "mission-control-v1-staging-stg-20260728e-authority": true
+  },
+  "lambdaAbsent": true,
+  "iamRolesAbsent": {
+    "mission-control-v1-staging-stg-20260728e-authority-signer": true,
+    "mission-control-v1-staging-stg-20260728e-deployer": true,
+    "mission-control-v1-staging-stg-20260728e-cloudformation": true,
+    "mission-control-v1-staging-stg-20260728e-task": true,
+    "mission-control-v1-staging-stg-20260728e-execution": true,
+    "mission-control-v1-staging-stg-20260728e-probe": true,
+    "mission-control-v1-staging-stg-20260728e-collector": true
+  },
+  "evidenceBucketAbsent": true,
+  "ecrRepositoryAbsent": true,
+  "databaseAbsent": true,
+  "certificateAbsent": true,
+  "vpcAbsent": true,
+  "activeEcs": {
+    "clusterStatus": "INACTIVE",
+    "activeServicesCount": 0,
+    "runningTasksCount": 0,
+    "pendingTasksCount": 0,
+    "serviceStatus": "INACTIVE"
+  },
+  "inactiveTaskDefinitionHistory": [
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-task:1",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-task:2",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-task:3",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-https-probe:1",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-https-probe:2",
+    "arn:aws:ecs:us-east-1:661452835066:task-definition/mission-control-v1-staging-stg-20260728e-https-probe:3"
+  ],
+  "kms": {
+    "keyArn": "arn:aws:kms:us-east-1:661452835066:key/3c048637-bbdc-4ac1-bb95-bdfde273e53d",
+    "keyState": "PendingDeletion",
+    "enabled": false,
+    "deletionDate": "2026-08-04T17:39:27.365000-04:00"
+  },
+  "activeInfrastructureAbsent": true
+}

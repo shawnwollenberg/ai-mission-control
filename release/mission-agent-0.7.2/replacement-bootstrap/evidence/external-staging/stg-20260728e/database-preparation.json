@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "mission-control-v1-staging-database-preparation/1",
+  "runId": "stg-20260728e",
+  "rdsArn": "arn:aws:rds:us-east-1:661452835066:db:mission-control-v1-staging-stg-20260728e-postgres",
+  "endpoint": "mission-control-v1-staging-stg-20260728e-postgres.c81soy2am29r.us-east-1.rds.amazonaws.com",
+  "databaseName": "mission_control_v1_staging_stg_20260728e",
+  "caIdentifier": "rds-ca-rsa2048-g1",
+  "engine": "postgres",
+  "engineVersion": "17.6",
+  "migrationCount": 30,
+  "emptyDatabaseThrough": "0030",
+  "idempotentRerunPending": 0,
+  "upgradePath": "0028-to-0030",
+  "representativeDataPreserved": true,
+  "runtimeRole": "mission_control_v1_staging_runtime",
+  "controllerRole": "mission_control_v1_staging_controller",
+  "directRuntimeMutationDenied": true,
+  "positiveRuntimeChecks": [
+    "schema_migrations_read",
+    "authentication_lookup",
+    "worker_read_write"
+  ],
+  "governedControllerFunctionAvailable": true,
+  "credentialsStoredOnlyInSecret": "arn:aws:secretsmanager:us-east-1:661452835066:secret:mission-control-v1-staging-stg-20260728e-runtime-Iegjr1"
+}

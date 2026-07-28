@@ -1,0 +1,12 @@
+{
+  "applicationCommit": "4f5e88cdd5d9ab62d739e012fe732866b9ca95e0",
+  "bootstrapManifestDigest": "21161b79be8479318a27768b354a782e305856df81a59e50a6f668e6590cb766",
+  "databaseBindingReceiptDigest": "b5b8c79d15f0deefa0f26a0eecfc26208f62ba8c26b4790fe6ad6b44d8f659eb",
+  "desiredTaskCount": 1,
+  "projectBrainImageDigest": "sha256:59565411ae82bd962039df1d616a6ba20b6e87adf38553f0d072ac33675afe2d",
+  "productionContractVersion": "mission-control-production-rollout-v1",
+  "routesEnabled": true,
+  "schemaVersion": "mission-control-v1-external-staging-configuration/1",
+  "stagingRunId": "stg-20260728e",
+  "webImageDigest": "sha256:c18a0f41ab886d9124ac7cb1d2688e47c36e8c5557d95e02f3ed25840e6c3317"
+}
