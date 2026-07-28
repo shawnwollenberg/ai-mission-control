@@ -37,11 +37,24 @@ RUN curl --fail --location --silent --show-error \
 
 FROM ${NODE_IMAGE} AS runner
 ARG PROJECT_BRAIN_COMMIT=09cae9482712decc20f043aecb38d944beacfe20
+ARG MC_SOURCE_COMMIT
+ARG MC_SOURCE_STATE
+ARG MC_BUILD_MODE=disposable
+ARG MC_BUILD_TIMESTAMP
+ARG MC_BUILDER_IDENTITY
+ARG MC_REPOSITORY_IDENTITY
 LABEL org.opencontainers.image.revision="${PROJECT_BRAIN_COMMIT}" \
       io.mission-control.project-brain.version="0.4.0" \
       io.mission-control.project-brain.contract="1.0" \
       io.mission-control.project-brain.schema="2.5.0"
 ENV NODE_ENV=production \
+    MC_SOURCE_COMMIT=${MC_SOURCE_COMMIT} \
+    MC_SOURCE_STATE=${MC_SOURCE_STATE} \
+    MC_BUILD_MODE=${MC_BUILD_MODE} \
+    MC_BUILD_TIMESTAMP=${MC_BUILD_TIMESTAMP} \
+    MC_BUILDER_IDENTITY=${MC_BUILDER_IDENTITY} \
+    MC_REPOSITORY_IDENTITY=${MC_REPOSITORY_IDENTITY} \
+    MC_APPLICATION_BUNDLE_ROOT=/app \
     PROJECT_BRAIN_EXECUTABLE=/opt/project-brain/bin/project-brain \
     PROJECT_BRAIN_SKILL_PATH=/opt/project-brain-skill \
     PROJECT_BRAIN_REQUIRED_VERSION=0.4.0 \
@@ -78,7 +91,8 @@ COPY remote-agent ./remote-agent
 COPY templates ./templates
 COPY db ./db
 COPY agents ./agents
-COPY tsconfig.json package.json ./
+COPY tsconfig.json package.json package-lock.json ./
+RUN node scripts/generate-v1-build-provenance.mjs
 RUN groupadd --system --gid 1001 mission-control \
     && useradd --system --uid 1001 --gid mission-control --home-dir /nonexistent mission-control \
     && mkdir -p /repositories \
