@@ -74,6 +74,19 @@ function rollbackRoot(authorization: ReplacementAuthorization): string {
   return join(stagingRoot(authorization), "rollback-0.6.8");
 }
 
+export async function removeStagedReplacementAssets(authorization: ReplacementAuthorization): Promise<void> {
+  const root = stagingRoot(authorization);
+  if (!root.startsWith(`${LOCAL_AGENT_HOME}/replacement-bootstrap/`))
+    throw new Error("Replacement staging root escaped the approved agent home.");
+  for (const path of [stagedArtifact(authorization), stagedPlist(authorization), stagedArchive(authorization)]) {
+    try {
+      await unlink(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  }
+}
+
 async function fileChecksum(path: string): Promise<string> {
   return sha256(Uint8Array.from(await readFile(path)));
 }

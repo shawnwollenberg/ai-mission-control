@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "mission-agent-replacement-operator-artifact-v1",
+  "artifact": "dist/mission-agent-replacement-operator-v1.mjs",
+  "sha256": "488556e1bc02ae0a2c002fd2fecc8dd50af15d04d8490ccf217fdf40aee49680",
+  "byteLength": 91955,
+  "installPath": "/Users/shawnwollenberg/Library/Application Support/WallyWeb/MissionAgentReplacement/operator-v1.mjs",
+  "mode": "0500",
+  "launchAgentLabel": "com.wallyweb.mission-agent.replacement-operator",
+  "appleCodeSigning": "deferred-v1-owner-controlled-mac",
+  "notarization": "deferred-v1-owner-controlled-mac"
+}
