@@ -58,6 +58,7 @@ const evidence = {
   configurationDigest: digest("b"),
   applicationCommit: "c".repeat(40),
   buildIdentityDigest: digest("d"),
+  bootstrapManifestDigest: digest("f"),
 };
 const expected = {
   ...evidence,
@@ -70,14 +71,22 @@ delete expected.runningTaskArns;
 
 test("build provenance is strict and digest-stable", () => {
   const provenance = {
-    schemaVersion: "mission-control-build-provenance-v1",
+    schemaVersion: "mission-control-build-provenance-v2",
     sourceCommit: "c".repeat(40),
+    sourceTreeObject: "f".repeat(40),
+    sourceArchiveDigest: digest("0"),
+    sourceInputManifestDigest: digest("9"),
     sourceState: "clean",
     buildMode: "production",
     buildTimestamp: "2026-07-27T17:00:00.000Z",
     builderIdentity: "staging-release-builder",
     repositoryIdentity: "wallyweb/mission-control",
+    buildWorkflowIdentity: "reviewed-staging-build-v1",
     lockfileDigest: digest("1"),
+    dockerfileDigests: { web: digest("3"), projectBrain: digest("4") },
+    baseImageDigests: { webNode: `sha256:${digest("a")}`, projectBrainNode: `sha256:${digest("b")}` },
+    buildScriptDigests: { generateProvenance: digest("5"), verifySourceInput: digest("6") },
+    configurationTemplateDigests: { ecs: digest("7"), bootstrap: digest("8") },
     applicationBundleDigest: digest("2"),
     productionContractVersion: "mission-control-production-rollout-v1",
     databaseCompatibility: { minimum: "0028", maximum: "0030" },
