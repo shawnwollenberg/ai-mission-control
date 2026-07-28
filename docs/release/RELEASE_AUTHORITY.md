@@ -1,5 +1,22 @@
 # Release Authority
 
+## Mission Agent 0.7.2 replacement-bootstrap V1 boundary
+
+Release Authority proves the immutable Mission Agent artifact and manifest; it
+does not by itself authorize a host mutation. The V1 replacement path adds a
+single-use deployment-, operator-, host-, agent-, artifact-, fence-, and
+authorization-bound grant. Provider completion is accepted only from the
+enrolled host's durable signed receipt. After the first mutation intent,
+forward expiry or Mission Control deployment replacement cannot remove the
+exact rollback obligation.
+
+The authoritative controller database credential is scoped to the web
+component that serves the six governed routes. Worker containers receive only
+the ordinary runtime database credential. Rollback closure requires fresh
+host-signed restored-process observations plus authenticated heartbeat,
+capability, repository identity, inventory, and projection-replay evidence.
+The database never manufactures host observations.
+
 ## 1. Purpose and scope
 
 Release Authority protects the identity and integrity of distributable Mission

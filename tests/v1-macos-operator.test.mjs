@@ -35,6 +35,10 @@ const initialJournal = emptyV1OperatorJournal(binding, key);
 const forward = createV1OperatorRequest(
   {
     ...binding,
+    currentControllerDeploymentId: "ecs-svc/123",
+    currentControllerFencingGeneration: 7,
+    grantId: "12121212-1212-4212-8212-121212121212",
+    grantChecksum: digest("3"),
     operation: "stage_artifact",
     providerMutationId: "22222222-2222-4222-8222-222222222222",
     sequence: 1,
@@ -54,6 +58,8 @@ test("v1 operator request binds every immutable execution identity", () => {
     { targetArtifactSha256: digest("f") },
     { fencingGeneration: 8 },
     { missionControlDeploymentId: "ecs-svc/other" },
+    { currentControllerDeploymentId: "ecs-svc/other" },
+    { currentControllerFencingGeneration: 8 },
   ])
     assert.throws(
       () => verifyV1OperatorRequest({ ...forward, ...changed }, key, binding, new Date("2026-07-27T18:00:00.000Z")),
@@ -66,9 +72,14 @@ test("forward expiry fails closed while exact rollback obligation remains usable
   const rollback = createV1OperatorRequest(
     {
       ...binding,
+      currentControllerDeploymentId: "ecs-svc/123",
+      currentControllerFencingGeneration: 7,
+      grantId: "13131313-1313-4313-8313-131313131313",
+      grantChecksum: digest("4"),
       operation: "restore_previous_version",
       providerMutationId: "44444444-4444-4444-8444-444444444444",
       sequence: 1,
+      lifecycleSequence: 5,
       requestMessageId: "55555555-5555-4555-8555-555555555555",
       nonce: "operator-rollback-nonce",
       issuedAt: "2026-07-28T17:59:00.000Z",
@@ -176,16 +187,32 @@ test("operator grant independently pins executable and execution identities", ()
   const grant = createV1OperatorGrant(
     {
       schemaVersion: "mission-agent-v1-operator-grant-v1",
+      grantId: "abababab-abab-4bab-8bab-abababababab",
+      grantKind: "forward",
       binding,
       credentialId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      operationId: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd",
+      providerMutationId: forward.providerMutationId,
+      sequence: 1,
+      lifecycleSequence: 4,
+      hostFingerprint: `ed25519-spki-sha256:${digest("b")}`,
+      operatorArtifactSha256: digest("a"),
+      operatorProtocolVersion: "1",
+      configurationVersion: 4,
+      originatingForwardDeploymentId: binding.missionControlDeploymentId,
+      currentControllerDeploymentId: binding.missionControlDeploymentId,
+      currentControllerFencingGeneration: binding.fencingGeneration,
+      rollbackObligationId: binding.rollbackObligationId,
       approvedExecutableChecksum: digest("a"),
-      allowedOperations: ["stage_artifact", "verify_artifact"],
+      allowedOperation: "stage_artifact",
       missionControlUrl: "https://mission-control.invalid",
       issuedAt: "2026-07-27T18:00:00.000Z",
+      expiresAt: "2026-07-27T18:10:00.000Z",
     },
     key,
   );
-  verifyV1OperatorGrant(grant, key);
+  verifyV1OperatorGrant(grant, key, new Date("2026-07-27T18:05:00.000Z"));
+  assert.throws(() => verifyV1OperatorGrant(grant, key, new Date("2026-07-27T18:10:00.000Z")));
   assert.throws(() => verifyV1OperatorGrant({ ...grant, approvedExecutableChecksum: digest("b") }, key));
 });
 
@@ -203,6 +230,10 @@ test("host provider rejects control-plane-only vocabulary before any boundary or
   const request = createV1OperatorRequest(
     {
       ...binding,
+      currentControllerDeploymentId: "ecs-svc/123",
+      currentControllerFencingGeneration: 7,
+      grantId: "14141414-1414-4414-8414-141414141414",
+      grantChecksum: digest("5"),
       operation: "request_drain",
       providerMutationId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
       sequence: 1,

@@ -1,0 +1,1102 @@
+{
+  "evidenceVersion": "mission-control-v1-local-production-https-acceptance-v1",
+  "generatedAt": "2026-07-28T15:56:47.571Z",
+  "sourceCommit": "0502c8e620315ca068c2e03bac1f61043e40c4d9",
+  "sourceTreeState": "dirty-acceptance-candidate",
+  "changedFileChecksums": {
+    "app/api/mission-agent/replacement-bootstrap/claim/route.ts": "df333e999141acb77f44d05199645461fe41e3fe0fec82093b492974f3c98495",
+    "app/api/mission-agent/replacement-bootstrap/decision/route.ts": "0eb5f3512b3e593b8736665c0148e8d29bb401e998a11be6272f0b0a4b605208",
+    "app/api/mission-agent/replacement-bootstrap/failure/route.ts": "1d36e7ba83baf84a2f37543751e33110254690da01c5b85e5c911581ee5b8f89",
+    "app/api/mission-agent/replacement-bootstrap/intent/route.ts": "516cfc9fb61a76062947e0c3019d42da2c99c425746f48cafc71c86671bde174",
+    "app/api/mission-agent/replacement-bootstrap/receipt/route.ts": "dfd4525af8a1ef73d820c2669979e7ff2b6dd898bd2cef086e68dc9811ebd1e5",
+    "app/api/mission-agent/replacement-bootstrap/status/route.ts": "f22f57df1fd4a78efc92fcd37d50ff2e832d38ddec4e1125fc4843bd282fc27c",
+    "application/replacement-bootstrap-governance.ts": "0ebb67be7363d790db4ff1a5cf03de41fd5816bac84f04dc9b2c3e8ca01e155d",
+    "application/v1-macos-operator-grant.ts": "2eccbf80e918cc4f5218db015ffb4eedcea05733f8f3ea0bc5280105eb29a25b",
+    "application/v1-macos-operator-journal.ts": "ba7dd0089755c43de9e18eb0aaafa59032e290d11a8281cb7b3f247bcf9810ec",
+    "application/v1-macos-operator.ts": "9eda5a30db3b002650c45096e8d2c241f9640f5b4fe9becdb4f61b55af88147d",
+    "db/migrations/0030_mission_agent_v1_production_rollout.sql": "6a55b8f93d10e687f6c0195dbd625918d9fe77e05d8e2d7b330e8dd8d3dcd8c7",
+    "dist/mission-agent-replacement-operator-v1.json": "577100e27da23023c8d1a9386316245dfede868b8e29959a46dc74fc388fc364",
+    "dist/mission-agent-replacement-operator-v1.mjs": "450a11e802f6076323dd176eb56f3e48d9299f11bf1d554240ce6403f56fb82f",
+    "docs/release/RELEASE_AUTHORITY.md": "d4f89450d4d8aa53955d12d4f8f4e273c841f338df9b05b3780c48af11e5299c",
+    "docs/release/RELEASE_CHECKLIST.md": "3500cd234bc45a762164fd42a33b41827dfaa9008ace8302bb8b16a33fa6c1ee",
+    "docs/release/V1_MACOS_OPERATOR.md": "81b03cb207797848a5967f78e01e821ca2f8731e776cdd6497a5de8e892398bd",
+    "docs/release/V1_PRODUCTION_ROLLOUT.md": "d1f92f5da4326968d54a650b082cf49bc53164b2b6cbb2f1fa3291ae8379524b",
+    "infra/mission-control-v1-ecs-stack.ts": "84087d03c2bbaee3506e70b899b09101669dfc6ad31e837bbbd61df3d7b8ba53",
+    "package.json": "f9a2674ff5315c75f31f50a68875bf43e891070a92914c04173a0f913ad84506",
+    "scripts/build-v1-macos-operator.mjs": "82cf1664da7b3cdc74a61a29a0c7293c94b353c929c4002127a30ba707bf7748",
+    "scripts/run-v1-production-migration-acceptance.mjs": "38c630fcbc2dd4770d52f559353d9e85addb8880916ff9cfaa8761255c7ab6cb",
+    "scripts/v1-macos-operator.ts": "80015ed4626389dcbfbafde9d7d5c9473e39da3e64595834dda78ca94503c7ad",
+    "tests/v1-macos-operator.test.mjs": "9487ee64edf8f462d58e3ab5b146e7a75e7b6fc4afeaafa80b83ed10a7bb4d62",
+    "app/api/mission-agent/replacement-bootstrap/authorize/route.ts": "4b8e1c540016f665531f94b6936c7444750067f3500e274d45b6f879c19b4f1a",
+    "application/v1-operator-host-identity.ts": "790500f2c166c8bef3da0836a86f2566929d6601d12bc9847b3e705de0e91704",
+    "application/v1-production-route-gate.ts": "875344c5b9055e5d8231f36513e39b5814e30ec8a036448d679753b57056993b",
+    "application/v1-rollout-contract.ts": "ff0234674405d17831695ccf33aee9e20ba71342a600b0d8399bad8a3a94cb2f",
+    "application/v1-rollout-lifecycle.ts": "a9b99096608da21a01e440720587694606a8746a3b22d879baea7a8e9c5e0a3e",
+    "lib/v1-controller-database.ts": "c6b80a807848f861de4f2cfcd8d7ada0e8b2386a60d6fd11c6be9c117068b116",
+    "scripts/run-v1-local-production-https-acceptance.mjs": "7efeb89f79803668bbdd160cf9cae9a0bce1cfe7a3cce42a3b58cf1d4fc5d6b8",
+    "scripts/v1-disposable-operator-process.mjs": "70013b73b9fefc823d20832a72f72db54ae96868a49ae2b77fbe09aec16ae4cb",
+    "tests/v1-operator-host-identity.test.mjs": "940e0b6212ca95cf0e6c5f1d1aff234d67ccef77fb7740b0f5b2de8720c74c65"
+  },
+  "candidateTreeChecksum": "9742cf534f9eca07c77926ecadb9b80709ecc653b5c3a6483fcb7d284e7dab4e",
+  "migration0030Checksum": "6a55b8f93d10e687f6c0195dbd625918d9fe77e05d8e2d7b330e8dd8d3dcd8c7",
+  "operatorArtifactChecksum": "450a11e802f6076323dd176eb56f3e48d9299f11bf1d554240ce6403f56fb82f",
+  "mode": "local-production-mode-standalone-nextjs-over-https",
+  "database": "PostgreSQL 17, migrations 0001-0030",
+  "hostOperator": "stateful disposable provider using the production operator protocol and durable journal",
+  "providerAuthenticatedEcsEvidence": "synthetic local fixture; external ECS staging still required",
+  "physicalMacOSRehearsal": "not performed; separately authorized staging still required",
+  "receiptLossBoundary": "forced after every provider mutation before control-plane receipt delivery",
+  "productionContacted": false,
+  "namedCanaryContacted": false,
+  "results": [
+    {
+      "name": "success",
+      "state": "success_verified",
+      "lifecycle_sequence": "55",
+      "mutation_count": 5,
+      "receipt_count": 5,
+      "rollback_state": "verified_closed",
+      "operationCounts": {
+        "stage_artifact": 1,
+        "stop_agent": 1,
+        "install_agent": 1,
+        "install_launch_configuration": 1,
+        "start_agent": 1
+      },
+      "rejectionResults": [
+        {
+          "handler": "claim",
+          "case": "wrong-authorization-fingerprint",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "wrong-authorization",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "wrong-execution",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "invalid-state-transition",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "invalid-sequence",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "stale-fencing-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "invalid-claim-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "malformed-event-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "unknown-request-field",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "wrong-canary",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "invalid-credential",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "invalid-signature",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "claim",
+          "case": "reused-nonce-and-message-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "wrong-authorization-fingerprint",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "wrong-authorization",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "wrong-execution",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "invalid-state-transition",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "invalid-sequence",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "stale-fencing-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "invalid-claim-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "malformed-event-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "unknown-request-field",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "wrong-canary",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "invalid-credential",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "invalid-signature",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "intent",
+          "case": "reused-nonce-and-message-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "wrong-authorization-fingerprint",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "wrong-authorization",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "wrong-execution",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "invalid-state-transition",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "invalid-sequence",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "stale-fencing-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "invalid-claim-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "malformed-event-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "unknown-request-field",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "wrong-canary",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "invalid-credential",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "invalid-signature",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "receipt",
+          "case": "reused-nonce-and-message-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "wrong-authorization-fingerprint",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "wrong-authorization",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "wrong-execution",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "invalid-state-transition",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "invalid-sequence",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "stale-fencing-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "invalid-claim-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "malformed-event-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "unknown-request-field",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "wrong-canary",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "invalid-credential",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "invalid-signature",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "decision",
+          "case": "reused-nonce-and-message-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "wrong-authorization-fingerprint",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "wrong-authorization",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "wrong-execution",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "invalid-state-transition",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "invalid-sequence",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "stale-fencing-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "invalid-claim-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "malformed-event-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "unknown-request-field",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "wrong-canary",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "invalid-credential",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "invalid-signature",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "status",
+          "case": "reused-nonce-and-message-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "wrong-authorization-fingerprint",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "wrong-authorization",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "wrong-execution",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "invalid-state-transition",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "invalid-sequence",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "stale-fencing-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "invalid-claim-generation",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "malformed-event-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "unknown-request-field",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "wrong-canary",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "invalid-credential",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "invalid-signature",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        },
+        {
+          "handler": "failure",
+          "case": "reused-nonce-and-message-id",
+          "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+          "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+        }
+      ],
+      "staleRollbackCloseZeroMutation": null
+    },
+    {
+      "name": "rollback-prefix-1",
+      "state": "rollback_verified",
+      "lifecycle_sequence": "25",
+      "mutation_count": 2,
+      "receipt_count": 2,
+      "rollback_state": "verified_closed",
+      "operationCounts": {
+        "stage_artifact": 1,
+        "remove_staged_artifact": 1
+      },
+      "rejectionResults": [],
+      "staleRollbackCloseZeroMutation": true
+    },
+    {
+      "name": "rollback-prefix-2",
+      "state": "rollback_verified",
+      "lifecycle_sequence": "43",
+      "mutation_count": 4,
+      "receipt_count": 4,
+      "rollback_state": "verified_closed",
+      "operationCounts": {
+        "stage_artifact": 1,
+        "stop_agent": 1,
+        "start_agent": 1,
+        "remove_staged_artifact": 1
+      },
+      "rejectionResults": [],
+      "staleRollbackCloseZeroMutation": true
+    },
+    {
+      "name": "rollback-prefix-3",
+      "state": "rollback_verified",
+      "lifecycle_sequence": "61",
+      "mutation_count": 6,
+      "receipt_count": 6,
+      "rollback_state": "verified_closed",
+      "operationCounts": {
+        "stage_artifact": 1,
+        "stop_agent": 1,
+        "install_agent": 1,
+        "restore_previous_version": 1,
+        "start_agent": 1,
+        "remove_staged_artifact": 1
+      },
+      "rejectionResults": [],
+      "staleRollbackCloseZeroMutation": true
+    },
+    {
+      "name": "rollback-prefix-4",
+      "state": "rollback_verified",
+      "lifecycle_sequence": "79",
+      "mutation_count": 8,
+      "receipt_count": 8,
+      "rollback_state": "verified_closed",
+      "operationCounts": {
+        "stage_artifact": 1,
+        "stop_agent": 1,
+        "install_agent": 1,
+        "install_launch_configuration": 1,
+        "restore_previous_launch_configuration": 1,
+        "restore_previous_version": 1,
+        "start_agent": 1,
+        "remove_staged_artifact": 1
+      },
+      "rejectionResults": [],
+      "staleRollbackCloseZeroMutation": true
+    },
+    {
+      "name": "rollback-prefix-5",
+      "state": "rollback_verified",
+      "lifecycle_sequence": "97",
+      "mutation_count": 10,
+      "receipt_count": 10,
+      "rollback_state": "verified_closed",
+      "operationCounts": {
+        "stage_artifact": 1,
+        "stop_agent": 2,
+        "install_agent": 1,
+        "install_launch_configuration": 1,
+        "start_agent": 2,
+        "restore_previous_launch_configuration": 1,
+        "restore_previous_version": 1,
+        "remove_staged_artifact": 1
+      },
+      "rejectionResults": [],
+      "staleRollbackCloseZeroMutation": true
+    }
+  ],
+  "rejectionMatrix": {
+    "handlers": ["claim", "intent", "receipt", "decision", "status", "failure"],
+    "casesPerHandler": 13,
+    "canonicalOperationalSnapshotsEqual": true,
+    "cases": [
+      {
+        "handler": "claim",
+        "case": "wrong-authorization-fingerprint",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "wrong-authorization",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "wrong-execution",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "invalid-state-transition",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "invalid-sequence",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "stale-fencing-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "invalid-claim-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "malformed-event-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "unknown-request-field",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "wrong-canary",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "invalid-credential",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "invalid-signature",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "claim",
+        "case": "reused-nonce-and-message-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "wrong-authorization-fingerprint",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "wrong-authorization",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "wrong-execution",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "invalid-state-transition",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "invalid-sequence",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "stale-fencing-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "invalid-claim-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "malformed-event-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "unknown-request-field",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "wrong-canary",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "invalid-credential",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "invalid-signature",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "intent",
+        "case": "reused-nonce-and-message-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "wrong-authorization-fingerprint",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "wrong-authorization",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "wrong-execution",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "invalid-state-transition",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "invalid-sequence",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "stale-fencing-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "invalid-claim-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "malformed-event-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "unknown-request-field",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "wrong-canary",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "invalid-credential",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "invalid-signature",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "receipt",
+        "case": "reused-nonce-and-message-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "wrong-authorization-fingerprint",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "wrong-authorization",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "wrong-execution",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "invalid-state-transition",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "invalid-sequence",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "stale-fencing-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "invalid-claim-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "malformed-event-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "unknown-request-field",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "wrong-canary",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "invalid-credential",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "invalid-signature",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "decision",
+        "case": "reused-nonce-and-message-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "wrong-authorization-fingerprint",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "wrong-authorization",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "wrong-execution",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "invalid-state-transition",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "invalid-sequence",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "stale-fencing-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "invalid-claim-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "malformed-event-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "unknown-request-field",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "wrong-canary",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "invalid-credential",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "invalid-signature",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "status",
+        "case": "reused-nonce-and-message-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "wrong-authorization-fingerprint",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "wrong-authorization",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "wrong-execution",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "invalid-state-transition",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "invalid-sequence",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "stale-fencing-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "invalid-claim-generation",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "malformed-event-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "unknown-request-field",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "wrong-canary",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "invalid-credential",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "invalid-signature",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      },
+      {
+        "handler": "failure",
+        "case": "reused-nonce-and-message-id",
+        "beforeChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0",
+        "afterChecksum": "6ba8b2e98b32005d5a2052dd09d2f40295fa30b96b23a75479661445ac5226d0"
+      }
+    ]
+  }
+}

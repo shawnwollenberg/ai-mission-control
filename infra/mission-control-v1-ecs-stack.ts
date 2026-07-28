@@ -128,6 +128,7 @@ export class MissionControlV1EcsStack extends cdk.Stack {
       },
       secrets: {
         ...commonSecrets,
+        V1_CONTROLLER_DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret, "v1ControllerDatabaseUrl"),
         MISSION_CONTROL_SESSION_SECRET: ecs.Secret.fromSecretsManager(runtimeSecret, "sessionSecret"),
       },
       logging: ecs.LogDrivers.awsLogs({ logGroup, streamPrefix: "web" }),

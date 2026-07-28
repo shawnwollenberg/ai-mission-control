@@ -6,11 +6,24 @@
     "replacementTests": { "passed": 38, "failed": 0 },
     "governanceIntegrationTests": { "passed": 4, "failed": 0 },
     "httpEndToEndScenarios": { "passed": 10, "failed": 0 },
+    "localProductionHttpsAcceptance": {
+      "passed": true,
+      "successfulForwardLifecycle": 1,
+      "verifiedRollbackLifecycles": 5,
+      "sixHandlerZeroMutationCases": 78,
+      "operatorSubprocessRecovery": "passed",
+      "controllerReplacementRecovery": "passed"
+    },
+    "v1OperatorTests": { "passed": 11, "failed": 0 },
+    "v1HostIdentityTests": { "passed": 2, "failed": 0 },
+    "v1EcsIdentityTests": { "passed": 18, "failed": 0 },
     "migrationUpgradeRehearsal": "passed",
-    "emptyDatabaseMigrationsThrough0029": "passed"
+    "emptyDatabaseMigrationsThrough0030": "passed",
+    "migration0028Through0030": "passed",
+    "productionApplicationRoleBoundary": "passed"
   },
   "repositoryValidation": {
-    "fullSuite": { "passed": 191, "failed": 7, "total": 198 },
+    "fullSuite": { "passed": 220, "failed": 7, "total": 227 },
     "untouchedBaseSuite": { "passed": 152, "failed": 7, "total": 159 },
     "failureClassification": "all seven failures reproduce on untouched base",
     "typecheck": "passed",
@@ -48,5 +61,12 @@
     "signedArtifactModified": false,
     "productionMigrationApplied": false,
     "deploymentPerformed": false
+  },
+  "remainingExternalAcceptance": {
+    "ecsStagingRehearsal": "pending separate authorization",
+    "physicalMacosOperatorRehearsal": "pending separate authorization",
+    "productionPreflight": "pending separate authorization",
+    "productionMigration": "not authorized",
+    "canaryReplacement": "not authorized"
   }
 }

@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { chmod, mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { canonicalJson } from "./v1-production-runtime-identity";
@@ -41,6 +41,10 @@ export type V1OperatorBinding = {
 };
 
 export type V1OperatorRequest = V1OperatorBinding & {
+  currentControllerDeploymentId: string;
+  currentControllerFencingGeneration: number;
+  grantId: string;
+  grantChecksum: string;
   operation: V1OperatorOperation;
   providerMutationId: string;
   sequence: number;
@@ -54,6 +58,7 @@ export type V1OperatorRequest = V1OperatorBinding & {
 };
 
 export type V1OperatorJournalEntry = {
+  localJournalEntryId: string;
   sequence: number;
   operation: V1OperatorOperation;
   providerMutationId: string;
@@ -100,7 +105,8 @@ function authenticate(value: unknown, key: string): string {
 }
 
 export function requestPayload(request: V1OperatorRequest): Omit<V1OperatorRequest, "requestAuthenticationTag"> {
-  const { requestAuthenticationTag: _tag, ...payload } = request;
+  const payload = { ...request };
+  delete (payload as Partial<V1OperatorRequest>).requestAuthenticationTag;
   return payload;
 }
 
@@ -120,14 +126,18 @@ export function verifyV1OperatorRequest(
     !UUID.test(request.agentId) ||
     !UUID.test(request.operatorId) ||
     !UUID.test(request.rollbackObligationId) ||
+    !UUID.test(request.grantId) ||
     !UUID.test(request.providerMutationId) ||
     !UUID.test(request.requestMessageId) ||
     !request.nonce ||
     request.sequence < 1 ||
     request.fencingGeneration < 1 ||
+    !request.currentControllerDeploymentId ||
+    request.currentControllerFencingGeneration < request.fencingGeneration ||
     !SHA256.test(request.targetArtifactSha256) ||
     !SHA256.test(request.priorInventorySha256) ||
     !SHA256.test(request.authorizationFingerprint) ||
+    !SHA256.test(request.grantChecksum) ||
     !SHA256.test(request.expectedJournalChecksum) ||
     !Number.isFinite(issuedAt) ||
     !Number.isFinite(forwardExpiresAt) ||
@@ -213,6 +223,7 @@ export function appendV1OperatorJournal(
     throw new Error("V1 operator request sequence is not the exact successor.");
   const previousEntryChecksum = journal.entries.at(-1)?.entryChecksum ?? null;
   const unsealed = {
+    localJournalEntryId: randomUUID(),
     sequence: request.sequence,
     operation: request.operation,
     providerMutationId: request.providerMutationId,
@@ -252,7 +263,8 @@ export function completeV1OperatorJournal(
     throw new Error("Provider completion is not the current durable intent.");
   const entries = journal.entries.map((entry, entryIndex) => {
     if (entryIndex !== index) return entry;
-    const { entryChecksum: _checksum, ...prior } = entry;
+    const prior = { ...entry };
+    delete (prior as Partial<V1OperatorJournalEntry>).entryChecksum;
     const payload = {
       ...prior,
       status: "completed" as const,
@@ -276,7 +288,12 @@ export function verifyV1OperatorJournal(journal: V1OperatorJournal, key: string)
   for (let index = 0; index < journal.entries.length; index += 1) {
     const entry = journal.entries[index]!;
     const { entryChecksum, ...payload } = entry;
-    if (entry.sequence !== index + 1 || entry.previousEntryChecksum !== previous || checksum(payload) !== entryChecksum)
+    if (
+      !UUID.test(entry.localJournalEntryId) ||
+      entry.sequence !== index + 1 ||
+      entry.previousEntryChecksum !== previous ||
+      checksum(payload) !== entryChecksum
+    )
       throw new Error("V1 operator journal hash chain is invalid.");
     previous = entryChecksum;
   }

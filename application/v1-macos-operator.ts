@@ -85,7 +85,7 @@ export async function assertV1OperatorRuntimeBoundary(boundary: V1OperatorRuntim
     throw new Error("V1 macOS operator checksum, owner, or permissions differ.");
 }
 
-type AuthenticatedProviderReceipt = {
+export type AuthenticatedProviderReceipt = {
   receipt: V1ProviderReceipt;
   requestChecksum: string;
   intentEntryChecksum: string;
@@ -115,7 +115,7 @@ async function writeReceipt(
   requestChecksum: string,
   intentEntryChecksum: string,
   credentialKey: string,
-): Promise<string> {
+): Promise<{ checksum: string; authenticated: AuthenticatedProviderReceipt; bytes: string }> {
   if (providerResultChecksum(receipt) !== receipt.resultChecksum)
     throw new Error("Provider receipt result checksum is invalid.");
   const unsigned = { receipt, requestChecksum, intentEntryChecksum };
@@ -145,7 +145,7 @@ async function writeReceipt(
     if (sha256(Uint8Array.from(await readFile(path))) !== checksum)
       throw new Error("Existing provider receipt contradicts recovered provider state.");
   }
-  return checksum;
+  return { checksum, authenticated, bytes };
 }
 
 async function readReceipt(
@@ -154,7 +154,12 @@ async function readReceipt(
   requestChecksum: string,
   intentEntryChecksum: string,
   credentialKey: string,
-): Promise<{ receipt: V1ProviderReceipt; checksum: string } | null> {
+): Promise<{
+  receipt: V1ProviderReceipt;
+  checksum: string;
+  authenticated: AuthenticatedProviderReceipt;
+  bytes: string;
+} | null> {
   try {
     const bytes = await readFile(path);
     const authenticated = JSON.parse(bytes.toString("utf8")) as AuthenticatedProviderReceipt;
@@ -173,7 +178,7 @@ async function readReceipt(
       providerResultChecksum(receipt) !== receipt.resultChecksum
     )
       throw new Error("Existing provider receipt is unauthenticated or contradicts the authorized operation.");
-    return { receipt, checksum: sha256(Uint8Array.from(bytes)) };
+    return { receipt, checksum: sha256(Uint8Array.from(bytes)), authenticated, bytes: bytes.toString("utf8") };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;
@@ -263,8 +268,17 @@ export async function executeV1OperatorRequest(input: {
   /** Acceptance seam; the packaged CLI never supplies this override. */
   assertRuntimeBoundary?: (boundary: V1OperatorRuntimeBoundary) => Promise<void>;
   /** Crash-boundary acceptance seam; the packaged CLI never supplies this callback. */
+  afterProviderExecuted?: (receipt: V1ProviderReceipt) => Promise<void>;
+  /** Crash-boundary acceptance seam; the packaged CLI never supplies this callback. */
   afterReceiptPersisted?: (receiptChecksum: string) => Promise<void>;
-}): Promise<{ disposition: "completed" | "receipt_recovered"; receiptChecksum: string }> {
+}): Promise<{
+  disposition: "completed" | "receipt_recovered";
+  receiptChecksum: string;
+  providerReceipt: AuthenticatedProviderReceipt;
+  receiptBytes: string;
+  operatorJournalChecksum: string;
+  localJournalEntryId: string;
+}> {
   const { request, expectedBinding, credentialKey, boundary, provider } = input;
   if (!HOST_OPERATIONS.has(request.operation))
     throw new Error(`Control-plane operation ${request.operation} is not a host-provider operation.`);
@@ -301,8 +315,24 @@ export async function executeV1OperatorRequest(input: {
     });
     if (confirmation.accepted !== true || confirmation.currentJournalChecksum !== journal.journalChecksum)
       throw new Error("Mission Control did not confirm the exact operator journal head.");
-    if (existing?.status === "completed" && existing.providerReceiptChecksum)
-      return { disposition: "receipt_recovered", receiptChecksum: existing.providerReceiptChecksum };
+    if (existing?.status === "completed" && existing.providerReceiptChecksum) {
+      const recoveredReceipt = await readReceipt(
+        `${dirname(boundary.journalPath)}/receipts/${request.providerMutationId}.json`,
+        request,
+        expectedRequestChecksum,
+        existing.entryChecksum,
+        credentialKey,
+      );
+      if (!recoveredReceipt) throw new Error("Completed journal entry lacks its durable provider receipt.");
+      return {
+        disposition: "receipt_recovered",
+        receiptChecksum: recoveredReceipt.checksum,
+        providerReceipt: recoveredReceipt.authenticated,
+        receiptBytes: recoveredReceipt.bytes,
+        operatorJournalChecksum: journal.journalChecksum,
+        localJournalEntryId: existing.localJournalEntryId,
+      };
+    }
     const intent = journal.entries.find(
       (entry) =>
         entry.providerMutationId === request.providerMutationId && entry.requestChecksum === expectedRequestChecksum,
@@ -319,7 +349,14 @@ export async function executeV1OperatorRequest(input: {
     if (durableReceipt) {
       journal = completeV1OperatorJournal(journal, request, durableReceipt.checksum, credentialKey);
       await writeV1OperatorJournal(boundary.journalPath, journal);
-      return { disposition: "receipt_recovered", receiptChecksum: durableReceipt.checksum };
+      return {
+        disposition: "receipt_recovered",
+        receiptChecksum: durableReceipt.checksum,
+        providerReceipt: durableReceipt.authenticated,
+        receiptBytes: durableReceipt.bytes,
+        operatorJournalChecksum: journal.journalChecksum,
+        localJournalEntryId: intent.localJournalEntryId,
+      };
     }
     const state = await provider.inspect(request);
     if (state === "ambiguous") throw new Error("Provider state is ambiguous; human intervention is required.");
@@ -335,16 +372,24 @@ export async function executeV1OperatorRequest(input: {
       receipt = await provider.execute(request);
       disposition = "completed";
     }
-    const receiptChecksum = await writeReceipt(
+    await input.afterProviderExecuted?.(receipt);
+    const persistedReceipt = await writeReceipt(
       receiptPath,
       receipt,
       expectedRequestChecksum,
       intent.entryChecksum,
       credentialKey,
     );
-    await input.afterReceiptPersisted?.(receiptChecksum);
-    journal = completeV1OperatorJournal(journal, request, receiptChecksum, credentialKey);
+    await input.afterReceiptPersisted?.(persistedReceipt.checksum);
+    journal = completeV1OperatorJournal(journal, request, persistedReceipt.checksum, credentialKey);
     await writeV1OperatorJournal(boundary.journalPath, journal);
-    return { disposition, receiptChecksum };
+    return {
+      disposition,
+      receiptChecksum: persistedReceipt.checksum,
+      providerReceipt: persistedReceipt.authenticated,
+      receiptBytes: persistedReceipt.bytes,
+      operatorJournalChecksum: journal.journalChecksum,
+      localJournalEntryId: intent.localJournalEntryId,
+    };
   });
 }

@@ -73,6 +73,13 @@ restart inspection detects the postcondition, writes or reuses the
 checksum-bound receipt, and does not repeat the mutation.
 Contradictory or ambiguous state stops for human intervention.
 
+Rollback closure requires two fresh same-process observations signed by the
+enrolled host key after the terminal rollback receipt, followed by three
+authenticated prior-version heartbeats and exact capability, repository
+identity, inventory, and projection-replay equivalence. Mission Control may
+validate and canonically reference these observations; it must never synthesize
+host process evidence.
+
 Forward mutation expires normally. An expired request can never create a new
 intent; only an exact request already present in the authenticated journal may
 enter recovery, and it still requires a fresh controller confirmation. The

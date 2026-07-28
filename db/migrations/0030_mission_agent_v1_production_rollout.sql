@@ -111,9 +111,83 @@ CREATE TRIGGER mission_control_v1_configuration_successor_guard
 BEFORE INSERT ON mission_control_v1_production_configurations
 FOR EACH ROW EXECUTE FUNCTION validate_v1_configuration_successor();
 
+CREATE TABLE mission_agent_v1_operator_releases (
+  release_id uuid PRIMARY KEY,
+  protocol_version text NOT NULL CHECK(protocol_version='1'),
+  artifact_checksum text NOT NULL UNIQUE CHECK(artifact_checksum ~ '^[a-f0-9]{64}$'),
+  executable_path text NOT NULL CHECK(
+    executable_path='/Users/shawnwollenberg/Library/Application Support/WallyWeb/MissionAgentReplacement/operator-v1.mjs'
+  ),
+  launch_agent_label text NOT NULL CHECK(
+    launch_agent_label='com.wallyweb.mission-agent.replacement-operator'
+  ),
+  manifest_checksum text NOT NULL UNIQUE CHECK(manifest_checksum ~ '^[a-f0-9]{64}$'),
+  status text NOT NULL CHECK(status IN ('approved','retired','revoked')),
+  approved_by text NOT NULL,
+  approved_at timestamptz NOT NULL
+);
+
+CREATE TABLE mission_agent_v1_host_identities (
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  host_id uuid NOT NULL,
+  agent_id uuid NOT NULL,
+  public_key_spki text NOT NULL,
+  public_key_fingerprint text NOT NULL UNIQUE
+    CHECK(public_key_fingerprint ~ '^ed25519-spki-sha256:[a-f0-9]{64}$'),
+  owner_uid bigint NOT NULL CHECK(owner_uid>0),
+  status text NOT NULL CHECK(status IN ('pending','active','revoked')),
+  registered_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  revoked_at timestamptz,
+  PRIMARY KEY(workspace_id,host_id),
+  UNIQUE(workspace_id,agent_id,host_id),
+  FOREIGN KEY(workspace_id,agent_id) REFERENCES agents(workspace_id,agent_id) ON DELETE RESTRICT,
+  CHECK((status='revoked')=(revoked_at IS NOT NULL))
+);
+
+CREATE TABLE mission_agent_v1_host_challenges (
+  workspace_id uuid NOT NULL,
+  challenge_id uuid NOT NULL,
+  host_id uuid NOT NULL,
+  challenge_nonce text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  consumed_at timestamptz,
+  request_message_id uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(workspace_id,challenge_id),
+  UNIQUE(workspace_id,challenge_nonce),
+  UNIQUE(workspace_id,request_message_id),
+  FOREIGN KEY(workspace_id,host_id)
+    REFERENCES mission_agent_v1_host_identities(workspace_id,host_id) ON DELETE RESTRICT,
+  CHECK(expires_at>created_at AND expires_at<=created_at+interval '5 minutes')
+);
+
+CREATE TABLE mission_agent_v1_host_measurements (
+  workspace_id uuid NOT NULL,
+  measurement_id uuid NOT NULL,
+  challenge_id uuid NOT NULL,
+  host_id uuid NOT NULL,
+  operator_release_id uuid NOT NULL REFERENCES mission_agent_v1_operator_releases(release_id) ON DELETE RESTRICT,
+  startup_evidence_checksum text NOT NULL UNIQUE CHECK(startup_evidence_checksum ~ '^[a-f0-9]{64}$'),
+  startup_evidence jsonb NOT NULL,
+  signature text NOT NULL,
+  journal_generation bigint NOT NULL CHECK(journal_generation>0),
+  observed_at timestamptz NOT NULL,
+  expires_at timestamptz NOT NULL,
+  PRIMARY KEY(workspace_id,measurement_id),
+  UNIQUE(workspace_id,challenge_id),
+  FOREIGN KEY(workspace_id,challenge_id)
+    REFERENCES mission_agent_v1_host_challenges(workspace_id,challenge_id) ON DELETE RESTRICT,
+  FOREIGN KEY(workspace_id,host_id)
+    REFERENCES mission_agent_v1_host_identities(workspace_id,host_id) ON DELETE RESTRICT,
+  CHECK(expires_at>observed_at AND expires_at<=observed_at+interval '15 minutes')
+);
+
 CREATE TABLE mission_agent_v1_operator_identities (
   workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   operator_id uuid NOT NULL,
+  host_id uuid NOT NULL,
+  operator_release_id uuid NOT NULL REFERENCES mission_agent_v1_operator_releases(release_id) ON DELETE RESTRICT,
+  host_measurement_id uuid NOT NULL,
   agent_id uuid NOT NULL,
   deployment_id uuid NOT NULL REFERENCES mission_control_production_deployments(deployment_id) ON DELETE RESTRICT,
   implementation text NOT NULL CHECK(implementation = 'mission-agent-replacement-operator-v1'),
@@ -121,7 +195,7 @@ CREATE TABLE mission_agent_v1_operator_identities (
   executable_checksum text NOT NULL CHECK(executable_checksum ~ '^[a-f0-9]{64}$'),
   executable_path text NOT NULL,
   owner_uid bigint NOT NULL CHECK(owner_uid > 0),
-  journal_schema_version text NOT NULL CHECK(journal_schema_version = 'replacement-operator-journal-v1'),
+  journal_schema_version text NOT NULL CHECK(journal_schema_version = 'mission-agent-v1-operator-journal-v1'),
   launch_agent_label text NOT NULL CHECK(launch_agent_label = 'com.wallyweb.mission-agent.replacement-operator'),
   credential_id uuid NOT NULL,
   verified_at timestamptz NOT NULL,
@@ -129,6 +203,10 @@ CREATE TABLE mission_agent_v1_operator_identities (
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   PRIMARY KEY(workspace_id,operator_id),
   UNIQUE(workspace_id,agent_id,operator_id,deployment_id),
+  FOREIGN KEY(workspace_id,host_id)
+    REFERENCES mission_agent_v1_host_identities(workspace_id,host_id) ON DELETE RESTRICT,
+  FOREIGN KEY(workspace_id,host_measurement_id)
+    REFERENCES mission_agent_v1_host_measurements(workspace_id,measurement_id) ON DELETE RESTRICT,
   FOREIGN KEY(workspace_id,agent_id) REFERENCES agents(workspace_id,agent_id) ON DELETE RESTRICT,
   FOREIGN KEY(workspace_id,credential_id) REFERENCES agent_credentials(workspace_id,credential_id) ON DELETE RESTRICT,
   CHECK(executable_path LIKE '/Users/%/Library/Application Support/WallyWeb/MissionAgentReplacement/%')
@@ -140,19 +218,28 @@ CREATE TABLE mission_agent_v1_rollout_operations (
   execution_id uuid NOT NULL,
   agent_id uuid NOT NULL,
   operator_id uuid NOT NULL,
+  host_id uuid NOT NULL,
   deployment_id uuid NOT NULL,
+  current_controller_deployment_id uuid NOT NULL,
   configuration_id uuid NOT NULL,
   authorization_fingerprint text NOT NULL CHECK(authorization_fingerprint ~ '^[a-f0-9]{64}$'),
   target_artifact_checksum text NOT NULL
     CHECK(target_artifact_checksum = '108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09'),
   prior_inventory_checksum text NOT NULL CHECK(prior_inventory_checksum ~ '^[a-f0-9]{64}$'),
+  rollback_obligation_id uuid NOT NULL,
   claim_generation integer NOT NULL CHECK(claim_generation = 1),
   fencing_namespace uuid NOT NULL,
   initial_fencing_epoch bigint NOT NULL CHECK(initial_fencing_epoch = 1),
+  lifecycle_sequence bigint NOT NULL DEFAULT 0 CHECK(lifecycle_sequence>=0),
+  operator_journal_checksum text NOT NULL CHECK(operator_journal_checksum ~ '^[a-f0-9]{64}$'),
   state text NOT NULL CHECK(state IN (
-    'prepared','drain_requested','drained_verified','forward_active','observing',
-    'success_verified','recovery_only','rollback_verified','human_intervention_required',
-    'expired_before_mutation'
+    'prepared','preflight_verified','drain_requested','drained_verified','forward_active',
+    'grant_issued','grant_delivered','grant_acknowledged','mutation_intent_committed',
+    'awaiting_provider_receipt','provider_receipt_accepted','verifying','observing',
+    'recovery_only','rollback_grant_issued','rollback_grant_delivered',
+    'rollback_grant_acknowledged','rollback_intent_committed','awaiting_rollback_receipt',
+    'rollback_receipt_accepted','rollback_verifying','success_verified','rollback_verified',
+    'expired_before_mutation','human_intervention_required'
   )),
   drain_evidence_checksum text CHECK(drain_evidence_checksum IS NULL OR drain_evidence_checksum ~ '^[a-f0-9]{64}$'),
   forward_expires_at timestamptz NOT NULL,
@@ -164,12 +251,15 @@ CREATE TABLE mission_agent_v1_rollout_operations (
   UNIQUE(workspace_id,authorization_id),
   UNIQUE(workspace_id,authorization_id,execution_id,authorization_fingerprint,prior_inventory_checksum),
   UNIQUE(workspace_id,authorization_id,execution_id,fencing_namespace),
+  UNIQUE(workspace_id,authorization_id,execution_id,rollback_obligation_id),
   FOREIGN KEY(workspace_id,authorization_id,execution_id)
     REFERENCES mission_agent_replacement_execution_claims(workspace_id,authorization_id,execution_id)
       ON DELETE RESTRICT,
   FOREIGN KEY(workspace_id,agent_id,operator_id,deployment_id)
     REFERENCES mission_agent_v1_operator_identities(workspace_id,agent_id,operator_id,deployment_id)
       ON DELETE RESTRICT,
+  FOREIGN KEY(current_controller_deployment_id)
+    REFERENCES mission_control_production_deployments(deployment_id) ON DELETE RESTRICT,
   FOREIGN KEY(deployment_id,configuration_id)
     REFERENCES mission_control_v1_production_configurations(deployment_id,configuration_id)
       ON DELETE RESTRICT,
@@ -183,6 +273,220 @@ CREATE TABLE mission_agent_v1_rollout_operations (
 CREATE UNIQUE INDEX mission_agent_v1_one_unresolved_rollout_idx
   ON mission_agent_v1_rollout_operations(workspace_id,agent_id)
   WHERE state NOT IN ('success_verified','rollback_verified','expired_before_mutation');
+
+CREATE TABLE mission_agent_v1_grants (
+  workspace_id uuid NOT NULL,
+  authorization_id uuid NOT NULL,
+  execution_id uuid NOT NULL,
+  grant_id uuid NOT NULL,
+  grant_kind text NOT NULL CHECK(grant_kind IN ('forward','rollback','recovery')),
+  state text NOT NULL CHECK(state IN (
+    'proposed','issued','delivered','acknowledged','consumed','expired_before_consumption',
+    'revoked_before_consumption','superseded','failed_delivery'
+  )),
+  operation_id uuid NOT NULL,
+  provider_mutation_id uuid NOT NULL,
+  operation text NOT NULL,
+  sequence bigint NOT NULL CHECK(sequence>0),
+  authorization_fingerprint text NOT NULL CHECK(authorization_fingerprint ~ '^[a-f0-9]{64}$'),
+  operator_id uuid NOT NULL,
+  host_id uuid NOT NULL,
+  agent_id uuid NOT NULL,
+  operator_artifact_checksum text NOT NULL CHECK(operator_artifact_checksum ~ '^[a-f0-9]{64}$'),
+  target_artifact_checksum text NOT NULL CHECK(target_artifact_checksum ~ '^[a-f0-9]{64}$'),
+  originating_forward_deployment_id uuid NOT NULL,
+  current_controller_deployment_id uuid NOT NULL,
+  configuration_id uuid NOT NULL,
+  fencing_generation bigint NOT NULL CHECK(fencing_generation>0),
+  rollback_obligation_id uuid NOT NULL,
+  grant_checksum text NOT NULL UNIQUE CHECK(grant_checksum ~ '^[a-f0-9]{64}$'),
+  grant_bytes text NOT NULL,
+  delivery_message_id uuid,
+  acknowledgement_message_id uuid,
+  acknowledgement_checksum text CHECK(
+    acknowledgement_checksum IS NULL OR acknowledgement_checksum ~ '^[a-f0-9]{64}$'
+  ),
+  host_acknowledgement_signature text,
+  issued_at timestamptz,
+  delivered_at timestamptz,
+  acknowledged_at timestamptz,
+  consumed_at timestamptz,
+  expires_at timestamptz NOT NULL,
+  PRIMARY KEY(workspace_id,authorization_id,execution_id,grant_id),
+  UNIQUE(workspace_id,authorization_id,execution_id,operation_id),
+  UNIQUE(workspace_id,authorization_id,execution_id,provider_mutation_id),
+  UNIQUE(workspace_id,authorization_id,execution_id,sequence),
+  FOREIGN KEY(workspace_id,authorization_id,execution_id)
+    REFERENCES mission_agent_v1_rollout_operations(workspace_id,authorization_id,execution_id)
+      ON DELETE RESTRICT,
+  CHECK(grant_checksum=encode(digest(convert_to(grant_bytes,'UTF8'),'sha256'),'hex')),
+  CHECK(issued_at IS NULL OR expires_at>issued_at)
+);
+
+CREATE TABLE mission_agent_v1_lifecycle_events (
+  workspace_id uuid NOT NULL,
+  authorization_id uuid NOT NULL,
+  execution_id uuid NOT NULL,
+  event_id uuid NOT NULL,
+  sequence bigint NOT NULL CHECK(sequence>0),
+  handler text NOT NULL CHECK(handler IN ('claim','intent','receipt','decision','status','failure')),
+  action text NOT NULL,
+  from_state text NOT NULL,
+  to_state text NOT NULL,
+  fencing_generation bigint NOT NULL CHECK(fencing_generation>0),
+  request_message_id uuid NOT NULL,
+  request_nonce text NOT NULL,
+  event_checksum text NOT NULL UNIQUE CHECK(event_checksum ~ '^[a-f0-9]{64}$'),
+  audit_reference text NOT NULL,
+  occurred_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(workspace_id,authorization_id,execution_id,event_id),
+  UNIQUE(workspace_id,authorization_id,execution_id,sequence),
+  UNIQUE(workspace_id,request_message_id),
+  UNIQUE(workspace_id,request_nonce),
+  FOREIGN KEY(workspace_id,authorization_id,execution_id)
+    REFERENCES mission_agent_v1_rollout_operations(workspace_id,authorization_id,execution_id)
+      ON DELETE RESTRICT
+);
+
+CREATE TABLE mission_agent_v1_transition_rules (
+  handler text NOT NULL,
+  action text NOT NULL,
+  from_state text NOT NULL,
+  to_state text NOT NULL,
+  PRIMARY KEY(handler,action,from_state)
+);
+
+INSERT INTO mission_agent_v1_transition_rules(handler,action,from_state,to_state) VALUES
+  ('claim','preflight','prepared','preflight_verified'),
+  ('claim','request_drain','preflight_verified','drain_requested'),
+  ('claim','verify_drain','drain_requested','drained_verified'),
+  ('claim','acquire_lease','drained_verified','forward_active'),
+  ('claim','renew_lease','forward_active','forward_active'),
+  ('intent','propose_grant','forward_active','grant_issued'),
+  ('status','record_grant_delivery','grant_issued','grant_delivered'),
+  ('status','acknowledge_grant','grant_delivered','grant_acknowledged'),
+  ('decision','expire_grant','grant_issued','forward_active'),
+  ('decision','expire_grant','grant_delivered','forward_active'),
+  ('decision','expire_grant','grant_acknowledged','forward_active'),
+  ('decision','revoke_grant','grant_issued','forward_active'),
+  ('decision','revoke_grant','grant_delivered','forward_active'),
+  ('decision','revoke_grant','grant_acknowledged','forward_active'),
+  ('intent','commit_mutation_intent','grant_acknowledged','mutation_intent_committed'),
+  ('status','operator_journal_head','mutation_intent_committed','awaiting_provider_receipt'),
+  ('status','anchor_durable_receipt','awaiting_provider_receipt','awaiting_provider_receipt'),
+  ('receipt','accept_provider_receipt','awaiting_provider_receipt','provider_receipt_accepted'),
+  ('decision','verify_provider_receipt','provider_receipt_accepted','verifying'),
+  ('decision','continue_forward','verifying','forward_active'),
+  ('decision','observe_stability','verifying','observing'),
+  ('decision','evaluate_stability','observing','observing'),
+  ('status','runtime_status','observing','observing'),
+  ('status','runtime_status','rollback_verifying','rollback_verifying'),
+  ('status','rollback_observation','rollback_verifying','rollback_verifying'),
+  ('decision','close_success','observing','success_verified'),
+  ('failure','activate_rollback','mutation_intent_committed','recovery_only'),
+  ('failure','activate_rollback','forward_active','recovery_only'),
+  ('failure','activate_rollback','provider_receipt_accepted','recovery_only'),
+  ('failure','activate_rollback','verifying','recovery_only'),
+  ('failure','activate_rollback','observing','recovery_only'),
+  ('intent','propose_grant','recovery_only','rollback_grant_issued'),
+  ('status','record_grant_delivery','rollback_grant_issued','rollback_grant_delivered'),
+  ('status','acknowledge_grant','rollback_grant_delivered','rollback_grant_acknowledged'),
+  ('decision','expire_grant','rollback_grant_issued','recovery_only'),
+  ('decision','expire_grant','rollback_grant_delivered','recovery_only'),
+  ('decision','expire_grant','rollback_grant_acknowledged','recovery_only'),
+  ('decision','revoke_grant','rollback_grant_issued','recovery_only'),
+  ('decision','revoke_grant','rollback_grant_delivered','recovery_only'),
+  ('decision','revoke_grant','rollback_grant_acknowledged','recovery_only'),
+  ('intent','commit_mutation_intent','rollback_grant_acknowledged','rollback_intent_committed'),
+  ('status','operator_journal_head','rollback_intent_committed','awaiting_rollback_receipt'),
+  ('status','anchor_durable_receipt','awaiting_rollback_receipt','awaiting_rollback_receipt'),
+  ('receipt','accept_provider_receipt','awaiting_rollback_receipt','rollback_receipt_accepted'),
+  ('decision','verify_provider_receipt','rollback_receipt_accepted','rollback_verifying'),
+  ('decision','continue_rollback','rollback_verifying','recovery_only'),
+  ('decision','close_rollback','rollback_verifying','rollback_verified'),
+  ('failure','require_human_intervention','recovery_only','human_intervention_required'),
+  ('failure','require_human_intervention','awaiting_provider_receipt','human_intervention_required'),
+  ('failure','require_human_intervention','rollback_intent_committed','human_intervention_required'),
+  ('failure','require_human_intervention','awaiting_rollback_receipt','human_intervention_required');
+
+CREATE OR REPLACE FUNCTION advance_mission_agent_v1_lifecycle(
+  p_workspace_id uuid,
+  p_authorization_id uuid,
+  p_execution_id uuid,
+  p_handler text,
+  p_action text,
+  p_expected_state text,
+  p_expected_sequence bigint,
+  p_fencing_generation bigint,
+  p_binding jsonb,
+  p_event_id uuid,
+  p_request_message_id uuid,
+  p_request_nonce text,
+  p_audit_reference text
+) RETURNS TABLE(state text,sequence bigint,event_checksum text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,pg_temp AS $$
+DECLARE
+  rollout record;
+  next_state text;
+  checksum text;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended(
+    p_workspace_id::text||':'||p_authorization_id::text||':'||p_execution_id::text,0
+  ));
+  SELECT r.*,o.host_id,o.executable_checksum,c.version configuration_version,
+         coalesce((SELECT max(f.epoch) FROM mission_agent_v1_fencing_epochs f
+           WHERE f.workspace_id=r.workspace_id AND f.authorization_id=r.authorization_id
+             AND f.execution_id=r.execution_id AND f.fencing_namespace=r.fencing_namespace),0) current_fence
+    INTO rollout
+    FROM mission_agent_v1_rollout_operations r
+    JOIN mission_agent_v1_operator_identities o
+      ON o.workspace_id=r.workspace_id AND o.operator_id=r.operator_id
+    JOIN mission_control_v1_production_configurations c
+      ON c.configuration_id=r.configuration_id
+   WHERE r.workspace_id=p_workspace_id AND r.authorization_id=p_authorization_id
+     AND r.execution_id=p_execution_id
+   FOR UPDATE OF r;
+  SELECT rule.to_state INTO next_state
+    FROM mission_agent_v1_transition_rules rule
+   WHERE rule.handler=p_handler AND rule.action=p_action AND rule.from_state=p_expected_state;
+  IF rollout IS NULL OR next_state IS NULL OR rollout.state<>p_expected_state
+     OR rollout.lifecycle_sequence<>p_expected_sequence
+     OR rollout.current_fence<>p_fencing_generation
+     OR rollout.authorization_fingerprint<>p_binding->>'authorizationFingerprint'
+     OR rollout.operator_id::text<>p_binding->>'operatorId'
+     OR rollout.host_id::text<>p_binding->>'hostId'
+     OR rollout.executable_checksum<>p_binding->>'operatorArtifactSha256'
+     OR rollout.agent_id::text<>p_binding->>'agentId'
+     OR rollout.target_artifact_checksum<>p_binding->>'targetArtifactSha256'
+     OR rollout.deployment_id::text<>p_binding->>'originatingForwardDeploymentId'
+     OR rollout.current_controller_deployment_id::text<>p_binding->>'currentControllerDeploymentId'
+     OR rollout.configuration_version<>(p_binding->>'configurationVersion')::bigint
+  THEN
+    RAISE EXCEPTION 'v1 lifecycle identity, fence, sequence, or state is contradictory';
+  END IF;
+  checksum := encode(digest(convert_to(jsonb_build_object(
+    'action',p_action,'authorizationId',p_authorization_id,'eventId',p_event_id,
+    'executionId',p_execution_id,'fencingGeneration',p_fencing_generation,
+    'fromState',p_expected_state,'handler',p_handler,'requestMessageId',p_request_message_id,
+    'requestNonce',p_request_nonce,'sequence',p_expected_sequence+1,'toState',next_state,
+    'workspaceId',p_workspace_id
+  )::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO mission_agent_v1_lifecycle_events(
+    workspace_id,authorization_id,execution_id,event_id,sequence,handler,action,from_state,to_state,
+    fencing_generation,request_message_id,request_nonce,event_checksum,audit_reference
+  ) VALUES(
+    p_workspace_id,p_authorization_id,p_execution_id,p_event_id,p_expected_sequence+1,p_handler,p_action,
+    p_expected_state,next_state,p_fencing_generation,p_request_message_id,p_request_nonce,checksum,p_audit_reference
+  );
+  UPDATE mission_agent_v1_rollout_operations
+     SET state=next_state,lifecycle_sequence=p_expected_sequence+1,updated_at=clock_timestamp()
+   WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id AND execution_id=p_execution_id;
+  RETURN QUERY SELECT next_state,p_expected_sequence+1,checksum;
+END $$;
+
+REVOKE ALL ON FUNCTION advance_mission_agent_v1_lifecycle(
+  uuid,uuid,uuid,text,text,text,bigint,bigint,jsonb,uuid,uuid,text,text
+) FROM PUBLIC,mission_control_v1_runtime,mission_control_v1_controller,mission_control_v1_verifier;
 
 CREATE TABLE mission_agent_v1_fencing_epochs (
   workspace_id uuid NOT NULL,
@@ -252,7 +556,8 @@ BEGIN
   IF p_evidence_checksum !~ '^[a-f0-9]{64}$' OR NOT EXISTS (
     SELECT 1
       FROM mission_agent_v1_rollout_operations r
-      JOIN mission_control_production_deployments d ON d.deployment_id=r.deployment_id
+      JOIN mission_control_production_deployments d
+        ON d.deployment_id=r.current_controller_deployment_id
      WHERE r.workspace_id=p_workspace_id AND r.authorization_id=p_authorization_id
        AND r.execution_id=p_execution_id AND r.fencing_namespace=p_fencing_namespace
        AND d.task_arn=p_controller_identity AND d.attestation_expires_at>clock_timestamp()
@@ -343,11 +648,64 @@ CREATE UNIQUE INDEX mission_agent_v1_one_open_rollback_idx
   ON mission_agent_v1_rollback_obligations(workspace_id,authorization_id,execution_id)
   WHERE state <> 'verified_closed';
 
+CREATE TABLE mission_agent_v1_operator_confirmations (
+  workspace_id uuid NOT NULL,
+  authorization_id uuid NOT NULL,
+  execution_id uuid NOT NULL,
+  provider_mutation_id uuid NOT NULL,
+  operation text NOT NULL CHECK(operation IN (
+    'observe','stage_artifact','verify_artifact','stop_agent','install_agent',
+    'install_launch_configuration','start_agent','verify_process','collect_heartbeats',
+    'verify_capabilities','remove_staged_artifact','restore_previous_launch_configuration',
+    'restore_previous_version','verify_rollback'
+  )),
+  sequence integer NOT NULL CHECK(sequence > 0),
+  fencing_generation bigint NOT NULL CHECK(fencing_generation > 0),
+  request_checksum text NOT NULL CHECK(request_checksum ~ '^[a-f0-9]{64}$'),
+  request_message_id uuid NOT NULL,
+  request_nonce text NOT NULL,
+  authenticated_message_id uuid NOT NULL,
+  authenticated_nonce text NOT NULL,
+  prior_operator_journal_checksum text NOT NULL CHECK(prior_operator_journal_checksum ~ '^[a-f0-9]{64}$'),
+  operator_journal_checksum text NOT NULL CHECK(operator_journal_checksum ~ '^[a-f0-9]{64}$'),
+  confirmed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(workspace_id,authorization_id,execution_id,provider_mutation_id),
+  UNIQUE(workspace_id,authorization_id,execution_id,sequence),
+  UNIQUE(workspace_id,request_message_id),
+  UNIQUE(workspace_id,request_nonce),
+  UNIQUE(workspace_id,authenticated_message_id),
+  UNIQUE(workspace_id,authenticated_nonce),
+  FOREIGN KEY(workspace_id,authorization_id,execution_id)
+    REFERENCES mission_agent_v1_rollout_operations(workspace_id,authorization_id,execution_id)
+      ON DELETE RESTRICT
+);
+
+CREATE TABLE mission_agent_v1_durable_receipt_anchors (
+  workspace_id uuid NOT NULL,
+  authorization_id uuid NOT NULL,
+  execution_id uuid NOT NULL,
+  grant_id uuid NOT NULL,
+  provider_mutation_id uuid NOT NULL,
+  fencing_generation bigint NOT NULL CHECK(fencing_generation>0),
+  receipt_checksum text NOT NULL CHECK(receipt_checksum ~ '^[a-f0-9]{64}$'),
+  host_signature text NOT NULL,
+  request_message_id uuid NOT NULL,
+  request_nonce text NOT NULL,
+  anchored_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(workspace_id,authorization_id,execution_id,provider_mutation_id),
+  UNIQUE(workspace_id,request_message_id),
+  UNIQUE(workspace_id,request_nonce),
+  FOREIGN KEY(workspace_id,authorization_id,execution_id,grant_id)
+    REFERENCES mission_agent_v1_grants(workspace_id,authorization_id,execution_id,grant_id)
+      ON DELETE RESTRICT
+);
+
 CREATE TABLE mission_agent_v1_provider_mutations (
   workspace_id uuid NOT NULL,
   authorization_id uuid NOT NULL,
   execution_id uuid NOT NULL,
   provider_mutation_id uuid NOT NULL,
+  grant_id uuid NOT NULL,
   operation_id uuid NOT NULL,
   obligation_id uuid NOT NULL,
   authorization_fingerprint text NOT NULL CHECK(authorization_fingerprint ~ '^[a-f0-9]{64}$'),
@@ -362,12 +720,27 @@ CREATE TABLE mission_agent_v1_provider_mutations (
   fencing_namespace uuid NOT NULL,
   fencing_epoch bigint NOT NULL CHECK(fencing_epoch > 0),
   intent_checksum text NOT NULL CHECK(intent_checksum ~ '^[a-f0-9]{64}$'),
+  request_checksum text NOT NULL CHECK(request_checksum ~ '^[a-f0-9]{64}$'),
+  request_message_id uuid NOT NULL,
+  request_nonce text NOT NULL,
+  prior_operator_journal_checksum text NOT NULL CHECK(prior_operator_journal_checksum ~ '^[a-f0-9]{64}$'),
   operator_journal_checksum text NOT NULL CHECK(operator_journal_checksum ~ '^[a-f0-9]{64}$'),
+  prior_state_checksum text NOT NULL CHECK(prior_state_checksum ~ '^[a-f0-9]{64}$'),
+  resulting_state_checksum text NOT NULL CHECK(resulting_state_checksum ~ '^[a-f0-9]{64}$'),
+  receipt_checksum text NOT NULL CHECK(receipt_checksum ~ '^[a-f0-9]{64}$'),
+  local_journal_entry_id uuid NOT NULL,
+  completed_at timestamptz NOT NULL,
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   PRIMARY KEY(workspace_id,authorization_id,execution_id,provider_mutation_id),
   UNIQUE(workspace_id,authorization_id,execution_id,sequence),
   UNIQUE(workspace_id,authorization_id,execution_id,phase,phase_sequence),
+  UNIQUE(workspace_id,request_message_id),
+  UNIQUE(workspace_id,request_nonce),
   UNIQUE(provider_mutation_id),
+  FOREIGN KEY(workspace_id,authorization_id,execution_id,grant_id)
+    REFERENCES mission_agent_v1_grants(
+      workspace_id,authorization_id,execution_id,grant_id
+    ) ON DELETE RESTRICT,
   FOREIGN KEY(workspace_id,authorization_id,execution_id,operation_id)
     REFERENCES mission_agent_replacement_mutation_intents(
       workspace_id,authorization_id,execution_id,operation_id
@@ -387,21 +760,42 @@ CREATE TABLE mission_agent_v1_provider_receipts (
   authorization_id uuid NOT NULL,
   execution_id uuid NOT NULL,
   provider_mutation_id uuid NOT NULL,
+  grant_id uuid NOT NULL,
   operation_id uuid NOT NULL,
+  operation text NOT NULL,
+  authorization_fingerprint text NOT NULL CHECK(authorization_fingerprint ~ '^[a-f0-9]{64}$'),
+  fencing_generation bigint NOT NULL CHECK(fencing_generation>0),
+  sequence bigint NOT NULL CHECK(sequence>0),
+  operator_id uuid NOT NULL,
+  host_id uuid NOT NULL,
+  operator_artifact_checksum text NOT NULL CHECK(operator_artifact_checksum ~ '^[a-f0-9]{64}$'),
+  agent_id uuid NOT NULL,
+  target_artifact_checksum text NOT NULL CHECK(target_artifact_checksum ~ '^[a-f0-9]{64}$'),
+  prior_state_checksum text NOT NULL CHECK(prior_state_checksum ~ '^[a-f0-9]{64}$'),
+  resulting_state_checksum text NOT NULL CHECK(resulting_state_checksum ~ '^[a-f0-9]{64}$'),
+  local_journal_entry_id uuid NOT NULL,
+  executed_at timestamptz NOT NULL,
+  request_message_id uuid NOT NULL,
+  receipt_message_id uuid NOT NULL,
+  outcome text NOT NULL CHECK(outcome IN ('succeeded','failed')),
+  error_classification text,
   receipt_checksum text NOT NULL CHECK(receipt_checksum ~ '^[a-f0-9]{64}$'),
   receipt_bytes text NOT NULL,
   authenticated_receipt_tag text NOT NULL CHECK(authenticated_receipt_tag ~ '^[a-f0-9]{64}$'),
+  host_receipt_signature text NOT NULL,
   verification_evidence_checksum text NOT NULL CHECK(verification_evidence_checksum ~ '^[a-f0-9]{64}$'),
   received_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   PRIMARY KEY(workspace_id,authorization_id,execution_id,provider_mutation_id),
   UNIQUE(receipt_checksum),
+  UNIQUE(workspace_id,receipt_message_id),
+  UNIQUE(workspace_id,authorization_id,execution_id,local_journal_entry_id),
   FOREIGN KEY(workspace_id,authorization_id,execution_id,provider_mutation_id)
     REFERENCES mission_agent_v1_provider_mutations(
       workspace_id,authorization_id,execution_id,provider_mutation_id
     ) ON DELETE RESTRICT,
-  FOREIGN KEY(workspace_id,authorization_id,execution_id,operation_id)
-    REFERENCES mission_agent_replacement_receipts(
-      workspace_id,authorization_id,execution_id,operation_id
+  FOREIGN KEY(workspace_id,authorization_id,execution_id,grant_id)
+    REFERENCES mission_agent_v1_grants(
+      workspace_id,authorization_id,execution_id,grant_id
     ) ON DELETE RESTRICT,
   CHECK(receipt_checksum=encode(digest(convert_to(receipt_bytes,'UTF8'),'sha256'),'hex'))
 );
@@ -436,8 +830,9 @@ CREATE TABLE mission_agent_v1_verified_evidence (
   )),
   evidence_checksum text NOT NULL CHECK(evidence_checksum ~ '^[a-f0-9]{64}$'),
   evidence jsonb NOT NULL,
-  producer_operation_id uuid NOT NULL,
-  authenticated_receipt_tag text NOT NULL CHECK(authenticated_receipt_tag ~ '^[a-f0-9]{64}$'),
+  producer_operation_id uuid,
+  authenticated_receipt_tag text CHECK(authenticated_receipt_tag IS NULL OR authenticated_receipt_tag ~ '^[a-f0-9]{64}$'),
+  canonical_source_checksum text,
   observed_at timestamptz NOT NULL,
   expires_at timestamptz NOT NULL,
   recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
@@ -449,6 +844,16 @@ CREATE TABLE mission_agent_v1_verified_evidence (
     REFERENCES mission_agent_replacement_receipts(
       workspace_id,authorization_id,execution_id,operation_id
     ) ON DELETE RESTRICT,
+  FOREIGN KEY(workspace_id,authorization_id,execution_id,evidence_type,canonical_source_checksum)
+    REFERENCES mission_agent_replacement_evidence(
+      workspace_id,authorization_id,execution_id,evidence_type,evidence_checksum
+    ) ON DELETE RESTRICT,
+  CHECK(
+    (producer_operation_id IS NOT NULL AND authenticated_receipt_tag IS NOT NULL
+      AND canonical_source_checksum IS NULL) OR
+    (producer_operation_id IS NULL AND authenticated_receipt_tag IS NULL
+      AND canonical_source_checksum IS NOT NULL)
+  ),
   CHECK(expires_at > observed_at)
 );
 
@@ -507,6 +912,37 @@ BEGIN
   );
   RETURN computed_checksum;
 END $$;
+
+CREATE OR REPLACE FUNCTION record_mission_agent_v1_canonical_evidence(
+  p_workspace_id uuid,
+  p_authorization_id uuid,
+  p_execution_id uuid,
+  p_evidence_type text,
+  p_source_checksum text
+) RETURNS text
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,pg_temp AS $$
+DECLARE source_row record;
+BEGIN
+  SELECT * INTO source_row FROM mission_agent_replacement_evidence e
+   WHERE e.workspace_id=p_workspace_id AND e.authorization_id=p_authorization_id
+     AND e.execution_id=p_execution_id AND e.evidence_type=p_evidence_type
+     AND e.evidence_checksum=p_source_checksum AND e.expires_at>clock_timestamp();
+  IF source_row IS NULL THEN
+    RAISE EXCEPTION 'v1 canonical evidence source is unavailable or contradictory';
+  END IF;
+  INSERT INTO mission_agent_v1_verified_evidence(
+    workspace_id,authorization_id,execution_id,evidence_type,evidence_checksum,evidence,
+    producer_operation_id,authenticated_receipt_tag,canonical_source_checksum,observed_at,expires_at
+  ) VALUES(
+    p_workspace_id,p_authorization_id,p_execution_id,p_evidence_type,source_row.evidence_checksum,
+    source_row.evidence,NULL,NULL,source_row.evidence_checksum,source_row.observed_at,source_row.expires_at
+  ) ON CONFLICT DO NOTHING;
+  RETURN source_row.evidence_checksum;
+END $$;
+
+REVOKE ALL ON FUNCTION record_mission_agent_v1_canonical_evidence(
+  uuid,uuid,uuid,text,text
+) FROM PUBLIC,mission_control_v1_runtime,mission_control_v1_controller,mission_control_v1_verifier;
 
 REVOKE INSERT,UPDATE,DELETE ON mission_agent_v1_verified_evidence FROM PUBLIC;
 REVOKE ALL ON FUNCTION record_mission_agent_v1_verified_evidence(
@@ -592,39 +1028,11 @@ CREATE TRIGGER mission_agent_v1_rollout_binding_guard
 BEFORE INSERT ON mission_agent_v1_rollout_operations
 FOR EACH ROW EXECUTE FUNCTION validate_v1_rollout_binding();
 
-CREATE OR REPLACE FUNCTION validate_v1_intent_obligation()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM mission_agent_v1_rollout_operations r
-     WHERE r.workspace_id=NEW.workspace_id AND r.authorization_id=NEW.authorization_id
-       AND r.execution_id=NEW.execution_id
-  ) THEN
-    RETURN NEW;
-  END IF;
-  IF NEW.operation IN (
-    'stage_artifact','install_agent','install_launch_configuration','stop_agent','start_agent',
-    'restore_previous_version'
-  ) AND (
-    NOT NEW.rollback_obligation OR NOT EXISTS (
-      SELECT 1 FROM mission_agent_v1_rollback_obligations o
-       WHERE o.workspace_id=NEW.workspace_id AND o.authorization_id=NEW.authorization_id
-         AND o.execution_id=NEW.execution_id AND o.state<>'verified_closed'
-    )
-  ) THEN
-    RAISE EXCEPTION 'v1 mutation intent requires exact durable rollback obligation';
-  END IF;
-  RETURN NEW;
-END $$;
-
-CREATE CONSTRAINT TRIGGER mission_agent_v1_intent_rollback_guard
-AFTER INSERT OR UPDATE ON mission_agent_replacement_mutation_intents
-DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION validate_v1_intent_obligation();
-
 CREATE OR REPLACE FUNCTION validate_v1_current_fencing_epoch()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE current_epoch bigint;
+DECLARE current_epoch_created_at timestamptz;
+DECLARE historical_completion_allowed boolean;
 DECLARE expected_intent record;
 DECLARE rollout record;
 DECLARE obligation record;
@@ -635,10 +1043,35 @@ BEGIN
   PERFORM pg_advisory_xact_lock(hashtextextended(
     NEW.authorization_id::text || ':' || NEW.execution_id::text || ':' || NEW.phase,0
   ));
-  SELECT max(epoch) INTO current_epoch
+  SELECT epoch,created_at INTO current_epoch,current_epoch_created_at
     FROM mission_agent_v1_fencing_epochs
    WHERE workspace_id=NEW.workspace_id AND authorization_id=NEW.authorization_id
-     AND execution_id=NEW.execution_id AND fencing_namespace=NEW.fencing_namespace;
+     AND execution_id=NEW.execution_id AND fencing_namespace=NEW.fencing_namespace
+   ORDER BY epoch DESC LIMIT 1;
+  historical_completion_allowed:=current_epoch>NEW.fencing_epoch
+    AND NEW.completed_at<=current_epoch_created_at
+    AND EXISTS (
+      SELECT 1
+        FROM mission_agent_v1_grants g
+        JOIN mission_agent_v1_operator_confirmations c
+          ON c.workspace_id=g.workspace_id AND c.authorization_id=g.authorization_id
+         AND c.execution_id=g.execution_id AND c.provider_mutation_id=g.provider_mutation_id
+       WHERE g.workspace_id=NEW.workspace_id AND g.authorization_id=NEW.authorization_id
+         AND g.execution_id=NEW.execution_id AND g.grant_id=NEW.grant_id
+         AND g.fencing_generation=NEW.fencing_epoch
+         AND c.fencing_generation=NEW.fencing_epoch
+         AND c.request_message_id=NEW.request_message_id
+         AND c.request_nonce=NEW.request_nonce
+    )
+    AND EXISTS (
+      SELECT 1 FROM mission_agent_v1_durable_receipt_anchors a
+       WHERE a.workspace_id=NEW.workspace_id AND a.authorization_id=NEW.authorization_id
+         AND a.execution_id=NEW.execution_id AND a.grant_id=NEW.grant_id
+         AND a.provider_mutation_id=NEW.provider_mutation_id
+         AND a.fencing_generation=NEW.fencing_epoch
+         AND a.receipt_checksum=NEW.receipt_checksum
+         AND a.anchored_at<current_epoch_created_at
+    );
   SELECT intent_checksum,operation,sequence,status INTO expected_intent
     FROM mission_agent_replacement_mutation_intents
    WHERE workspace_id=NEW.workspace_id AND authorization_id=NEW.authorization_id
@@ -651,7 +1084,7 @@ BEGIN
     FROM mission_agent_v1_rollback_obligations
    WHERE workspace_id=NEW.workspace_id AND authorization_id=NEW.authorization_id
      AND execution_id=NEW.execution_id AND obligation_id=NEW.obligation_id;
-  IF current_epoch IS NULL OR current_epoch<>NEW.fencing_epoch
+  IF current_epoch IS NULL OR (current_epoch<>NEW.fencing_epoch AND NOT historical_completion_allowed)
      OR expected_intent IS NULL OR expected_intent.intent_checksum<>NEW.intent_checksum
      OR expected_intent.operation<>NEW.operation OR expected_intent.sequence<>NEW.sequence
      OR expected_intent.status<>'prepared' OR obligation IS NULL
@@ -664,7 +1097,7 @@ BEGIN
      WHERE workspace_id=NEW.workspace_id AND authorization_id=NEW.authorization_id
        AND execution_id=NEW.execution_id AND phase='rollback';
     expected_rollback_operation := obligation.required_inverse_operations->>existing_phase_count;
-    IF rollout.state NOT IN ('recovery_only','human_intervention_required')
+    IF rollout.state NOT IN ('awaiting_rollback_receipt','recovery_only','human_intervention_required')
        OR obligation.state<>'executing'
        OR NEW.phase_sequence<>existing_phase_count+1
        OR expected_rollback_operation IS NULL
@@ -672,8 +1105,7 @@ BEGIN
        OR NOT (obligation.inverse_operations ? NEW.operation) THEN
       RAISE EXCEPTION 'v1 rollback mutation is outside inverse authority';
     END IF;
-  ELSIF rollout.state<>'forward_active' OR rollout.forward_expires_at<=clock_timestamp()
-     OR NEW.phase<>'forward' THEN
+  ELSIF rollout.state<>'awaiting_provider_receipt' OR NEW.phase<>'forward' THEN
     RAISE EXCEPTION 'v1 forward mutation authority is unavailable';
   ELSE
     expected_forward_operation := (
@@ -778,6 +1210,9 @@ FOR EACH ROW EXECUTE FUNCTION prevent_v1_canonical_mutation();
 CREATE TRIGGER mission_agent_v1_provider_mutation_append_only
 BEFORE UPDATE OR DELETE ON mission_agent_v1_provider_mutations
 FOR EACH ROW EXECUTE FUNCTION prevent_v1_canonical_mutation();
+CREATE TRIGGER mission_agent_v1_durable_receipt_anchor_append_only
+BEFORE UPDATE OR DELETE ON mission_agent_v1_durable_receipt_anchors
+FOR EACH ROW EXECUTE FUNCTION prevent_v1_canonical_mutation();
 CREATE TRIGGER mission_agent_v1_provider_receipt_append_only
 BEFORE UPDATE OR DELETE ON mission_agent_v1_provider_receipts
 FOR EACH ROW EXECUTE FUNCTION prevent_v1_canonical_mutation();
@@ -815,17 +1250,16 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'v1 terminal state requires rollback obligation discharge';
   END IF;
-  IF NOT (
-    (OLD.state='prepared' AND NEW.state IN ('drain_requested','expired_before_mutation')) OR
-    (OLD.state='drain_requested' AND NEW.state IN ('drained_verified','expired_before_mutation')) OR
-    (OLD.state='drained_verified' AND NEW.state IN ('forward_active','expired_before_mutation')) OR
-    (OLD.state='forward_active' AND NEW.state IN ('observing','recovery_only','human_intervention_required')) OR
-    (OLD.state='observing' AND NEW.state IN ('success_verified','recovery_only','human_intervention_required')) OR
-    (OLD.state='recovery_only' AND NEW.state IN ('rollback_verified','human_intervention_required')) OR
-    (OLD.state='human_intervention_required' AND NEW.state IN ('recovery_only','rollback_verified')) OR
-    OLD.state=NEW.state
-  ) THEN
-    RAISE EXCEPTION 'invalid v1 rollout state transition';
+  IF (NEW.state<>OLD.state OR NEW.lifecycle_sequence<>OLD.lifecycle_sequence)
+     AND NEW.state NOT IN ('success_verified','rollback_verified')
+     AND NOT EXISTS (
+       SELECT 1 FROM mission_agent_v1_lifecycle_events e
+        WHERE e.workspace_id=NEW.workspace_id AND e.authorization_id=NEW.authorization_id
+          AND e.execution_id=NEW.execution_id AND e.sequence=NEW.lifecycle_sequence
+          AND e.from_state=OLD.state AND e.to_state=NEW.state
+          AND NEW.lifecycle_sequence=OLD.lifecycle_sequence+1
+     ) THEN
+    RAISE EXCEPTION 'v1 rollout state may advance only through its authoritative lifecycle event';
   END IF;
   IF NEW.state='expired_before_mutation' AND (
     EXISTS (
@@ -1062,6 +1496,828 @@ END $$;
 REVOKE ALL ON FUNCTION close_mission_agent_v1_rollout(
   uuid,uuid,uuid,text,text,text,text,text
 ) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION close_mission_agent_v1_rollout(
+REVOKE ALL ON FUNCTION close_mission_agent_v1_rollout(
   uuid,uuid,uuid,text,text,text,text,text
-) TO mission_control_v1_verifier;
+) FROM mission_control_v1_verifier,mission_control_v1_controller,mission_control_v1_runtime;
+
+CREATE OR REPLACE FUNCTION execute_mission_agent_v1_handler(
+  p_workspace_id uuid,
+  p_credential_id uuid,
+  p_agent_id uuid,
+  p_authorization_id uuid,
+  p_execution_id uuid,
+  p_handler text,
+  p_action text,
+  p_payload jsonb,
+  p_request_message_id uuid,
+  p_request_nonce text,
+  p_request_body_checksum text
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,pg_temp AS $$
+DECLARE
+  rollout record;
+  grant_row record;
+  intent_row record;
+  obligation_row record;
+  transition_row record;
+  phase_name text;
+  phase_number integer;
+  receipt_text text;
+  receipt_digest text;
+  transition_binding jsonb;
+  expected_operation text;
+  v_closure_outcome text;
+  closure_document jsonb;
+  closure_bytes text;
+  closure_checksum text;
+  transition_fence bigint;
+BEGIN
+  IF p_handler NOT IN ('claim','intent','receipt','decision','status','failure')
+     OR p_request_body_checksum !~ '^[a-f0-9]{64}$'
+     OR p_request_nonce='' THEN
+    RAISE EXCEPTION 'v1 handler envelope is invalid';
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(
+    p_workspace_id::text||':'||p_authorization_id::text||':'||p_execution_id::text,0
+  ));
+  SELECT r.*,o.credential_id,o.host_id,o.executable_checksum,
+         release.artifact_checksum operator_artifact_checksum,
+         host.public_key_fingerprint host_fingerprint,
+         c.version configuration_version,
+         coalesce((SELECT max(f.epoch) FROM mission_agent_v1_fencing_epochs f
+           WHERE f.workspace_id=r.workspace_id AND f.authorization_id=r.authorization_id
+             AND f.execution_id=r.execution_id AND f.fencing_namespace=r.fencing_namespace),0) current_fence
+    INTO rollout
+    FROM mission_agent_v1_rollout_operations r
+    JOIN mission_agent_v1_operator_identities o
+      ON o.workspace_id=r.workspace_id AND o.operator_id=r.operator_id
+      AND o.agent_id=r.agent_id AND o.host_id=r.host_id
+    JOIN mission_agent_v1_operator_releases release
+      ON release.release_id=o.operator_release_id AND release.status='approved'
+    JOIN mission_agent_v1_host_identities host
+      ON host.workspace_id=o.workspace_id AND host.host_id=o.host_id AND host.status='active'
+    JOIN mission_control_v1_production_configurations c
+      ON c.configuration_id=r.configuration_id
+   WHERE r.workspace_id=p_workspace_id AND r.authorization_id=p_authorization_id
+     AND r.execution_id=p_execution_id
+   FOR UPDATE OF r;
+  IF rollout IS NULL OR rollout.credential_id<>p_credential_id OR rollout.agent_id<>p_agent_id
+     OR rollout.authorization_fingerprint<>p_payload->>'authorizationFingerprint' THEN
+    RAISE EXCEPTION 'v1 handler identity is contradictory';
+  END IF;
+  IF p_handler='receipt' AND p_action='accept_provider_receipt'
+     AND EXISTS (
+       SELECT 1 FROM mission_agent_v1_provider_receipts r
+        WHERE r.workspace_id=p_workspace_id AND r.authorization_id=p_authorization_id
+          AND r.execution_id=p_execution_id
+          AND r.provider_mutation_id=(p_payload->>'providerMutationId')::uuid
+     ) THEN
+    SELECT * INTO grant_row FROM mission_agent_v1_provider_receipts r
+     WHERE r.workspace_id=p_workspace_id AND r.authorization_id=p_authorization_id
+       AND r.execution_id=p_execution_id
+       AND r.provider_mutation_id=(p_payload->>'providerMutationId')::uuid;
+    IF grant_row.receipt_checksum<>p_payload->>'receiptChecksum' THEN
+      RAISE EXCEPTION 'v1 provider receipt retry contradicts durable evidence';
+    END IF;
+    RETURN jsonb_build_object(
+      'state',rollout.state,'sequence',rollout.lifecycle_sequence,
+      'receiptChecksum',grant_row.receipt_checksum,'recovered',true
+    );
+  END IF;
+  IF p_handler='status' AND p_action='operator_journal_head'
+     AND EXISTS (
+       SELECT 1 FROM mission_agent_v1_operator_confirmations c
+        JOIN mission_agent_v1_grants g
+          ON g.workspace_id=c.workspace_id AND g.authorization_id=c.authorization_id
+         AND g.execution_id=c.execution_id AND g.provider_mutation_id=c.provider_mutation_id
+        WHERE c.workspace_id=p_workspace_id AND c.authorization_id=p_authorization_id
+          AND c.execution_id=p_execution_id AND g.grant_id=(p_payload->>'grantId')::uuid
+     ) THEN
+    SELECT * INTO grant_row FROM mission_agent_v1_operator_confirmations c
+     WHERE c.workspace_id=p_workspace_id AND c.authorization_id=p_authorization_id
+       AND c.execution_id=p_execution_id
+       AND c.provider_mutation_id=(
+         SELECT g.provider_mutation_id FROM mission_agent_v1_grants g
+          WHERE g.workspace_id=p_workspace_id AND g.authorization_id=p_authorization_id
+            AND g.execution_id=p_execution_id AND g.grant_id=(p_payload->>'grantId')::uuid
+       );
+    IF grant_row.request_checksum<>p_payload->>'operatorRequestChecksum'
+       OR grant_row.operator_journal_checksum<>p_payload->>'operatorJournalChecksum' THEN
+      RAISE EXCEPTION 'v1 operator journal retry contradicts durable intent';
+    END IF;
+    RETURN jsonb_build_object(
+      'state',rollout.state,'sequence',rollout.lifecycle_sequence,
+      'operatorJournalChecksum',grant_row.operator_journal_checksum,'recovered',true
+    );
+  END IF;
+  IF rollout.lifecycle_sequence<>(p_payload->>'expectedSequence')::bigint
+     OR rollout.state<>p_payload->>'expectedState'
+     OR (
+       rollout.current_fence<>(p_payload->>'fencingGeneration')::bigint
+       AND NOT (
+         p_handler='receipt' AND p_action='accept_provider_receipt'
+         AND EXISTS (
+           SELECT 1 FROM mission_agent_v1_grants historical_grant
+            WHERE historical_grant.workspace_id=p_workspace_id
+              AND historical_grant.authorization_id=p_authorization_id
+              AND historical_grant.execution_id=p_execution_id
+              AND historical_grant.grant_id=(p_payload->>'grantId')::uuid
+              AND historical_grant.fencing_generation=(p_payload->>'fencingGeneration')::bigint
+         )
+       )
+     ) THEN
+    RAISE EXCEPTION 'v1 handler identity, state, sequence, or fence is contradictory';
+  END IF;
+  transition_fence:=rollout.current_fence;
+  transition_binding := jsonb_build_object(
+    'authorizationFingerprint',rollout.authorization_fingerprint,
+    'operatorId',rollout.operator_id,
+    'hostId',rollout.host_id,
+    'operatorArtifactSha256',rollout.executable_checksum,
+    'agentId',rollout.agent_id,
+    'targetArtifactSha256',rollout.target_artifact_checksum,
+    'originatingForwardDeploymentId',rollout.deployment_id,
+    'currentControllerDeploymentId',rollout.current_controller_deployment_id,
+    'configurationVersion',rollout.configuration_version
+  );
+
+  IF p_handler='claim' AND p_action='verify_drain' THEN
+    IF p_payload->>'drainEvidenceChecksum' !~ '^[a-f0-9]{64}$' THEN
+      RAISE EXCEPTION 'v1 drain verification evidence is malformed';
+    END IF;
+    UPDATE mission_agent_v1_rollout_operations
+       SET drain_evidence_checksum=p_payload->>'drainEvidenceChecksum'
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id;
+  ELSIF p_handler='intent' AND p_action='propose_grant' THEN
+    IF p_payload->>'grantKind'='forward' THEN
+      SELECT (ARRAY['stage_artifact','stop_agent','install_agent','install_launch_configuration','start_agent'])
+             [count(*)::int+1]
+        INTO expected_operation
+        FROM mission_agent_v1_provider_mutations
+       WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+         AND execution_id=p_execution_id AND phase='forward';
+    ELSE
+      SELECT o.required_inverse_operations->>(count(m.*)::int)
+        INTO expected_operation
+        FROM mission_agent_v1_rollback_obligations o
+        LEFT JOIN mission_agent_v1_provider_mutations m
+          ON m.workspace_id=o.workspace_id AND m.authorization_id=o.authorization_id
+         AND m.execution_id=o.execution_id AND m.phase='rollback'
+       WHERE o.workspace_id=p_workspace_id AND o.authorization_id=p_authorization_id
+         AND o.execution_id=p_execution_id AND o.obligation_id=rollout.rollback_obligation_id
+       GROUP BY o.required_inverse_operations;
+    END IF;
+    IF (p_payload->>'grantChecksum') !~ '^[a-f0-9]{64}$'
+       OR encode(digest(convert_to(p_payload->>'grantBytes','UTF8'),'sha256'),'hex')<>p_payload->>'grantChecksum'
+       OR (p_payload->>'grantExpiresAt')::timestamptz<=clock_timestamp()
+       OR (p_payload->>'grantExpiresAt')::timestamptz>clock_timestamp()+interval '15 minutes'
+       OR (p_payload->>'grantKind'='forward' AND clock_timestamp()>=rollout.forward_expires_at)
+       OR expected_operation IS NULL OR expected_operation<>p_payload->>'operation'
+       OR (p_payload->>'grantKind' IN ('rollback','recovery') AND NOT EXISTS (
+         SELECT 1 FROM mission_agent_v1_rollback_obligations o
+          WHERE o.workspace_id=p_workspace_id AND o.authorization_id=p_authorization_id
+            AND o.execution_id=p_execution_id AND o.obligation_id=rollout.rollback_obligation_id
+            AND o.state IN ('open','executing','human_intervention_required')
+       )) THEN
+      RAISE EXCEPTION 'v1 grant authority is unavailable';
+    END IF;
+    INSERT INTO mission_agent_v1_grants(
+      workspace_id,authorization_id,execution_id,grant_id,grant_kind,state,operation_id,
+      provider_mutation_id,operation,sequence,authorization_fingerprint,operator_id,host_id,
+      agent_id,operator_artifact_checksum,target_artifact_checksum,
+      originating_forward_deployment_id,current_controller_deployment_id,configuration_id,
+      fencing_generation,rollback_obligation_id,grant_checksum,grant_bytes,issued_at,expires_at
+    ) VALUES(
+      p_workspace_id,p_authorization_id,p_execution_id,(p_payload->>'grantId')::uuid,
+      p_payload->>'grantKind','issued',(p_payload->>'operationId')::uuid,
+      (p_payload->>'providerMutationId')::uuid,p_payload->>'operation',
+      (p_payload->>'operationSequence')::bigint,rollout.authorization_fingerprint,
+      rollout.operator_id,rollout.host_id,rollout.agent_id,rollout.executable_checksum,
+      rollout.target_artifact_checksum,rollout.deployment_id,rollout.current_controller_deployment_id,
+      rollout.configuration_id,rollout.current_fence,rollout.rollback_obligation_id,
+      p_payload->>'grantChecksum',p_payload->>'grantBytes',clock_timestamp(),
+      (p_payload->>'grantExpiresAt')::timestamptz
+    );
+  ELSIF p_handler='status' AND p_action IN ('record_grant_delivery','acknowledge_grant') THEN
+    SELECT * INTO grant_row FROM mission_agent_v1_grants
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND grant_id=(p_payload->>'grantId')::uuid
+     FOR UPDATE;
+    IF grant_row IS NULL OR grant_row.grant_checksum<>p_payload->>'grantChecksum'
+       OR grant_row.fencing_generation<>rollout.current_fence
+       OR grant_row.expires_at<=clock_timestamp()
+       OR (p_action='record_grant_delivery' AND grant_row.state<>'issued')
+       OR (p_action='acknowledge_grant' AND grant_row.state<>'delivered') THEN
+      RAISE EXCEPTION 'v1 grant acknowledgement is contradictory';
+    END IF;
+    IF p_action='record_grant_delivery' THEN
+      UPDATE mission_agent_v1_grants SET state='delivered',delivery_message_id=p_request_message_id,
+        delivered_at=clock_timestamp()
+       WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+         AND execution_id=p_execution_id AND grant_id=grant_row.grant_id;
+    ELSE
+      IF p_payload->>'acknowledgementChecksum' !~ '^[a-f0-9]{64}$'
+         OR p_payload->>'operatorJournalChecksum' !~ '^[a-f0-9]{64}$' THEN
+        RAISE EXCEPTION 'v1 grant acknowledgement evidence is malformed';
+      END IF;
+      UPDATE mission_agent_v1_grants SET state='acknowledged',
+        acknowledgement_message_id=p_request_message_id,
+        acknowledgement_checksum=p_payload->>'acknowledgementChecksum',
+        host_acknowledgement_signature=p_payload->>'hostSignature',
+        acknowledged_at=clock_timestamp()
+       WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+         AND execution_id=p_execution_id AND grant_id=grant_row.grant_id;
+      UPDATE mission_agent_v1_rollout_operations
+         SET operator_journal_checksum=p_payload->>'operatorJournalChecksum'
+       WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+         AND execution_id=p_execution_id;
+    END IF;
+  ELSIF p_handler='decision' AND p_action IN ('expire_grant','revoke_grant') THEN
+    SELECT * INTO grant_row FROM mission_agent_v1_grants
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND grant_id=(p_payload->>'grantId')::uuid
+     FOR UPDATE;
+    IF grant_row IS NULL OR grant_row.grant_checksum<>p_payload->>'grantChecksum'
+       OR grant_row.state NOT IN ('issued','delivered','acknowledged')
+       OR EXISTS (
+         SELECT 1 FROM mission_agent_v1_operator_confirmations c
+          WHERE c.workspace_id=grant_row.workspace_id
+            AND c.authorization_id=grant_row.authorization_id
+            AND c.execution_id=grant_row.execution_id
+            AND c.provider_mutation_id=grant_row.provider_mutation_id
+       )
+       OR (p_action='expire_grant' AND grant_row.expires_at>clock_timestamp())
+       OR (p_action='revoke_grant'
+         AND p_payload->>'revocationReasonChecksum' !~ '^[a-f0-9]{64}$') THEN
+      RAISE EXCEPTION 'v1 grant expiration or revocation is contradictory';
+    END IF;
+    UPDATE mission_agent_v1_grants
+       SET state=CASE WHEN p_action='expire_grant'
+                      THEN 'expired_before_consumption'
+                      ELSE 'revoked_before_consumption' END
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND grant_id=grant_row.grant_id;
+  ELSIF p_handler='intent' AND p_action='commit_mutation_intent' THEN
+    SELECT * INTO grant_row FROM mission_agent_v1_grants
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND grant_id=(p_payload->>'grantId')::uuid
+     FOR UPDATE;
+    IF grant_row IS NULL OR grant_row.state<>'acknowledged'
+       OR grant_row.operation_id<>(p_payload->>'operationId')::uuid
+       OR grant_row.operation<>p_payload->>'operation'
+       OR grant_row.expires_at<=clock_timestamp()
+       OR (grant_row.grant_kind='forward' AND clock_timestamp()>=rollout.forward_expires_at) THEN
+      RAISE EXCEPTION 'v1 mutation intent lacks an acknowledged valid grant';
+    END IF;
+    INSERT INTO mission_agent_replacement_mutation_intents(
+      workspace_id,authorization_id,execution_id,operation_id,credential_id,claim_generation,
+      sequence,operation,fixed_arguments_checksum,expected_precondition_checksum,
+      expected_postcondition_checksum,from_state,to_state,retry_policy,rollback_obligation,
+      intent_checksum,status,created_at
+    ) VALUES(
+      p_workspace_id,p_authorization_id,p_execution_id,grant_row.operation_id,p_credential_id,1,
+      grant_row.sequence,grant_row.operation,p_payload->>'fixedArgumentsChecksum',
+      p_payload->>'expectedPreconditionChecksum',p_payload->>'expectedPostconditionChecksum',
+      p_payload->>'fromState',p_payload->>'toState','inspect-then-once',true,
+      p_payload->>'intentChecksum','prepared',clock_timestamp()
+    );
+    IF grant_row.grant_kind='forward' THEN
+      INSERT INTO mission_agent_v1_rollback_obligations(
+        workspace_id,authorization_id,execution_id,obligation_id,authorization_fingerprint,
+        prior_inventory_checksum,inverse_protocol,inverse_operations,opened_by_operation_id,
+        opened_by_intent_checksum,state
+      ) VALUES(
+        p_workspace_id,p_authorization_id,p_execution_id,rollout.rollback_obligation_id,
+        rollout.authorization_fingerprint,rollout.prior_inventory_checksum,
+        'mission-agent-v1-rollback-sequence-v1','[
+          "remove_staged_artifact","stop_agent","restore_previous_version",
+          "restore_previous_launch_configuration","install_launch_configuration","start_agent",
+          "verify_process","collect_heartbeats","verify_capabilities","verify_rollback"
+        ]'::jsonb,grant_row.operation_id,p_payload->>'intentChecksum','open'
+      ) ON CONFLICT(workspace_id,authorization_id,execution_id,obligation_id) DO NOTHING;
+      UPDATE mission_agent_v1_rollout_operations SET forward_consumed_at=coalesce(forward_consumed_at,clock_timestamp())
+       WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id AND execution_id=p_execution_id;
+    END IF;
+  ELSIF p_handler='status' AND p_action='operator_journal_head' THEN
+    SELECT * INTO grant_row FROM mission_agent_v1_grants
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND grant_id=(p_payload->>'grantId')::uuid
+     FOR UPDATE;
+    IF grant_row IS NULL OR grant_row.state<>'acknowledged'
+       OR grant_row.expires_at<=clock_timestamp()
+       OR p_payload->>'operatorJournalChecksum' !~ '^[a-f0-9]{64}$' THEN
+      RAISE EXCEPTION 'v1 operator journal intent is unavailable';
+    END IF;
+    INSERT INTO mission_agent_v1_operator_confirmations(
+      workspace_id,authorization_id,execution_id,provider_mutation_id,operation,sequence,
+      fencing_generation,request_checksum,request_message_id,request_nonce,
+      authenticated_message_id,authenticated_nonce,prior_operator_journal_checksum,
+      operator_journal_checksum,confirmed_at
+    ) VALUES(
+      p_workspace_id,p_authorization_id,p_execution_id,grant_row.provider_mutation_id,
+      grant_row.operation,grant_row.sequence,rollout.current_fence,p_payload->>'operatorRequestChecksum',
+      (p_payload->>'operatorRequestMessageId')::uuid,p_payload->>'operatorRequestNonce',
+      p_request_message_id,p_request_nonce,rollout.operator_journal_checksum,
+      p_payload->>'operatorJournalChecksum',clock_timestamp()
+    );
+    UPDATE mission_agent_v1_rollout_operations SET operator_journal_checksum=p_payload->>'operatorJournalChecksum'
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id AND execution_id=p_execution_id;
+  ELSIF p_handler='status' AND p_action='anchor_durable_receipt' THEN
+    SELECT * INTO grant_row FROM mission_agent_v1_grants
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND grant_id=(p_payload->>'grantId')::uuid
+     FOR UPDATE;
+    IF grant_row IS NULL OR grant_row.state<>'acknowledged'
+       OR grant_row.provider_mutation_id<>(p_payload->>'providerMutationId')::uuid
+       OR grant_row.fencing_generation<>rollout.current_fence
+       OR p_payload->>'receiptChecksum' !~ '^[a-f0-9]{64}$'
+       OR NOT EXISTS (
+         SELECT 1 FROM mission_agent_v1_operator_confirmations c
+          WHERE c.workspace_id=p_workspace_id AND c.authorization_id=p_authorization_id
+            AND c.execution_id=p_execution_id
+            AND c.provider_mutation_id=grant_row.provider_mutation_id
+            AND c.fencing_generation=grant_row.fencing_generation
+       ) THEN
+      RAISE EXCEPTION 'v1 durable receipt anchor is invalid or stale';
+    END IF;
+    INSERT INTO mission_agent_v1_durable_receipt_anchors(
+      workspace_id,authorization_id,execution_id,grant_id,provider_mutation_id,
+      fencing_generation,receipt_checksum,host_signature,request_message_id,request_nonce
+    ) VALUES(
+      p_workspace_id,p_authorization_id,p_execution_id,grant_row.grant_id,
+      grant_row.provider_mutation_id,grant_row.fencing_generation,p_payload->>'receiptChecksum',
+      p_payload->>'hostSignature',p_request_message_id,p_request_nonce
+    );
+  ELSIF p_handler='receipt' AND p_action='accept_provider_receipt' THEN
+    SELECT * INTO grant_row FROM mission_agent_v1_grants
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND grant_id=(p_payload->>'grantId')::uuid
+     FOR UPDATE;
+    SELECT * INTO intent_row FROM mission_agent_replacement_mutation_intents
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND operation_id=grant_row.operation_id
+     FOR UPDATE;
+    SELECT * INTO obligation_row FROM mission_agent_v1_rollback_obligations
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND obligation_id=rollout.rollback_obligation_id
+     FOR UPDATE;
+    receipt_text:=p_payload->>'receiptBytes';
+    receipt_digest:=encode(digest(convert_to(receipt_text,'UTF8'),'sha256'),'hex');
+    IF grant_row IS NULL OR intent_row IS NULL OR obligation_row IS NULL
+       OR grant_row.state<>'acknowledged' OR intent_row.status<>'prepared'
+       OR (
+         grant_row.expires_at<=clock_timestamp()
+         AND (p_payload->>'executedAt')::timestamptz>grant_row.expires_at
+       )
+       OR receipt_digest<>p_payload->>'receiptChecksum'
+       OR (p_payload->>'providerMutationId')::uuid<>grant_row.provider_mutation_id
+       OR p_payload->>'operation'<>grant_row.operation
+       OR (p_payload->>'priorStateChecksum') !~ '^[a-f0-9]{64}$'
+       OR (p_payload->>'resultingStateChecksum') !~ '^[a-f0-9]{64}$'
+       OR p_payload->>'outcome'<>'succeeded'
+       OR (p_payload->>'authenticatedReceiptTag') !~ '^[a-f0-9]{64}$'
+       OR NOT EXISTS (
+         SELECT 1 FROM mission_agent_v1_operator_confirmations c
+          WHERE c.workspace_id=p_workspace_id AND c.authorization_id=p_authorization_id
+            AND c.execution_id=p_execution_id
+            AND c.provider_mutation_id=grant_row.provider_mutation_id
+            AND c.operation=grant_row.operation AND c.sequence=grant_row.sequence
+            AND c.fencing_generation=grant_row.fencing_generation
+            AND c.request_message_id=(p_payload->>'operatorRequestMessageId')::uuid
+            AND c.request_nonce=p_payload->>'operatorRequestNonce'
+            AND c.operator_journal_checksum=p_payload->>'priorOperatorJournalChecksum'
+       )
+       OR (
+         grant_row.fencing_generation<>rollout.current_fence
+         AND NOT EXISTS (
+           SELECT 1 FROM mission_agent_v1_durable_receipt_anchors a
+            WHERE a.workspace_id=p_workspace_id AND a.authorization_id=p_authorization_id
+              AND a.execution_id=p_execution_id AND a.grant_id=grant_row.grant_id
+              AND a.provider_mutation_id=grant_row.provider_mutation_id
+              AND a.fencing_generation=grant_row.fencing_generation
+              AND a.receipt_checksum=receipt_digest
+              AND a.anchored_at<(
+                SELECT created_at FROM mission_agent_v1_fencing_epochs f
+                 WHERE f.workspace_id=p_workspace_id AND f.authorization_id=p_authorization_id
+                   AND f.execution_id=p_execution_id AND f.fencing_namespace=rollout.fencing_namespace
+                   AND f.epoch=rollout.current_fence
+              )
+         )
+       ) THEN
+      RAISE EXCEPTION 'v1 durable provider receipt is invalid or contradictory';
+    END IF;
+    phase_name:=CASE WHEN grant_row.grant_kind='forward' THEN 'forward' ELSE 'rollback' END;
+    SELECT count(*)::integer+1 INTO phase_number FROM mission_agent_v1_provider_mutations
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND phase=phase_name;
+    INSERT INTO mission_agent_replacement_receipts(
+      workspace_id,authorization_id,execution_id,operation_id,credential_id,agent_id,
+      provider_identifier,authorization_fingerprint,claim_generation,sequence,request_nonce,
+      receipt_nonce,operation,operation_checksum,result_checksum,host_journal_checksum,
+      authentication_tag,received_at,acknowledgement
+    ) VALUES(
+      p_workspace_id,p_authorization_id,p_execution_id,grant_row.operation_id,p_credential_id,
+      rollout.agent_id,'v1-macos-operator',rollout.authorization_fingerprint,1,grant_row.sequence,
+      p_payload->>'operatorRequestNonce',p_request_nonce,grant_row.operation,
+      p_request_body_checksum,p_payload->>'resultingStateChecksum',
+      p_payload->>'operatorJournalChecksum',p_payload->>'authenticatedReceiptTag',
+      clock_timestamp(),jsonb_build_object('accepted',true,'receiptChecksum',receipt_digest)
+    );
+    INSERT INTO mission_agent_v1_provider_mutations(
+      workspace_id,authorization_id,execution_id,provider_mutation_id,grant_id,operation_id,
+      obligation_id,authorization_fingerprint,prior_inventory_checksum,phase,phase_sequence,
+      operation,sequence,fencing_namespace,fencing_epoch,intent_checksum,request_checksum,
+      request_message_id,request_nonce,prior_operator_journal_checksum,operator_journal_checksum,
+      prior_state_checksum,resulting_state_checksum,receipt_checksum,local_journal_entry_id,completed_at
+    ) VALUES(
+      p_workspace_id,p_authorization_id,p_execution_id,grant_row.provider_mutation_id,grant_row.grant_id,
+      grant_row.operation_id,rollout.rollback_obligation_id,rollout.authorization_fingerprint,
+      rollout.prior_inventory_checksum,phase_name,phase_number,grant_row.operation,grant_row.sequence,
+      rollout.fencing_namespace,grant_row.fencing_generation,intent_row.intent_checksum,
+      p_request_body_checksum,(p_payload->>'operatorRequestMessageId')::uuid,
+      p_payload->>'operatorRequestNonce',p_payload->>'priorOperatorJournalChecksum',
+      p_payload->>'operatorJournalChecksum',p_payload->>'priorStateChecksum',
+      p_payload->>'resultingStateChecksum',receipt_digest,(p_payload->>'localJournalEntryId')::uuid,
+      (p_payload->>'executedAt')::timestamptz
+    );
+    INSERT INTO mission_agent_v1_provider_receipts(
+      workspace_id,authorization_id,execution_id,provider_mutation_id,grant_id,operation_id,
+      operation,authorization_fingerprint,fencing_generation,sequence,operator_id,host_id,
+      operator_artifact_checksum,agent_id,target_artifact_checksum,prior_state_checksum,
+      resulting_state_checksum,local_journal_entry_id,executed_at,request_message_id,
+      receipt_message_id,outcome,error_classification,receipt_checksum,receipt_bytes,
+      authenticated_receipt_tag,host_receipt_signature,verification_evidence_checksum
+    ) VALUES(
+      p_workspace_id,p_authorization_id,p_execution_id,grant_row.provider_mutation_id,grant_row.grant_id,
+      grant_row.operation_id,grant_row.operation,rollout.authorization_fingerprint,grant_row.fencing_generation,
+      grant_row.sequence,rollout.operator_id,rollout.host_id,rollout.executable_checksum,rollout.agent_id,
+      rollout.target_artifact_checksum,p_payload->>'priorStateChecksum',
+      p_payload->>'resultingStateChecksum',(p_payload->>'localJournalEntryId')::uuid,
+      (p_payload->>'executedAt')::timestamptz,(p_payload->>'operatorRequestMessageId')::uuid,
+      p_request_message_id,p_payload->>'outcome',p_payload->>'errorClassification',
+      receipt_digest,receipt_text,p_payload->>'authenticatedReceiptTag',
+      p_payload->>'hostSignature',p_payload->>'verificationEvidenceChecksum'
+    );
+    UPDATE mission_agent_v1_grants SET state='consumed',consumed_at=clock_timestamp()
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND grant_id=grant_row.grant_id;
+    UPDATE mission_agent_replacement_mutation_intents SET status='completed',
+      completed_at=clock_timestamp(),result_checksum=p_payload->>'resultingStateChecksum',
+      host_journal_checksum=p_payload->>'operatorJournalChecksum'
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND operation_id=grant_row.operation_id;
+  ELSIF p_handler='failure' AND p_action='activate_rollback' THEN
+    SELECT * INTO obligation_row FROM mission_agent_v1_rollback_obligations
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND obligation_id=rollout.rollback_obligation_id
+     FOR UPDATE;
+    IF obligation_row IS NULL OR obligation_row.state='verified_closed' THEN
+      RAISE EXCEPTION 'v1 durable rollback obligation is unavailable';
+    END IF;
+    UPDATE mission_agent_v1_rollback_obligations SET state='executing',
+      required_inverse_operations=mission_agent_v1_rollback_plan((
+        SELECT coalesce(jsonb_agg(m.operation ORDER BY m.phase_sequence),'[]'::jsonb)
+          FROM mission_agent_v1_provider_mutations m
+         WHERE m.workspace_id=p_workspace_id AND m.authorization_id=p_authorization_id
+           AND m.execution_id=p_execution_id AND m.phase='forward'
+      )),
+      rollback_plan_checksum=encode(digest(convert_to(mission_agent_v1_rollback_plan((
+        SELECT coalesce(jsonb_agg(m.operation ORDER BY m.phase_sequence),'[]'::jsonb)
+          FROM mission_agent_v1_provider_mutations m
+         WHERE m.workspace_id=p_workspace_id AND m.authorization_id=p_authorization_id
+           AND m.execution_id=p_execution_id AND m.phase='forward'
+      ))::text,'UTF8'),'sha256'),'hex')
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND obligation_id=rollout.rollback_obligation_id;
+  ELSIF p_handler='decision' AND p_action='observe_stability' THEN
+    UPDATE mission_agent_replacement_execution_claims
+       SET state='awaiting-authoritative-smoke'
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id;
+  ELSIF p_handler='status' AND p_action='rollback_observation' THEN
+    SELECT r.* INTO grant_row
+      FROM mission_agent_v1_provider_receipts r
+     WHERE r.workspace_id=p_workspace_id AND r.authorization_id=p_authorization_id
+       AND r.execution_id=p_execution_id
+       AND EXISTS (
+         SELECT 1 FROM mission_agent_v1_provider_mutations m
+          WHERE m.workspace_id=r.workspace_id AND m.authorization_id=r.authorization_id
+            AND m.execution_id=r.execution_id AND m.provider_mutation_id=r.provider_mutation_id
+            AND m.phase='rollback'
+       )
+     ORDER BY r.executed_at DESC,r.receipt_message_id DESC LIMIT 1;
+    IF grant_row IS NULL
+       OR jsonb_typeof(p_payload->'processEvidence')<>'object'
+       OR (p_payload->>'observedAt')::timestamptz<=grant_row.executed_at
+       OR (p_payload->>'observedAt')::timestamptz>clock_timestamp()+interval '5 minutes'
+       OR p_payload->'processEvidence'->>'terminalReceiptChecksum'<>grant_row.receipt_checksum
+       OR p_payload->'processEvidence'->>'terminalStateChecksum'<>grant_row.resulting_state_checksum
+       OR (p_payload->'processEvidence'->>'fencingGeneration')::bigint<>rollout.current_fence
+       OR p_payload->'processEvidence'->>'authorizationId'<>p_authorization_id::text
+       OR p_payload->'processEvidence'->>'executionId'<>p_execution_id::text
+       OR p_payload->'processEvidence'->>'hostSignature' IS NOT NULL THEN
+      RAISE EXCEPTION 'v1 rollback host observation is invalid or stale';
+    END IF;
+    closure_document:=p_payload->'processEvidence';
+    closure_checksum:=encode(digest(convert_to(closure_document::text,'UTF8'),'sha256'),'hex');
+    INSERT INTO mission_agent_replacement_evidence(
+      workspace_id,authorization_id,execution_id,evidence_type,evidence_checksum,evidence,
+      observed_at,expires_at
+    ) VALUES(
+      p_workspace_id,p_authorization_id,p_execution_id,'process',closure_checksum,
+      closure_document,(p_payload->>'observedAt')::timestamptz,clock_timestamp()+interval '15 minutes'
+    );
+  ELSIF p_handler='status' AND p_action='runtime_status' THEN
+    IF p_payload->>'evidenceType' NOT IN (
+      'process','heartbeat-capability','projection','smoke','rollback-equivalence'
+    ) OR p_payload->>'sourceEvidenceChecksum' !~ '^[a-f0-9]{64}$' THEN
+      RAISE EXCEPTION 'v1 canonical runtime evidence reference is malformed';
+    END IF;
+    PERFORM record_mission_agent_v1_canonical_evidence(
+      p_workspace_id,p_authorization_id,p_execution_id,p_payload->>'evidenceType',
+      p_payload->>'sourceEvidenceChecksum'
+    );
+  ELSIF p_handler='decision' AND p_action IN ('close_success','close_rollback') THEN
+    v_closure_outcome:=CASE WHEN p_action='close_success' THEN 'success_verified' ELSE 'rollback_verified' END;
+    IF v_closure_outcome='rollback_verified' THEN
+      closure_document:=p_payload->'rollbackEvidence';
+      IF jsonb_typeof(closure_document)<>'object'
+         OR (p_payload->>'rollbackEvidenceExpiresAt')::timestamptz<=clock_timestamp()
+         OR (p_payload->>'rollbackEvidenceExpiresAt')::timestamptz>clock_timestamp()+interval '15 minutes'
+         OR closure_document->>'authorizationId'<>p_authorization_id::text
+         OR closure_document->>'executionId'<>p_execution_id::text
+         OR closure_document->>'terminalReceiptChecksum'<>(
+           SELECT r.receipt_checksum
+             FROM mission_agent_v1_provider_receipts r
+             JOIN mission_agent_v1_provider_mutations m
+               ON m.workspace_id=r.workspace_id AND m.authorization_id=r.authorization_id
+              AND m.execution_id=r.execution_id AND m.provider_mutation_id=r.provider_mutation_id
+            WHERE r.workspace_id=p_workspace_id AND r.authorization_id=p_authorization_id
+              AND r.execution_id=p_execution_id AND m.phase='rollback'
+            ORDER BY r.executed_at DESC,r.receipt_message_id DESC LIMIT 1
+         ) THEN
+        RAISE EXCEPTION 'v1 rollback equivalence evidence is invalid';
+      END IF;
+      closure_checksum:=encode(digest(convert_to(closure_document::text,'UTF8'),'sha256'),'hex');
+      INSERT INTO mission_agent_replacement_evidence(
+        workspace_id,authorization_id,execution_id,evidence_type,evidence_checksum,evidence,
+        observed_at,expires_at
+      ) VALUES
+        (p_workspace_id,p_authorization_id,p_execution_id,'heartbeat-capability',
+         closure_checksum,closure_document,clock_timestamp(),
+         (p_payload->>'rollbackEvidenceExpiresAt')::timestamptz),
+        (p_workspace_id,p_authorization_id,p_execution_id,'projection',
+         closure_checksum,closure_document,clock_timestamp(),
+         (p_payload->>'rollbackEvidenceExpiresAt')::timestamptz),
+        (p_workspace_id,p_authorization_id,p_execution_id,'rollback-equivalence',
+         closure_checksum,closure_document,clock_timestamp(),
+         (p_payload->>'rollbackEvidenceExpiresAt')::timestamptz);
+      FOR expected_operation IN SELECT unnest(ARRAY[
+        'process','heartbeat-capability','projection','rollback-equivalence'
+      ]) LOOP
+        SELECT e.evidence_checksum INTO receipt_digest
+          FROM mission_agent_replacement_evidence e
+         WHERE e.workspace_id=p_workspace_id AND e.authorization_id=p_authorization_id
+           AND e.execution_id=p_execution_id AND e.evidence_type=expected_operation
+           AND e.expires_at>clock_timestamp()
+           AND e.observed_at>(
+             SELECT max(r.executed_at)
+               FROM mission_agent_v1_provider_receipts r
+               JOIN mission_agent_v1_provider_mutations m
+                 ON m.workspace_id=r.workspace_id AND m.authorization_id=r.authorization_id
+                AND m.execution_id=r.execution_id AND m.provider_mutation_id=r.provider_mutation_id
+              WHERE r.workspace_id=p_workspace_id AND r.authorization_id=p_authorization_id
+                AND r.execution_id=p_execution_id AND m.phase='rollback'
+           )
+           AND (
+             expected_operation<>'rollback-equivalence'
+             OR e.evidence->>'terminalReceiptChecksum'=(
+               SELECT r.receipt_checksum
+                 FROM mission_agent_v1_provider_receipts r
+                 JOIN mission_agent_v1_provider_mutations m
+                   ON m.workspace_id=r.workspace_id AND m.authorization_id=r.authorization_id
+                  AND m.execution_id=r.execution_id AND m.provider_mutation_id=r.provider_mutation_id
+                WHERE r.workspace_id=p_workspace_id AND r.authorization_id=p_authorization_id
+                  AND r.execution_id=p_execution_id AND m.phase='rollback'
+                ORDER BY r.executed_at DESC,r.receipt_message_id DESC LIMIT 1
+             )
+           )
+         ORDER BY e.observed_at DESC LIMIT 1;
+        IF receipt_digest IS NULL THEN
+          RAISE EXCEPTION 'v1 rollback lacks canonical runtime evidence';
+        END IF;
+        PERFORM record_mission_agent_v1_canonical_evidence(
+          p_workspace_id,p_authorization_id,p_execution_id,expected_operation,receipt_digest
+        );
+        p_payload:=jsonb_set(
+          p_payload,
+          CASE expected_operation
+            WHEN 'process' THEN '{processChecksum}'::text[]
+            WHEN 'heartbeat-capability' THEN '{heartbeatChecksum}'::text[]
+            WHEN 'projection' THEN '{projectionChecksum}'::text[]
+            ELSE '{inventoryChecksum}'::text[]
+          END,
+          to_jsonb(receipt_digest)
+        );
+      END LOOP;
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM mission_agent_v1_verified_evidence e
+       WHERE e.workspace_id=p_workspace_id AND e.authorization_id=p_authorization_id
+         AND e.execution_id=p_execution_id AND e.evidence_type='process'
+         AND e.evidence_checksum=p_payload->>'processChecksum' AND e.expires_at>clock_timestamp()
+    ) OR NOT EXISTS (
+      SELECT 1 FROM mission_agent_v1_verified_evidence e
+       WHERE e.workspace_id=p_workspace_id AND e.authorization_id=p_authorization_id
+         AND e.execution_id=p_execution_id AND e.evidence_type='heartbeat-capability'
+         AND e.evidence_checksum=p_payload->>'heartbeatChecksum' AND e.expires_at>clock_timestamp()
+    ) OR NOT EXISTS (
+      SELECT 1 FROM mission_agent_v1_verified_evidence e
+       WHERE e.workspace_id=p_workspace_id AND e.authorization_id=p_authorization_id
+         AND e.execution_id=p_execution_id AND e.evidence_type='projection'
+         AND e.evidence_checksum=p_payload->>'projectionChecksum' AND e.expires_at>clock_timestamp()
+    ) OR NOT EXISTS (
+      SELECT 1 FROM mission_agent_v1_verified_evidence e
+       WHERE e.workspace_id=p_workspace_id AND e.authorization_id=p_authorization_id
+         AND e.execution_id=p_execution_id
+         AND e.evidence_type=CASE WHEN v_closure_outcome='success_verified' THEN 'smoke' ELSE 'rollback-equivalence' END
+         AND e.evidence_checksum=p_payload->>'inventoryChecksum' AND e.expires_at>clock_timestamp()
+    ) OR EXISTS (
+      SELECT 1 FROM mission_agent_v1_grants g
+       WHERE g.workspace_id=p_workspace_id AND g.authorization_id=p_authorization_id
+         AND g.execution_id=p_execution_id AND g.state NOT IN (
+           'consumed','expired_before_consumption','revoked_before_consumption','superseded'
+         )
+    ) OR EXISTS (
+      SELECT 1 FROM mission_agent_v1_provider_mutations m
+       WHERE m.workspace_id=p_workspace_id AND m.authorization_id=p_authorization_id
+         AND m.execution_id=p_execution_id AND NOT EXISTS (
+           SELECT 1 FROM mission_agent_v1_provider_receipts r
+            WHERE r.workspace_id=m.workspace_id AND r.authorization_id=m.authorization_id
+              AND r.execution_id=m.execution_id AND r.provider_mutation_id=m.provider_mutation_id
+         )
+    ) THEN
+      RAISE EXCEPTION 'v1 lifecycle closure lacks canonical durable verification';
+    END IF;
+    IF v_closure_outcome='success_verified' AND (
+      SELECT coalesce(jsonb_agg(m.operation ORDER BY m.phase_sequence),'[]'::jsonb)
+        FROM mission_agent_v1_provider_mutations m
+       WHERE m.workspace_id=p_workspace_id AND m.authorization_id=p_authorization_id
+         AND m.execution_id=p_execution_id AND m.phase='forward'
+    ) <> '["stage_artifact","stop_agent","install_agent","install_launch_configuration","start_agent"]'::jsonb THEN
+      RAISE EXCEPTION 'v1 success closure requires the complete canonical forward sequence';
+    END IF;
+    SELECT * INTO obligation_row FROM mission_agent_v1_rollback_obligations o
+     WHERE o.workspace_id=p_workspace_id AND o.authorization_id=p_authorization_id
+       AND o.execution_id=p_execution_id AND o.obligation_id=rollout.rollback_obligation_id
+     FOR UPDATE;
+    IF obligation_row IS NULL OR obligation_row.state='verified_closed'
+       OR (v_closure_outcome='rollback_verified' AND (
+         SELECT coalesce(jsonb_agg(m.operation ORDER BY m.phase_sequence),'[]'::jsonb)
+           FROM mission_agent_v1_provider_mutations m
+          WHERE m.workspace_id=p_workspace_id AND m.authorization_id=p_authorization_id
+            AND m.execution_id=p_execution_id AND m.phase='rollback'
+       )<>obligation_row.required_inverse_operations) THEN
+      RAISE EXCEPTION 'v1 lifecycle closure cannot discharge its rollback obligation';
+    END IF;
+    closure_document:=jsonb_build_object(
+      'authorization_id',p_authorization_id,'execution_id',p_execution_id,
+      'heartbeat_capability_checksum',p_payload->>'heartbeatChecksum',
+      'inventory_checksum',p_payload->>'inventoryChecksum','outcome',v_closure_outcome,
+      'process_checksum',p_payload->>'processChecksum',
+      'projection_checksum',p_payload->>'projectionChecksum','workspace_id',p_workspace_id
+    );
+    closure_bytes:=closure_document::text;
+    closure_checksum:=encode(digest(convert_to(closure_bytes,'UTF8'),'sha256'),'hex');
+    INSERT INTO mission_agent_v1_closure_evidence(
+      workspace_id,authorization_id,execution_id,outcome,evidence_checksum,process_checksum,
+      heartbeat_checksum,capability_checksum,projection_checksum,inventory_checksum,
+      evidence_bytes,verified_at
+    ) VALUES(
+      p_workspace_id,p_authorization_id,p_execution_id,v_closure_outcome,closure_checksum,
+      p_payload->>'processChecksum',p_payload->>'heartbeatChecksum',p_payload->>'heartbeatChecksum',
+      p_payload->>'projectionChecksum',p_payload->>'inventoryChecksum',closure_bytes,clock_timestamp()
+    );
+    UPDATE mission_agent_v1_rollback_obligations
+       SET state='verified_closed',closed_at=clock_timestamp(),closure_outcome=v_closure_outcome,
+           closure_evidence_checksum=closure_checksum
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id AND obligation_id=rollout.rollback_obligation_id;
+    UPDATE mission_agent_v1_rollout_operations SET terminal_evidence_checksum=closure_checksum
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id;
+    UPDATE mission_agent_replacement_execution_claims
+       SET state=CASE WHEN v_closure_outcome='success_verified' THEN 'completed' ELSE 'rolled-back' END,
+           completed_at=clock_timestamp()
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+       AND execution_id=p_execution_id;
+    UPDATE mission_agent_replacement_bootstraps
+       SET state=CASE WHEN v_closure_outcome='success_verified' THEN 'completed' ELSE 'rolled_back' END,
+           updated_at=clock_timestamp()
+     WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id;
+    UPDATE mission_agent_replacement_credentials SET consumed_at=coalesce(consumed_at,clock_timestamp())
+     WHERE workspace_id=p_workspace_id AND credential_id=p_credential_id;
+  END IF;
+
+  SELECT * INTO transition_row FROM advance_mission_agent_v1_lifecycle(
+    p_workspace_id,p_authorization_id,p_execution_id,p_handler,p_action,
+    p_payload->>'expectedState',(p_payload->>'expectedSequence')::bigint,
+    transition_fence,transition_binding,
+    (p_payload->>'eventId')::uuid,p_request_message_id,p_request_nonce,
+    'request-body-sha256:'||p_request_body_checksum
+  );
+  RETURN jsonb_build_object(
+    'state',transition_row.state,'sequence',transition_row.sequence,
+    'eventChecksum',transition_row.event_checksum,
+    'grantId',p_payload->>'grantId','grantChecksum',p_payload->>'grantChecksum',
+    'evidenceChecksum',CASE
+      WHEN p_action='runtime_status' THEN p_payload->>'sourceEvidenceChecksum'
+      WHEN p_action='rollback_observation' THEN closure_checksum
+      ELSE NULL END
+  );
+END $$;
+
+REVOKE ALL ON FUNCTION execute_mission_agent_v1_handler(
+  uuid,uuid,uuid,uuid,uuid,text,text,jsonb,uuid,text,text
+) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION execute_mission_agent_v1_handler(
+  uuid,uuid,uuid,uuid,uuid,text,text,jsonb,uuid,text,text
+) TO mission_control_v1_controller;
+
+REVOKE INSERT,UPDATE,DELETE ON
+  mission_agent_v1_rollout_operations,
+  mission_agent_v1_grants,
+  mission_agent_v1_lifecycle_events,
+  mission_agent_v1_fencing_epochs,
+  mission_agent_v1_rollback_obligations,
+  mission_agent_v1_operator_confirmations,
+  mission_agent_v1_durable_receipt_anchors,
+  mission_agent_v1_provider_mutations,
+  mission_agent_v1_provider_receipts,
+  mission_agent_v1_closure_evidence,
+  mission_agent_v1_verified_evidence
+FROM PUBLIC,mission_control_v1_runtime,mission_control_v1_controller,mission_control_v1_verifier;
+
+CREATE OR REPLACE FUNCTION adopt_mission_agent_v1_recovery_controller(
+  p_workspace_id uuid,
+  p_authorization_id uuid,
+  p_execution_id uuid,
+  p_new_deployment_id uuid,
+  p_expected_fencing_generation bigint,
+  p_request_message_id uuid,
+  p_request_nonce text,
+  p_evidence_checksum text
+) RETURNS bigint
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,pg_temp AS $$
+DECLARE
+  rollout record;
+  deployment record;
+  next_generation bigint;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended(
+    p_workspace_id::text||':'||p_authorization_id::text||':'||p_execution_id::text,0
+  ));
+  SELECT r.*,c.configuration_checksum expected_configuration_checksum,
+         coalesce((SELECT max(f.epoch) FROM mission_agent_v1_fencing_epochs f
+           WHERE f.workspace_id=r.workspace_id AND f.authorization_id=r.authorization_id
+             AND f.execution_id=r.execution_id AND f.fencing_namespace=r.fencing_namespace),0) current_fence
+    INTO rollout
+    FROM mission_agent_v1_rollout_operations r
+    JOIN mission_control_v1_production_configurations c ON c.configuration_id=r.configuration_id
+   WHERE r.workspace_id=p_workspace_id AND r.authorization_id=p_authorization_id
+     AND r.execution_id=p_execution_id
+   FOR UPDATE OF r;
+  SELECT * INTO deployment FROM mission_control_production_deployments
+   WHERE deployment_id=p_new_deployment_id;
+  IF rollout IS NULL OR deployment IS NULL
+     OR rollout.current_fence<>p_expected_fencing_generation
+     OR deployment.attestation_expires_at<=clock_timestamp()
+     OR deployment.configuration_checksum<>rollout.expected_configuration_checksum
+     OR NOT EXISTS (
+       SELECT 1 FROM mission_agent_v1_rollback_obligations o
+        WHERE o.workspace_id=p_workspace_id AND o.authorization_id=p_authorization_id
+          AND o.execution_id=p_execution_id AND o.state<>'verified_closed'
+     )
+     OR rollout.forward_consumed_at IS NULL
+     OR rollout.state IN ('success_verified','rollback_verified','expired_before_mutation') THEN
+    RAISE EXCEPTION 'v1 recovery controller adoption is unauthorized or contradictory';
+  END IF;
+  UPDATE mission_agent_v1_rollout_operations
+     SET current_controller_deployment_id=p_new_deployment_id,updated_at=clock_timestamp()
+   WHERE workspace_id=p_workspace_id AND authorization_id=p_authorization_id
+     AND execution_id=p_execution_id;
+  SELECT advance_mission_agent_v1_fencing_epoch(
+    p_workspace_id,p_authorization_id,p_execution_id,rollout.fencing_namespace,
+    p_expected_fencing_generation,deployment.task_arn,p_request_message_id,p_request_nonce,
+    p_evidence_checksum
+  ) INTO next_generation;
+  RETURN next_generation;
+END $$;
+
+REVOKE ALL ON FUNCTION adopt_mission_agent_v1_recovery_controller(
+  uuid,uuid,uuid,uuid,bigint,uuid,text,text
+) FROM PUBLIC,mission_control_v1_runtime,mission_control_v1_verifier;
+GRANT EXECUTE ON FUNCTION adopt_mission_agent_v1_recovery_controller(
+  uuid,uuid,uuid,uuid,bigint,uuid,text,text
+) TO mission_control_v1_controller;

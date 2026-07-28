@@ -1,9 +1,10 @@
 #!/usr/bin/env node
+/* eslint-disable */
 
 // scripts/v1-macos-operator.ts
 import { execFile as execFile3 } from "node:child_process";
-import { createHash as createHash9, randomUUID } from "node:crypto";
-import { readFile as readFile4 } from "node:fs/promises";
+import { createHash as createHash10, randomUUID as randomUUID2 } from "node:crypto";
+import { readFile as readFile5 } from "node:fs/promises";
 import { resolve as resolve4 } from "node:path";
 import { parseArgs, promisify as promisify3 } from "node:util";
 
@@ -19,16 +20,17 @@ function canonicalJson(value) {
 
 // application/v1-macos-operator-grant.ts
 function payload(grant) {
-  const { authenticationTag: _tag, ...value } = grant;
+  const value = { ...grant };
+  delete value.authenticationTag;
   return value;
 }
 function authenticate(value, key) {
   return createHmac("sha256", key).update(canonicalJson(value)).digest("hex");
 }
-function verifyV1OperatorGrant(grant, key) {
+function verifyV1OperatorGrant(grant, key, now = /* @__PURE__ */ new Date(), options = {}) {
   const expected = Uint8Array.from(Buffer.from(authenticate(payload(grant), key), "hex"));
   const supplied = Uint8Array.from(Buffer.from(grant.authenticationTag, "hex"));
-  if (grant.schemaVersion !== "mission-agent-v1-operator-grant-v1" || !/^[a-f0-9]{64}$/.test(grant.approvedExecutableChecksum) || !grant.missionControlUrl.startsWith("https://") || !Number.isFinite(Date.parse(grant.issuedAt)) || new Set(grant.allowedOperations).size !== grant.allowedOperations.length || supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
+  if (grant.schemaVersion !== "mission-agent-v1-operator-grant-v1" || !/^[a-f0-9-]{36}$/.test(grant.grantId) || !["forward", "rollback", "recovery"].includes(grant.grantKind) || !/^[a-f0-9-]{36}$/.test(grant.operationId) || !/^[a-f0-9-]{36}$/.test(grant.providerMutationId) || grant.sequence < 1 || grant.lifecycleSequence < 1 || !/^ed25519-spki-sha256:[a-f0-9]{64}$/.test(grant.hostFingerprint) || !/^[a-f0-9]{64}$/.test(grant.operatorArtifactSha256) || !grant.operatorProtocolVersion || grant.configurationVersion < 1 || !grant.originatingForwardDeploymentId || !grant.currentControllerDeploymentId || grant.currentControllerFencingGeneration < 1 || grant.rollbackObligationId !== grant.binding.rollbackObligationId || grant.providerMutationId.length === 0 || !/^[a-f0-9]{64}$/.test(grant.approvedExecutableChecksum) || grant.operatorArtifactSha256 !== grant.approvedExecutableChecksum || !grant.missionControlUrl.startsWith("https://") || !Number.isFinite(Date.parse(grant.issuedAt)) || !Number.isFinite(Date.parse(grant.expiresAt)) || Date.parse(grant.expiresAt) <= Date.parse(grant.issuedAt) || !options.allowExpiredReceiptRecovery && Date.parse(grant.expiresAt) <= now.getTime() || Date.parse(grant.expiresAt) - Date.parse(grant.issuedAt) > 15 * 6e4 || supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
     throw new Error("V1 operator grant is malformed or unauthenticated.");
 }
 
@@ -1130,7 +1132,7 @@ import { dirname as dirname3, resolve as resolve3 } from "node:path";
 import { promisify as promisify2 } from "node:util";
 
 // application/v1-macos-operator-journal.ts
-import { createHash as createHash5, createHmac as createHmac2, timingSafeEqual as timingSafeEqual2 } from "node:crypto";
+import { createHash as createHash5, createHmac as createHmac2, randomUUID, timingSafeEqual as timingSafeEqual2 } from "node:crypto";
 import { chmod as chmod2, mkdir as mkdir2, open, readFile as readFile2, rename as rename2, rm } from "node:fs/promises";
 import { dirname as dirname2 } from "node:path";
 var V1_OPERATOR_JOURNAL_SCHEMA = "mission-agent-v1-operator-journal-v1";
@@ -1177,13 +1179,14 @@ function authenticate2(value, key) {
   return createHmac2("sha256", key).update(canonicalJson(value)).digest("hex");
 }
 function requestPayload(request) {
-  const { requestAuthenticationTag: _tag, ...payload2 } = request;
+  const payload2 = { ...request };
+  delete payload2.requestAuthenticationTag;
   return payload2;
 }
 function verifyV1OperatorRequest(request, key, expected, now = /* @__PURE__ */ new Date(), options = {}) {
   const issuedAt = Date.parse(request.issuedAt);
   const forwardExpiresAt = Date.parse(request.forwardExpiresAt);
-  if (!V1_OPERATOR_OPERATIONS.includes(request.operation) || !UUID2.test(request.authorizationId) || !UUID2.test(request.executionId) || !UUID2.test(request.agentId) || !UUID2.test(request.operatorId) || !UUID2.test(request.rollbackObligationId) || !UUID2.test(request.providerMutationId) || !UUID2.test(request.requestMessageId) || !request.nonce || request.sequence < 1 || request.fencingGeneration < 1 || !SHA2563.test(request.targetArtifactSha256) || !SHA2563.test(request.priorInventorySha256) || !SHA2563.test(request.authorizationFingerprint) || !SHA2563.test(request.expectedJournalChecksum) || !Number.isFinite(issuedAt) || !Number.isFinite(forwardExpiresAt) || FORWARD_MUTATIONS.has(request.operation) && (forwardExpiresAt <= issuedAt || forwardExpiresAt - issuedAt > 15 * 6e4) || issuedAt > now.getTime() + 6e4 || !options.allowExactIntentRecovery && now.getTime() - issuedAt > 15 * 6e4 || canonicalJson(
+  if (!V1_OPERATOR_OPERATIONS.includes(request.operation) || !UUID2.test(request.authorizationId) || !UUID2.test(request.executionId) || !UUID2.test(request.agentId) || !UUID2.test(request.operatorId) || !UUID2.test(request.rollbackObligationId) || !UUID2.test(request.grantId) || !UUID2.test(request.providerMutationId) || !UUID2.test(request.requestMessageId) || !request.nonce || request.sequence < 1 || request.fencingGeneration < 1 || !request.currentControllerDeploymentId || request.currentControllerFencingGeneration < request.fencingGeneration || !SHA2563.test(request.targetArtifactSha256) || !SHA2563.test(request.priorInventorySha256) || !SHA2563.test(request.authorizationFingerprint) || !SHA2563.test(request.grantChecksum) || !SHA2563.test(request.expectedJournalChecksum) || !Number.isFinite(issuedAt) || !Number.isFinite(forwardExpiresAt) || FORWARD_MUTATIONS.has(request.operation) && (forwardExpiresAt <= issuedAt || forwardExpiresAt - issuedAt > 15 * 6e4) || issuedAt > now.getTime() + 6e4 || !options.allowExactIntentRecovery && now.getTime() - issuedAt > 15 * 6e4 || canonicalJson(
     Object.fromEntries(Object.keys(expected).map((name) => [name, request[name]]))
   ) !== canonicalJson(expected))
     throw new Error("V1 operator request binding is malformed or contradictory.");
@@ -1226,6 +1229,7 @@ function appendV1OperatorJournal(journal, request, status, key, providerReceiptC
     throw new Error("V1 operator request sequence is not the exact successor.");
   const previousEntryChecksum = journal.entries.at(-1)?.entryChecksum ?? null;
   const unsealed = {
+    localJournalEntryId: randomUUID(),
     sequence: request.sequence,
     operation: request.operation,
     providerMutationId: request.providerMutationId,
@@ -1256,7 +1260,8 @@ function completeV1OperatorJournal(journal, request, providerReceiptChecksum, ke
     throw new Error("Provider completion is not the current durable intent.");
   const entries = journal.entries.map((entry, entryIndex) => {
     if (entryIndex !== index) return entry;
-    const { entryChecksum: _checksum, ...prior } = entry;
+    const prior = { ...entry };
+    delete prior.entryChecksum;
     const payload2 = {
       ...prior,
       status: "completed",
@@ -1275,7 +1280,7 @@ function verifyV1OperatorJournal(journal, key) {
   for (let index = 0; index < journal.entries.length; index += 1) {
     const entry = journal.entries[index];
     const { entryChecksum, ...payload2 } = entry;
-    if (entry.sequence !== index + 1 || entry.previousEntryChecksum !== previous || checksum(payload2) !== entryChecksum)
+    if (!UUID2.test(entry.localJournalEntryId) || entry.sequence !== index + 1 || entry.previousEntryChecksum !== previous || checksum(payload2) !== entryChecksum)
       throw new Error("V1 operator journal hash chain is invalid.");
     previous = entryChecksum;
   }
@@ -1394,7 +1399,7 @@ async function writeReceipt(path, receipt, requestChecksum, intentEntryChecksum,
     if (sha2563(Uint8Array.from(await readFile3(path))) !== checksum2)
       throw new Error("Existing provider receipt contradicts recovered provider state.");
   }
-  return checksum2;
+  return { checksum: checksum2, authenticated, bytes };
 }
 async function readReceipt(path, request, requestChecksum, intentEntryChecksum, credentialKey) {
   try {
@@ -1406,7 +1411,7 @@ async function readReceipt(path, request, requestChecksum, intentEntryChecksum, 
     const receipt = authenticated.receipt;
     if (supplied.length !== computed.length || !timingSafeEqual3(supplied, computed) || authenticated.requestChecksum !== requestChecksum || authenticated.intentEntryChecksum !== intentEntryChecksum || receipt.providerMutationId !== request.providerMutationId || receipt.operation !== request.operation || !/^[a-f0-9]{64}$/.test(receipt.resultChecksum) || providerResultChecksum(receipt) !== receipt.resultChecksum)
       throw new Error("Existing provider receipt is unauthenticated or contradicts the authorized operation.");
-    return { receipt, checksum: sha2563(Uint8Array.from(bytes)) };
+    return { receipt, checksum: sha2563(Uint8Array.from(bytes)), authenticated, bytes: bytes.toString("utf8") };
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -1501,8 +1506,24 @@ async function executeV1OperatorRequest(input) {
     });
     if (confirmation.accepted !== true || confirmation.currentJournalChecksum !== journal.journalChecksum)
       throw new Error("Mission Control did not confirm the exact operator journal head.");
-    if (existing?.status === "completed" && existing.providerReceiptChecksum)
-      return { disposition: "receipt_recovered", receiptChecksum: existing.providerReceiptChecksum };
+    if (existing?.status === "completed" && existing.providerReceiptChecksum) {
+      const recoveredReceipt = await readReceipt(
+        `${dirname3(boundary.journalPath)}/receipts/${request.providerMutationId}.json`,
+        request,
+        expectedRequestChecksum,
+        existing.entryChecksum,
+        credentialKey
+      );
+      if (!recoveredReceipt) throw new Error("Completed journal entry lacks its durable provider receipt.");
+      return {
+        disposition: "receipt_recovered",
+        receiptChecksum: recoveredReceipt.checksum,
+        providerReceipt: recoveredReceipt.authenticated,
+        receiptBytes: recoveredReceipt.bytes,
+        operatorJournalChecksum: journal.journalChecksum,
+        localJournalEntryId: existing.localJournalEntryId
+      };
+    }
     const intent = journal.entries.find(
       (entry) => entry.providerMutationId === request.providerMutationId && entry.requestChecksum === expectedRequestChecksum
     );
@@ -1518,7 +1539,14 @@ async function executeV1OperatorRequest(input) {
     if (durableReceipt) {
       journal = completeV1OperatorJournal(journal, request, durableReceipt.checksum, credentialKey);
       await writeV1OperatorJournal(boundary.journalPath, journal);
-      return { disposition: "receipt_recovered", receiptChecksum: durableReceipt.checksum };
+      return {
+        disposition: "receipt_recovered",
+        receiptChecksum: durableReceipt.checksum,
+        providerReceipt: durableReceipt.authenticated,
+        receiptBytes: durableReceipt.bytes,
+        operatorJournalChecksum: journal.journalChecksum,
+        localJournalEntryId: intent.localJournalEntryId
+      };
     }
     const state = await provider.inspect(request);
     if (state === "ambiguous") throw new Error("Provider state is ambiguous; human intervention is required.");
@@ -1534,17 +1562,25 @@ async function executeV1OperatorRequest(input) {
       receipt = await provider.execute(request);
       disposition = "completed";
     }
-    const receiptChecksum = await writeReceipt(
+    await input.afterProviderExecuted?.(receipt);
+    const persistedReceipt = await writeReceipt(
       receiptPath,
       receipt,
       expectedRequestChecksum,
       intent.entryChecksum,
       credentialKey
     );
-    await input.afterReceiptPersisted?.(receiptChecksum);
-    journal = completeV1OperatorJournal(journal, request, receiptChecksum, credentialKey);
+    await input.afterReceiptPersisted?.(persistedReceipt.checksum);
+    journal = completeV1OperatorJournal(journal, request, persistedReceipt.checksum, credentialKey);
     await writeV1OperatorJournal(boundary.journalPath, journal);
-    return { disposition, receiptChecksum };
+    return {
+      disposition,
+      receiptChecksum: persistedReceipt.checksum,
+      providerReceipt: persistedReceipt.authenticated,
+      receiptBytes: persistedReceipt.bytes,
+      operatorJournalChecksum: journal.journalChecksum,
+      localJournalEntryId: intent.localJournalEntryId
+    };
   });
 }
 
@@ -1658,6 +1694,16 @@ function signProtocolRequest(key, input) {
   return createHmac5("sha256", key).update(signatureInput(input)).digest("hex");
 }
 
+// application/v1-operator-host-identity.ts
+import { createHash as createHash9, createPrivateKey, createPublicKey as createPublicKey3, generateKeyPairSync, sign, verify as verify3 } from "node:crypto";
+import { chmod as chmod3, mkdir as mkdir4, open as open3, readFile as readFile4 } from "node:fs/promises";
+var V1_HOST_PRIVATE_KEY_PATH = "/Users/shawnwollenberg/Library/Application Support/WallyWeb/MissionAgentReplacement/host-identity.pk8";
+async function signV1HostBoundPayload(payload2, privateKeyPath = V1_HOST_PRIVATE_KEY_PATH) {
+  const privateKey = createPrivateKey({ key: await readFile4(privateKeyPath), format: "der", type: "pkcs8" });
+  if (privateKey.asymmetricKeyType !== "ed25519") throw new Error("V1 host identity key is not Ed25519.");
+  return sign(null, new TextEncoder().encode(canonicalJson(payload2)), privateKey).toString("base64");
+}
+
 // scripts/v1-macos-operator.ts
 var exec2 = promisify3(execFile3);
 async function main() {
@@ -1673,10 +1719,10 @@ async function main() {
   });
   const requiredKeys = ["request", "grant", "authorization-package", "owner-uid", "repository-root"];
   for (const key of requiredKeys) if (!parsed.values[key]) throw new Error(`--${key} is required.`);
-  const request = JSON.parse(await readFile4(resolve4(parsed.values.request), "utf8"));
-  const grant = JSON.parse(await readFile4(resolve4(parsed.values.grant), "utf8"));
+  const request = JSON.parse(await readFile5(resolve4(parsed.values.request), "utf8"));
+  const grant = JSON.parse(await readFile5(resolve4(parsed.values.grant), "utf8"));
   const rawPackage = JSON.parse(
-    await readFile4(resolve4(parsed.values["authorization-package"]), "utf8")
+    await readFile5(resolve4(parsed.values["authorization-package"]), "utf8")
   );
   const keychain = await exec2(
     "/usr/bin/security",
@@ -1684,13 +1730,13 @@ async function main() {
     { encoding: "utf8", timeout: 1e4, maxBuffer: 8 * 1024 }
   );
   const credentialKey = deriveSigningKey(keychain.stdout.trim());
-  verifyV1OperatorGrant(grant, credentialKey);
+  verifyV1OperatorGrant(grant, credentialKey, /* @__PURE__ */ new Date(), { allowExpiredReceiptRecovery: true });
   const authorizationPackage = verifyReplacementAuthorizationPackage({
     value: rawPackage,
     credentialSigningKey: credentialKey
   });
   const expectedBinding = grant.binding;
-  if (expectedBinding.agentId !== authorizationPackage.authorization.agentId || expectedBinding.targetArtifactSha256 !== TARGET_SHA256 || expectedBinding.authorizationFingerprint !== authorizationPackage.authorizationFingerprint || grant.credentialId !== rawPackage.credentialId || !grant.allowedOperations.includes(request.operation))
+  if (expectedBinding.agentId !== authorizationPackage.authorization.agentId || expectedBinding.targetArtifactSha256 !== TARGET_SHA256 || expectedBinding.authorizationFingerprint !== authorizationPackage.authorizationFingerprint || grant.credentialId !== rawPackage.credentialId || grant.allowedOperation !== request.operation || grant.providerMutationId !== request.providerMutationId || grant.sequence !== request.sequence || grant.currentControllerFencingGeneration !== request.currentControllerFencingGeneration || grant.currentControllerDeploymentId !== request.currentControllerDeploymentId || request.grantId !== grant.grantId || request.grantChecksum !== createHash10("sha256").update(canonicalJson(grant)).digest("hex"))
     throw new Error("Operator grant contradicts the governed authorization package or request.");
   const journalPath = `${V1_OPERATOR_JOURNAL_ROOT}/${expectedBinding.authorizationId}/${expectedBinding.executionId}.json`;
   const boundary = {
@@ -1701,6 +1747,57 @@ async function main() {
     platform: process.platform,
     journalPath
   };
+  const protocolPost = async (path, bodyValue) => {
+    if (bodyValue.action === "acknowledge_grant" && path === REPLACEMENT_STATUS_PATH || bodyValue.action === "accept_provider_receipt" && path === REPLACEMENT_RECEIPT_PATH)
+      bodyValue.hostSignature = await signV1HostBoundPayload(bodyValue, V1_HOST_PRIVATE_KEY_PATH);
+    const body = canonicalJson(bodyValue);
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const nonce = randomUUID2();
+    const messageId = randomUUID2();
+    const bodyChecksum = createHash10("sha256").update(body).digest("hex");
+    const signature = signProtocolRequest(credentialKey, {
+      method: "POST",
+      path,
+      timestamp,
+      nonce,
+      messageId,
+      protocolVersion: REPLACEMENT_CREDENTIAL_PROTOCOL,
+      bodyChecksum
+    });
+    const response = await fetch(new URL(path, grant.missionControlUrl), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-mc-agent-id": expectedBinding.agentId,
+        "x-mc-credential-id": grant.credentialId,
+        "x-mc-timestamp": timestamp,
+        "x-mc-nonce": nonce,
+        "x-mc-message-id": messageId,
+        "x-mc-protocol-version": REPLACEMENT_CREDENTIAL_PROTOCOL,
+        "x-mc-body-sha256": bodyChecksum,
+        "x-mc-signature": signature
+      },
+      body
+    });
+    if (!response.ok) throw new Error(`Mission Control rejected ${path} (${response.status}).`);
+    return await response.json();
+  };
+  await protocolPost(REPLACEMENT_STATUS_PATH, {
+    authorizationId: expectedBinding.authorizationId,
+    executionId: expectedBinding.executionId,
+    authorizationFingerprint: expectedBinding.authorizationFingerprint,
+    claimGeneration: 1,
+    action: "acknowledge_grant",
+    expectedState: grant.grantKind === "forward" ? "grant_delivered" : "rollback_grant_delivered",
+    expectedSequence: grant.lifecycleSequence + 2,
+    fencingGeneration: request.fencingGeneration,
+    eventId: randomUUID2(),
+    grantId: grant.grantId,
+    grantChecksum: request.grantChecksum,
+    acknowledgementChecksum: createHash10("sha256").update(canonicalJson(grant)).digest("hex"),
+    operatorJournalChecksum: request.expectedJournalChecksum
+  });
+  let confirmedJournalChecksum = request.expectedJournalChecksum;
   const result = await executeV1OperatorRequest({
     request,
     expectedBinding,
@@ -1708,57 +1805,58 @@ async function main() {
     boundary,
     provider: createV1MacOSOperatorProvider(resolve4(parsed.values["repository-root"]), authorizationPackage),
     async confirmWithControlPlane({ request: pending, requestChecksum, journalChecksum }) {
-      const body = JSON.stringify({
+      confirmedJournalChecksum = journalChecksum;
+      const confirmation = await protocolPost(REPLACEMENT_STATUS_PATH, {
         authorizationId: expectedBinding.authorizationId,
         executionId: expectedBinding.executionId,
         authorizationFingerprint: expectedBinding.authorizationFingerprint,
         claimGeneration: 1,
-        v1OperatorConfirmation: {
-          providerMutationId: pending.providerMutationId,
-          sequence: pending.sequence,
-          operation: pending.operation,
-          fencingGeneration: pending.fencingGeneration,
-          requestChecksum,
-          journalChecksum
-        }
+        action: "operator_journal_head",
+        expectedState: grant.grantKind === "forward" ? "mutation_intent_committed" : "rollback_intent_committed",
+        expectedSequence: grant.lifecycleSequence + 3,
+        fencingGeneration: pending.fencingGeneration,
+        eventId: randomUUID2(),
+        grantId: grant.grantId,
+        operatorRequestChecksum: requestChecksum,
+        operatorRequestMessageId: pending.requestMessageId,
+        operatorRequestNonce: pending.nonce,
+        operatorJournalChecksum: journalChecksum
       });
-      const timestamp = (/* @__PURE__ */ new Date()).toISOString();
-      const nonce = randomUUID();
-      const messageId = randomUUID();
-      const bodyChecksum = createHash9("sha256").update(body).digest("hex");
-      const signature = signProtocolRequest(credentialKey, {
-        method: "POST",
-        path: REPLACEMENT_STATUS_PATH,
-        timestamp,
-        nonce,
-        messageId,
-        protocolVersion: REPLACEMENT_CREDENTIAL_PROTOCOL,
-        bodyChecksum
-      });
-      const response = await fetch(new URL(REPLACEMENT_STATUS_PATH, grant.missionControlUrl), {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-mc-agent-id": expectedBinding.agentId,
-          "x-mc-credential-id": grant.credentialId,
-          "x-mc-timestamp": timestamp,
-          "x-mc-nonce": nonce,
-          "x-mc-message-id": messageId,
-          "x-mc-protocol-version": REPLACEMENT_CREDENTIAL_PROTOCOL,
-          "x-mc-body-sha256": bodyChecksum,
-          "x-mc-signature": signature
-        },
-        body
-      });
-      if (!response.ok) throw new Error(`Mission Control rejected operator confirmation (${response.status}).`);
-      const confirmation = await response.json();
-      if (confirmation.v1OperatorConfirmation?.accepted !== true)
-        throw new Error("Mission Control did not authorize the v1 operator request.");
+      if (confirmation.state !== (grant.grantKind === "forward" ? "awaiting_provider_receipt" : "awaiting_rollback_receipt"))
+        throw new Error("Mission Control did not persist the exact operator journal intent.");
       return {
         accepted: true,
-        currentJournalChecksum: confirmation.v1OperatorConfirmation.currentJournalChecksum ?? ""
+        currentJournalChecksum: journalChecksum
       };
     }
+  });
+  const provider = result.providerReceipt.receipt;
+  await protocolPost(REPLACEMENT_RECEIPT_PATH, {
+    authorizationId: expectedBinding.authorizationId,
+    executionId: expectedBinding.executionId,
+    authorizationFingerprint: expectedBinding.authorizationFingerprint,
+    claimGeneration: 1,
+    action: "accept_provider_receipt",
+    expectedState: grant.grantKind === "forward" ? "awaiting_provider_receipt" : "awaiting_rollback_receipt",
+    expectedSequence: grant.lifecycleSequence + 4,
+    fencingGeneration: request.fencingGeneration,
+    eventId: randomUUID2(),
+    grantId: grant.grantId,
+    providerMutationId: request.providerMutationId,
+    operation: request.operation,
+    priorStateChecksum: request.expectedJournalChecksum,
+    resultingStateChecksum: provider.resultChecksum,
+    localJournalEntryId: result.localJournalEntryId,
+    executedAt: provider.completedAt,
+    operatorRequestMessageId: request.requestMessageId,
+    operatorRequestNonce: request.nonce,
+    priorOperatorJournalChecksum: confirmedJournalChecksum,
+    operatorJournalChecksum: result.operatorJournalChecksum,
+    receiptBytes: result.receiptBytes,
+    receiptChecksum: result.receiptChecksum,
+    authenticatedReceiptTag: result.providerReceipt.authenticationTag,
+    verificationEvidenceChecksum: provider.resultChecksum,
+    outcome: "succeeded"
   });
   process.stdout.write(`${JSON.stringify(result)}
 `);

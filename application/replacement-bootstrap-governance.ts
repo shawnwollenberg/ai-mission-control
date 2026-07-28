@@ -38,6 +38,7 @@ import {
   missionAgentHeartbeatProjectionFromEvent,
 } from "./mission-agent-capability-projector";
 import type { DomainEvent } from "../lib/postgres-event-store";
+import { emptyV1OperatorJournal, type V1OperatorBinding } from "./v1-macos-operator-journal";
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -160,22 +161,56 @@ async function persistValidatedProcessObservation(input: {
   );
 }
 
-async function requireFreshHeartbeatCapabilitiesAndProjection(input: {
+export async function requireFreshHeartbeatCapabilitiesAndProjection(input: {
   client: PoolClient;
   workspaceId: string;
   claim: ReplacementClaim;
 }): Promise<void> {
+  const v1Start = await input.client.query<{ completed_at: Date; provider_mutation_id: string }>(
+    `SELECT completed_at,provider_mutation_id::text
+       FROM mission_agent_v1_provider_mutations
+      WHERE workspace_id=$1 AND authorization_id=$2 AND execution_id=$3
+        AND phase='forward' AND operation='start_agent'
+      ORDER BY completed_at DESC LIMIT 1`,
+    [input.workspaceId, input.claim.authorizationId, input.claim.executionId],
+  );
+  const legacyStart = await input.client.query<{ created_at: Date }>(
+    `SELECT created_at
+       FROM mission_agent_replacement_mutation_intents
+      WHERE workspace_id=$1 AND authorization_id=$2 AND execution_id=$3
+        AND operation IN ('start_service','restart_prior_service')
+        AND status IN ('prepared','completed')
+      ORDER BY sequence DESC LIMIT 1`,
+    [input.workspaceId, input.claim.authorizationId, input.claim.executionId],
+  );
+  const startBoundary = v1Start.rows[0]?.completed_at ?? legacyStart.rows[0]?.created_at;
   const processes = await input.client.query<{ evidence: Record<string, unknown> }>(
     `SELECT evidence FROM mission_agent_replacement_evidence
       WHERE workspace_id=$1 AND authorization_id=$2 AND execution_id=$3 AND evidence_type='process'
+        AND ($4::timestamptz IS NULL OR observed_at >= $4)
       ORDER BY observed_at`,
-    [input.workspaceId, input.claim.authorizationId, input.claim.executionId],
+    [input.workspaceId, input.claim.authorizationId, input.claim.executionId, startBoundary ?? null],
   );
-  if (processes.rows.length < 2) throw new Error("Repeated running-process observations are required.");
-  const pids = new Set(processes.rows.map((row) => row.evidence.pid));
-  const startedAt = new Date(String(processes.rows[0]?.evidence.processStartedAt));
-  if (pids.size !== 1 || !Number.isFinite(startedAt.getTime()))
-    throw new Error("Running-process observations do not identify one stable process.");
+  const latestProcessStartedAt = processes.rows.reduce<Date | null>((latest, row) => {
+    const candidate = new Date(String(row.evidence.processStartedAt));
+    if (!Number.isFinite(candidate.getTime())) return latest;
+    return !latest || candidate > latest ? candidate : latest;
+  }, null);
+  const currentProcesses = latestProcessStartedAt
+    ? processes.rows.filter(
+        (row) => new Date(String(row.evidence.processStartedAt)).getTime() === latestProcessStartedAt.getTime(),
+      )
+    : [];
+  const pids = new Set(currentProcesses.map((row) => row.evidence.pid));
+  const startedAt = latestProcessStartedAt ?? v1Start.rows[0]?.completed_at;
+  if (
+    !(startedAt instanceof Date) ||
+    !Number.isFinite(startedAt.getTime()) ||
+    (processes.rows.length > 0 && (currentProcesses.length < 2 || pids.size !== 1))
+  )
+    throw new Error(
+      `Running-process observations do not identify one stable process (observations=${currentProcesses.length}, distinctPids=${pids.size}).`,
+    );
   const state = await input.client.query<{
     status: string;
     last_heartbeat_at: Date | null;
@@ -386,15 +421,25 @@ async function requireFreshHeartbeatCapabilitiesAndProjection(input: {
     identityProtocolVersion: "2",
     activationProtocolVersion: "1",
     nodeMajor: 22,
-    processId: Array.from(pids)[0],
+    processId: Array.from(pids)[0] ?? v1Start.rows[0]?.provider_mutation_id,
   };
   const evidenceChecksum = sha256(canonicalJson(evidence));
+  const processEvidence = {
+    evidenceVersion: "mission-agent-v1-start-receipt-process-v1",
+    providerMutationId: v1Start.rows[0]?.provider_mutation_id,
+    pid: Array.from(pids)[0] ?? v1Start.rows[0]?.provider_mutation_id,
+    processStartedAt: startedAt.toISOString(),
+    artifactChecksum: TARGET_SHA256,
+    agentId: input.claim.agentId,
+  };
+  const processEvidenceChecksum = sha256(canonicalJson(processEvidence));
   await input.client.query(
     `INSERT INTO mission_agent_replacement_evidence(
       workspace_id,authorization_id,execution_id,evidence_type,evidence_checksum,evidence,
       observed_at,expires_at
     ) VALUES($1,$2,$3,'heartbeat-capability',$4,$5::jsonb,clock_timestamp(),$6),
-            ($1,$2,$3,'projection',$4,$5::jsonb,clock_timestamp(),$6)
+            ($1,$2,$3,'projection',$4,$5::jsonb,clock_timestamp(),$6),
+            ($1,$2,$3,'process',$7,$8::jsonb,clock_timestamp(),$6)
     ON CONFLICT DO NOTHING`,
     [
       input.workspaceId,
@@ -403,21 +448,120 @@ async function requireFreshHeartbeatCapabilitiesAndProjection(input: {
       evidenceChecksum,
       JSON.stringify(evidence),
       input.claim.expiresAt,
+      processEvidenceChecksum,
+      JSON.stringify(processEvidence),
     ],
   );
+}
+
+export async function recordV1CanonicalPostInstallEvidence(input: {
+  client: PoolClient;
+  workspaceId: string;
+  authorizationId: string;
+  executionId: string;
+}): Promise<void> {
+  const result = await input.client.query<{
+    authorization_id: string;
+    execution_id: string;
+    agent_id: string;
+    expires_at: Date;
+  }>(
+    `SELECT authorization_id::text,execution_id::text,agent_id::text,expires_at
+       FROM mission_agent_replacement_execution_claims
+      WHERE workspace_id=$1 AND authorization_id=$2 AND execution_id=$3
+        AND completed_at IS NULL`,
+    [input.workspaceId, input.authorizationId, input.executionId],
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error("V1 canonical evidence claim is unavailable.");
+  await requireFreshHeartbeatCapabilitiesAndProjection({
+    client: input.client,
+    workspaceId: input.workspaceId,
+    claim: {
+      authorizationId: row.authorization_id,
+      executionId: row.execution_id,
+      agentId: row.agent_id,
+      expiresAt: row.expires_at,
+    } as ReplacementClaim,
+  });
 }
 
 async function requireRollbackEquivalence(input: {
   client: PoolClient;
   workspaceId: string;
   claim: ReplacementClaim;
-}): Promise<void> {
+}): Promise<{ evidence: Record<string, unknown>; expiresAt: Date }> {
+  const terminalReceipt = await input.client.query<{
+    receipt_checksum: string;
+    resulting_state_checksum: string;
+    executed_at: Date;
+    fencing_generation: string;
+  }>(
+    `SELECT r.receipt_checksum,r.resulting_state_checksum,r.executed_at,
+            r.fencing_generation::text
+       FROM mission_agent_v1_provider_receipts r
+       JOIN mission_agent_v1_provider_mutations m
+         ON m.workspace_id=r.workspace_id AND m.authorization_id=r.authorization_id
+        AND m.execution_id=r.execution_id AND m.provider_mutation_id=r.provider_mutation_id
+      WHERE r.workspace_id=$1 AND r.authorization_id=$2 AND r.execution_id=$3
+        AND m.phase='rollback'
+      ORDER BY r.executed_at DESC,r.receipt_message_id DESC LIMIT 1`,
+    [input.workspaceId, input.claim.authorizationId, input.claim.executionId],
+  );
+  const v1Operation = await input.client.query<{ present: boolean }>(
+    `SELECT EXISTS(
+       SELECT 1 FROM mission_agent_v1_rollout_operations
+        WHERE workspace_id=$1 AND authorization_id=$2 AND execution_id=$3
+     ) present`,
+    [input.workspaceId, input.claim.authorizationId, input.claim.executionId],
+  );
+  const requiresV1ProviderReceipt = v1Operation.rows[0]?.present === true;
+  const legacyTerminalReceipt = !requiresV1ProviderReceipt
+    ? await input.client.query<{
+        receipt_checksum: string;
+        resulting_state_checksum: string;
+        executed_at: Date;
+        fencing_generation: string;
+      }>(
+        `SELECT acknowledgement->>'receiptChecksum' receipt_checksum,
+                result_checksum resulting_state_checksum,received_at executed_at,
+                claim_generation::text fencing_generation
+           FROM mission_agent_replacement_receipts
+          WHERE workspace_id=$1 AND authorization_id=$2 AND execution_id=$3
+            AND operation='restart_prior_service'
+          ORDER BY sequence DESC LIMIT 1`,
+        [input.workspaceId, input.claim.authorizationId, input.claim.executionId],
+      )
+    : null;
+  const terminal = terminalReceipt.rows[0] ?? legacyTerminalReceipt?.rows[0];
+  if (!terminal?.receipt_checksum)
+    throw new Error(
+      requiresV1ProviderReceipt
+        ? "Rollback terminal provider receipt is unavailable."
+        : "Rollback terminal operator receipt is unavailable.",
+    );
   const process = await input.client.query<{ evidence: Record<string, unknown> }>(
     `SELECT evidence FROM mission_agent_replacement_evidence
       WHERE workspace_id=$1 AND authorization_id=$2 AND execution_id=$3 AND evidence_type='process'
         AND evidence->>'artifactChecksum'=$4
+        AND ($9::boolean = false OR (
+          observed_at>$5
+          AND evidence->>'terminalReceiptChecksum'=$6
+          AND evidence->>'terminalStateChecksum'=$7
+          AND (evidence->>'fencingGeneration')::bigint=$8::bigint
+        ))
       ORDER BY observed_at DESC LIMIT 2`,
-    [input.workspaceId, input.claim.authorizationId, input.claim.executionId, SOURCE_SHA256],
+    [
+      input.workspaceId,
+      input.claim.authorizationId,
+      input.claim.executionId,
+      SOURCE_SHA256,
+      terminal.executed_at,
+      terminal.receipt_checksum,
+      terminal.resulting_state_checksum,
+      terminal.fencing_generation,
+      requiresV1ProviderReceipt,
+    ],
   );
   if (process.rows.length < 2 || new Set(process.rows.map((row) => row.evidence.pid)).size !== 1)
     throw new Error("Rollback requires repeated observations of one restored 0.6.8 process.");
@@ -636,22 +780,44 @@ async function requireRollbackEquivalence(input: {
     projectionReplayEqual: liveProjectionChecksum === replayedProjectionChecksum,
     rollbackInventoryChecksum: inventoryObservation.rollbackInventoryChecksum,
     rollbackInventoryExact,
+    terminalReceiptChecksum: terminal.receipt_checksum,
+    terminalStateChecksum: terminal.resulting_state_checksum,
+    terminalReceiptExecutedAt: terminal.executed_at.toISOString(),
+    fencingGeneration: Number(terminal.fencing_generation),
   };
-  const evidenceChecksum = sha256(canonicalJson(evidence));
-  await input.client.query(
-    `INSERT INTO mission_agent_replacement_evidence(
-      workspace_id,authorization_id,execution_id,evidence_type,evidence_checksum,evidence,
-      observed_at,expires_at
-    ) VALUES($1,$2,$3,'rollback-equivalence',$4,$5::jsonb,clock_timestamp(),$6)`,
-    [
-      input.workspaceId,
-      input.claim.authorizationId,
-      input.claim.executionId,
-      evidenceChecksum,
-      JSON.stringify(evidence),
-      input.claim.expiresAt,
-    ],
+  return { evidence, expiresAt: new Date(Date.now() + 15 * 60_000) };
+}
+
+export async function recordV1CanonicalRollbackEvidence(input: {
+  client: PoolClient;
+  workspaceId: string;
+  authorizationId: string;
+  executionId: string;
+}): Promise<{ evidence: Record<string, unknown>; expiresAt: Date }> {
+  const result = await input.client.query<{
+    authorization_id: string;
+    execution_id: string;
+    agent_id: string;
+    expires_at: Date;
+  }>(
+    `SELECT authorization_id::text,execution_id::text,agent_id::text,expires_at
+       FROM mission_agent_replacement_execution_claims
+      WHERE workspace_id=$1 AND authorization_id=$2 AND execution_id=$3
+        AND completed_at IS NULL`,
+    [input.workspaceId, input.authorizationId, input.executionId],
   );
+  const row = result.rows[0];
+  if (!row) throw new Error("V1 rollback evidence claim is unavailable.");
+  return requireRollbackEquivalence({
+    client: input.client,
+    workspaceId: input.workspaceId,
+    claim: {
+      authorizationId: row.authorization_id,
+      executionId: row.execution_id,
+      agentId: row.agent_id,
+      expiresAt: row.expires_at,
+    } as ReplacementClaim,
+  });
 }
 
 function credentialScope(input: {
@@ -674,16 +840,22 @@ function credentialScope(input: {
   };
 }
 
-export async function issueReplacementCredentialAndClaim(input: {
-  client: PoolClient;
-  authorization: ReplacementAuthorization;
-  executionId: string;
-  authenticatedApprover: string;
-}): Promise<IssuedReplacementCredential> {
+async function issueReplacementCredentialAndClaimWithBoundary(
+  input: {
+    client: PoolClient;
+    authorization: ReplacementAuthorization;
+    executionId: string;
+    authenticatedApprover: string;
+  },
+  boundary: {
+    assert(client: PoolClient): Promise<void>;
+    afterIssue?(context: { credentialId: string; verifier: string; fingerprint: string; now: Date }): Promise<void>;
+  },
+): Promise<IssuedReplacementCredential> {
   if (!UUID.test(input.executionId)) throw new Error("Replacement execution ID is malformed.");
   await input.client.query("BEGIN");
   try {
-    await assertDisposableReplacementDatabase(input.client);
+    await boundary.assert(input.client);
     const clock = await input.client.query<{ now: Date }>("SELECT clock_timestamp() AS now");
     const now = clock.rows[0]?.now;
     if (!(now instanceof Date)) throw new Error("PostgreSQL clock is unavailable.");
@@ -810,6 +982,7 @@ export async function issueReplacementCredentialAndClaim(input: {
         WHERE workspace_id=$1 AND authorization_id=$2 AND execution_count=0 AND state='approved'`,
       [input.authorization.workspaceId, input.authorization.authorizationId, now],
     );
+    await boundary.afterIssue?.({ credentialId, verifier, fingerprint, now });
     await input.client.query("COMMIT");
     return {
       credentialId,
@@ -824,6 +997,209 @@ export async function issueReplacementCredentialAndClaim(input: {
     await input.client.query("ROLLBACK").catch(() => undefined);
     throw error;
   }
+}
+
+export async function issueReplacementCredentialAndClaim(input: {
+  client: PoolClient;
+  authorization: ReplacementAuthorization;
+  executionId: string;
+  authenticatedApprover: string;
+}): Promise<IssuedReplacementCredential> {
+  return issueReplacementCredentialAndClaimWithBoundary(input, {
+    async assert(client) {
+      await assertDisposableReplacementDatabase(client);
+    },
+  });
+}
+
+export async function issueV1ProductionReplacementCredentialAndClaim(input: {
+  client: PoolClient;
+  authorization: ReplacementAuthorization;
+  executionId: string;
+  authenticatedApprover: string;
+  deploymentId: string;
+  configurationId: string;
+}): Promise<
+  IssuedReplacementCredential & {
+    operatorId: string;
+    rollbackObligationId: string;
+    fencingNamespace: string;
+    initialJournalChecksum: string;
+  }
+> {
+  const rollbackObligationId = randomUUID();
+  const fencingNamespace = randomUUID();
+  const operatorId = randomUUID();
+  let initialJournalChecksum = "";
+  let approvedOperator:
+    | {
+        hostId: string;
+        releaseId: string;
+        measurementId: string;
+        protocolVersion: string;
+        artifactChecksum: string;
+        executablePath: string;
+        ownerUid: number;
+        startupEvidenceChecksum: string;
+      }
+    | undefined;
+  const issued = await issueReplacementCredentialAndClaimWithBoundary(input, {
+    async assert(client) {
+      if (
+        input.authorization.agentId !== NAMED_CANARY_ID ||
+        input.authenticatedApprover !== input.authorization.approvedBy
+      )
+        throw new Error("V1 production authorization input is malformed or outside the named canary.");
+      const authority = await client.query<{
+        state: string;
+        configuration_checksum: string;
+        deployment_configuration_checksum: string;
+        task_arn: string;
+        attestation_checksum: string;
+        attestation_expires_at: Date;
+      }>(
+        `SELECT c.state,c.configuration_checksum,
+                d.configuration_checksum deployment_configuration_checksum,d.task_arn,
+                d.attestation_checksum,d.attestation_expires_at
+           FROM mission_control_v1_production_configurations c
+           JOIN mission_control_production_deployments d ON d.deployment_id=c.deployment_id
+          WHERE c.configuration_id=$1 AND c.deployment_id=$2
+          FOR SHARE`,
+        [input.configurationId, input.deploymentId],
+      );
+      const row = authority.rows[0];
+      if (
+        !row ||
+        row.state !== "canary_authorized" ||
+        row.configuration_checksum !== row.deployment_configuration_checksum ||
+        row.attestation_expires_at.getTime() <= Date.now()
+      )
+        throw new Error("V1 production deployment or canary configuration is not authoritatively eligible.");
+      const operator = await client.query<{
+        host_id: string;
+        release_id: string;
+        measurement_id: string;
+        protocol_version: string;
+        artifact_checksum: string;
+        executable_path: string;
+        owner_uid: string;
+        startup_evidence_checksum: string;
+      }>(
+        `SELECT h.host_id::text,r.release_id::text,m.measurement_id::text,r.protocol_version,
+                r.artifact_checksum,r.executable_path,h.owner_uid::text,m.startup_evidence_checksum
+           FROM mission_agent_v1_host_identities h
+           JOIN mission_agent_v1_host_measurements m
+             ON m.workspace_id=h.workspace_id AND m.host_id=h.host_id
+           JOIN mission_agent_v1_operator_releases r
+             ON r.release_id=m.operator_release_id
+          WHERE h.workspace_id=$1 AND h.agent_id=$2 AND h.status='active'
+            AND r.status='approved' AND m.expires_at>clock_timestamp()
+          ORDER BY m.observed_at DESC
+          LIMIT 1
+          FOR SHARE OF h,m,r`,
+        [input.authorization.workspaceId, input.authorization.agentId],
+      );
+      const selected = operator.rows[0];
+      if (!selected) throw new Error("No fresh checksum-bound approved operator host measurement is available.");
+      approvedOperator = {
+        hostId: selected.host_id,
+        releaseId: selected.release_id,
+        measurementId: selected.measurement_id,
+        protocolVersion: selected.protocol_version,
+        artifactChecksum: selected.artifact_checksum,
+        executablePath: selected.executable_path,
+        ownerUid: Number(selected.owner_uid),
+        startupEvidenceChecksum: selected.startup_evidence_checksum,
+      };
+    },
+    async afterIssue({ credentialId, verifier, fingerprint, now }) {
+      if (!approvedOperator) throw new Error("Approved operator binding was not established.");
+      const binding: V1OperatorBinding = {
+        authorizationId: input.authorization.authorizationId,
+        executionId: input.executionId,
+        agentId: input.authorization.agentId,
+        targetArtifactSha256: TARGET_SHA256,
+        priorInventorySha256: ROLLBACK_INVENTORY_SHA256,
+        authorizationFingerprint: fingerprint,
+        fencingGeneration: 1,
+        operatorId,
+        missionControlDeploymentId: input.deploymentId,
+        rollbackObligationId,
+      };
+      initialJournalChecksum = emptyV1OperatorJournal(binding, verifier).journalChecksum;
+      await input.client.query(
+        `INSERT INTO mission_agent_v1_operator_identities(
+          workspace_id,operator_id,host_id,operator_release_id,host_measurement_id,
+          agent_id,deployment_id,implementation,version,executable_checksum,
+          executable_path,owner_uid,journal_schema_version,launch_agent_label,credential_id,
+          verified_at,verification_checksum
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,'mission-agent-replacement-operator-v1',$8,$9,$10,$11,
+          'mission-agent-v1-operator-journal-v1','com.wallyweb.mission-agent.replacement-operator',
+          $12,$13,$14)`,
+        [
+          input.authorization.workspaceId,
+          operatorId,
+          approvedOperator.hostId,
+          approvedOperator.releaseId,
+          approvedOperator.measurementId,
+          input.authorization.agentId,
+          input.deploymentId,
+          approvedOperator.protocolVersion,
+          approvedOperator.artifactChecksum,
+          approvedOperator.executablePath,
+          approvedOperator.ownerUid,
+          credentialId,
+          now,
+          approvedOperator.startupEvidenceChecksum,
+        ],
+      );
+      await input.client.query(
+        `INSERT INTO mission_agent_v1_rollout_operations(
+          workspace_id,authorization_id,execution_id,agent_id,operator_id,host_id,
+          deployment_id,current_controller_deployment_id,configuration_id,
+          authorization_fingerprint,target_artifact_checksum,prior_inventory_checksum,
+          rollback_obligation_id,claim_generation,fencing_namespace,initial_fencing_epoch,
+          operator_journal_checksum,state,forward_expires_at
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10,$11,$12,1,$13,1,$14,'prepared',$15)`,
+        [
+          input.authorization.workspaceId,
+          input.authorization.authorizationId,
+          input.executionId,
+          input.authorization.agentId,
+          operatorId,
+          approvedOperator.hostId,
+          input.deploymentId,
+          input.configurationId,
+          fingerprint,
+          TARGET_SHA256,
+          ROLLBACK_INVENTORY_SHA256,
+          rollbackObligationId,
+          fencingNamespace,
+          initialJournalChecksum,
+          input.authorization.expiresAt,
+        ],
+      );
+      const deployment = await input.client.query<{
+        task_arn: string;
+        attestation_checksum: string;
+      }>(
+        `SELECT task_arn,attestation_checksum FROM mission_control_production_deployments
+          WHERE deployment_id=$1`,
+        [input.deploymentId],
+      );
+      await input.client.query(`SELECT advance_mission_agent_v1_fencing_epoch($1,$2,$3,$4,0,$5,$6,$7,$8)`, [
+        input.authorization.workspaceId,
+        input.authorization.authorizationId,
+        input.executionId,
+        fencingNamespace,
+        deployment.rows[0]?.task_arn,
+        randomUUID(),
+        randomBytes(24).toString("base64url"),
+        deployment.rows[0]?.attestation_checksum,
+      ]);
+    },
+  });
+  return { ...issued, operatorId, rollbackObligationId, fencingNamespace, initialJournalChecksum };
 }
 
 async function lockClaim(input: {
@@ -1202,12 +1578,29 @@ export async function consumeGovernedReplacementReceipt(input: {
         receipt,
         rollback: true,
       });
-    if (receipt.operation === "verify_prior_projection")
-      await requireRollbackEquivalence({
+    if (receipt.operation === "verify_prior_projection") {
+      const equivalence = await requireRollbackEquivalence({
         client: input.client,
         workspaceId: input.workspaceId,
         claim: locked.claim,
       });
+      const evidenceChecksum = sha256(canonicalJson(equivalence.evidence));
+      await input.client.query(
+        `INSERT INTO mission_agent_replacement_evidence(
+          workspace_id,authorization_id,execution_id,evidence_type,evidence_checksum,evidence,
+          observed_at,expires_at
+        ) VALUES($1,$2,$3,'rollback-equivalence',$4,$5::jsonb,clock_timestamp(),$6)
+        ON CONFLICT DO NOTHING`,
+        [
+          input.workspaceId,
+          receipt.authorizationId,
+          receipt.executionId,
+          evidenceChecksum,
+          JSON.stringify(equivalence.evidence),
+          equivalence.expiresAt,
+        ],
+      );
+    }
     if (receipt.operation === "report_evidence" && locked.claim.state.startsWith("rollback:")) {
       const equivalence = await input.client.query<{ count: string }>(
         `SELECT count(*)::text AS count FROM mission_agent_replacement_evidence
@@ -1261,7 +1654,12 @@ export async function consumeGovernedReplacementReceipt(input: {
         receipt.resultChecksum,
         receipt.hostJournalChecksum,
         receipt.authentication,
-        JSON.stringify({ accepted: true, state: nextState, recovery: receipt.recovery }),
+        JSON.stringify({
+          accepted: true,
+          state: nextState,
+          recovery: receipt.recovery,
+          receiptChecksum: receipt.receiptChecksum,
+        }),
       ],
     );
     await input.client.query(

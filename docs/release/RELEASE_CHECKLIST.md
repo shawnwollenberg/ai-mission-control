@@ -253,6 +253,31 @@ Before accepting the isolated replacement-bootstrap repair:
       `108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09`.
 - [ ] Confirm no production or named-canary endpoint was contacted.
 
+Before accepting local V1 Phase E:
+
+- [ ] Run `npm run test:v1:migration` and verify empty 0001–0030 plus
+      0028–0030 rehearsals.
+- [ ] Run `npm run test:v1:https` through the built standalone server and real
+      six-route contracts.
+- [ ] Verify the controller database credential is present only in the web
+      container definition, never generic or Project Brain workers.
+- [ ] Verify an old-fence durable receipt retains its original execution fence
+      after recovery-controller adoption.
+- [ ] Verify revocation cannot discard an operator-confirmed in-flight
+      mutation.
+- [ ] Verify fresh operator subprocess recovery at provider-success/pre-receipt
+      and post-receipt/pre-control-plane boundaries.
+- [ ] Verify rollback closure uses fresh host-signed process observations and
+      post-rollback heartbeats/projection replay, with no database-synthesized
+      host evidence.
+- [ ] Verify the six-handler rejection artifact records every case and equal
+      before/after operational snapshot checksums.
+- [ ] Obtain independent lifecycle, database-boundary, recovery, host identity,
+      grant, rejection, and HTTPS-realism reviews with no unresolved critical,
+      high, or V1-blocking finding.
+- [ ] Stop before ECS or physical macOS staging. Request authorization only for
+      non-mutating ECS staging and read-only identity/database preflight.
+
 Recovery inspection must show the committed intent and observed host state:
 
 ```text

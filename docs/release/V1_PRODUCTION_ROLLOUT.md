@@ -76,6 +76,23 @@ V1 retains canonical PostgreSQL events/receipts, CloudWatch logs, operator
 journal digests, and checksum-bound local or S3 release evidence. Evidence
 contains identifiers and digests, never secrets or private paths.
 
+## Local Phase E acceptance boundary
+
+The local production-mode acceptance uses the standalone production Next.js
+bundle over HTTPS, all six authenticated external handlers, PostgreSQL
+migrations through 0030, the controller-only database role, fresh operator
+subprocesses, a disk-backed disposable provider, host-signed receipts and
+rollback observations, canonical heartbeats/projections, and verified terminal
+success or rollback. It forces process termination both after provider success
+before receipt persistence and after receipt persistence before control-plane
+delivery. Recovery reloads the provider and authenticated journal from disk and
+must not execute the provider mutation twice.
+
+This proves the application protocol and local recovery model. It does **not**
+prove an ECR image digest, ECS control-plane identity, a physical same-user
+macOS LaunchAgent, production database connectivity, or the real canary. Those
+remain external staging prerequisites and require separate authorization.
+
 ## Explicit exclusions
 
 No fleet rollout, other agent, customer device, generic administration,

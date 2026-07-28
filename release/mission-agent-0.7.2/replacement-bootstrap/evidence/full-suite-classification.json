@@ -6,8 +6,8 @@
     "node": "v24.10.0"
   },
   "candidate": {
-    "tests": 198,
-    "passed": 191,
+    "tests": 227,
+    "passed": 220,
     "failed": 7
   },
   "untouchedBase": {

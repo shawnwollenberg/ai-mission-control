@@ -1,8 +1,8 @@
 {
   "schemaVersion": "mission-agent-replacement-operator-artifact-v1",
   "artifact": "dist/mission-agent-replacement-operator-v1.mjs",
-  "sha256": "488556e1bc02ae0a2c002fd2fecc8dd50af15d04d8490ccf217fdf40aee49680",
-  "byteLength": 91955,
+  "sha256": "450a11e802f6076323dd176eb56f3e48d9299f11bf1d554240ce6403f56fb82f",
+  "byteLength": 98619,
   "installPath": "/Users/shawnwollenberg/Library/Application Support/WallyWeb/MissionAgentReplacement/operator-v1.mjs",
   "mode": "0500",
   "launchAgentLabel": "com.wallyweb.mission-agent.replacement-operator",

@@ -16,7 +16,7 @@ await build({
   legalComments: "none",
   sourcemap: false,
   minify: false,
-  banner: { js: "#!/usr/bin/env node" },
+  banner: { js: "#!/usr/bin/env node\n/* eslint-disable */" },
 });
 const bytes = await readFile(output);
 const checksum = createHash("sha256").update(bytes).digest("hex");
