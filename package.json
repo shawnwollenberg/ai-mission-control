@@ -60,6 +60,7 @@
     "test:replacement:integration": "node --import tsx --test tests/replacement-governance.integration.test.mjs",
     "test:replacement:http-e2e": "node --test tests/replacement-http-e2e.test.mjs",
     "test:replacement:migration": "node scripts/run-replacement-migration-acceptance.mjs",
+    "test:v1:migration": "node scripts/run-v1-production-migration-acceptance.mjs",
     "test:integration": "node --import tsx --test tests/*.integration.test.mjs",
     "test:repository-identity": "node --import tsx --test tests/repository-identity.test.mjs tests/repository-identity.integration.test.mjs",
     "test:release-authority": "node --import tsx --test tests/release-authority-v2.test.mjs",
