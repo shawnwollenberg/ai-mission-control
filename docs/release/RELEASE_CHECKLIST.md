@@ -131,7 +131,11 @@ legacy signing authority is unavailable.
 from the lost key, substitute a trust root, use an ambiguous `node` path,
 automatically retry, or expose the workflow as ordinary fleet discovery.
 
-### Operator commands
+### Historical operator commands (do not execute)
+
+These commands are preserved only as a design record. The repaired CLI refuses
+the production-bound provider from disposable mode, and no production
+replacement command is authorized.
 
 Dry-run preflight:
 
@@ -161,4 +165,113 @@ Failure and rollback status inspection:
 
 ```text
 jq '{disposition,transitions,hostReceipts,finalSnapshot}' <evidence.json>
+```
+
+### Local canary prerequisite commands
+
+Inspect and validate an immutable package without mutation:
+
+```text
+npm run replacement-bootstrap:local -- --authorization-package <immutable-package.json> --dry-run
+```
+
+Validate the package file checksum independently:
+
+```text
+shasum -a 256 <immutable-package.json>
+```
+
+Mutation remains unavailable in production. For a separately authorized
+disposable acceptance environment, verify the exact gate and resource
+fingerprint before local execution:
+
+```text
+test "$MISSION_CONTROL_ENVIRONMENT" = disposable-test
+test "$MISSION_AGENT_REPLACEMENT_BOOTSTRAP_DISPOSABLE_EXECUTION" = explicitly-authorized-non-production-only
+npm run replacement-bootstrap:local -- --authorization-package <immutable-package.json>
+```
+
+The command has no release, Node, plist, trust, identity, repository, rollback,
+or smoke overrides. Stop if any undocumented option appears.
+
+Inspect the authenticated host journal:
+
+```text
+npm run replacement-bootstrap:local -- --authorization-package <immutable-package.json> --inspect-journal
+```
+
+Validate local evidence and receipts:
+
+```text
+jq empty <governed-evidence-directory>/replacement-local-evidence.json
+shasum -a 256 <governed-evidence-directory>/replacement-local-evidence.json
+```
+
+Inspect recovery and rollback state:
+
+```text
+jq '{phase,lastCompletedOperation,nextPermittedOperation,receiptSequence}' <governed-evidence-directory>/replacement-host-journal.json
+```
+
+Receipt submission is automatic through the package-bound HTTPS receipt path.
+Never copy credentials into a curl command or manually synthesize receipts.
+
+Before each disposable execution boundary:
+
+- [ ] Confirm the claim owner matches authorization, execution, fingerprint,
+      credential, agent, operator, provider, generation, and next sequence.
+- [ ] Confirm the credential scope names no other authorization, agent,
+      provider, target, runtime, operation, or execution.
+- [ ] Confirm the exact mutation intent is committed before any host mutation.
+- [ ] Inspect the authenticated journal and authoritative ledger together.
+- [ ] Require the checksum-bound two-snapshot Mission Control drain receipt.
+- [ ] Require repeated real PID/process receipts after start.
+- [ ] Require three post-start heartbeats with exact 0.7.2 capabilities.
+- [ ] Require matching repository identity and projection replay checksums.
+- [ ] Require the deterministic governed smoke mission and acceptance receipt.
+- [ ] On rollback, compare against the exact 0.6.8 inventory and require prior
+      process, heartbeat, capability, identity, and projection equivalence.
+- [ ] Confirm authorization, execution, and credential are terminal and cannot
+      be reused.
+
+Before accepting the isolated replacement-bootstrap repair:
+
+- [ ] Run `npm run test:replacement:http-e2e`.
+- [ ] Confirm all ten forward, rollback, and receipt-loss scenarios pass.
+- [ ] Confirm every stateful provider mutation count is exactly zero or one.
+- [ ] Run the authenticated PostgreSQL negative and replay matrix.
+- [ ] Rehearse both empty database through 0029 and 0028 to 0029.
+- [ ] Run `npm run test:replacement:migration` and confirm representative
+      0028 row hashes remain identical after 0029 and a second migration run.
+- [ ] Compare all full-suite failures with untouched base commit
+      `9abc71da235f63c6ce2e4b0197ecfdd53d3015ed`.
+- [ ] Verify the canonical smoke-template and rollback-inventory checksums
+      instead of applying Prettier to those two files.
+- [ ] Obtain independent security, recovery, migration, rollback, and evidence
+      reviews with no unresolved critical or high finding.
+- [ ] Confirm the signed 0.7.2 artifact remains
+      `108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09`.
+- [ ] Confirm no production or named-canary endpoint was contacted.
+
+Recovery inspection must show the committed intent and observed host state:
+
+```text
+npm run replacement-bootstrap:local -- \
+  --authorization-package <immutable-package.json> \
+  --inspect-journal
+```
+
+Never retry a non-retry-safe mutation after an interrupted precondition.
+When the verified postcondition already exists, submit the authenticated
+recovery receipt without running the mutation again. Partial or ambiguous
+state requires halt or governed rollback.
+
+Before authorizing production, verify exact fixture assets:
+
+```text
+shasum -a 256 release/mission-agent-0.7.2/replacement-bootstrap/com.wallyweb.mission-agent.plist
+shasum -a 256 release/mission-agent-0.7.2/replacement-bootstrap/migration-history.json
+shasum -a 256 release/mission-agent-0.7.2/replacement-bootstrap/node-runtime.json
+shasum -a 256 release/mission-agent-0.7.2/replacement-bootstrap/postgresql-tools.json
+plutil -lint release/mission-agent-0.7.2/replacement-bootstrap/com.wallyweb.mission-agent.plist
 ```

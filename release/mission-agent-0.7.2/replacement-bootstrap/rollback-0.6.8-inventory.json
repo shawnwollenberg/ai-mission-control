@@ -1,0 +1,75 @@
+{
+  "inventoryVersion": "mission-agent-rollback-inventory-v1",
+  "capturedFrom": "read-only-local-canary-metadata-inspection",
+  "agentId": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+  "agentVersion": "0.6.8",
+  "artifact": {
+    "path": "/Users/shawnwollenberg/.mission-agent/mission-agent-0.6.8.mjs",
+    "byteLength": 117277,
+    "sha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+    "owner": "shawnwollenberg",
+    "group": "staff",
+    "mode": "0700"
+  },
+  "service": {
+    "label": "com.wallyweb.mission-agent",
+    "plistPath": "/Users/shawnwollenberg/Library/LaunchAgents/com.wallyweb.mission-agent.plist",
+    "plistByteLength": 2308,
+    "plistSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
+    "owner": "shawnwollenberg",
+    "group": "staff",
+    "mode": "0600",
+    "programArguments": [
+      "/usr/local/Cellar/node/24.10.0/bin/node",
+      "/Users/shawnwollenberg/.mission-agent/mission-agent-0.6.8.mjs",
+      "run"
+    ],
+    "workingDirectory": null,
+    "runAtLoad": true,
+    "keepAlive": true,
+    "standardOutputPath": "/Users/shawnwollenberg/.mission-agent/mission-agent.log",
+    "standardErrorPath": "/Users/shawnwollenberg/.mission-agent/mission-agent-error.log"
+  },
+  "runtime": {
+    "nodeExecutable": "/usr/local/Cellar/node/24.10.0/bin/node",
+    "nodeVersion": "24.10.0",
+    "selection": "absolute-launchd-program-argument"
+  },
+  "environment": {
+    "names": [
+      "MISSION_AGENT_HOME",
+      "PATH"
+    ],
+    "nonSecretValueChecksums": {
+      "MISSION_AGENT_HOME": "0974bb09ab4b18256c3a16bb4c6997a1ce50d68d8317a0c1d1634ed5f68f526d",
+      "PATH": "34e696b0c29cbb879f48eb2d4e321f21f0e3eb053d495e010e8d867ae0ed926f"
+    }
+  },
+  "configuration": {
+    "path": "/Users/shawnwollenberg/.mission-agent/config.json",
+    "byteLength": 2034,
+    "sha256": "8db02e81b4b09945e164d7789e690ea7c3ad97ffb5e892ab7de559de38517742",
+    "owner": "shawnwollenberg",
+    "group": "staff",
+    "mode": "0600"
+  },
+  "credential": {
+    "storage": "macOS Keychain",
+    "itemClass": "generic-password",
+    "service": "Mission Agent",
+    "account": "0bd16e0e-98aa-4ab8-896a-f95d82ee5ad8",
+    "secretCopied": false,
+    "identityPreserved": true
+  },
+  "equivalencePolicy": {
+    "allowedDifferences": [
+      "process-id",
+      "process-start-timestamp",
+      "heartbeat-timestamps",
+      "append-only-log-bytes"
+    ],
+    "targetProcessMustBeAbsent": true,
+    "freshStableHeartbeatCount": 3,
+    "projectionReplayRequired": true
+  }
+}

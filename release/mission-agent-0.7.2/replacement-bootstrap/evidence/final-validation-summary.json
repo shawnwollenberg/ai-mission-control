@@ -1,0 +1,52 @@
+{
+  "evidenceVersion": "replacement-final-validation-v1",
+  "sourceBaseCommit": "9abc71da235f63c6ce2e4b0197ecfdd53d3015ed",
+  "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+  "focusedValidation": {
+    "replacementTests": { "passed": 38, "failed": 0 },
+    "governanceIntegrationTests": { "passed": 4, "failed": 0 },
+    "httpEndToEndScenarios": { "passed": 10, "failed": 0 },
+    "migrationUpgradeRehearsal": "passed",
+    "emptyDatabaseMigrationsThrough0029": "passed"
+  },
+  "repositoryValidation": {
+    "fullSuite": { "passed": 191, "failed": 7, "total": 198 },
+    "untouchedBaseSuite": { "passed": 152, "failed": 7, "total": 159 },
+    "failureClassification": "all seven failures reproduce on untouched base",
+    "typecheck": "passed",
+    "eslint": "passed",
+    "productionBuild": "passed",
+    "productionDependencyAudit": "zero vulnerabilities",
+    "changedFileFormatting": "passed with canonical checksum-bound fixtures excluded from rewriting",
+    "secretPatternScan": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "independentReviews": {
+    "securityAuthorizationStateRecovery": {
+      "reviewer": "mission_agent_070_security_review",
+      "criticalOpen": 0,
+      "highOpen": 0,
+      "acceptanceBlockersOpen": 0
+    },
+    "endToEndMigrationRollbackEvidence": {
+      "reviewer": "independent_acceptance_review",
+      "criticalOpen": 0,
+      "highOpen": 0,
+      "acceptanceBlockersOpen": 0
+    },
+    "releaseBoundaryEvidenceBinding": {
+      "reviewer": "release_authority_security_review",
+      "criticalOpen": 0,
+      "highOpen": 0,
+      "acceptanceBlockersOpen": 0
+    }
+  },
+  "safety": {
+    "productionContacted": false,
+    "namedCanaryContacted": false,
+    "productionAuthorizationPackageCreated": false,
+    "signedArtifactModified": false,
+    "productionMigrationApplied": false,
+    "deploymentPerformed": false
+  }
+}

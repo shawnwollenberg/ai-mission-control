@@ -1,7 +1,8 @@
 {
   "evidenceVersion": "1",
   "recordedAt": "2026-07-27T20:25:58.000Z",
-  "disposition": "validated-not-authorized-for-production-execution",
+  "disposition": "superseded-historical-design-acceptance",
+  "supersededBy": "release/mission-agent-0.7.2/replacement-bootstrap/evidence/http-e2e-acceptance.json",
   "protocol": {
     "name": "operator-mediated replacement trust bootstrap",
     "version": "operator-replacement-bootstrap-v1",

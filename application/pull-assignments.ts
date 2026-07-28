@@ -107,6 +107,17 @@ export async function claimNextAssignment(input: {
            AND t.status IN('assigned','running') AND a.status='active' AND a.capabilities @> t.required_capabilities
            AND r.identity_migration_status IN('not_required','completed')
            AND NOT EXISTS (
+             SELECT 1 FROM mission_agent_replacement_execution_claims replacement
+              WHERE replacement.workspace_id=p.workspace_id AND replacement.agent_id=p.agent_id
+                AND replacement.completed_at IS NULL
+                AND NOT (
+                  p.payload->>'replacementAuthorizationId'=replacement.authorization_id::text
+                  AND p.payload->>'replacementExecutionId'=replacement.execution_id::text
+                  AND p.payload->>'replacementTemplateChecksum'=
+                    '9a2c0df075b182a3f8c7bbcb5f67ad05f465f4504974d3fd8ac0e517caa5fec9'
+                )
+           )
+           AND NOT EXISTS (
              SELECT 1 FROM jsonb_array_elements(t.required_resources) resource
              WHERE NOT EXISTS (
                SELECT 1 FROM agent_resource_permissions permission

@@ -446,7 +446,13 @@ agents are transitioned or retired.
 This procedure is transitional infrastructure and must not be used for agents
 already capable of native Manifest v3 verification.
 
-### Canonical replacement operator
+### Historical replacement-operator design (superseded and disabled)
+
+The commands in this subsection describe the earlier design record only. They
+are not executable authorization. The repaired CLI now refuses the
+production-bound macOS filesystem and launchd provider in disposable mode, and
+production remains disabled. A future production enablement requires a new,
+commit-bound review and authorization.
 
 The authorization checksum binds the complete `nodeRuntime`,
 `serviceReplacement`, `smokeMission`, and `evidenceDestination` objects. This
@@ -456,7 +462,7 @@ checksums, fixed read-only smoke template, and governed evidence destination.
 Unknown fields and mutable or relative paths fail closed. Any field change
 invalidates the approval action hash.
 
-The only reviewed entrypoint is:
+The originally proposed entrypoint was:
 
 ```text
 npm run replacement-bootstrap -- \
@@ -472,7 +478,7 @@ the protocol acknowledgment, and a governed evidence location. Artifact,
 manifest, signature, Node, service, trust, repository, workspace, version, and
 rollback overrides are not command options.
 
-The mutation-free preflight loads the durable authorization, locks and
+The design called for a mutation-free preflight that loads the durable authorization, locks and
 revalidates its approval fingerprint and database-clock expiry, confirms the
 one-shot state, verifies the named agent and repository, verifies the exact
 release through both verification paths, and requires schema 0028. The
@@ -492,3 +498,260 @@ or beyond the atomic switch rolls back to exact 0.6.8. The evidence bundle
 contains preflight, backup, migration, receipts, transitions, journal,
 identity, heartbeat, capability, smoke, observation, and final fleet safety
 state without credentials.
+
+### Local operator-mediated canary architecture
+
+Remote host control was rejected for this one legacy transition because there
+was no reviewed authenticated transport and adding SSH automation or a new
+network control plane would broaden the release surface. Mission Control owns
+approval, package issuance, backup, migration, locking, the durable operation
+ledger, smoke creation, state transitions, and final disposition. A human
+authenticated to the named Mac invokes the reviewed local command:
+
+```text
+npm run replacement-bootstrap:local -- \
+  --authorization-package <immutable-package.json>
+```
+
+The command accepts only the package path, `--dry-run`, `--inspect-journal`, and
+an optional evidence directory that must exactly equal the package binding.
+Agent, release, runtime, trust, Node, plist, path, repository, rollback, and
+smoke overrides do not exist.
+
+The package format is `replacement-authorization-package-v1`. Canonical JSON
+binds the complete authorization and approval snapshots, authorization
+fingerprint, disposable Mission Control prerequisite identity, one execution ID, one nonce,
+one narrowly scoped credential ID, expiry, maximum use count one, fixed claim,
+receipt, and decision paths, and receipt instructions. HMAC-SHA-256 uses a
+dedicated replacement credential stored in macOS Keychain under
+`com.wallyweb.mission-agent.replacement-bootstrap`; the secret is not in the
+package, database evidence, command line, or logs. The credential allows only
+`replacement-bootstrap-v1`, the named agent, and the authorization expiry. It
+cannot create or approve authorizations or call ordinary administrative APIs.
+
+Mission Control persists package issuance and claims in the existing protocol
+receipt authority. Unique message IDs and nonces reject package and operation
+replay. Each fixed local operation writes an authenticated pre-operation host
+journal, executes once, submits an HMAC-authenticated checksum receipt, waits
+for durable sequence acknowledgement, and then advances the journal. A local
+journal one receipt behind the ledger may advance; an idempotent unconsumed
+operation may resume. Larger discrepancies halt. Ambiguity at stop, artifact
+replacement, plist replacement, or start always rolls back.
+
+The exact canonical plist is
+`release/mission-agent-0.7.2/replacement-bootstrap/com.wallyweb.mission-agent.plist`.
+It is 1,127 bytes with SHA-256
+`c81d2310df79224c41d71bdac2ea458f53b86caeed8b1543a474e955fa00dde6`
+and formally supersedes placeholder `a98179f5…`, for which no bytes existed.
+It uses label `com.wallyweb.mission-agent`, absolute Node
+`/opt/mission-agent/runtime/node-22/22.22.0/bin/node`, exact 0.7.2 artifact,
+fixed agent home and working directory, deterministic PATH, existing log
+paths, RunAtLoad, and KeepAlive. It has no secret, shell wrapper, or mutable
+runtime alias. Install mode is 0600, owned by `shawnwollenberg:staff`. Rollback
+uses the preserved LaunchAgent at the authorization-scoped rollback path with
+checksum `3adfe6e3…`.
+
+Node bindings live in `node-runtime.json`: official `nodejs.org` Darwin arm64
+archive, no redirects, 49,923,798 bytes, archive checksum `5ed4db0f…`, immutable
+install directory, executable checksum `913b144f…`, root:wheel ownership, and
+0755 permissions. Symlinked or conflicting installations fail closed. Global
+Node 24.10.0 is neither selected nor modified.
+
+The authoritative `migration-history.json` hashes exact repository bytes in
+order for migrations 0001–0029. Live production must equal exactly 0001–0028;
+missing, extra, duplicated, reordered, or changed entries fail. A checked-out
+PostgreSQL connection owns `BEGIN`, database clock, advisory transaction lock,
+approval/fingerprint/expiry/concurrency revalidation, fixed 0029 application,
+package claim initialization, evidence writes, commit or rollback, and release.
+Backend PID checks before and after mutation detect session substitution.
+
+Database tools are bound in `postgresql-tools.json` to PostgreSQL 17.4 in the
+official amd64 image digest
+`sha256:d4eceb7552a57997fff2e9ceb1a624210e61b6432a2a1f7934a418c27bfe1406`.
+Only absolute `/usr/bin/pg_dump`, `/usr/bin/pg_restore`, and `/usr/bin/psql`
+paths and enumerated arguments are permitted. Database credentials use libpq
+references, never process arguments or evidence.
+
+Before 0029, backup acceptance requires a mode-0600 custom dump, checksum and
+length, positively verified encrypted storage, `pg_restore --list`, a real
+restore into a disposable PostgreSQL 17 database, exact 0028 history,
+required tables, representative safe counts, preserved repository
+fingerprints, and absence of 0029 authorization tables. Migration is blocked
+until every check passes. The disposable restore is destroyed after evidence;
+off-host encrypted retention remains a separately governed follow-up.
+
+The local operator stops only the exact launchd label, atomically installs only
+the checksum-bound artifact and plist, and verifies Node, version, agent,
+workspace, repository registration, heartbeat freshness, and doctor
+capabilities. Mission Control—not the local command—creates the immutable
+read-only smoke mission. The command waits for a checksum-bound continue or
+rollback decision for the same execution. Rollback restores exact 0.6.8 and
+the original plist once, restarts the same identity, and never retries 0.7.2 or
+rolls back migration 0029.
+
+### Replacement ownership, recovery, and acceptance repair
+
+The prerequisite implementation is hard-disabled outside a fully bound
+disposable environment. The server requires `NODE_ENV` to be non-production,
+`MISSION_CONTROL_ENVIRONMENT=disposable-test`, the fixed disposable instance
+identity, the explicit non-production gate value, a loopback PostgreSQL
+endpoint whose database name begins
+`mission_control_replacement_disposable_`, and the SHA-256 fingerprint of
+those exact resources. The local command additionally requires a loopback
+HTTPS Mission Control origin and the disposable instance identity embedded in
+the authenticated package. Missing or unknown environment identity, a
+production process, a non-loopback endpoint, a request-field override, or a
+resource fingerprint mismatch fails before authentication or mutation. Every
+replacement API route returns 503 by default and in production.
+
+Migration 0029 now contains the durable ownership model:
+
+- `mission_agent_replacement_credentials` binds one non-reversible verifier
+  fingerprint and exact operation scope to one authorization, execution,
+  agent, provider, fingerprint, expiry, and maximum sequence.
+- `mission_agent_replacement_execution_claims` is the single claim owner and
+  records the PostgreSQL claim time, generation, state, expiry, and last
+  accepted sequence.
+- `mission_agent_replacement_mutation_intents` commits each exact mutation,
+  fixed-argument checksum, pre/postcondition checksums, retry policy, and
+  rollback obligation before the host acts.
+- `mission_agent_replacement_receipts` consumes credential, claim, request
+  nonce, receipt nonce, operation, result, host-journal, and authentication
+  bindings atomically with the state transition.
+- `mission_agent_replacement_evidence` stores authoritative drain, process,
+  heartbeat/capability, projection, smoke, and rollback-equivalence evidence.
+
+Credential issuance, execution-claim creation, authorization consumption, and
+the initial state transition occur in one transaction after locking the
+authorization and approval. The database clock must show an approved,
+fingerprint-matching, unexpired, unrevoked, unconsumed authorization with no
+existing owner. The raw credential is returned once; only the existing
+protocol verifier plus its fingerprint are persisted. Terminal completion or
+rollback consumes and revokes both credential records.
+
+The server operation table is authoritative. It defines every forward and
+rollback operation, whether it mutates, retry safety, receipt requirements,
+rollback obligation, recovery eligibility, and expiration behavior. A host
+journal cannot authorize a transition. Skips, sequence gaps, state mismatch,
+duplicate mutation, early smoke, early completion, rollback before failure,
+forward progress after rollback, and terminal reuse fail closed.
+
+For every host mutation the sequence is: committed server intent, authenticated
+local pre-operation journal, observed pre/postcondition, at-most-once fixed
+operation, authenticated post-operation journal, receipt, atomic server
+consumption, then local acknowledgement. Recovery queries the locked server
+claim and pending intent. A complete postcondition produces a recovery receipt
+without repeating the mutation. An unchanged precondition may retry only for
+an operation explicitly marked retry-safe. Partial or ambiguous state halts;
+an ambiguous forward mutation requires governed rollback. A receipt accepted
+before the HTTP response or before the local journal update is reconciled from
+the authoritative sequence.
+
+Drain is not a host assertion. The execution claim makes the named agent
+ineligible for ordinary pull assignments. Mission Control checks active
+assignments and leases, executions, targeted jobs/outbox messages, publication
+assignments, and the latest heartbeat twice across a bounded stabilization
+window, then persists a checksum-bound drain record. Only the immutable smoke
+assignment is exempt, and only when its authorization ID, replacement
+execution ID, and exact template checksum match.
+
+The approved smoke bytes are in
+`release/mission-agent-0.7.2/replacement-bootstrap/read-only-smoke-template.json`
+with SHA-256
+`9a2c0df075b182a3f8c7bbcb5f67ad05f465f4504974d3fd8ac0e517caa5fec9`.
+Mission Control creates deterministic canonical mission, task, execution, and
+assignment records through the existing governed command/event path. Continue
+is issued only after the named agent completes exactly one execution using
+that repository and template, artifacts have canonical checksums, the lease is
+gone, no forbidden push/publication/deployment/approval event exists,
+heartbeats span execution, and projection aggregate versions match their
+authoritative event streams. A host-reported smoke result is ignored.
+
+The local provider inspects the real launchd job and process. Process receipts
+bind host, agent, service label, PID/parent PID, process start time and owner,
+absolute Node executable/version, artifact path/checksum, arguments checksum,
+and plist checksum. The process must start after the committed start intent.
+Repeated observations must name one stable PID. Mission Control then requires
+three post-start heartbeat events, version 0.7.2, the exact artifact checksum,
+Node 22, Manifest v3, Release Authority v2, v3 canonicalization, fresh
+capabilities, the approved repository fingerprint, one agent identity, and
+matching live/reconstructed projection checksums.
+
+Rollback inventory is immutable at
+`release/mission-agent-0.7.2/replacement-bootstrap/rollback-0.6.8-inventory.json`
+with SHA-256
+`2e7f074a890b1b6492ac76d1786b987c0a7417e50532a1e712699963b7e5f229`.
+It binds exact 0.6.8 bytes, original plist, absolute Node 24.10.0 selection,
+arguments, environment-name/value checksums, config metadata, Keychain
+storage, modes, ownership, logs, and restart behavior. Rollback has its own
+committed intents, removes the staged target, restores exact prior bytes and
+plist, starts once, observes the real 0.6.8 process twice, requires three fresh
+prior-version heartbeats and capabilities, verifies repository identity and
+projection equivalence, proves no target process remains, and makes the
+authorization and credential terminal. Timestamps, PID, heartbeat times, and
+append-only log bytes are the only permitted equivalence differences.
+
+PostgreSQL backup tooling is checked at runtime as well as in the manifest:
+the runner must attest the exact immutable image digest and linux/amd64
+platform, and each absolute executable must have the expected byte checksum,
+17.4 version, root ownership, 0755 mode, and non-symlink type before any backup
+command is accepted.
+
+This implementation does not authorize production use. Production still
+requires a new authorization naming the final commit, final asset and package
+checksums, exact production application image digest, migration 0029, backup
+location and encryption proof, package issuance, the named canary, and the
+single local command.
+
+### Isolated replacement-bootstrap acceptance
+
+The production-shaped disposable acceptance starts a real Next.js server
+behind loopback HTTPS, initializes a real PostgreSQL 17 database through the
+checked-in migrations, and drives only authenticated replacement-bootstrap and
+Mission Agent HTTP routes. The operator process, application process, and
+stateful disposable provider use separate requests and durable files. The
+provider rejects a second execution of any non-idempotent mutation.
+
+The acceptance matrix proves one forward completion, one governed
+post-mutation failure followed by exact rollback, receipt loss after every
+forward mutation, and receipt loss after every rollback mutation. Canonical
+database claims, credentials, mutation intents, receipts, events, projections,
+leases, outbox records, smoke execution, and artifacts are checked after each
+scenario. Agent status and repository identity are rebuilt from authoritative
+events rather than copied projection values. Repository identity is extracted
+from the authenticated heartbeat event and compared independently with both
+the active identity source record and repository projection; the evidence
+records separate source and event-replay hashes.
+
+Run the isolated matrix:
+
+```text
+npm run test:replacement:http-e2e
+npm run test:replacement:migration
+```
+
+The sanitized committed result is
+`release/mission-agent-0.7.2/replacement-bootstrap/evidence/http-e2e-acceptance.json`.
+Migration evidence and the untouched-base full-suite classification live
+beside it. These records contain no package secret, agent credential, private
+key, raw authentication header, or disposable absolute path.
+
+The two checksum-bound fixture files intentionally retain their canonical byte
+formats and are excluded from Prettier rewriting. Their SHA-256 values must be
+verified instead.
+
+Interrupted rollback remains reachable after authorization expiry without
+reopening forward execution. Only the intent, receipt, recovery-status, and
+failure endpoints may authenticate an expired replacement credential; the
+governance transaction then permits only operations whose state-table entry is
+explicitly rollback-only and allowed after expiry. The package verifier may
+verify immutable HMAC-bound bytes in recovery mode, but an expired package
+cannot claim or begin a new execution. An existing forward journal with a
+rollback obligation is forced into the durable rollback state before any
+further host action.
+
+Mission Agent 0.7.2 is registered as the exact approved Manifest v3 artifact
+for post-restart capability verification. The registry binds version `0.7.2`,
+Manifest `3`, and SHA-256
+`108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09`;
+it does not alter the signed artifact, manifest, signature, or trust record.

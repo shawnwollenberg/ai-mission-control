@@ -1,7 +1,8 @@
 {
   "evidenceVersion": "1",
   "recordedAt": "2026-07-27T21:15:00.000Z",
-  "disposition": "provider-neutral-workflow-validated-production-mode-disabled",
+  "disposition": "superseded-historical-provider-neutral-acceptance",
+  "supersededBy": "release/mission-agent-0.7.2/replacement-bootstrap/evidence/http-e2e-acceptance.json",
   "baseCommit": "d9c27fc02b550376b77f7bae471c976d93fd1c44",
   "protocol": "operator-replacement-bootstrap-v1",
   "implementation": {
@@ -54,7 +55,7 @@
       "classification": "All failures reproduce on the untouched base and are legacy latest-manifest or Git-fixture failures."
     },
     "emptyDatabaseMigrations0001Through0029": "passed",
-    "migration0028To0029": "previously validated; migration source unchanged",
+    "migration0028To0029": "historical result only; superseded by current seeded migration evidence",
     "typecheck": "passed",
     "eslint": "passed",
     "productionBuild": "passed",
@@ -80,9 +81,9 @@
   "independentReview": {
     "reviewer": "release_authority_security_review",
     "disposition": "pass for scoped repair",
-    "criticalFindingsOpen": 0,
-    "highFindingsOpen": 0,
-    "acceptanceBlockingMediumFindingsOpen": 0,
+    "criticalFindingsOpen": null,
+    "highFindingsOpen": null,
+    "acceptanceBlockingMediumFindingsOpen": null,
     "productionProviderReviewed": false,
     "productionProviderRequiredBeforeExecution": true
   },

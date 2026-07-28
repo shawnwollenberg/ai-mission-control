@@ -38,7 +38,8 @@ export const APPROVED_AGENT_ROOT = "/Users/shawnwollenberg/.mission-agent" as co
 export const TARGET_SERVICE_PATH =
   "/Users/shawnwollenberg/.mission-agent/staged-0.7.2/com.wallyweb.mission-agent.plist" as const;
 export const CURRENT_SERVICE_SHA256 = "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898" as const;
-export const TARGET_SERVICE_SHA256 = "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50" as const;
+export const TARGET_SERVICE_SHA256 = "c81d2310df79224c41d71bdac2ea458f53b86caeed8b1543a474e955fa00dde6" as const;
+export const ROLLBACK_INVENTORY_SHA256 = "2e7f074a890b1b6492ac76d1786b987c0a7417e50532a1e712699963b7e5f229" as const;
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -131,6 +132,7 @@ export type ReplacementAuthorization = {
   maximumExecutionCount: 1;
   rollbackVersion: typeof SOURCE_VERSION;
   rollbackArtifactSha256: typeof SOURCE_SHA256;
+  rollbackInventorySha256: typeof ROLLBACK_INVENTORY_SHA256;
   reason: "legacy-signing-authority-unavailable";
   legacyCryptographicContinuity: "unavailable";
   evidenceReferences: string[];
@@ -201,6 +203,7 @@ export function validateReplacementAuthorization(
     "maximumExecutionCount",
     "rollbackVersion",
     "rollbackArtifactSha256",
+    "rollbackInventorySha256",
     "reason",
     "legacyCryptographicContinuity",
     "evidenceReferences",
@@ -265,6 +268,7 @@ export function validateReplacementAuthorization(
     value.maximumExecutionCount !== 1 ||
     value.rollbackVersion !== SOURCE_VERSION ||
     value.rollbackArtifactSha256 !== SOURCE_SHA256 ||
+    value.rollbackInventorySha256 !== ROLLBACK_INVENTORY_SHA256 ||
     value.reason !== "legacy-signing-authority-unavailable" ||
     value.legacyCryptographicContinuity !== "unavailable"
   )

@@ -149,7 +149,11 @@ export async function registerRemoteAgent(input: {
   });
   return { agentId, credential: { credentialId, secret, protocolVersion: "1.0", displayedOnce: true } };
 }
-export async function getRemoteAgentAuth(agentId: string, credentialId: string) {
+export async function getRemoteAgentAuth(
+  agentId: string,
+  credentialId: string,
+  options: { allowExpiredReplacementRecovery?: boolean } = {},
+) {
   const row = (
     await getDatabasePool().query<{
       workspace_id: string;
@@ -175,7 +179,7 @@ export async function getRemoteAgentAuth(agentId: string, credentialId: string) 
     row.credential_status === "revoked" ||
     !["active", "pending_verification", "expiring"].includes(row.credential_record_status) ||
     row.revoked_at ||
-    (row.expires_at && row.expires_at.getTime() <= Date.now())
+    (row.expires_at && row.expires_at.getTime() <= Date.now() && !options.allowExpiredReplacementRecovery)
   )
     throw new ValidationFailedError("Agent credential is not active");
   return row;

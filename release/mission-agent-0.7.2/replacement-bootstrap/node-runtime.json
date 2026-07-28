@@ -1,0 +1,22 @@
+{
+  "manifestVersion": "1",
+  "version": "22.22.0",
+  "platform": "darwin-arm64",
+  "distributionOrigin": "https://nodejs.org",
+  "distributionUrl": "https://nodejs.org/dist/v22.22.0/node-v22.22.0-darwin-arm64.tar.gz",
+  "officialChecksumUrl": "https://nodejs.org/dist/v22.22.0/SHASUMS256.txt",
+  "archiveFilename": "node-v22.22.0-darwin-arm64.tar.gz",
+  "archiveByteLength": 49923798,
+  "archiveSha256": "5ed4db0fcf1eaf84d91ad12462631d73bf4576c1377e192d222e48026a902640",
+  "installationDirectory": "/opt/mission-agent/runtime/node-22/22.22.0",
+  "executablePath": "/opt/mission-agent/runtime/node-22/22.22.0/bin/node",
+  "executableSha256": "913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4",
+  "reportedVersion": "v22.22.0",
+  "owner": "root",
+  "group": "wheel",
+  "directoryMode": "0755",
+  "executableMode": "0755",
+  "globalNodeVersionPreserved": "24.10.0",
+  "redirectPolicy": "reject-all",
+  "symlinkPolicy": "reject-executable-or-install-root-symlink"
+}

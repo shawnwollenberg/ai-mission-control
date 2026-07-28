@@ -17,7 +17,7 @@ import { canonicalJson } from "../integrations/mission-agent/release-authority";
 export const REPLACEMENT_OPERATOR_VERSION = "replacement-bootstrap-operator-v1" as const;
 export const REQUIRED_PRODUCTION_SCHEMA = "0028" as const;
 export const TARGET_PRODUCTION_SCHEMA = "0029" as const;
-export const MIGRATION_0029_SHA256 = "56c593fd43bedb8b8056f1e210e0eca9c56a94dfae22d84b1cfa4c3ad9ad0bb1";
+export const MIGRATION_0029_SHA256 = "c58f48d1455489af81eef8efd3143fd54595f278d8d675e8aa08d3e9a2a09caa";
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://missioncontrol.wallyweb.com/schemas/mission-agent-replacement-authorization-package-v1.json",
+  "title": "Authenticated local Mission Agent replacement authorization package",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "packageVersion",
+    "protocolVersion",
+    "credentialProtocol",
+    "credentialId",
+    "missionControlInstanceIdentity",
+    "claimPath",
+    "intentPath",
+    "receiptPath",
+    "decisionPath",
+    "statusPath",
+    "failurePath",
+    "executionId",
+    "nonce",
+    "issuedAt",
+    "expiresAt",
+    "maximumUseCount",
+    "authorization",
+    "approval",
+    "authorizationFingerprint",
+    "evidenceInstructions",
+    "packageChecksum",
+    "authentication"
+  ],
+  "properties": {
+    "packageVersion": { "const": "replacement-authorization-package-v1" },
+    "protocolVersion": { "const": "operator-replacement-bootstrap-v1" },
+    "credentialProtocol": { "const": "replacement-bootstrap-v1" },
+    "credentialId": { "type": "string", "format": "uuid" },
+    "missionControlInstanceIdentity": {
+      "const": "mission-control-disposable-replacement-bootstrap-v1"
+    },
+    "claimPath": { "const": "/api/mission-agent/replacement-bootstrap/claim" },
+    "intentPath": { "const": "/api/mission-agent/replacement-bootstrap/intent" },
+    "receiptPath": { "const": "/api/mission-agent/replacement-bootstrap/receipt" },
+    "decisionPath": { "const": "/api/mission-agent/replacement-bootstrap/decision" },
+    "statusPath": { "const": "/api/mission-agent/replacement-bootstrap/status" },
+    "failurePath": { "const": "/api/mission-agent/replacement-bootstrap/failure" },
+    "executionId": { "type": "string", "format": "uuid" },
+    "nonce": { "type": "string", "pattern": "^[A-Za-z0-9_-]{32,128}$" },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "maximumUseCount": { "const": 1 },
+    "authorization": {
+      "$ref": "mission-agent-replacement-bootstrap-authorization-v1.json"
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approvalId", "status", "decidedBy", "actionHash", "decidedAt", "expiresAt"],
+      "properties": {
+        "approvalId": { "type": "string", "format": "uuid" },
+        "status": { "const": "granted" },
+        "decidedBy": { "type": "string", "minLength": 1 },
+        "actionHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "decidedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "authorizationFingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "evidenceInstructions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "localDirectory", "receiptSequenceStartsAt"],
+      "properties": {
+        "mode": { "const": "authenticated-receipt-api" },
+        "localDirectory": {
+          "type": "string",
+          "pattern": "^/Users/shawnwollenberg/\\.mission-agent/evidence/[A-Za-z0-9._/-]+$"
+        },
+        "receiptSequenceStartsAt": { "const": 1 }
+      }
+    },
+    "packageChecksum": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "credentialId", "signature"],
+      "properties": {
+        "algorithm": { "const": "hmac-sha256" },
+        "credentialId": { "type": "string", "format": "uuid" },
+        "signature": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

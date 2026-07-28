@@ -1,0 +1,182 @@
+{
+  "fixtureVersion": "1",
+  "canonicalization": "sha256-of-exact-repository-file-bytes",
+  "requiredPreExecutionVersion": 28,
+  "targetVersion": 29,
+  "migrations": [
+    {
+      "number": 1,
+      "filename": "0001_foundation.sql",
+      "sha256": "a98d998926cf2c11504e394aa9f23b1442c028c387d87ae8cd0a97dc220d7028",
+      "requiredInProduction": true
+    },
+    {
+      "number": 2,
+      "filename": "0002_projections.sql",
+      "sha256": "b99e46a0d411e8715448d2a23b0e87c283bf73a19a9f30b285a1a69908412d16",
+      "requiredInProduction": true
+    },
+    {
+      "number": 3,
+      "filename": "0003_outbox_jobs_artifacts.sql",
+      "sha256": "226d367f2141032902e6e2647268e6a2c9f5cd63572b80e1ea67769ddd8731a0",
+      "requiredInProduction": true
+    },
+    {
+      "number": 4,
+      "filename": "0004_authentication.sql",
+      "sha256": "a13a2d73c808904a1d463a88cda234b2019d82a0c4770a49b4111cddff4cf107",
+      "requiredInProduction": true
+    },
+    {
+      "number": 5,
+      "filename": "0005_outbox_event_link.sql",
+      "sha256": "11f143103d9064c639910b0d3492757009445bf75fea979fa5049422bb85d862",
+      "requiredInProduction": true
+    },
+    {
+      "number": 6,
+      "filename": "0006_mission_projection_counts.sql",
+      "sha256": "3b3b2fd03186b78c1d7d8a17fcde1d658a61b7bbb209bac5a165f95182971e0e",
+      "requiredInProduction": true
+    },
+    {
+      "number": 7,
+      "filename": "0007_phase1_execution.sql",
+      "sha256": "09da893a4a1b4e579673947efdf220ed0463ef6b0dc3a7b42217999540910636",
+      "requiredInProduction": true
+    },
+    {
+      "number": 8,
+      "filename": "0008_job_claim_metadata.sql",
+      "sha256": "2667ad9eb27a5fe5e8cc5fc31e74b9cdbf3c2c7391eb65a39fe78d99a077b8ef",
+      "requiredInProduction": true
+    },
+    {
+      "number": 9,
+      "filename": "0009_phase2_execution.sql",
+      "sha256": "cbf9bcb5e0177f2d46ca8cb7ced1aa24a91d96c69636e81d1c5069f400c5f54c",
+      "requiredInProduction": true
+    },
+    {
+      "number": 10,
+      "filename": "0010_phase3_policy_actions.sql",
+      "sha256": "6be72b63e14b9fc5d6754316defe7dec606da4055b89f11a29e8dcb24b5df301",
+      "requiredInProduction": true
+    },
+    {
+      "number": 11,
+      "filename": "0011_phase4_remote_agents.sql",
+      "sha256": "c43a3a22359e7cef6294b4faded147cd6351065dce24ed90d4ed9d91b28a3365",
+      "requiredInProduction": true
+    },
+    {
+      "number": 12,
+      "filename": "0012_phase4_governance.sql",
+      "sha256": "5ba7f5ce63692d56e61323294ce8ece2124a59631035b93f18cf6a5e9971fcf4",
+      "requiredInProduction": true
+    },
+    {
+      "number": 13,
+      "filename": "0013_phase5_templates_schedules.sql",
+      "sha256": "b327b5c177df71a8f7168fd3c45ee475b21b5ef58c35cf27087e2f3f32adce05",
+      "requiredInProduction": true
+    },
+    {
+      "number": 14,
+      "filename": "0014_template_immutability.sql",
+      "sha256": "7c241d0505f134b8ba65d2c1a9a0ef15f41186705a9e372b5ac6fc61e9d4439e",
+      "requiredInProduction": true
+    },
+    {
+      "number": 15,
+      "filename": "0015_phase5_daily_operations.sql",
+      "sha256": "a48a68bd5067deeddae34f6f39a89362f01c2234457a6311079e187d1215e800",
+      "requiredInProduction": true
+    },
+    {
+      "number": 16,
+      "filename": "0016_phase5_schedule_statistics_backfill.sql",
+      "sha256": "6d316ecb8177fa1bfcdccfa80d4ce05b13637d0949c9f5602a68f6a7e80d983e",
+      "requiredInProduction": true
+    },
+    {
+      "number": 17,
+      "filename": "0017_phase5_projection_compatibility.sql",
+      "sha256": "f78337bda3755402a04248c12f46425c8c0b8de9a6dcaf70d4175485bf606771",
+      "requiredInProduction": true
+    },
+    {
+      "number": 18,
+      "filename": "0018_phase6_emergency_controls.sql",
+      "sha256": "0c488ebbd4aedb8c113ff6748c5c4c2b49f63ab4aad7eee72ac7c5a550359e61",
+      "requiredInProduction": true
+    },
+    {
+      "number": 19,
+      "filename": "0019_personal_workspaces_onboarding.sql",
+      "sha256": "8acf65cb45388f1a2acdb19155f147ba0ec7e04793aaece09b0c4c0dae80da56",
+      "requiredInProduction": true
+    },
+    {
+      "number": 20,
+      "filename": "0020_mission_agent_pull.sql",
+      "sha256": "dcf9f662290fae1634bf84c066c250d2a2c5f9e05cb751de66748a8cb82c00cb",
+      "requiredInProduction": true
+    },
+    {
+      "number": 21,
+      "filename": "0021_repository_recommendations.sql",
+      "sha256": "0e3fd702f7bf0482d03018632e8d3f2c8ac522bf4ea6584a430d7bff3b29f752",
+      "requiredInProduction": true
+    },
+    {
+      "number": 22,
+      "filename": "0022_recommendation_repository_integrity.sql",
+      "sha256": "3e905ba86ad2b353a10f22799a391e03f8580b364af91e2668a100978ad044a6",
+      "requiredInProduction": true
+    },
+    {
+      "number": 23,
+      "filename": "0023_repository_health.sql",
+      "sha256": "ce1f9b1290dc8754a4097de8ac5086e1b5843b42c60c417388acb440bb5d6cb7",
+      "requiredInProduction": true
+    },
+    {
+      "number": 24,
+      "filename": "0024_publish_for_review.sql",
+      "sha256": "0876dc7cc1fa3fa03f3c81eb61d2a28a03690e1bab1ae25fe8f838201308c3c0",
+      "requiredInProduction": true
+    },
+    {
+      "number": 25,
+      "filename": "0025_project_brain_governed_execution.sql",
+      "sha256": "243929eaacab45f08a0d9da9926873d6f1bc21284095bb7709da44ef067c8f68",
+      "requiredInProduction": true
+    },
+    {
+      "number": 26,
+      "filename": "0026_remote_project_brain_transport.sql",
+      "sha256": "19c3d1bc5a5ed25184b35b7123c5a5e843cfc6c60cf8753e8a0edbc22459aa65",
+      "requiredInProduction": true
+    },
+    {
+      "number": 27,
+      "filename": "0027_mission_agent_artifact_identity.sql",
+      "sha256": "66b2952341214d9da851eef976647f35f2a21d25b156cd5a46fdb4bb88b3b21f",
+      "requiredInProduction": true
+    },
+    {
+      "number": 28,
+      "filename": "0028_repository_identity_migration.sql",
+      "sha256": "c23e2b826dbdf8be0b8d54ff914b33c18d1d6740ea4df613a13d0e94d58c6b44",
+      "requiredInProduction": true
+    },
+    {
+      "number": 29,
+      "filename": "0029_mission_agent_replacement_bootstrap.sql",
+      "sha256": "c58f48d1455489af81eef8efd3143fd54595f278d8d675e8aa08d3e9a2a09caa",
+      "requiredInProduction": false
+    }
+  ]
+}

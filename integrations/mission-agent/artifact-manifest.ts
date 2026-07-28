@@ -10,10 +10,14 @@ export type MissionAgentArtifactVerification = {
 // Generated from the detached release manifest after the immutable artifact is
 // finalized. The checksum covers the exact public .mjs bytes, not configuration
 // or runtime state.
-export const approvedMissionAgentArtifacts: Readonly<Record<string, { sha256: string; manifestVersion: "1" }>> = {
+export const approvedMissionAgentArtifacts: Readonly<Record<string, { sha256: string; manifestVersion: "1" | "3" }>> = {
   "0.6.8": {
     sha256: "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
     manifestVersion: "1",
+  },
+  "0.7.2": {
+    sha256: "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+    manifestVersion: "3",
   },
 };
 
@@ -33,7 +37,7 @@ export function verifyMissionAgentArtifact(version: unknown, artifact: unknown):
       compatible: false,
       rejectionReason: "mission_agent_artifact_checksum_missing",
     };
-  if (!/^[a-f0-9]{64}$/.test(advertisedChecksum) || manifestVersion !== "1")
+  if (!/^[a-f0-9]{64}$/.test(advertisedChecksum) || !["1", "3"].includes(String(manifestVersion)))
     return {
       advertisedChecksum,
       expectedChecksum,
@@ -50,6 +54,15 @@ export function verifyMissionAgentArtifact(version: unknown, artifact: unknown):
       status: "unapproved_version",
       compatible: false,
       rejectionReason: "mission_agent_version_unapproved",
+    };
+  if (manifestVersion !== approved.manifestVersion)
+    return {
+      advertisedChecksum,
+      expectedChecksum,
+      manifestVersion,
+      status: "malformed",
+      compatible: false,
+      rejectionReason: "mission_agent_artifact_identity_malformed",
     };
   if (advertisedChecksum !== approved.sha256)
     return {

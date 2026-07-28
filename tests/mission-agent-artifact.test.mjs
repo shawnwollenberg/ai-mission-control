@@ -44,3 +44,9 @@ test("artifact verification accepts only the approved canonical identity", () =>
   ])
     assert.equal(verifyMissionAgentArtifact(version, artifact).status, status);
 });
+
+test("signed Mission Agent 0.7.2 Manifest v3 artifact identity is exact", () => {
+  const checksum = "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09";
+  assert.equal(verifyMissionAgentArtifact("0.7.2", { sha256: checksum, manifestVersion: "3" }).status, "verified");
+  assert.equal(verifyMissionAgentArtifact("0.7.2", { sha256: checksum, manifestVersion: "1" }).status, "malformed");
+});

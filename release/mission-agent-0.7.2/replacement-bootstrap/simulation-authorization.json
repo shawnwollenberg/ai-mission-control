@@ -30,7 +30,7 @@
     "serviceManager": "launchd",
     "serviceIdentifier": "com.wallyweb.mission-agent",
     "currentDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898",
-    "targetDefinitionSha256": "a98179f5dafd0458222137a7e40914023ed46b250e803fea8ad961e2ab30ef50",
+    "targetDefinitionSha256": "c81d2310df79224c41d71bdac2ea458f53b86caeed8b1543a474e955fa00dde6",
     "targetDefinitionPath": "/Users/shawnwollenberg/.mission-agent/staged-0.7.2/com.wallyweb.mission-agent.plist",
     "rollbackDefinitionSha256": "3adfe6e3e0119871dcc8ba1977bc8af953accbcc51424eb13e1f1070f8789898"
   },
@@ -48,6 +48,7 @@
   "maximumExecutionCount": 1,
   "rollbackVersion": "0.6.8",
   "rollbackArtifactSha256": "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
+  "rollbackInventorySha256": "2e7f074a890b1b6492ac76d1786b987c0a7417e50532a1e712699963b7e5f229",
   "reason": "legacy-signing-authority-unavailable",
   "legacyCryptographicContinuity": "unavailable",
   "evidenceReferences": [

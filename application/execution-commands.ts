@@ -176,7 +176,13 @@ export async function handleRequestRemoteExecution(input: {
         required_capabilities: string[];
         domain: string;
         required_resources: RequiredResource[];
-        approval_requirements: { missionType?: string; writeApprovalRequired?: boolean };
+        approval_requirements: {
+          missionType?: string;
+          writeApprovalRequired?: boolean;
+          replacementAuthorizationId?: string;
+          replacementExecutionId?: string;
+          replacementTemplateChecksum?: string;
+        };
         verification_requirements: string[];
       }
     >(
@@ -243,6 +249,9 @@ export async function handleRequestRemoteExecution(input: {
     throw new ValidationFailedError("Repository dispatch is blocked during identity migration");
   if (!repository.read_allowed) throw new ValidationFailedError("Repository does not allow required remote access");
   const taskEnvelope = {
+    repositoryId,
+    repositoryFingerprint: repository.repository_fingerprint,
+    repositoryCommit: repository.observed_commit,
     missionType: repositoryChange ? "repository_change" : "repository_analysis",
     taskObjective: task.name,
     instructions: task.instructions,
@@ -269,6 +278,13 @@ export async function handleRequestRemoteExecution(input: {
     artifactRequirements: repositoryChange
       ? ["implementation_plan", "git_patch", "validation_results", "change_summary"]
       : ["repository_analysis"],
+    ...(task.approval_requirements.replacementAuthorizationId
+      ? {
+          replacementAuthorizationId: task.approval_requirements.replacementAuthorizationId,
+          replacementExecutionId: task.approval_requirements.replacementExecutionId,
+          replacementTemplateChecksum: task.approval_requirements.replacementTemplateChecksum,
+        }
+      : {}),
   };
   const result = await appendEvents({
     workspaceId: input.actor.workspaceId,

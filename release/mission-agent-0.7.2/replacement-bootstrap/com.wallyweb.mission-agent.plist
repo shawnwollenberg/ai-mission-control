@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.wallyweb.mission-agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/mission-agent/runtime/node-22/22.22.0/bin/node</string>
+    <string>/Users/shawnwollenberg/.mission-agent/mission-agent-0.7.2.mjs</string>
+    <string>run</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>MISSION_AGENT_HOME</key>
+    <string>/Users/shawnwollenberg/.mission-agent</string>
+    <key>PATH</key>
+    <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/Apple/usr/bin</string>
+  </dict>
+  <key>WorkingDirectory</key>
+  <string>/Users/shawnwollenberg/.mission-agent</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/shawnwollenberg/.mission-agent/mission-agent.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/shawnwollenberg/.mission-agent/mission-agent-error.log</string>
+</dict>
+</plist>

@@ -1,0 +1,32 @@
+{
+  "evidenceVersion": "replacement-migration-acceptance-v2",
+  "generatedAt": "2026-07-28T00:51:38.373Z",
+  "sourceBaseCommit": "9abc71da235f63c6ce2e4b0197ecfdd53d3015ed",
+  "command": "npm run test:replacement:migration",
+  "database": {
+    "image": "postgres:17-alpine",
+    "imageDigest": "sha256:8ee7c900f4de054e8f0a3b42b8f5da38b8fba57c3ccd7c1a02be28cb0b06494f",
+    "topology": "loopback-disposable",
+    "resourceFingerprint": "5d343748498cbc5d03da70bd5d68174bb698089fc05011c7b1b776beb7fd02d1"
+  },
+  "migration": {
+    "filename": "0029_mission_agent_replacement_bootstrap.sql",
+    "sourceSha256": "c58f48d1455489af81eef8efd3143fd54595f278d8d675e8aa08d3e9a2a09caa",
+    "recordedChecksum": "c58f48d1455489af81eef8efd3143fd54595f278d8d675e8aa08d3e9a2a09caa",
+    "initialBoundary": "0028",
+    "initialMigrationCount": 28,
+    "pendingMigrations": 0,
+    "secondRunPendingMigrations": 0
+  },
+  "representativeData": {
+    "workspaceId": "10000000-0000-4000-8000-000000000001",
+    "repositoryId": "30000000-0000-4000-8000-000000000001",
+    "beforeSha256": "a214144214432b51df578cce687c764f763c8d81b60a1092b39b52fc2604a366",
+    "afterSha256": "a214144214432b51df578cce687c764f763c8d81b60a1092b39b52fc2604a366",
+    "preserved": true
+  },
+  "newReplacementClaimRows": 0,
+  "productionContacted": false,
+  "namedCanaryContacted": false,
+  "result": "pass"
+}

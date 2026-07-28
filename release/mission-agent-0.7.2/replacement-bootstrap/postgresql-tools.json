@@ -1,0 +1,97 @@
+{
+  "manifestVersion": "1",
+  "productionExecutionBoundary": {
+    "type": "immutable-container",
+    "image": "docker.io/library/postgres",
+    "version": "17.4-bookworm",
+    "platform": "linux/amd64",
+    "indexDigest": "sha256:304ab813518754228f9f792f79d6da36359b82d8ecf418096c636725f8c930ad",
+    "imageDigest": "sha256:d4eceb7552a57997fff2e9ceb1a624210e61b6432a2a1f7934a418c27bfe1406"
+  },
+  "tools": [
+    {
+      "name": "pg_dump",
+      "absolutePath": "/usr/bin/pg_dump",
+      "version": "17.4",
+      "expectedMajorVersion": 17,
+      "owningPackage": "postgresql-client-17",
+      "binarySha256": "fc00112585bd75eb9eb6fcd11ca4cf7222acf10259a1f21eea4889536dee640a",
+      "allowedArguments": ["--format=custom", "--compress=9", "--file=<approved-path>", "--dbname=<libpq-service>"],
+      "disallowedArguments": [
+        "--dbname=postgresql://*",
+        "--table=*",
+        "--exclude-table=*",
+        "--schema=*",
+        "--no-owner=false",
+        "<extra-arguments>"
+      ]
+    },
+    {
+      "name": "pg_restore",
+      "absolutePath": "/usr/bin/pg_restore",
+      "version": "17.4",
+      "expectedMajorVersion": 17,
+      "owningPackage": "postgresql-client-17",
+      "binarySha256": "fc00112585bd75eb9eb6fcd11ca4cf7222acf10259a1f21eea4889536dee640a",
+      "allowedArguments": [
+        "--list",
+        "--exit-on-error",
+        "--clean",
+        "--if-exists",
+        "--no-owner",
+        "--dbname=<disposable-restore>",
+        "<approved-backup-path>"
+      ],
+      "disallowedArguments": [
+        "--table=*",
+        "--schema=*",
+        "--use-list=*",
+        "--single-transaction=false",
+        "<extra-arguments>"
+      ]
+    },
+    {
+      "name": "psql",
+      "absolutePath": "/usr/bin/psql",
+      "version": "17.4",
+      "expectedMajorVersion": 17,
+      "owningPackage": "postgresql-client-17",
+      "binarySha256": "fc00112585bd75eb9eb6fcd11ca4cf7222acf10259a1f21eea4889536dee640a",
+      "allowedArguments": [
+        "--no-psqlrc",
+        "--set=ON_ERROR_STOP=1",
+        "--dbname=<disposable-restore>",
+        "--file=<fixed-validation-file>"
+      ],
+      "disallowedArguments": ["--command=*", "--variable=*", "<stdin-sql>", "<extra-arguments>"]
+    }
+  ],
+  "migrationRunner": {
+    "runtimePath": "/usr/local/bin/node",
+    "scriptPath": "/app/node_modules/.bin/tsx",
+    "migrationScriptPath": "/app/scripts/migrate.ts",
+    "sourceBinding": "exact-provider-commit-and-image-digest-required-by-next-production-authorization",
+    "allowedEnvironment": [
+      "APP_ENV=production",
+      "ALLOW_PRODUCTION_MIGRATIONS=MISSION_CONTROL_PRODUCTION",
+      "DATABASE_URL=<credential-reference>"
+    ],
+    "arbitraryMigrationSelection": false
+  },
+  "localValidationTools": {
+    "platform": "darwin-arm64",
+    "version": "17.4",
+    "pgDump": {
+      "absolutePath": "/usr/local/opt/postgresql@17/bin/pg_dump",
+      "sha256": "5b765348d1d4be9238e6d2447f18c927813652c871a8308deab49662d60d615a"
+    },
+    "pgRestore": {
+      "absolutePath": "/usr/local/opt/postgresql@17/bin/pg_restore",
+      "sha256": "00bd80662835e3f606bf5234c1ec0af5bb398cbb8a92849b8090dd8a0956dbe8"
+    },
+    "psql": {
+      "absolutePath": "/usr/local/opt/postgresql@17/bin/psql",
+      "sha256": "885d90d2b695a7ae16e64719b701aa36fe7f21a0dfd51d8097493390e0ba3372"
+    }
+  }
+}
