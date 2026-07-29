@@ -16,8 +16,27 @@ import {
 } from "@/remote-agent/security";
 import { validateExecutionLease } from "@/application/pull-assignments";
 import { validateRemoteProjectBrainLease } from "@/application/remote-project-brain-assignments";
+import { ConcurrencyConflictError } from "@/lib/application-errors";
 
 const path = "/api/agent-protocol/v1/messages";
+const agentStatusMaxAttempts = 16;
+
+async function processAuthenticatedMessage(
+  message: Parameters<typeof processRemoteMessage>[0],
+  credential: Parameters<typeof processRemoteMessage>[1],
+) {
+  if (!["AgentHeartbeat", "AgentCapabilitiesReported"].includes(message.messageType))
+    return processRemoteMessage(message, credential);
+  for (let attempt = 0; attempt < agentStatusMaxAttempts; attempt += 1) {
+    try {
+      return await processRemoteMessage(message, credential);
+    } catch (error) {
+      if (!(error instanceof ConcurrencyConflictError) || attempt + 1 === agentStatusMaxAttempts) throw error;
+    }
+  }
+  throw new ConcurrencyConflictError({ agentId: message.agentId, messageType: message.messageType });
+}
+
 export async function POST(request: Request) {
   try {
     const authenticated = await authenticateProtocolRequest(request, path);
@@ -65,7 +84,7 @@ export async function POST(request: Request) {
         result: receipt.acknowledgement,
       });
     try {
-      const result = await processRemoteMessage(message, authenticated.credential);
+      const result = await processAuthenticatedMessage(message, authenticated.credential);
       const acknowledgement = { protocolVersion: "1.0", messageId: message.messageId, received: true, result };
       await completeProtocolMessage(authenticated.credential, message.messageId, acknowledgement);
       return NextResponse.json(acknowledgement, { status: 202 });

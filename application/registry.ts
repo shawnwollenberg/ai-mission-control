@@ -12,6 +12,7 @@ import {
 
 export type RegistryActor = { workspaceId: string; userId: string; role: "owner" | "member" };
 type RepositoryRegistrationFailurePoint = "after_repository" | "after_identity" | "after_grant";
+const REPOSITORY_REGISTRATION_MAX_ATTEMPTS = 16;
 type DispatchPolicyRow = {
   agent_status: string;
   adapter_type: string;
@@ -240,6 +241,66 @@ export async function listRepositories(workspaceId: string) {
   ).rows;
 }
 
+async function loadConvergedStableRepositoryRegistration(input: {
+  workspaceId: string;
+  agentId: string;
+  repositoryId: string;
+  fingerprint: string;
+  canonicalRemoteUrl: string;
+  selectedRemote: string;
+  name: string;
+  defaultBranch: string;
+  observedCommit: string | null;
+}) {
+  return (
+    await getDatabasePool().query(
+      `SELECT r.repository_id,r.name,r.default_branch,r.repository_fingerprint,r.observed_commit
+       FROM repositories r
+       JOIN repository_identities i
+         ON i.workspace_id=r.workspace_id AND i.repository_id=r.repository_id
+        AND i.identity_version='stable-v2' AND i.fingerprint=$4
+        AND i.canonical_remote_url=$5 AND i.selected_remote=$6
+        AND i.migration_status='active'
+       JOIN agent_resource_permissions p
+         ON p.workspace_id=r.workspace_id AND p.agent_id=$2
+        AND p.resource_type='repository' AND p.resource_id=r.repository_id::text
+        AND p.revoked_at IS NULL AND p.permissions ? 'read'
+       WHERE r.workspace_id=$1 AND r.repository_id=$3
+         AND r.disabled_at IS NULL AND r.identity_version='stable-v2'
+         AND r.repository_fingerprint=$4 AND r.observed_remote_url=$5
+         AND r.allowed_agent_ids ? $2::text
+         AND r.name=$7 AND r.default_branch=$8
+         AND r.observed_commit IS NOT DISTINCT FROM $9
+         AND EXISTS(
+           SELECT 1 FROM events e
+           JOIN commands c
+             ON c.workspace_id=e.workspace_id
+            AND c.aggregate_type=e.aggregate_type AND c.aggregate_id=e.aggregate_id
+            AND c.status='completed' AND e.event_id=ANY(c.result_event_ids)
+           WHERE e.workspace_id=r.workspace_id
+             AND e.aggregate_type='repository' AND e.aggregate_id=r.repository_id
+             AND e.event_type IN ('repository.registered','repository.registration_refreshed')
+             AND e.payload->>'repositoryId'=r.repository_id::text
+             AND e.payload->>'agentId'=$2::text
+             AND e.payload->>'fingerprint'=$4
+             AND e.payload->>'canonicalRemoteUrl'=$5
+         )
+       LIMIT 1`,
+      [
+        input.workspaceId,
+        input.agentId,
+        input.repositoryId,
+        input.fingerprint,
+        input.canonicalRemoteUrl,
+        input.selectedRemote,
+        input.name,
+        input.defaultBranch,
+        input.observedCommit,
+      ],
+    )
+  ).rows[0];
+}
+
 export async function registerMissionAgentRepository(input: {
   workspaceId: string;
   agentId: string;
@@ -278,7 +339,7 @@ export async function registerMissionAgentRepository(input: {
     const commandId = stableUuid(
       `repository-registration:${input.workspaceId}:${input.agentId}:${input.protocolMessageId ?? randomUUID()}`,
     );
-    for (let attempt = 0; attempt < 4; attempt += 1) {
+    for (let attempt = 0; attempt < REPOSITORY_REGISTRATION_MAX_ATTEMPTS; attempt += 1) {
       const existing = (
         await getDatabasePool().query<{
           repository_id: string;
@@ -324,11 +385,39 @@ export async function registerMissionAgentRepository(input: {
       }
       const repositoryId =
         existing?.repository_id ?? stableUuid(`stable-v2-repository:${input.workspaceId}:${input.fingerprint}`);
+      if (existing) {
+        const converged = await loadConvergedStableRepositoryRegistration({
+          workspaceId: input.workspaceId,
+          agentId: input.agentId,
+          repositoryId,
+          fingerprint: input.fingerprint,
+          canonicalRemoteUrl: derived.canonicalRemoteUrl,
+          selectedRemote: derived.selectedRemote,
+          name: input.name.trim().slice(0, 160),
+          defaultBranch: input.defaultBranch.trim().slice(0, 200),
+          observedCommit: input.commit?.slice(0, 80) ?? null,
+        });
+        if (converged && existing.identity_migration_status !== "agent_activated") return converged;
+      }
       const aggregateEvents = await loadAggregateEvents({
         workspaceId: input.workspaceId,
         aggregateType: "repository",
         aggregateId: repositoryId,
       });
+      if (!existing && aggregateEvents.length) {
+        const converged = await loadConvergedStableRepositoryRegistration({
+          workspaceId: input.workspaceId,
+          agentId: input.agentId,
+          repositoryId,
+          fingerprint: input.fingerprint,
+          canonicalRemoteUrl: derived.canonicalRemoteUrl,
+          selectedRemote: derived.selectedRemote,
+          name: input.name.trim().slice(0, 160),
+          defaultBranch: input.defaultBranch.trim().slice(0, 200),
+          observedCommit: input.commit?.slice(0, 80) ?? null,
+        });
+        if (converged) return converged;
+      }
       try {
         await appendEvents({
           workspaceId: input.workspaceId,
@@ -342,7 +431,8 @@ export async function registerMissionAgentRepository(input: {
           actor: { type: "agent", id: input.agentId },
           events: [
             {
-              eventType: existing ? "repository.registration_refreshed" : "repository.registered",
+              eventType:
+                existing || aggregateEvents.length ? "repository.registration_refreshed" : "repository.registered",
               eventSchemaVersion: 1,
               payload: {
                 repositoryId,
@@ -377,7 +467,21 @@ export async function registerMissionAgentRepository(input: {
           });
         return repository;
       } catch (error) {
-        if (error instanceof ConcurrencyConflictError && attempt < 3) continue;
+        if (error instanceof ConcurrencyConflictError) {
+          const converged = await loadConvergedStableRepositoryRegistration({
+            workspaceId: input.workspaceId,
+            agentId: input.agentId,
+            repositoryId,
+            fingerprint: input.fingerprint,
+            canonicalRemoteUrl: derived.canonicalRemoteUrl,
+            selectedRemote: derived.selectedRemote,
+            name: input.name.trim().slice(0, 160),
+            defaultBranch: input.defaultBranch.trim().slice(0, 200),
+            observedCommit: input.commit?.slice(0, 80) ?? null,
+          });
+          if (converged && existing?.identity_migration_status !== "agent_activated") return converged;
+          if (attempt + 1 < REPOSITORY_REGISTRATION_MAX_ATTEMPTS) continue;
+        }
         throw error;
       }
     }
