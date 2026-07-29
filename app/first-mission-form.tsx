@@ -60,8 +60,23 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
             <p className="section-label">Daily control plane</p>
             <h2>Repositories</h2>
           </div>
-          <div className="inline-links">
-            <span>{repositories.length} connected</span>
+          <div className="repository-heading-actions">
+            <span className="repository-count">{repositories.length} connected</span>
+            <details className="repository-add-help">
+              <summary>Add repository</summary>
+              <div>
+                <strong>Run this on the computer hosting Mission Agent</strong>
+                <code>mission-agent repository add /absolute/path/to/repository</code>
+                <p>
+                  The signed Mission Agent validates the local checkout and registers it only with this workspace. Git
+                  credentials stay on that computer.
+                </p>
+                <p>
+                  Folders named <code>mission/*</code> are isolated mission worktrees—not additional repository
+                  connections.
+                </p>
+              </div>
+            </details>
             <Link className="nav-link" href="/preview/servicepilot">
               Run Demo
             </Link>
@@ -123,7 +138,7 @@ export default function FirstMissionForm({ repositories }: { repositories: Repos
           ) : (
             <div className="form-error">
               This repository has not been registered with your Mission Agent. Add it from that computer with
-              <code>mission-agent repository add /path/to/repository</code>.
+              <code>mission-agent repository add /absolute/path/to/repository</code>.
             </div>
           )}
           <label>

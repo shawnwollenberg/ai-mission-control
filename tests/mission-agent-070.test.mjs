@@ -116,9 +116,9 @@ test("all non-active trust states, unknown keys, and malformed signatures fail c
 });
 
 test("legacy v1 is accepted only for explicit governed rollback to exact signed 0.6.8", async () => {
-  const published = await readFile(new URL("../public/mission-agent-latest.json", import.meta.url), "utf8");
-  assert.equal(agent.verifyReleaseManifestText(published, { allowRollbackVersion: "0.6.8" }).version, "0.6.8");
-  assert.throws(() => agent.verifyReleaseManifestText(published), /rollback/);
+  const historical = await readFile(new URL("./fixtures/mission-agent-0.6.8-manifest.json", import.meta.url), "utf8");
+  assert.equal(agent.verifyReleaseManifestText(historical, { allowRollbackVersion: "0.6.8" }).version, "0.6.8");
+  assert.throws(() => agent.verifyReleaseManifestText(historical), /rollback/);
   assert.throws(
     () =>
       agent.verifyReleaseManifestText(

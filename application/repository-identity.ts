@@ -42,6 +42,8 @@ export function canonicalizeRemoteUrl(value: string): string {
     }
     if (!["https:", "http:", "ssh:", "git:"].includes(parsed.protocol))
       throw new ValidationFailedError("The Git remote protocol is unsupported");
+    if (parsed.password || (parsed.protocol !== "ssh:" && parsed.username))
+      throw new ValidationFailedError("The Git remote URL must not contain credentials");
     const defaults: Record<string, string> = { "http:": "80", "https:": "443", "ssh:": "22", "git:": "9418" };
     host = `${parsed.hostname}${parsed.port && parsed.port !== defaults[parsed.protocol] ? `:${parsed.port}` : ""}`;
     pathname = parsed.pathname;

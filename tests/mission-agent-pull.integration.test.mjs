@@ -132,6 +132,44 @@ test.after(async () => {
   await closeDatabasePool();
 });
 
+test("unsupported compatibility agents are rejected before execution or mission state is created", async () => {
+  await getDatabasePool().query(
+    "UPDATE agents SET mission_agent_version='0.1.1' WHERE workspace_id=$1 AND agent_id=$2",
+    [workspaceId, registration.agentId],
+  );
+  const before = (
+    await getDatabasePool().query(
+      `SELECT
+         (SELECT count(*)::int FROM mission_projections WHERE workspace_id=$1) missions,
+         (SELECT count(*)::int FROM execution_projections WHERE workspace_id=$1) executions`,
+      [workspaceId],
+    )
+  ).rows[0];
+  await assert.rejects(
+    launchFirstRepositoryMission({
+      actor,
+      commandId: randomUUID(),
+      agentId: registration.agentId,
+      repositoryId: repository.repository_id,
+      objective: "This unsupported agent must fail before creating durable work",
+    }),
+    /Mission Agent 0\.3\.1 or newer/,
+  );
+  const after = (
+    await getDatabasePool().query(
+      `SELECT
+         (SELECT count(*)::int FROM mission_projections WHERE workspace_id=$1) missions,
+         (SELECT count(*)::int FROM execution_projections WHERE workspace_id=$1) executions`,
+      [workspaceId],
+    )
+  ).rows[0];
+  assert.deepEqual(after, before);
+  await getDatabasePool().query(
+    "UPDATE agents SET mission_agent_version='0.3.1' WHERE workspace_id=$1 AND agent_id=$2",
+    [workspaceId, registration.agentId],
+  );
+});
+
 test("pull-ready Mission Agent claims, renews, validates, and releases one durable assignment", async () => {
   const launched = await launchFirstRepositoryMission({
     actor,

@@ -13,12 +13,7 @@ export async function POST(request: Request) {
     if (auth.receipt.duplicate) return NextResponse.json(auth.receipt.acknowledgement);
     const actionRequestId = String(auth.message.payload.actionRequestId ?? "");
     const summary = String(auth.message.payload.summary ?? "Mission Agent publication preflight failed.");
-    await failMissionAgentPublication(
-      auth.credential.workspace_id,
-      actionRequestId,
-      auth.credential.agent_id,
-      summary,
-    );
+    await failMissionAgentPublication(auth.credential.workspace_id, actionRequestId, auth.credential.agent_id, summary);
     const response = { protocolVersion: "1.0", messageId: auth.message.messageId, status: "failed" };
     await completeProtocolMessage(auth.credential, auth.message.messageId, response);
     return NextResponse.json(response);

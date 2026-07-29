@@ -180,14 +180,18 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
       actor: { type: "agent", id: credential.agent_id },
       events: [
         { eventType, eventSchemaVersion: 1, occurredAt: message.sentAt, payload: message.payload },
-        ...(projectBrainCapabilities
+        ...(message.payload.artifact
           ? [
-              {
-                eventType: "agent.remote_project_brain_capability_advertised",
-                eventSchemaVersion: 1,
-                occurredAt: message.sentAt,
-                payload: { capabilities: projectBrainCapabilities },
-              },
+              ...(projectBrainCapabilities
+                ? [
+                    {
+                      eventType: "agent.remote_project_brain_capability_advertised",
+                      eventSchemaVersion: 1,
+                      occurredAt: message.sentAt,
+                      payload: { capabilities: projectBrainCapabilities },
+                    },
+                  ]
+                : []),
               {
                 eventType:
                   artifactVerification.status === "verified"
@@ -202,6 +206,7 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
                   status: artifactVerification.status,
                   rejectionReason: artifactVerification.rejectionReason,
                   projectBrainCompatible,
+                  identityProtocolVersion: artifactVerification.identityProtocolVersion,
                 },
               },
             ]
@@ -257,7 +262,7 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
               pullReady ? String(message.payload.adapter ?? "generic") : null,
             ],
           );
-          if (projectBrainCapabilities)
+          if (message.payload.artifact)
             await client.query(
               `UPDATE agents SET remote_project_brain_capabilities=$3,
                 remote_project_brain_capabilities_at=$4::timestamptz,
@@ -265,22 +270,22 @@ export async function processRemoteMessage(message: ProtocolEnvelope, credential
                 mission_agent_checksum_status=$7,mission_agent_manifest_version=$8,
                 mission_agent_project_brain_compatible=$9,
                 mission_agent_checksum_rejection_reason=$10,
-                mission_agent_artifact_verified_at=CASE WHEN $9 THEN $4::timestamptz ELSE NULL END,
+                mission_agent_artifact_verified_at=CASE WHEN $11 THEN $4::timestamptz ELSE NULL END,
                 mission_agent_capability_expires_at=$4::timestamptz + interval '5 minutes',
                 updated_at=$4::timestamptz
                WHERE workspace_id=$1 AND agent_id=$2`,
               [
                 credential.workspace_id,
                 credential.agent_id,
-                JSON.stringify(projectBrainCapabilities),
+                projectBrainCapabilities ? JSON.stringify(projectBrainCapabilities) : null,
                 capabilityObservedAt,
                 artifactVerification.advertisedChecksum,
                 artifactVerification.expectedChecksum,
                 artifactVerification.status,
                 artifactVerification.manifestVersion,
                 projectBrainCompatible,
-                artifactVerification.rejectionReason ??
-                  (projectBrainCompatible ? null : "project_brain_capabilities_incompatible"),
+                artifactVerification.rejectionReason,
+                artifactVerification.compatible,
               ],
             );
           await client.query(

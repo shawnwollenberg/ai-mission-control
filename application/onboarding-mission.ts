@@ -39,9 +39,9 @@ export async function launchFirstRepositoryMission(input: {
   if (!resource) throw new NotFoundError("Ready Mission Agent repository");
   if (resource.mission_agent_adapter !== "codex")
     throw new ValidationFailedError("This adapter can connect but cannot execute the first local mission yet");
-  if (missionType === "change" && !supportsRepositoryChanges(resource.mission_agent_version))
+  if (!supportsMissionExecution(resource.mission_agent_version))
     throw new ValidationFailedError(
-      "Repository Change Missions require Mission Agent 0.3.1 or newer. Run mission-agent update, then try again.",
+      "Repository missions require Mission Agent 0.3.1 or newer. Run mission-agent update, then try again.",
     );
   const missionId = randomUUID();
   await handleCreateMission({
@@ -135,7 +135,7 @@ export async function launchFirstRepositoryMission(input: {
   return { missionId, taskId, executionId: execution.executionId };
 }
 
-function supportsRepositoryChanges(version: unknown) {
+function supportsMissionExecution(version: unknown) {
   const match = String(version ?? "").match(/^(\d+)\.(\d+)\.(\d+)$/);
   if (!match) return false;
   const [, major, minor, patch] = match.map(Number);

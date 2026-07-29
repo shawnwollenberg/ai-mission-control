@@ -101,7 +101,7 @@ export async function claimNextAssignment(input: {
          JOIN task_projections t ON t.workspace_id=p.workspace_id AND t.task_id=p.task_id
          JOIN agents a ON a.workspace_id=p.workspace_id AND a.agent_id=p.agent_id
          JOIN repositories r ON r.workspace_id=p.workspace_id
-           AND r.repository_id=(p.payload->>'repositoryId')::uuid
+           AND r.repository_id=e.repository_id
          WHERE p.workspace_id=$1 AND p.agent_id=$2 AND p.status='available' AND e.agent_id=$2
            AND e.status IN('requested','accepted','preparing','running')
            AND t.status IN('assigned','running') AND a.status='active' AND a.capabilities @> t.required_capabilities

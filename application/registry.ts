@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { NotFoundError, ValidationFailedError } from "@/lib/application-errors";
+import { ConcurrencyConflictError, NotFoundError, ValidationFailedError } from "@/lib/application-errors";
 import { getDatabasePool } from "@/lib/database";
+import { appendEvents, loadAggregateEvents, type DomainEvent } from "@/lib/postgres-event-store";
+import { stableUuid } from "@/lib/stable-id";
 import {
   deriveStableRepositoryIdentity,
   finalizeRepositoryIdentityActivation,
@@ -9,6 +11,7 @@ import {
 } from "@/application/repository-identity";
 
 export type RegistryActor = { workspaceId: string; userId: string; role: "owner" | "member" };
+type RepositoryRegistrationFailurePoint = "after_repository" | "after_identity" | "after_grant";
 type DispatchPolicyRow = {
   agent_status: string;
   adapter_type: string;
@@ -249,6 +252,8 @@ export async function registerMissionAgentRepository(input: {
   canonicalRemoteUrl?: string;
   selectedRemote?: string;
   remotes?: RemoteCandidate[];
+  protocolMessageId?: string;
+  failureInjection?: RepositoryRegistrationFailurePoint;
 }) {
   if (!input.name.trim() || !/^[a-f0-9]{64}$/.test(input.fingerprint) || !input.defaultBranch.trim())
     throw new ValidationFailedError("Repository identity is invalid");
@@ -270,32 +275,113 @@ export async function registerMissionAgentRepository(input: {
       input.selectedRemote !== derived.selectedRemote
     )
       throw new ValidationFailedError("Stable repository registration does not match server derivation");
-    const repository = (
-      await getDatabasePool().query(
-        `UPDATE repositories SET name=$4,default_branch=$5,observed_remote_url=$6,observed_commit=$7,updated_at=now()
-         WHERE workspace_id=$1 AND repository_fingerprint=$2 AND identity_version='stable-v2'
-           AND identity_migration_status='agent_activated' AND disabled_at IS NULL
-           AND allowed_agent_ids ? $3::text
-         RETURNING repository_id,name,default_branch,repository_fingerprint,observed_commit`,
-        [
-          input.workspaceId,
-          input.fingerprint,
-          input.agentId,
-          input.name.trim().slice(0, 160),
-          input.defaultBranch.trim().slice(0, 200),
-          derived.canonicalRemoteUrl,
-          input.commit?.slice(0, 80) ?? null,
-        ],
-      )
-    ).rows[0];
-    if (!repository) throw new ValidationFailedError("Stable repository registration has no acknowledged activation");
-    await finalizeRepositoryIdentityActivation({
-      workspaceId: input.workspaceId,
-      agentId: input.agentId,
-      repositoryId: repository.repository_id,
-      stableFingerprint: input.fingerprint,
-    });
-    return repository;
+    const commandId = stableUuid(
+      `repository-registration:${input.workspaceId}:${input.agentId}:${input.protocolMessageId ?? randomUUID()}`,
+    );
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const existing = (
+        await getDatabasePool().query<{
+          repository_id: string;
+          canonical_remote_url: string | null;
+          identity_migration_status: string;
+        }>(
+          `SELECT r.repository_id,i.canonical_remote_url,r.identity_migration_status
+           FROM repositories r
+           JOIN repository_identities i
+             ON i.workspace_id=r.workspace_id AND i.repository_id=r.repository_id
+             AND i.identity_version='stable-v2' AND i.fingerprint=$2
+           WHERE r.workspace_id=$1 AND r.disabled_at IS NULL
+           LIMIT 1`,
+          [input.workspaceId, input.fingerprint],
+        )
+      ).rows[0];
+      if (existing?.canonical_remote_url !== undefined && existing.canonical_remote_url !== derived.canonicalRemoteUrl)
+        throw new ValidationFailedError("Stable repository identity conflicts with its canonical remote");
+      if (!existing) {
+        const legacyRows = (
+          await getDatabasePool().query<{ observed_remote_url: string | null }>(
+            `SELECT observed_remote_url FROM repositories
+             WHERE workspace_id=$1 AND identity_version='legacy-v1' AND disabled_at IS NULL
+               AND observed_remote_url IS NOT NULL`,
+            [input.workspaceId],
+          )
+        ).rows;
+        if (
+          legacyRows.some((row) => {
+            try {
+              return (
+                deriveStableRepositoryIdentity({
+                  remotes: [{ name: "origin", url: row.observed_remote_url! }],
+                  repositoryName: input.name,
+                }).canonicalRemoteUrl === derived.canonicalRemoteUrl
+              );
+            } catch {
+              return false;
+            }
+          })
+        )
+          throw new ValidationFailedError("This repository requires governed legacy identity migration");
+      }
+      const repositoryId =
+        existing?.repository_id ?? stableUuid(`stable-v2-repository:${input.workspaceId}:${input.fingerprint}`);
+      const aggregateEvents = await loadAggregateEvents({
+        workspaceId: input.workspaceId,
+        aggregateType: "repository",
+        aggregateId: repositoryId,
+      });
+      try {
+        await appendEvents({
+          workspaceId: input.workspaceId,
+          aggregateType: "repository",
+          aggregateId: repositoryId,
+          expectedVersion: aggregateEvents.length,
+          commandId,
+          commandType: "RegisterMissionAgentRepository",
+          correlationId: repositoryId,
+          causationId: aggregateEvents.at(-1)?.eventId,
+          actor: { type: "agent", id: input.agentId },
+          events: [
+            {
+              eventType: existing ? "repository.registration_refreshed" : "repository.registered",
+              eventSchemaVersion: 1,
+              payload: {
+                repositoryId,
+                agentId: input.agentId,
+                name: input.name.trim().slice(0, 160),
+                defaultBranch: input.defaultBranch.trim().slice(0, 200),
+                identityVersion: STABLE_IDENTITY_VERSION,
+                fingerprint: input.fingerprint,
+                canonicalRemoteUrl: derived.canonicalRemoteUrl,
+                selectedRemote: derived.selectedRemote,
+                observedCommit: input.commit?.slice(0, 80) ?? null,
+              },
+            },
+          ],
+          applyProjections: (client, events) =>
+            applyRepositoryRegistrationProjection(client, events, input.failureInjection),
+        });
+        const repository = (
+          await getDatabasePool().query(
+            `SELECT repository_id,name,default_branch,repository_fingerprint,observed_commit
+             FROM repositories WHERE workspace_id=$1 AND repository_id=$2`,
+            [input.workspaceId, repositoryId],
+          )
+        ).rows[0];
+        if (!repository) throw new ValidationFailedError("Repository registration projection is unavailable");
+        if (existing?.identity_migration_status === "agent_activated")
+          await finalizeRepositoryIdentityActivation({
+            workspaceId: input.workspaceId,
+            agentId: input.agentId,
+            repositoryId,
+            stableFingerprint: input.fingerprint,
+          });
+        return repository;
+      } catch (error) {
+        if (error instanceof ConcurrencyConflictError && attempt < 3) continue;
+        throw error;
+      }
+    }
+    throw new ConcurrencyConflictError({ repositoryFingerprint: input.fingerprint });
   }
   // A version string does not prove which identity algorithm produced an
   // agent-supplied fingerprint. Only governed migration may activate stable-v2.
@@ -373,6 +459,103 @@ export async function registerMissionAgentRepository(input: {
     [input.workspaceId, input.agentId, repository.repository_id],
   );
   return repository;
+}
+
+export async function applyRepositoryRegistrationProjection(
+  client: import("pg").PoolClient,
+  events: DomainEvent[],
+  failureInjection?: RepositoryRegistrationFailurePoint,
+) {
+  for (const event of events) {
+    if (!["repository.registered", "repository.registration_refreshed"].includes(event.eventType)) continue;
+    const payload = event.payload;
+    const repositoryId = String(payload.repositoryId ?? "");
+    const agentId = String(payload.agentId ?? "");
+    const fingerprint = String(payload.fingerprint ?? "");
+    const name = String(payload.name ?? "");
+    const defaultBranch = String(payload.defaultBranch ?? "");
+    const canonicalRemoteUrl = String(payload.canonicalRemoteUrl ?? "");
+    const selectedRemote = String(payload.selectedRemote ?? "");
+    const observedCommit = payload.observedCommit ? String(payload.observedCommit) : null;
+    if (
+      !repositoryId ||
+      !agentId ||
+      !/^[a-f0-9]{64}$/.test(fingerprint) ||
+      !name ||
+      !defaultBranch ||
+      !canonicalRemoteUrl ||
+      !selectedRemote
+    )
+      throw new ValidationFailedError("Canonical repository registration event is invalid");
+    await client.query(
+      `INSERT INTO repositories(
+         workspace_id,repository_id,name,local_path,default_branch,allowed_agent_ids,read_allowed,write_allowed,
+         commit_allowed,push_allowed,merge_allowed,deployment_allowed,validation_commands,pull_request_allowed,
+         protected_branches,allowed_branch_prefixes,allowed_remotes,provider_type,location_mode,
+         repository_fingerprint,observed_remote_url,observed_commit,identity_version,identity_migration_status)
+       VALUES($1,$2,$3,$4,$5,jsonb_build_array($6::text),true,false,false,$10,false,false,'[]',$10,
+         jsonb_build_array($5::text),$11,'["origin"]',$12,'mission_agent',$7,$8,$9,'stable-v2','not_required')
+       ON CONFLICT(workspace_id,repository_id) DO UPDATE SET
+         name=EXCLUDED.name,default_branch=EXCLUDED.default_branch,
+         allowed_agent_ids=CASE
+           WHEN repositories.allowed_agent_ids ? $6::text THEN repositories.allowed_agent_ids
+           ELSE repositories.allowed_agent_ids||to_jsonb($6::text)
+         END,
+         observed_remote_url=EXCLUDED.observed_remote_url,observed_commit=EXCLUDED.observed_commit,updated_at=now()
+       WHERE repositories.identity_version='stable-v2'
+         AND repositories.repository_fingerprint=EXCLUDED.repository_fingerprint`,
+      [
+        event.workspaceId,
+        repositoryId,
+        name,
+        `mission-agent://${fingerprint}`,
+        defaultBranch,
+        agentId,
+        fingerprint,
+        canonicalRemoteUrl,
+        observedCommit,
+        /github\.com\//i.test(canonicalRemoteUrl),
+        JSON.stringify(/github\.com\//i.test(canonicalRemoteUrl) ? ["mission/"] : []),
+        /github\.com\//i.test(canonicalRemoteUrl) ? "github" : "local_fixture",
+      ],
+    );
+    if (failureInjection === "after_repository") throw new Error("Injected failure after repository projection");
+    await client.query(
+      `INSERT INTO repository_identities(
+         workspace_id,repository_id,identity_version,fingerprint,canonical_remote_url,repository_name,
+         selected_remote,created_at,verified_at,verification_source,migration_status,migration_event_id)
+       VALUES($1,$2,'stable-v2',$3,$4,$5,$6,$7,$7,'mission-agent+mission-control-registration','active',$8)
+       ON CONFLICT(workspace_id,repository_id,identity_version,fingerprint) DO NOTHING`,
+      [
+        event.workspaceId,
+        repositoryId,
+        fingerprint,
+        canonicalRemoteUrl,
+        name,
+        selectedRemote,
+        event.occurredAt,
+        event.eventId,
+      ],
+    );
+    if (failureInjection === "after_identity") throw new Error("Injected failure after identity projection");
+    await client.query(
+      `INSERT INTO agent_resource_permissions(
+         workspace_id,agent_id,resource_type,resource_id,permissions)
+       VALUES($1,$2,'repository',$3,'["read"]')
+       ON CONFLICT(workspace_id,agent_id,resource_type,resource_id) DO UPDATE SET
+         permissions=(
+           SELECT jsonb_agg(permission ORDER BY permission)
+           FROM (
+             SELECT DISTINCT jsonb_array_elements_text(
+               agent_resource_permissions.permissions||EXCLUDED.permissions
+             ) permission
+           ) permissions
+         ),
+         revoked_at=NULL`,
+      [event.workspaceId, agentId, repositoryId],
+    );
+    if (failureInjection === "after_grant") throw new Error("Injected failure after grant projection");
+  }
 }
 export async function getDispatchPolicy(workspaceId: string, agentId: string, repositoryId: string) {
   const result = await getDatabasePool().query<DispatchPolicyRow>(

@@ -4,7 +4,7 @@ import test from "node:test";
 
 const projectBrainCommit = "09cae9482712decc20f043aecb38d944beacfe20";
 const sourceChecksum = "1d127947f5a0ca5497d4a06c1497e36e00057d0551839ac2855b798c275c0d26";
-const missionAgentChecksum = "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d";
+const missionAgentChecksum = "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09";
 
 test("dedicated worker image pins Project Brain and keeps runtime installation offline", async () => {
   const worker = await readFile("Dockerfile.project-brain-worker", "utf8");
@@ -55,7 +55,7 @@ test("packaging repair preserves contracts and publishes the checksum-bound Miss
     readFile("db/migrations/0026_remote_project_brain_transport.sql", "utf8"),
     readFile("db/migrations/0027_mission_agent_artifact_identity.sql", "utf8"),
   ]);
-  assert.equal(JSON.parse(manifest).sha256, missionAgentChecksum);
+  assert.equal(JSON.parse(manifest).artifactSha256, missionAgentChecksum);
   assert.match(onboarding, new RegExp(missionAgentChecksum));
   assert.ok(migration25.length > 0);
   assert.ok(migration26.length > 0);

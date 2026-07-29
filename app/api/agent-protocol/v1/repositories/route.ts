@@ -30,6 +30,7 @@ export async function POST(request: Request) {
             url: String((remote as Record<string, unknown>).url ?? ""),
           }))
         : undefined,
+      protocolMessageId: auth.message.messageId,
     });
     const response = { protocolVersion: "1.0", messageId: auth.message.messageId, repository };
     await completeProtocolMessage(auth.credential, auth.message.messageId, response);

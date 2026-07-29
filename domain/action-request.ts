@@ -72,8 +72,7 @@ export function transitionAction(
   return { eventType: eventType[target], eventSchemaVersion: 1, payload: { ...details, status: target } };
 }
 export function reconcileFailedActionExecution(state: ActionState): NewDomainEvent {
-  if (state.status !== "failed")
-    throw new InvalidTransitionError("ActionRequest", state.status, "reconciling");
+  if (state.status !== "failed") throw new InvalidTransitionError("ActionRequest", state.status, "reconciling");
   return {
     eventType: "action.execution_reconciliation_started",
     eventSchemaVersion: 1,

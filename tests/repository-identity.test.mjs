@@ -87,6 +87,16 @@ test("canonical identity normalizes default ports and preserves non-default port
   );
 });
 
+test("canonical identity rejects credential-bearing remotes without rejecting SSH usernames", () => {
+  assert.equal(canonicalizeRemoteUrl("ssh://git@github.com/acme/widget.git"), "github.com/acme/widget");
+  for (const remote of [
+    "https://token@github.com/acme/widget.git",
+    "https://token:secret@github.com/acme/widget.git",
+    "ssh://git:secret@github.com/acme/widget.git",
+  ])
+    assert.throws(() => canonicalizeRemoteUrl(remote), /must not contain credentials/);
+});
+
 test("approval fingerprint binds every authority-bearing field", () => {
   const base = {
     repositoryId: "repository",
@@ -192,7 +202,10 @@ test("shared canonicalization fixtures agree across central and Mission Agent 0.
   const source = await readFile(new URL("../public/mission-agent-0.6.9.mjs", import.meta.url), "utf8");
   const moduleSource = source
     .slice(0, source.lastIndexOf("\nif (process.argv[1]"))
-    .replace("const sourceArtifactPath = fileURLToPath(import.meta.url);", 'const sourceArtifactPath = "/tmp/test.mjs";');
+    .replace(
+      "const sourceArtifactPath = fileURLToPath(import.meta.url);",
+      'const sourceArtifactPath = "/tmp/test.mjs";',
+    );
   const missionAgent = await import(`data:text/javascript;base64,${Buffer.from(moduleSource).toString("base64")}`);
   for (const fixture of fixtures) {
     const central = deriveStableRepositoryIdentity({
@@ -200,10 +213,7 @@ test("shared canonicalization fixtures agree across central and Mission Agent 0.
       repositoryName: fixture.repositoryName,
     });
     const remote = missionAgent.deriveStableRepositoryIdentity(fixture.remotes, fixture.repositoryName);
-    assert.equal(
-      central.canonicalRemoteUrl,
-      fixture.canonicalRemoteUrl,
-    );
+    assert.equal(central.canonicalRemoteUrl, fixture.canonicalRemoteUrl);
     assert.deepEqual(remote, central);
   }
   assert.match(source, /parsed\.port !== defaults\[parsed\.protocol\]/);
