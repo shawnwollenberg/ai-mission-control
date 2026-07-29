@@ -18,10 +18,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ rec
     const recommendation = await getRecommendation(identity.workspaceId, recommendationId);
     if (!recommendation) throw new NotFoundError("Recommendation");
     const retriableMissionStatuses = new Set(["failed", "cancelled", "completed"]);
-    if (
-      recommendation.linkedMissionId &&
-      !retriableMissionStatuses.has(recommendation.linkedMissionStatus ?? "")
-    )
+    if (recommendation.linkedMissionId && !retriableMissionStatuses.has(recommendation.linkedMissionStatus ?? ""))
       return NextResponse.json({ missionId: recommendation.linkedMissionId });
     const agent = (
       await getDatabasePool().query(
@@ -50,9 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ rec
     });
     await changeRecommendationStatus({
       actor: { workspaceId: identity.workspaceId, id: identity.userId, type: "human" },
-      commandId: stableUuid(
-        `recommendation-link:${recommendationId}:${recommendation.linkedMissionId ?? "initial"}`,
-      ),
+      commandId: stableUuid(`recommendation-link:${recommendationId}:${recommendation.linkedMissionId ?? "initial"}`),
       recommendationId,
       target: "in_progress",
       reason: recommendation.linkedMissionId

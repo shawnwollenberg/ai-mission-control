@@ -50,8 +50,8 @@ export default function RecommendationActions({
             : currentStatus === "completed"
               ? "Create Follow-up Change Mission"
               : currentStatus === "in_progress"
-              ? "Retry Change Mission"
-              : "Create Change Mission"}
+                ? "Retry Change Mission"
+                : "Create Change Mission"}
         </button>
       )}
       {currentStatus === "open" && (

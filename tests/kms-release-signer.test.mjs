@@ -5,6 +5,8 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  awsKmsSigningClients,
+  createTestOnlyKmsSigningDependencies,
   humanSigningConfirmation,
   parseKmsKeyArn,
   pendingKmsReleaseKeyRecord,
@@ -16,6 +18,13 @@ import {
   parseCanonicalSignedReleaseManifestJson,
   validatePendingReleaseKey,
 } from "../integrations/mission-agent/release-authority.ts";
+
+const originalNodeEnv = process.env.NODE_ENV;
+process.env.NODE_ENV = "test";
+test.after(() => {
+  if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = originalNodeEnv;
+});
 
 const keyArn = "arn:aws:kms:us-east-1:123456789012:key/11111111-1111-1111-1111-111111111111";
 const releaseAuthorityKeyId = "mission-agent-release-2026-01";
@@ -77,13 +86,16 @@ function mockAws(overrides = {}) {
       }
     },
   };
-  return {
+  const dependencies = createTestOnlyKmsSigningDependencies({
     kms,
     sts: {
       async send() {
         return { Arn: "arn:aws:sts::123456789012:assumed-role/release-signer/shawn" };
       },
     },
+  });
+  return {
+    ...dependencies,
     publicKeyDer,
     calls,
   };
@@ -187,6 +199,7 @@ test("AWS KMS Ed25519 RAW conformance yields DER SPKI fingerprint, raw signature
     assert.equal((await readFile(join(temp, "signed.json"))).at(-1), "}".charCodeAt(0));
     assert.equal(bundle.signature, (await readFile(join(temp, "signature.txt"), "utf8")).trim());
     assert.deepEqual(receipt.independentVerification, { localEd25519: true, awsKms: true });
+    assert.equal(receipt.evidenceEnvironment, "test-only-mock");
     assert.equal(receipt.awsRequestId, "00000000-0000-0000-0000-000000000001");
     assert.equal(receipt.awsVerifyRequestId, "00000000-0000-0000-0000-000000000002");
     assert.equal(receipt.signerPrincipalArn, "arn:aws:sts::123456789012:assumed-role/release-signer/shawn");
@@ -205,6 +218,54 @@ test("AWS KMS Ed25519 RAW conformance yields DER SPKI fingerprint, raw signature
   } finally {
     await rm(temp, { recursive: true, force: true });
   }
+});
+
+test("production and CI signing guards reject missing test injection while explicit fake evidence is marked", async () => {
+  const temp = await mkdtemp(join(tmpdir(), "kms-release-policy-"));
+  const originalCi = process.env.CI;
+  const originalAppEnv = process.env.APP_ENV;
+  try {
+    const aws = mockAws();
+    const pending = pendingKmsReleaseKeyRecord({
+      releaseAuthorityKeyId,
+      kmsKeyArn: keyArn,
+      publicKeySpkiDer: aws.publicKeyDer,
+      createdAt: "2026-07-26T15:00:00.000Z",
+    });
+    const unbranded = { kms: aws.kms, sts: aws.sts };
+
+    process.env.CI = "true";
+    await assert.rejects(
+      signReleaseWithKms(await signingInput(temp, pending), unbranded),
+      /disabled in production and CI/,
+    );
+    process.env.CI = "";
+    process.env.APP_ENV = "production";
+    await assert.rejects(
+      signReleaseWithKms(await signingInput(temp, pending), unbranded),
+      /disabled in production and CI/,
+    );
+    assert.equal(aws.calls.length, 0);
+  } finally {
+    if (originalCi === undefined) delete process.env.CI;
+    else process.env.CI = originalCi;
+    if (originalAppEnv === undefined) delete process.env.APP_ENV;
+    else process.env.APP_ENV = originalAppEnv;
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test("test-only signing dependency construction fails closed outside tests and with AWS SDK clients", () => {
+  const previous = process.env.NODE_ENV;
+  delete process.env.NODE_ENV;
+  assert.throws(
+    () => createTestOnlyKmsSigningDependencies({ kms: { send: async () => ({}) }, sts: { send: async () => ({}) } }),
+    /NODE_ENV=test/,
+  );
+  process.env.NODE_ENV = "test";
+  const real = awsKmsSigningClients({ region: "us-east-1" });
+  assert.throws(() => createTestOnlyKmsSigningDependencies(real), /cannot use AWS SDK clients/);
+  process.env.NODE_ENV = previous;
 });
 
 test("production signing adapter signs exact canonical Manifest v3 bytes", async () => {

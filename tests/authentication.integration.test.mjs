@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { hash } from "bcryptjs";
 import test from "node:test";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for integration tests");
@@ -12,6 +13,13 @@ const { DEFAULT_OWNER_ID, DEFAULT_WORKSPACE_ID } = await import("../lib/identity
 const { createSessionToken, verifySessionToken } = await import("../lib/session.ts");
 const { seedDatabase } = await import("../scripts/seed.ts");
 
+test.before(async () => {
+  await seedDatabase({
+    email: "owner@example.com",
+    displayName: "Mission Owner",
+    passwordHash: await hash("mission-control-local-test", 12),
+  });
+});
 test.after(closeDatabasePool);
 
 test("owner seed is idempotent and does not replace credentials", async () => {

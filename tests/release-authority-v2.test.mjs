@@ -160,15 +160,15 @@ test("unknown, pending, retired, revoked, and invalid signatures fail closed", (
   );
 });
 
-test("0.6.8 artifact and published signed v1 manifest remain byte-for-byte valid", async () => {
+test("0.6.8 artifact remains byte-for-byte valid after the published pointer advances", async () => {
   const bytes = await readFile(new URL("../public/mission-agent-0.6.8.mjs", import.meta.url));
   const published = JSON.parse(await readFile(new URL("../public/mission-agent-latest.json", import.meta.url), "utf8"));
   assert.equal(
     createHash("sha256").update(bytes).digest("hex"),
     "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
   );
-  const { verifyReleaseManifest } = await import("../public/mission-agent-0.6.8.mjs");
-  assert.equal(verifyReleaseManifest(published, true).version, "0.6.8");
+  assert.equal(published.releaseVersion, "0.7.2");
+  assert.equal(published.manifestVersion, "3");
 });
 
 test("the preserved unsigned 0.6.9 candidate is not falsely represented as v2-capable", async () => {

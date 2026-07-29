@@ -17,7 +17,7 @@ export async function applyMissionAgentCapabilityProjection(client: PoolClient, 
          manifest_version,checksum_status,project_brain_compatible,observed_at,heartbeat_at,
          freshness_expires_at,last_rejection_reason,last_verified_at
        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$9::timestamptz + interval '5 minutes',$10,
-         CASE WHEN $8 THEN $9::timestamptz ELSE NULL END)
+         CASE WHEN $11 THEN $9::timestamptz ELSE NULL END)
        ON CONFLICT(workspace_id,agent_id) DO UPDATE SET
          advertised_version=EXCLUDED.advertised_version,
          advertised_checksum=EXCLUDED.advertised_checksum,
@@ -41,6 +41,7 @@ export async function applyMissionAgentCapabilityProjection(client: PoolClient, 
         compatible,
         event.occurredAt,
         event.payload.rejectionReason ?? null,
+        verified,
       ],
     );
   }

@@ -69,11 +69,9 @@ test("recommendation lifecycle is explicit and terminal states cannot reopen", (
     "mission-2",
   );
   assert.equal(
-    transitionRecommendation(
-      { ...state, status: "in_progress", linkedMissionId: "failed-mission" },
-      "in_progress",
-      { linkedMissionId: "retry-mission" },
-    ).payload.linkedMissionId,
+    transitionRecommendation({ ...state, status: "in_progress", linkedMissionId: "failed-mission" }, "in_progress", {
+      linkedMissionId: "retry-mission",
+    }).payload.linkedMissionId,
     "retry-mission",
   );
   assert.equal(
