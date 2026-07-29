@@ -126,6 +126,92 @@ test("multiple valid inline artifacts use the repository execution budget rather
   );
 });
 
+test("unsupported recommendation validation fails closed with explicit terminal evidence", async () => {
+  const launched = await launchFirstRepositoryMission({
+    actor,
+    commandId: randomUUID(),
+    agentId: registration.agentId,
+    repositoryId: repository.repository_id,
+    objective: "Verify the FP1 production repository-registration and terminal mission lifecycle",
+  });
+  const envelope = (messageType, payload) => ({
+    protocolVersion: "1.0",
+    messageId: randomUUID(),
+    idempotencyKey: randomUUID(),
+    agentId: registration.agentId,
+    workspaceId,
+    sentAt: new Date().toISOString(),
+    messageType,
+    correlationId: launched.executionId,
+    missionId: launched.missionId,
+    taskId: launched.taskId,
+    executionId: launched.executionId,
+    attempt: 1,
+    payload,
+  });
+  await processRemoteMessage(
+    envelope("ExecutionAccepted", { stage: "assignment_received", summary: "Assignment accepted" }),
+    credential,
+  );
+  const productionRejected =
+    "node -e \"const fs=require('fs');const c=fs.readFileSync('.git/config','utf8');if(/github\\\\.com\\\\/example\\\\//.test(c)||!c.includes('[branch \\\\\"main\\\\\"]'))process.exit(1)\"";
+  const recommendation = Buffer.from(
+    JSON.stringify([
+      {
+        title: "Register the production repository remote",
+        description: "Replace the placeholder remote.",
+        reasoning: "The disposable fixture used a placeholder namespace.",
+        evidence: [{ path: ".git/config", description: "Repository remote configuration" }],
+        estimatedImpact: "high",
+        estimatedRisk: "medium",
+        estimatedEffort: "small",
+        suggestedValidation: [productionRejected],
+        acceptanceCriteria: ["The origin identifies the authoritative repository."],
+      },
+    ]),
+  );
+  await assert.rejects(
+    processRemoteMessage(
+      envelope("ExecutionArtifactSubmitted", {
+        name: "Repository recommendations",
+        description: "Production-representative rejected recommendation",
+        artifactType: "repository_recommendations",
+        mediaType: "application/json",
+        byteSize: recommendation.length,
+        checksum: createHash("sha256").update(recommendation).digest("hex"),
+        contentBase64: recommendation.toString("base64"),
+        repositoryCommit: "b".repeat(40),
+      }),
+      credential,
+    ),
+    /inline code and shell operators are prohibited/,
+  );
+  const failure =
+    "Recommendation validation command is not allowed. Use one direct supported executable with simple repository-local arguments; inline code and shell operators are prohibited.";
+  await processRemoteMessage(
+    envelope("ExecutionFailed", { classification: "local_adapter_failure", summary: failure }),
+    credential,
+  );
+  const terminal = (
+    await getDatabasePool().query(
+      `SELECT e.status execution_status,e.progress_summary,t.status task_status,t.progress_summary task_summary,
+              m.status mission_status
+       FROM execution_projections e
+       JOIN task_projections t ON t.workspace_id=e.workspace_id AND t.task_id=e.task_id
+       JOIN mission_projections m ON m.workspace_id=e.workspace_id AND m.mission_id=e.mission_id
+       WHERE e.workspace_id=$1 AND e.execution_id=$2`,
+      [workspaceId, launched.executionId],
+    )
+  ).rows[0];
+  assert.deepEqual(terminal, {
+    execution_status: "failed",
+    progress_summary: failure,
+    task_status: "failed",
+    task_summary: failure,
+    mission_status: "failed",
+  });
+});
+
 test.after(async () => {
   await getDatabasePool().query("DELETE FROM events WHERE workspace_id=$1", [workspaceId]);
   await getDatabasePool().query("DELETE FROM workspaces WHERE id=$1", [workspaceId]);

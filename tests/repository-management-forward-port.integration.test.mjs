@@ -173,6 +173,14 @@ test("new stable-v2 repository is workspace bound, event backed, launchable, and
     )
   ).rows[0];
   assert.equal(mission.repository_id, repository.repository_id);
+  const task = (
+    await getDatabasePool().query("SELECT instructions FROM task_projections WHERE workspace_id=$1 AND mission_id=$2", [
+      workspaceA,
+      launched.missionId,
+    ])
+  ).rows[0];
+  assert.match(task.instructions, /Never suggest inline code evaluation \(including node -e\)/);
+  assert.match(task.instructions, /return an empty suggestedValidation array instead of inventing one/);
 });
 
 test("duplicate registration preserves every association, grant permission, and Project Brain flag", async () => {
