@@ -48,6 +48,7 @@ export type KmsSigningReceipt = {
     awsKms: true;
   };
   approvalReference: string;
+  evidenceEnvironment?: "test-only-mock";
 };
 
 export type KmsSignReleaseInput = {
@@ -85,6 +86,34 @@ export type KmsSignReleaseDependencies = {
   kms: KmsCommandClient;
   sts: KmsCommandClient;
 };
+
+const testOnlySigningAuthorization = Symbol("mission-control-test-only-kms-signing");
+type TestOnlyKmsSignReleaseDependencies = KmsSignReleaseDependencies & {
+  [testOnlySigningAuthorization]: true;
+};
+
+export function createTestOnlyKmsSigningDependencies(
+  dependencies: KmsSignReleaseDependencies,
+): KmsSignReleaseDependencies {
+  if (process.env.NODE_ENV !== "test") throw new Error("Test-only KMS signing dependencies require NODE_ENV=test");
+  if (dependencies.kms instanceof KMSClient || dependencies.sts instanceof STSClient)
+    throw new Error("Test-only KMS signing dependencies cannot use AWS SDK clients");
+  return Object.freeze({
+    ...dependencies,
+    [testOnlySigningAuthorization]: true as const,
+  });
+}
+
+function isExplicitTestSigning(
+  dependencies: KmsSignReleaseDependencies,
+): dependencies is TestOnlyKmsSignReleaseDependencies {
+  return (
+    process.env.NODE_ENV === "test" &&
+    (dependencies as Partial<TestOnlyKmsSignReleaseDependencies>)[testOnlySigningAuthorization] === true &&
+    !(dependencies.kms instanceof KMSClient) &&
+    !(dependencies.sts instanceof STSClient)
+  );
+}
 
 function requiredString(value: unknown, field: string): string {
   if (typeof value !== "string" || value === "") throw new Error(`AWS response lacks ${field}`);
@@ -191,7 +220,8 @@ export async function signReleaseWithKms(
   input: KmsSignReleaseInput,
   dependencies: KmsSignReleaseDependencies,
 ): Promise<KmsSigningReceipt> {
-  if (process.env.APP_ENV === "production" || process.env.CI)
+  const explicitTestSigning = isExplicitTestSigning(dependencies);
+  if ((process.env.APP_ENV === "production" || process.env.CI) && !explicitTestSigning)
     throw new Error("Human-authorized KMS signing is disabled in production and CI");
   if (!SHA256.test(input.expectedArtifactSha256)) throw new Error("Expected artifact checksum is malformed");
   if (!/^[a-f0-9]{40}$/.test(input.expectedSourceCommit)) throw new Error("Expected source commit is malformed");
@@ -327,6 +357,7 @@ export async function signReleaseWithKms(
     signatureSha256: sha256(signature),
     independentVerification: { localEd25519: true, awsKms: true },
     approvalReference: input.approvalReference,
+    ...(explicitTestSigning ? { evidenceEnvironment: "test-only-mock" as const } : {}),
   };
 
   // The authoritative signed bundle is deliberately written last. An

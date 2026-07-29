@@ -1,11 +1,12 @@
 # Release R-2026-07-29-FP1 — Repository management forward port
 
-**Status:** approved for governed commit, push, merge, and deployment  
-**Human approval:** granted by the human release owner on 2026-07-29, bound to the production base, exact reviewed diff, signed Mission Agent identity, and green evidence in this record  
+**Status:** CI remediation complete locally; renewed human approval pending
+
+**Human approval:** the prior approval was invalidated by failed GitHub validation; no renewed approval has been granted
 **Production base:** `046c40e7747f3e5b72c600064d9402936abf238a` (`origin/production`, fetched 2026-07-29)  
 **Classification:** security-sensitive application release  
 **Release commit:** `f81ca321339db253eff54c958af19bd57a11e190`
-**Release authority:** commit, push, governed merge, application deployment, and post-deployment verification of this exact release are authorized; Mission Agent publication/signing and scope expansion remain prohibited
+**Release authority:** investigation, test-harness remediation, validation, push to the existing PR branch, and an evidence commit are authorized; merge, deployment, migration application, Mission Agent publication/signing, production mutation, and scope expansion remain prohibited
 
 ## Behavioral gap analysis
 
@@ -160,24 +161,92 @@ run reported zero pending migrations.
 
 ## Validation evidence (Node v22.20.0, npm 10.9.3)
 
-| Gate                            | Result                        | Evidence                                                               |
-| ------------------------------- | ----------------------------- | ---------------------------------------------------------------------- |
-| Clean install                   | Pass                          | `npm ci`; 412 packages installed                                       |
-| Focused identity/artifact tests | Pass                          | 39/39                                                                  |
-| Forward-port integration tests  | Pass                          | 7/7                                                                    |
-| Failure injection               | Pass                          | all three transition points                                            |
-| Concurrent duplicate repetition | Pass                          | 10/10 consecutive runs                                                 |
-| Unit suite                      | Pass after stale-test repairs | 160/160                                                                |
-| Full integration suite          | Pass                          | 65/65 on a fresh migrated database                                     |
-| E2E suite                       | Pass                          | 2/2; signed 0.7.2 execution `succeeded` and mission `completed`        |
-| Full lint                       | Pass                          | zero warnings                                                          |
-| Full formatting                 | Pass                          | ordinary files formatted; four exact-byte manifests narrowly excluded  |
-| Typecheck                       | Pass                          | `tsc --noEmit`                                                         |
-| Production build                | Pass                          | Next.js production build                                               |
-| Migration status                | Pass                          | current head, zero pending                                             |
-| Artifact immutability           | Pass                          | base diff clean; checksums and sizes match                             |
-| Dependency audit                | Residual, non-production      | full audit: 9 high development-tool findings; production-only audit: 0 |
-| `git diff --check`              | Pass                          | no whitespace errors                                                   |
+| Gate                            | Result                   | Evidence                                                               |
+| ------------------------------- | ------------------------ | ---------------------------------------------------------------------- |
+| Clean install                   | Pass                     | `npm ci`; 412 packages installed                                       |
+| Focused identity/artifact tests | Pass                     | 39/39                                                                  |
+| Forward-port integration tests  | Pass                     | 7/7                                                                    |
+| Failure injection               | Pass                     | all three transition points                                            |
+| Concurrent duplicate repetition | Pass                     | 10/10 consecutive runs                                                 |
+| Unit suite                      | Pass                     | 162/162, including 12/12 KMS release-signer tests                      |
+| Full integration suite          | Pass                     | 65/65                                                                  |
+| E2E suite                       | Pass                     | 2/2; signed 0.7.2 execution `succeeded` and mission `completed`        |
+| Full lint                       | Pass                     | zero warnings                                                          |
+| Full formatting                 | Pass                     | ordinary files formatted; four exact-byte manifests narrowly excluded  |
+| Typecheck                       | Pass                     | `tsc --noEmit`                                                         |
+| Production build                | Pass                     | Next.js production build                                               |
+| Migration status                | Pass                     | current head, zero pending                                             |
+| Artifact immutability           | Pass                     | base diff clean; checksums and sizes match                             |
+| Dependency audit                | Residual, non-production | full audit: 9 high development-tool findings; production-only audit: 0 |
+| `git diff --check`              | Pass                     | no whitespace errors                                                   |
+
+## PR #7 CI signing-test remediation
+
+GitHub Actions run `30472824941`, job `90647047917`, failed seven of 160 unit
+tests. In every failure, `signReleaseWithKms` was invoked with in-memory mock
+KMS/STS clients while GitHub supplied `CI=true`; `APP_ENV` and `NODE_ENV` were
+unset. The production guard correctly rejected before manifest, artifact,
+authority, KMS-shape, principal, signature, or verification logic:
+`Human-authorized KMS signing is disabled in production and CI`.
+
+Failure classification:
+
+1. `AWS KMS Ed25519 RAW conformance yields DER SPKI fingerprint, raw signature,
+and complete receipt` intended signer-contract and verification coverage.
+2. `production signing adapter signs exact canonical Manifest v3 bytes`
+   intended canonical-input and signer-contract coverage.
+3. `signer fails before KMS Sign for modified artifact, identity confirmations,
+and human confirmation` intended pre-effect policy rejection coverage.
+4. `modified artifact bytes fail closed before signing` intended artifact
+   integrity rejection coverage.
+5. `wrong KMS key shape, usage, algorithm, public key, and disabled state fail
+closed` intended signer/KMS policy validation coverage.
+6. `unauthorized AWS principal and incomplete activation evidence fail before
+KMS Sign` intended release-authorization rejection coverage.
+7. `wrong public key and KMS verification failure do not produce outputs`
+   intended public-key binding and signature-verification failure coverage.
+
+The first incorrect transition was test construction: mocks were injected but
+were not explicitly authorized as unit-test doubles. No real KMS call occurred,
+and this did not expose a production signing regression.
+
+The remediation adds `createTestOnlyKmsSigningDependencies`. It creates an
+internally branded dependency object only when `NODE_ENV=test`, rejects actual
+AWS SDK KMS/STS clients, and cannot be forged without the module-private
+symbol. `signReleaseWithKms` permits the injected fake in tests while retaining
+the original production/CI rejection for every unbranded call. Mock receipts
+carry `evidenceEnvironment: test-only-mock`; production receipts remain
+unchanged. Tests prove CI and production reject missing injection, construction
+fails outside tests, real AWS clients are refused, mock evidence is visibly
+non-production, and no secret/credential material enters receipts.
+
+This changes only the test seam and receipt marking for explicitly injected
+unit-test doubles. Production release-authority behavior, configuration, AWS
+clients, signing guard, key identity, signing algorithm, and release artifacts
+are unchanged. Renewed human approval remains pending.
+
+The same CI-order local run exposed a separate E2E fixture-isolation defect.
+The onboarding test used the fixed remote
+`https://github.com/example/mission-control.git` after the integration suite.
+Repository identity v2 correctly deduplicated that identity against state left
+in the shared disposable database, allowing a one-shot test agent to encounter
+an earlier assignment before the new mission. The fixture now creates a unique
+remote and an exactly matching local repository name for every run. This
+preserves production deduplication and all terminal-state assertions; the test
+passes on the previously contaminated CI-order database.
+
+Local remediation validation used Node `v22.20.0` and npm `10.9.3`: clean
+`npm ci`; format, lint, typecheck, 162 unit, 65 integration, production build,
+and 2 E2E tests all passed. Migration status reports zero pending migrations;
+the repository concurrency case passed 10/10 consecutive runs; and
+`git diff --check` passed. The signed Mission Agent 0.7.2 remains exactly
+148,063 bytes with SHA-256
+`108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09`;
+its artifact, signature, and manifest have no diff.
+
+The remediation evidence is not complete until the narrowly scoped commit is
+pushed and GitHub Actions reports an authoritative green run. Record the new
+branch head and run/job identifiers here after that run.
 
 The audit findings are in ESLint/CDK dependency paths: direct development
 dependencies `eslint` and `eslint-config-next`; transitive
@@ -305,12 +374,14 @@ Exact reviewed paths:
 - `application/repository-identity.ts`
 - `domain/action-request.ts`
 - `integrations/mission-agent/artifact-manifest.ts`
+- `integrations/mission-agent/kms-release-signer.ts`
 - `tests/authentication.integration.test.mjs`
 - `tests/durable-browser.e2e.test.mjs`
 - `tests/fixtures/mission-agent-0.6.8-manifest.json`
 - `tests/mission-agent-070.test.mjs`
 - `tests/mission-agent-artifact.test.mjs`
 - `tests/mission-agent-pull.integration.test.mjs`
+- `tests/kms-release-signer.test.mjs`
 - `tests/project-brain-packaging.test.mjs`
 - `tests/recommendation.test.mjs`
 - `tests/release-authority-v2.test.mjs`
@@ -326,8 +397,8 @@ remains the named platform/tooling follow-up above.
 Rollback is code-only: no migration exists, and repositories, identities,
 grants, commands, events, missions, receipts, and Brain records remain durable.
 Existing repository/grant and Project Brain preservation pass integration
-coverage. Before commit, push, merge, or deployment, the repository release
-mechanism must contain a new explicit human approval bound to this release ID,
-base SHA, reviewed diff, gate evidence, rollout, and rollback.
+coverage. Before merge or deployment, the repository release mechanism must
+contain a new explicit human approval bound to this release ID, base SHA, exact
+remediated diff, final GitHub CI evidence, rollout, and rollback.
 
-**Approval disposition: Approved for the exact governed release described above.**
+**Approval disposition: Renewed human approval pending.**

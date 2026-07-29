@@ -261,7 +261,9 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     const encoded = connection.command.match(/ connect '([^']+)'$/)?.[1];
     assert.ok(encoded);
     const directory = await mkdtemp(join(tmpdir(), "mc-e2e-mission-agent-"));
-    const repositoryRoot = join(directory, "mission-control");
+    const repositoryFixtureId = crypto.randomUUID();
+    const repositoryName = `mission-control-${repositoryFixtureId}`;
+    const repositoryRoot = join(directory, repositoryName);
     await mkdir(repositoryRoot);
     await run("git", ["init", "-b", "main"], { cwd: repositoryRoot });
     await run("git", ["config", "user.email", "e2e@example.invalid"], { cwd: repositoryRoot });
@@ -269,7 +271,7 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     await writeFile(join(repositoryRoot, "README.md"), "# Mission Control E2E\n");
     await run("git", ["add", "README.md"], { cwd: repositoryRoot });
     await run("git", ["commit", "-m", "fixture"], { cwd: repositoryRoot });
-    await run("git", ["remote", "add", "origin", "https://github.com/example/mission-control.git"], {
+    await run("git", ["remote", "add", "origin", `https://github.com/example/${repositoryName}.git`], {
       cwd: repositoryRoot,
     });
     await run(
