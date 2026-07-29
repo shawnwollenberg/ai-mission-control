@@ -301,7 +301,11 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     const launched = await fetch(`${origin}/api/onboarding/first-mission`, {
       method: "POST",
       headers: browserHeaders(cookie, { "content-type": "application/json", "idempotency-key": crypto.randomUUID() }),
-      body: JSON.stringify({ agentId: connection.agentId, repositoryId }),
+      body: JSON.stringify({
+        agentId: connection.agentId,
+        repositoryId,
+        objective: "Verify the FP1 production repository-registration and terminal mission lifecycle",
+      }),
     });
     assert.equal(launched.status, 201);
     const mission = await launched.json();

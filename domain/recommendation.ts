@@ -22,6 +22,21 @@ const transitions: Record<RecommendationStatus, RecommendationStatus[]> = {
   dismissed: [],
 };
 
+const recommendationValidationCommand = /^(npm|pnpm|yarn|bun|npx|node|go|cargo|pytest)( [A-Za-z0-9_./:@=,+-]+)*$/;
+const packageLifecycleScripts = new Set(["preinstall", "install", "postinstall", "prepare", "prepublish", "publish"]);
+
+export function assertSafeRecommendationValidation(command: string) {
+  const parts = command.split(/\s+/);
+  if (
+    !recommendationValidationCommand.test(command) ||
+    parts.some((part) => part.includes("..") && part !== "./...") ||
+    (["npm", "pnpm", "yarn", "bun"].includes(parts[0]) && parts[1] === "run" && packageLifecycleScripts.has(parts[2]))
+  )
+    throw new ValidationFailedError(
+      "Recommendation validation command is not allowed. Use one direct supported executable with simple repository-local arguments; inline code and shell operators are prohibited.",
+    );
+}
+
 export function createRecommendation(input: {
   repositoryId: string;
   sourceMissionId: string;
@@ -42,15 +57,7 @@ export function createRecommendation(input: {
   if (!input.evidence.length) throw new ValidationFailedError("Recommendation evidence is required");
   if (!input.acceptanceCriteria.length)
     throw new ValidationFailedError("Recommendation acceptance criteria are required");
-  const allowedValidation = /^(npm|pnpm|yarn|bun|npx|node|go|cargo|pytest)( [A-Za-z0-9_./:@=,+-]+)*$/;
-  if (
-    input.suggestedValidation.some(
-      (command) =>
-        !allowedValidation.test(command) ||
-        command.split(/\s+/).some((part) => part.includes("..") && part !== "./..."),
-    )
-  )
-    throw new ValidationFailedError("Recommendation validation command is not allowed");
+  input.suggestedValidation.forEach(assertSafeRecommendationValidation);
   return { eventType: "recommendation.created", eventSchemaVersion: 1, payload: { ...input, status: "open" } };
 }
 

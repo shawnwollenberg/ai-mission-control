@@ -93,7 +93,7 @@ export async function launchFirstRepositoryMission(input: {
       instructions:
         missionType === "change"
           ? `Plan the requested change, pause for write approval, then implement it in an isolated worktree. Objective: ${objective}`
-          : `Inspect repository structure, configuration, commands, and tests; produce evidence-based Markdown findings. Analysis objective: ${objective}`,
+          : `Inspect repository structure, configuration, commands, and tests; produce evidence-based Markdown findings. Analysis objective: ${objective}. Suggested validation must use only direct repository-local npm, pnpm, yarn, bun, npx, node, go, cargo, or pytest commands with simple arguments. Never suggest inline code evaluation (including node -e), shell wrappers, chaining, separators, pipes, redirects, substitutions, environment assignments, privilege escalation, network commands, destructive commands, or paths outside the repository. When no governed validation command is evidenced by repository files, return an empty suggestedValidation array instead of inventing one.`,
       expectedOutput:
         missionType === "change"
           ? "Implementation plan, changed files, diff, validation evidence, and one local commit for human review."
