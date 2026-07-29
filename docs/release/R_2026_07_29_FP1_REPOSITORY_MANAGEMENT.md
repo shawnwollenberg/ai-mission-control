@@ -4,7 +4,7 @@
 **Human approval:** granted by the human release owner on 2026-07-29, bound to the production base, exact reviewed diff, signed Mission Agent identity, and green evidence in this record  
 **Production base:** `046c40e7747f3e5b72c600064d9402936abf238a` (`origin/production`, fetched 2026-07-29)  
 **Classification:** security-sensitive application release  
-**Release commit:** recorded by the immediate evidence-only follow-up commit after Git creates the reviewed tree's commit identity  
+**Release commit:** `f81ca321339db253eff54c958af19bd57a11e190`
 **Release authority:** commit, push, governed merge, application deployment, and post-deployment verification of this exact release are authorized; Mission Agent publication/signing and scope expansion remain prohibited
 
 ## Behavioral gap analysis
