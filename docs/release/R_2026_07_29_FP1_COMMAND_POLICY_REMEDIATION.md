@@ -1,7 +1,6 @@
 # R_2026_07_29_FP1_COMMAND_POLICY_REMEDIATION
 
-**Status:** Human approved; pending governed commit, CI, merge, deployment, and
-post-deployment acceptance
+**Status:** Concurrency remediation prepared; renewed human approval pending
 
 **Date:** 2026-07-29
 
@@ -15,14 +14,11 @@ post-deployment acceptance
 narrows model-generated validation guidance and preserves command-policy
 rejection. It does not add execution authority.
 
-**Approval:** Granted by the human operator on 2026-07-29 for exactly the
-seven-file reviewed scope and green evidence recorded in this document. The
-approval authorizes the governed commit, branch push, pull request, CI, merge,
-deployment, and post-deployment acceptance. It does not authorize broader
-prompt, allowlist, execution-policy, Mission Agent, or infrastructure changes.
-It is invalid if the reviewed scope or evidence changes, a required gate turns
-red, Mission Agent 0.7.2 changes, or production advances with an overlapping
-change.
+**Approval:** The prior human approval was invalidated when authoritative
+GitHub validation run `30486275692`, job `90692630093`, failed. Investigation,
+narrow test remediation, evidence updates, one additional PR commit, and CI
+are authorized. Merge, deployment, publication, signing, migration application,
+production mutation, and renewed approval remain pending.
 
 ## User problem and root cause
 
@@ -160,6 +156,76 @@ and audit controls. This release does not redesign package-script trust.
    green.
 7. No migration or signed artifact changes.
 
+## Authoritative CI concurrency-remediation amendment
+
+GitHub validation run `30486275692`, job `90692630093`, failed one of 164 unit
+tests:
+`concurrent controlled advances cannot duplicate mission progress`. The
+failure compared the second Promise result (`plan.created`, sequence 2) with
+the first Promise result (`agent.activated` for Research, sequence 3). Both
+events were durable and valid:
+
+- plan event ID
+  `b585145b-e593-4220-a219-eedf30a4e206:controlled:2`, causally following the
+  mission-created event;
+- research event ID
+  `b585145b-e593-4220-a219-eedf30a4e206:controlled:3`, causally following the
+  plan event; and
+- timestamps differed by one millisecond, but timestamps are not ordering
+  authority.
+
+The two concurrent operations were identical calls to
+`appendNextControlledEvent(missionId)`. In the file-backed controlled-demo
+store, each call asynchronously reads the stream before selecting the next
+template. The first point of nondeterminism is completion order of those reads:
+both may select the same next transition and converge through the deterministic
+event ID, or one may observe the other's completed append and select the
+immediately adjacent transition. The per-mission append queue serializes
+writes, assigns consecutive `sequence` values, binds causation to the preceding
+durable event, and makes a repeated event ID idempotent. Promise input or
+resolution position, UUIDs, wall-clock timestamps, and unordered row position
+are not lifecycle authority.
+
+The authoritative contract is event sequence and causation:
+
+1. `mission.created` is sequence 1;
+2. `plan.created` must be sequence 2 and causally follow mission creation;
+3. Research activation may be appended by the adjacent concurrent advance only
+   as sequence 3, causally following `plan.created`; and
+4. each returned event must appear exactly once in the durable stream.
+
+Production PostgreSQL commands use the stronger same-version contract.
+`appendEvents` opens a transaction, locks the workspace/aggregate head with
+`SELECT ... FOR UPDATE`, compares the supplied expected version, assigns
+consecutive aggregate versions, applies projections and outbox writes in the
+same transaction, and commits the new head. Concurrent commands with one
+expected version produce one winner and one explicit concurrency conflict.
+Aggregate reads order by `aggregate_version`; mission/global reads order by
+the database event position. Existing tests cover separate pooled database
+transactions, stale expected versions, transactional projector rollback,
+duplicate command delivery, replay, and deterministic terminal projection.
+
+Production lifecycle code is unchanged. The overly positional unit test now
+runs 100 isolated missions per invocation with randomized 0–3 ms scheduling
+and asserts sequence, causation, required phase order, unique durable event
+IDs, repeated production-path reads, and projector replay equality. It permits
+only the two governed outcomes: one idempotent plan transition, or plan
+followed by Research. It does not accept an unordered pair, a skipped plan,
+duplicate progress, contradictory state, or projection divergence.
+
+Before the correction, the authoritative CI reproduction rate was 1/1 and a
+local 100-invocation probe was 0/100, confirming a scheduling-sensitive
+positional assertion. After the correction, 100/100 outer invocations passed;
+each invocation exercised 100 isolated randomized mission pairs.
+
+The complete local revalidation after this amendment used Node `v22.20.0` and
+npm `10.9.3`. Unit 164/164, integration 66/66, E2E 2/2, real-Codex E2E 2/2,
+repository concurrency 10/10, PostgreSQL lifecycle concurrency 100/100,
+formatting, lint, typecheck, production build, zero-pending migration status,
+`git diff --check`, signed-artifact verification, and the production-only
+dependency audit all passed. The production dependency audit reported zero
+findings.
+
 ## Validation evidence
 
 Runtime:
@@ -174,10 +240,12 @@ Results:
 | ---------------------------------------------- | -------------------------------------------------------------------- |
 | Focused command/adversarial tests              | Pass; exact production command plus canonical and adversarial matrix |
 | Focused remediation and repository integration | Pass; 19/19                                                          |
+| Corrected lifecycle race test                  | Pass; 100/100 outer invocations, 100 randomized missions each        |
+| PostgreSQL lifecycle concurrency               | Pass; 100/100 separate concurrent transaction runs                   |
 | Complete unit suite                            | Pass; 164/164                                                        |
 | Complete integration suite                     | Pass; 66/66                                                          |
 | Complete E2E suite                             | Pass; 2/2                                                            |
-| Real-Codex production-representative E2E       | Pass; 2/2, 152.9 seconds total                                       |
+| Real-Codex production-representative E2E       | Pass; 2/2, 114.4 seconds on final remediation state                  |
 | Repository failure injection                   | Pass; all registration projection transitions                        |
 | Repository concurrency                         | Pass; 10/10 consecutive                                              |
 | Full lint                                      | Pass; zero warnings                                                  |
@@ -220,6 +288,7 @@ records are outside the diff.
 - `tests/mission-agent-pull.integration.test.mjs`
 - `tests/recommendation.test.mjs`
 - `tests/repository-management-forward-port.integration.test.mjs`
+- `tests/mission-outcome.test.mjs` (concurrency-remediation amendment only)
 - `docs/release/R_2026_07_29_FP1_COMMAND_POLICY_REMEDIATION.md`
 
 ## Rollout, rollback, and post-deployment acceptance
@@ -252,4 +321,4 @@ policy remains the authoritative fail-closed boundary. A future unsupported
 suggestion may still fail the mission; the clearer terminal explanation
 identifies the safe alternative without widening execution.
 
-**Human approval: granted for this exact reviewed state on 2026-07-29.**
+**Renewed human approval: pending.**
