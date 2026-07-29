@@ -244,9 +244,20 @@ the repository concurrency case passed 10/10 consecutive runs; and
 `108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09`;
 its artifact, signature, and manifest have no diff.
 
-The remediation evidence is not complete until the narrowly scoped commit is
-pushed and GitHub Actions reports an authoritative green run. Record the new
-branch head and run/job identifiers here after that run.
+The narrowly scoped remediation commit is
+`5c377617f3407558ce5c1b941b201b17c5916be8`. GitHub Actions validation run
+`30479861095`, job `90670803340`, passed in 1 minute 44 seconds. The
+authoritative run passed checkout, declared-runtime verification, clean
+install, migration and seed, full formatting, full lint, typecheck, 162 unit
+tests, 65 integration tests, production build, and 2 E2E tests. The evidence
+commit containing this result is intentionally documentation-only; its exact
+branch-head SHA and follow-up CI run are reported with the release handoff
+because a commit cannot contain its own SHA.
+
+The reviewed repository-management behavior did not change in this
+remediation. Mission Agent 0.7.2 bytes, signature, manifest, size, and SHA-256
+remain unchanged, and the production/CI real-signing guard remains intact.
+Renewed human approval remains pending.
 
 The audit findings are in ESLint/CDK dependency paths: direct development
 dependencies `eslint` and `eslint-config-next`; transitive
