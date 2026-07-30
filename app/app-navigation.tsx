@@ -18,6 +18,9 @@ export function AppNavigation({ subtitle }: { subtitle: string }) {
         <Link className="nav-link" href="/missions">
           Missions
         </Link>
+        <Link className="nav-link" href="/repositories">
+          Repositories
+        </Link>
         <Link className="nav-link" href="/agents">
           Agents
         </Link>
