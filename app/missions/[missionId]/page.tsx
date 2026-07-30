@@ -254,35 +254,62 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
         initialRecommendations={await listMissionRecommendations(identity.workspaceId, missionId)}
       />
       {registeredRepository || projectBrainProjection ? (
-        <section aria-label="Project Brain mission evidence">
+        <section className="project-brain-mission-shell" aria-label="Project Brain mission evidence">
           <ProjectBrainPanel projection={projectBrainProjection} />
           {execution.executions[0] ? (
-            <>
-              <form action={advanceProjectBrainLifecycle}>
-                <button name="operation" value="initialize_repository" type="submit">
-                  Authorize or initialize Project Brain
-                </button>
-              </form>
-              <form action={generateProjectBrainContext}>
-                <button type="submit">Authorize or generate verified context</button>
-              </form>
-              <form action={previewProjectBrainContext}>
-                <button type="submit">Generate read-only context preview</button>
-              </form>
-              <form action={advanceProjectBrainLifecycle}>
-                <button name="operation" value="record_closure" type="submit">
-                  Authorize or record mission closure
-                </button>
-                <button name="operation" value="propose_learning" type="submit">
-                  Authorize or propose learning
-                </button>
-                <button name="operation" value="evaluate_learning" type="submit">
-                  Authorize or evaluate learning
-                </button>
-              </form>
-            </>
+            <div className="command-panel project-brain-controls">
+              <div className="panel-title">
+                <div>
+                  <p className="section-label">Knowledge workflow</p>
+                  <h2>Project Brain controls</h2>
+                </div>
+                <span>Approval governed</span>
+              </div>
+              <div className="project-brain-action-groups">
+                <section className="project-brain-action-group" aria-labelledby="project-brain-context-actions">
+                  <div>
+                    <h3 id="project-brain-context-actions">Setup and context</h3>
+                    <p>Prepare repository knowledge and inspect the exact context bound to this mission.</p>
+                  </div>
+                  <div className="project-brain-action-grid">
+                    <form action={advanceProjectBrainLifecycle}>
+                      <button name="operation" value="initialize_repository" type="submit">
+                        Authorize or initialize
+                      </button>
+                    </form>
+                    <form action={generateProjectBrainContext}>
+                      <button type="submit">Authorize verified context</button>
+                    </form>
+                    <form action={previewProjectBrainContext}>
+                      <button className="secondary" type="submit">
+                        Preview context
+                      </button>
+                    </form>
+                  </div>
+                </section>
+                <section className="project-brain-action-group" aria-labelledby="project-brain-lifecycle-actions">
+                  <div>
+                    <h3 id="project-brain-lifecycle-actions">Mission lifecycle</h3>
+                    <p>Record closure and evaluate proposed learning after mission evidence is available.</p>
+                  </div>
+                  <form className="project-brain-action-grid" action={advanceProjectBrainLifecycle}>
+                    <button name="operation" value="record_closure" type="submit">
+                      Authorize closure
+                    </button>
+                    <button name="operation" value="propose_learning" type="submit">
+                      Authorize learning proposal
+                    </button>
+                    <button name="operation" value="evaluate_learning" type="submit">
+                      Authorize evaluation
+                    </button>
+                  </form>
+                </section>
+              </div>
+            </div>
           ) : (
-            <p>Context can be bound after an execution is assigned.</p>
+            <div className="command-panel project-brain-controls">
+              <p>Context can be bound after an execution is assigned.</p>
+            </div>
           )}
         </section>
       ) : null}

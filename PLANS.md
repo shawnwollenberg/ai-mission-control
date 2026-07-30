@@ -502,6 +502,21 @@ Completion requires a fresh production user to connect behind NAT, confirm pull 
 
 ## Cross-phase test matrix
 
+## Routine governed release — Project Brain mission controls layout
+
+**Release:** `R_2026_07_30_PROJECT_BRAIN_CONTROLS_UI`
+
+**Status:** Human approved for commit, push, merge, and deployment on 2026-07-30
+
+**Production base:** `a4ea9abec3248224e2be60e2057df1f45e55bdb0`
+
+This release may change only the mission-page Project Brain control markup and its presentation styles. It groups the
+existing server actions into a centered, responsive control panel without changing Project Brain operations, approval
+requirements, event authority, repository permissions, Mission Agent, Project Brain worker, database schema, signing,
+or deployment infrastructure. Acceptance requires formatting, lint, typecheck, production build, focused Project Brain
+tests, complete current test gates, responsive rendered-page validation, and a web-only rollout with application-only
+rollback. Detailed evidence is recorded in `docs/release/R_2026_07_30_PROJECT_BRAIN_CONTROLS_UI.md`.
+
 - Unit: transitions, dependency resolution, policy, health, retry classification, schemas, serialization.
 - Integration: append/projection, command idempotency, dispatch/outbox, callback auth/replay, approvals, rebuild.
 - End to end: success, retry, heartbeat timeout, approve, deny, reassign, DeFi stop boundary, scheduled monitoring run.
