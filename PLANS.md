@@ -1,5 +1,12 @@
 # Mission Control — Production Readiness Execution Plan
 
+## Pending release — R_2026_07_30_PUBLICATION_RECONCILIATION_UX
+
+The narrowly scoped publication-reconciliation and mission-filter UX change is documented in
+`docs/release/R_2026_07_30_PUBLICATION_RECONCILIATION_UX.md`. It is security-sensitive because it
+advances provider-evidenced action state. Human approval remains pending; implementation and validation do not
+authorize commit, push, merge, or deployment.
+
 The long-term product direction is maintained in `docs/INTERNAL_PRODUCT_ENGINEERING_ROADMAP.md`. It guides architecture and phase sequencing but does not authorize implementation or expand agent authority; the approved boundaries in this plan remain controlling.
 
 **Status:** Phase 6 deployed; Mission Agent 0.6.3 compatibility fixes deployed — 2026-07-21

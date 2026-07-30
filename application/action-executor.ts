@@ -298,6 +298,22 @@ export async function finalizeMissionAgentPublication(workspaceId: string, actio
     // The agent has already confirmed the exact remote branch and PR. A provider
     // verification outage is therefore recoverable and must not convert the
     // approval-bound action into a terminal failure or repeat the external effect.
+    if (row.status === "failed") {
+      const reconcilingState = rehydrateAction(
+        await loadAggregateEvents({ workspaceId, aggregateType: "action_request", aggregateId: actionId }),
+      )!;
+      if (reconcilingState.status === "executing")
+        await append(
+          workspaceId,
+          actionId,
+          transitionAction(reconcilingState, "failed", {
+            classification: "provider_verification_failure",
+            retryDisposition: "requires-human-review",
+            result: { message: error instanceof Error ? error.message : String(error) },
+          }),
+          workerId,
+        );
+    }
     throw error;
   }
 }

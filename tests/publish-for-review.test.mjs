@@ -59,3 +59,28 @@ test("provider verification retries an already-pushed exact publication without 
   const projections = await readFile("scripts/projections.ts", "utf8");
   assert.match(projections, /to_jsonb\(x\) - 'last_heartbeat_at'/);
 });
+
+test("ambiguous provider confirmation offers non-publishing reconciliation before a new attempt", async () => {
+  const consoleSource = await readFile("app/missions/[missionId]/durable-mission-console.tsx", "utf8");
+  const route = await readFile("app/api/actions/[actionRequestId]/reconcile-publication/route.ts", "utf8");
+  assert.match(consoleSource, /Confirm Existing Pull Request/);
+  assert.match(consoleSource, /without pushing or creating another/);
+  assert.match(consoleSource, /Start New Publication Attempt/);
+  assert.match(consoleSource, /GitHub did not confirm the pull request/);
+  assert.match(route, /requireMutationOrigin/);
+  assert.match(route, /requireApiIdentity/);
+  assert.match(route, /identity\.workspaceId/);
+  assert.match(route, /finalizeMissionAgentPublication/);
+  assert.doesNotMatch(route, /requestPublishForReview|recordPublicationPush|createPublicationAssignment/);
+  const executor = await readFile("application/action-executor.ts", "utf8");
+  assert.match(executor, /classification: "provider_verification_failure"/);
+  assert.match(executor, /retryDisposition: "requires-human-review"/);
+});
+
+test("mission archive presents unknown cost as an explicit filter instead of a bare checkbox", async () => {
+  const missionsPage = await readFile("app/missions/page.tsx", "utf8");
+  assert.match(missionsPage, /Cost\s*<select name="unknownCost"/);
+  assert.match(missionsPage, /<option value="true">Unknown cost<\/option>/);
+  assert.doesNotMatch(missionsPage, /type="checkbox" name="unknownCost"/);
+  assert.match(missionsPage, /hasUnknownCost: query\.unknownCost === "true"/);
+});
