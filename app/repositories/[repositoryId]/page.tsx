@@ -317,7 +317,7 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
       </section>
 
       {current ? (
-        <section className="command-panel repository-evidence">
+        <section className="command-panel repository-evidence" id="health-evidence">
           <div className="panel-heading">
             <div>
               <p className="section-label">Why this score</p>

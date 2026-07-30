@@ -622,6 +622,119 @@ body {
 .repository-card-grid p {
   margin: 0;
 }
+.repository-index-header {
+  gap: 32px;
+}
+.repository-index-header > div > p:last-child {
+  color: #aeb5aa;
+  line-height: 1.6;
+  max-width: 680px;
+}
+.repository-index-add {
+  flex: 0 0 auto;
+}
+.repository-index-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 16px;
+}
+.repository-index-card {
+  position: relative;
+  display: grid;
+  gap: 24px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  background: rgba(12, 18, 16, 0.7);
+}
+.repository-card-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+}
+.repository-card-heading h2 {
+  margin: 6px 0;
+}
+.repository-card-heading p,
+.repository-card-heading small {
+  margin: 0;
+  color: #aeb5aa;
+  overflow-wrap: anywhere;
+}
+.repository-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.repository-card-stats span {
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #aeb5aa;
+  font-size: 11px;
+}
+.repository-score-explanation {
+  position: relative;
+}
+.repository-score-explanation > summary {
+  min-width: 132px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  padding: 12px 14px;
+  border: 1px solid rgba(28, 224, 214, 0.35);
+  cursor: pointer;
+  list-style: none;
+}
+.repository-score-explanation > summary::-webkit-details-marker {
+  display: none;
+}
+.repository-score-explanation > summary:hover,
+.repository-score-explanation[open] > summary {
+  border-color: var(--acid);
+}
+.repository-score-explanation > summary strong {
+  font-size: 30px;
+}
+.repository-score-explanation > summary span {
+  margin-left: 4px;
+  color: #aeb5aa;
+}
+.repository-score-explanation > summary small {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+.repository-score-explanation > div {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(420px, calc(100vw - 44px));
+  padding: 18px;
+  border: 1px solid rgba(28, 224, 214, 0.35);
+  background: #08100e;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+.repository-score-explanation ul {
+  display: grid;
+  gap: 7px;
+  padding: 0;
+  list-style: none;
+}
+.repository-score-explanation li {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) auto;
+  gap: 3px 12px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.repository-score-explanation li small {
+  grid-column: 1 / -1;
+  text-transform: capitalize;
+}
+.repository-score-explanation > div > small {
+  display: block;
+  margin: 14px 0;
+}
 .health-score strong {
   font-size: 48px;
   line-height: 1;
@@ -753,6 +866,19 @@ body {
   }
   .health-score {
     min-width: 0;
+  }
+  .repository-index-header {
+    align-items: stretch;
+  }
+  .repository-index-grid {
+    grid-template-columns: 1fr;
+  }
+  .repository-card-heading {
+    grid-template-columns: 1fr;
+  }
+  .repository-score-explanation > div {
+    right: auto;
+    left: 0;
   }
 }
 .quick-grid {
@@ -2652,6 +2778,52 @@ select:focus {
   font-size: clamp(2rem, 4vw, 4rem);
   margin: 10px 0 0;
 }
+.mission-search-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.mission-search-field {
+  display: grid;
+  gap: 8px;
+}
+.mission-filter-disclosure {
+  border: 1px solid var(--line);
+}
+.mission-filter-disclosure > summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.mission-filter-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.mission-filter-disclosure > summary span {
+  font-weight: 700;
+}
+.mission-filter-disclosure > summary small {
+  color: var(--muted);
+}
+.mission-filter-disclosure[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+.mission-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+}
+.mission-filter-row label {
+  display: grid;
+  gap: 7px;
+}
+.mission-filter-row button {
+  min-height: 42px;
+}
 .mission-table {
   border-block: 1px solid var(--line);
 }
@@ -2915,5 +3087,8 @@ select:focus {
   .execution-mode {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .mission-filter-row {
+    grid-template-columns: 1fr;
   }
 }

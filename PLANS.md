@@ -482,6 +482,28 @@ Completion requires a fresh production user to connect behind NAT, confirm pull 
 
 ## Cross-phase test matrix
 
+## Routine governed release — Mission archive filters and repository overview
+
+**Release:** `R_2026_07_30_REPOSITORY_OVERVIEW_UI`
+
+**Status:** Human authorized implementation, commit, push, merge, and deployment on 2026-07-30; validation complete
+
+**Production base:** `a4b873c540c1da6a271571e47d523285d4c129dc`
+
+This routine application release may change only authenticated navigation, the mission archive filter presentation, a
+workspace-scoped repository overview, confidence-score disclosure, a link target on the existing repository evidence
+section, focused UI tests, and release documentation. It does not change mission search semantics, repository
+registration commands, repository identity, health scoring, authorization, Project Brain, Mission Agent, database
+schema, signing, release authority, or infrastructure.
+
+Acceptance requires the search field to remain unchanged; Status, Origin, and Cost to share one collapsible row; all
+active repositories to appear only for the authenticated workspace; each repository to link to its existing detail
+page; Add repository to present the governed Mission Agent registration path; score disclosure to show only canonical
+assessment dimensions and confidence; responsive browser validation; and all current release gates. Rollback is
+application-only and must preserve every repository, assessment, recommendation, mission, event, receipt, grant, agent,
+and Project Brain record. Detailed evidence is recorded in
+`docs/release/R_2026_07_30_REPOSITORY_OVERVIEW_UI.md`.
+
 ## Mission Control 0.5 — Delivery Authority Expansion
 
 **Approved first boundary:** `Publish for Review` combines the exact approved mission-branch push and evidence-rich pull-request creation into one human approval. The binding includes repository/remote identity, base branch/commit, mission branch, local commit, diff evidence, objective, acceptance criteria, validation evidence, and action hash. Any mismatch stops publication; force push and protected-branch push are prohibited.
