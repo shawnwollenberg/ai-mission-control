@@ -63,8 +63,11 @@ export default async function MissionListPage({
           </select>
         </label>
         <label>
-          <input type="checkbox" name="unknownCost" value="true" defaultChecked={query.unknownCost === "true"} />{" "}
-          Unknown cost
+          Cost
+          <select name="unknownCost" defaultValue={query.unknownCost ?? ""}>
+            <option value="">Any</option>
+            <option value="true">Unknown cost</option>
+          </select>
         </label>
         <button type="submit">Filter</button>
       </form>

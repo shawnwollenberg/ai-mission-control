@@ -151,6 +151,22 @@ export default function DurableMissionConsole({
     if (!response.ok) setError(body.error?.message ?? "Publication approval could not be requested.");
     setPending(false);
   }
+  async function reconcilePublication(actionRequestId: string) {
+    setPending(true);
+    setError("");
+    const response = await fetch(`/api/actions/${actionRequestId}/reconcile-publication`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok)
+      setError(
+        body.error?.message ??
+          "Mission Control could not confirm the existing pull request. Check GitHub before starting a new publication attempt.",
+      );
+    setPending(false);
+  }
 
   async function command(name: string) {
     if (pending) return;
@@ -325,7 +341,7 @@ export default function DurableMissionConsole({
                                 action.actionType === "repository.publish_for_review" &&
                                 action.status === "failed",
                             )
-                              ? "Retry Publish for Review"
+                              ? "Start New Publication Attempt"
                               : "Publish for Review"}
                           </button>
                           <small>
@@ -423,6 +439,38 @@ export default function DurableMissionConsole({
                     and create a follow-up Change Mission to regenerate complete evidence.
                   </p>
                 )}
+                {action.actionType === "repository.publish_for_review" &&
+                  action.status === "failed" &&
+                  String(action.result?.message ?? "").includes("GitHub did not confirm the pull request") && (
+                    <div className="mission-actions">
+                      <p>
+                        The branch and pull request may already exist on GitHub. Check the repository for a pull request
+                        matching this mission&apos;s branch and commit. If it exists, confirm it here; Mission Control
+                        will verify and record the existing pull request without pushing or creating another one.
+                      </p>
+                      <div className="button-row">
+                        <a
+                          className="secondary-link"
+                          href={`https://github.com/${String(action.parameters.providerRepository)}/pulls`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Check GitHub pull requests
+                        </a>
+                        <button
+                          disabled={pending}
+                          onClick={() => reconcilePublication(action.actionRequestId)}
+                          type="button"
+                        >
+                          Confirm Existing Pull Request
+                        </button>
+                      </div>
+                      <small>
+                        If no matching pull request exists, use Start New Publication Attempt above. That creates a
+                        separate approval-gated publication request.
+                      </small>
+                    </div>
+                  )}
               </div>
             ))}
           </section>

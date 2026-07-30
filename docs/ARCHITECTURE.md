@@ -175,6 +175,8 @@ Each assessment is a canonical `repository_health` aggregate linked to the repos
 
 The action aggregate provides the rebuildable publication lifecycle: a successful local execution is **Local Changes Ready**; `waiting_for_approval` is **Publication Approval Required**; `executing` is **Publishing**; success with provider evidence is **Pull Request Open**; and failure is **Publication Failed**. CI, review, ready-to-merge, changes-requested, merged, and closed are reserved provider-backed states for later boundaries.
 
+When an exact branch and pull request were reported but provider confirmation was ambiguous, the user is directed to inspect GitHub before choosing a recovery action. **Confirm Existing Pull Request** re-runs provider verification for the original action and exact approved repository, branch, base, and commit; it performs no push or pull-request creation and requires no new publication approval. **Start New Publication Attempt** is a distinct, approval-gated action for cases where no matching pull request exists. A human click alone is never recorded as provider confirmation.
+
 Independent review agents may emit findings and a merge recommendation, but neither is authority. A future merge action must bind the current PR head SHA, target branch, required CI checks, required review decisions, unresolved findings, repository merge policy, and a fresh human approval. Merge remains permanently denied in the current policy engine.
 
 Deployment is a separate future mission. It must bind an exact merged commit, target environment, immutable build artifact, deployment plan, rollback plan, health checks, and deployment-specific approval. Publication approval cannot authorize it; deployment remains denied.
