@@ -486,7 +486,7 @@ Completion requires a fresh production user to connect behind NAT, confirm pull 
 
 **Release:** `R_2026_07_30_REPOSITORY_OVERVIEW_UI`
 
-**Status:** Human authorized implementation, commit, push, merge, and deployment on 2026-07-30; local validation complete
+**Status:** Human authorized implementation, commit, push, merge, and deployment on 2026-07-30; validation complete
 
 **Production base:** `a4b873c540c1da6a271571e47d523285d4c129dc`
 

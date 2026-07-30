@@ -1,6 +1,6 @@
 # R_2026_07_30_REPOSITORY_OVERVIEW_UI
 
-**Status:** Human authorized; local validation complete; authoritative GitHub validation pending  
+**Status:** Human authorized; local and authoritative GitHub validation complete
 **Classification:** Routine governed application release  
 **Production base:** `a4b873c540c1da6a271571e47d523285d4c129dc`
 
@@ -89,6 +89,9 @@ Local validation on 2026-07-30:
   `app/repositories/page.tsx`, `app/repositories/[repositoryId]/page.tsx`, `package.json`,
   `tests/repository-index-ui.test.mjs`, and this release record.
 - Production base remains `a4b873c540c1da6a271571e47d523285d4c129dc`.
+- Reviewed implementation commit: `a9c51de47b20185856414568d52c6b3ec41bb515`.
+- Pull request: `#12`.
+- GitHub Actions validation run `30579017494`, job `90994292469`: passed in 2m00s.
 
 ## Rollout, rollback, and post-deployment verification
 
