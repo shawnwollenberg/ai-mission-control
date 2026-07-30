@@ -1,6 +1,6 @@
 # R_2026_07_30_REPOSITORY_OVERVIEW_UI
 
-**Status:** Human authorized; local and authoritative GitHub validation complete
+**Status:** Deployed; post-deployment verification passed with one authenticated-session limitation
 **Classification:** Routine governed application release  
 **Production base:** `a4b873c540c1da6a271571e47d523285d4c129dc`
 
@@ -92,6 +92,9 @@ Local validation on 2026-07-30:
 - Reviewed implementation commit: `a9c51de47b20185856414568d52c6b3ec41bb515`.
 - Pull request: `#12`.
 - GitHub Actions validation run `30579017494`, job `90994292469`: passed in 2m00s.
+- Final evidence head `439053af3349dee0817cb33404db3f67440be5ad` passed GitHub Actions run `30579223615`,
+  job `90994986329`, in 2m04s.
+- Pull request `#12` merged as `b3982221617585baf4e2f17a1dc4ce32e3799027`.
 
 ## Rollout, rollback, and post-deployment verification
 
@@ -102,6 +105,29 @@ of secrets in rendered output and logs.
 
 Rollback only the application revision if any required check fails. Do not delete or rewrite repositories, identities,
 grants, agents, assessments, recommendations, missions, commands, events, receipts, audits, or Project Brain records.
+
+Deployment and post-deployment evidence:
+
+- Immutable ARM64 web image:
+  `661452835066.dkr.ecr.us-east-1.amazonaws.com/mission-control@sha256:e7db1957073c3d87775eeb05a29ecb25ba35098b37c2fbe454b2049277d8d020`.
+- Deployment command: AWS Systems Manager `ac8e8506-bbcf-43d3-bbbe-460f6a0a62e9`.
+- Only `mission-control-web` was replaced. Generic, action, Project Brain, Mission Agent 0.7.2, PostgreSQL, and Caddy
+  containers remained running unchanged.
+- The stopped rollback container retains prior digest
+  `sha256:1bdb9be3062dcffeb637225a102afbe0c9bf3c35c17c3522ad5cc14a91d08086`.
+- Production health returned `ok`; readiness returned `ready` with no failed checks and `secretsPrinted=false`.
+- Migration ledger contains all 28 repository migrations (`0001` through `0028`); this release added and applied none.
+- Production retained 15 repositories, 15 repository identities, 20 agent resource grants, 59,760 canonical events,
+  47 mission projections, 94 artifacts, and two Repository Project Brain projections after the web-only replacement.
+- Unauthenticated `/repositories` and `/missions` requests retained the expected secure redirect to login. Exact-image
+  authenticated Chrome validation was completed before deployment against the production build. The available
+  production Chrome profile had no Mission Control session after deployment, and no production credential or session
+  secret was retrieved merely to repeat the same read-only click path.
+- Mission Agent 0.7.2 inside the deployed image remains exactly 148,063 bytes with SHA-256
+  `108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09`.
+- Web logs since deployment contained zero case-insensitive error markers and zero password, token, authorization, or
+  secret markers.
+- Rollback was not required. Production remains healthy on the new web image, with the prior container preserved.
 
 ## Risks and approval
 
