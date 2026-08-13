@@ -62,3 +62,8 @@ Onboard only exact capability attestations for Claude Code
 `gpt-5.6-luna`. For rollback, stop new claims, drain leases through the
 protocol, restore signed 0.7.2, retain credentials/repositories/events/schema,
 and rebuild projections. No destructive migration rollback is authorized.
+
+The owner-authenticated agent registration API accepts a Mission Agent adapter
+and provider profile only through the existing strict provider-profile parser.
+This lets the owner approve the exact 0.8 capability attestation before its
+first heartbeat; a heartbeat still cannot expand the registered profile.

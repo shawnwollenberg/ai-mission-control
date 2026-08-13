@@ -3,6 +3,7 @@ import { listAgents, registerAgent } from "@/application/registry";
 import { apiErrorResponse } from "@/lib/http-errors";
 import { requireApiIdentity, requireMutationOrigin, unauthenticatedResponse } from "@/lib/request-auth";
 import { registerRemoteAgent } from "@/application/remote-agent-registry";
+import { parseAgentProviderProfile } from "@/domain/agent-provider";
 export async function GET() {
   const identity = await requireApiIdentity();
   if (!identity) return unauthenticatedResponse();
@@ -24,6 +25,8 @@ export async function POST(request: Request) {
       credentialReference?: string;
       adapterType?: "codex" | "remote_http";
       endpoint?: string;
+      missionAgentAdapter?: "codex" | "hermes" | "claude-code" | "generic";
+      providerProfile?: unknown;
     };
     if (body.adapterType === "remote_http") {
       const registration = await registerRemoteAgent({
@@ -34,6 +37,8 @@ export async function POST(request: Request) {
         capabilities: body.capabilities ?? [],
         supportedDomains: body.supportedDomains ?? [],
         concurrencyLimit: body.concurrencyLimit,
+        missionAgentAdapter: body.missionAgentAdapter,
+        providerProfile: body.providerProfile ? parseAgentProviderProfile(body.providerProfile) : undefined,
       });
       return NextResponse.json(registration, { status: 201 });
     }
