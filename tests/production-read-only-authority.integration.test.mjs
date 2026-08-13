@@ -111,6 +111,7 @@ test("production read-only authority persists exact receipt, read-only projectio
     commandId,
     repositoryId,
     planningAgentIds: [claude.agentId, codex.agentId],
+    validationCommands: [["npm", "run", "format:check"]],
   });
   const row = (
     await getDatabasePool().query(
@@ -148,15 +149,27 @@ test("production read-only authority persists exact receipt, read-only projectio
   ).rows;
   assert.equal(permissions.length, 2);
   assert.ok(permissions.every(({ permissions: value }) => JSON.stringify(value) === '["read"]'));
+  assert.deepEqual(row.validation_commands, [["npm", "run", "format:check"]]);
 });
 
 test("production authority remains owner-only and disposable implementation authority remains prohibited", async () => {
+  await assert.rejects(
+    configureProductionReadOnlyPlanningAuthority({
+      actor: owner,
+      commandId: randomUUID(),
+      repositoryId,
+      planningAgentIds: [claude.agentId],
+      validationCommands: [],
+    }),
+    /requires owner-governed validation commands/,
+  );
   await assert.rejects(
     configureProductionReadOnlyPlanningAuthority({
       actor: { ...owner, role: "member" },
       commandId: randomUUID(),
       repositoryId,
       planningAgentIds: [claude.agentId],
+      validationCommands: [["npm", "run", "format:check"]],
     }),
     /Workspace owner permission is required/,
   );
