@@ -1,0 +1,18 @@
+{
+  "approvalReference": "Human approval of exact manifest a28877d5358a9fb46848d2a2b9047848d35637427c51b2d16d35404b1e147482 and artifact c366c95674fed2c8f63dd9f0182e54ee25d9a7d71764afe89b0facd734864494 on 2026-08-13",
+  "artifactSha256": "c366c95674fed2c8f63dd9f0182e54ee25d9a7d71764afe89b0facd734864494",
+  "awsRequestId": "d490053b-36c2-4ac7-ab5e-33619fab9191",
+  "awsVerifyRequestId": "6c053238-280c-4919-bbee-34b63f12fc8b",
+  "canonicalManifestSha256": "a28877d5358a9fb46848d2a2b9047848d35637427c51b2d16d35404b1e147482",
+  "independentVerification": { "awsKms": true, "localEd25519": true },
+  "kmsKeyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+  "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+  "receiptVersion": "1",
+  "releaseAuthorityKeyId": "mission-agent-release-2026-01",
+  "releaseVersion": "0.8.0",
+  "signatureSha256": "f125e71b8eca41a12fa176a8f436af457fa36c4cfe897ee700e98192b643974e",
+  "signerPrincipalArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+  "signingAlgorithm": "ED25519_SHA_512",
+  "signingTime": "2026-08-13T20:05:12.741Z",
+  "sourceSha": "33d4bcd62789f767a7bbe9b1f7588eee4f0f0549"
+}

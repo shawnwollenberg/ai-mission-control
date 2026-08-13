@@ -44,6 +44,14 @@ export const approvedMissionAgentArtifacts: Readonly<Record<string, ApprovedMiss
     signingKeyId: "mission-agent-release-2026-01",
     publicKeyFingerprint: "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
   },
+  "0.8.0": {
+    sha256: "c366c95674fed2c8f63dd9f0182e54ee25d9a7d71764afe89b0facd734864494",
+    manifestVersion: "3",
+    identityProtocolVersion: "2",
+    releaseAuthorityVersion: "v2",
+    signingKeyId: "mission-agent-release-2026-01",
+    publicKeyFingerprint: "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+  },
 };
 
 export function verifyMissionAgentArtifact(version: unknown, artifact: unknown): MissionAgentArtifactVerification {

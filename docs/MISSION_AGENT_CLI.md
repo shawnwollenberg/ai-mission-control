@@ -19,7 +19,7 @@ cd /path/to/repository
 <generated connection command> --repository /absolute/path/to/repository
 ```
 
-The generated command downloads a checksummed immutable Mission Agent release, stores the credential, registers the first repository, installs the stable `mission-agent` command under `~/.local/bin`, sends a signed heartbeat, and starts outbound assignment polling. No inbound port is required. The stable launcher can upgrade to the current signed production release, 0.7.2. Consensus Plan and Claude Code support is being reconciled as an unsigned 0.8.0 candidate and is not a production release until the security-sensitive release record is approved.
+The generated command downloads a checksummed immutable Mission Agent release, stores the credential, registers the first repository, installs the stable `mission-agent` command under `~/.local/bin`, sends a signed heartbeat, and starts outbound assignment polling. No inbound port is required. Guided onboarding remains on signed 0.7.2. Signed 0.8.0 is published through the governed Consensus Plan onboarding path because its exact-model task envelope is intentionally stricter than the legacy first-mission envelope. Consensus Plan provider roles remain subject to exact server-side capability attestations and do not grant implementation authority merely because the client is installed.
 
 If no Git repository is found, run from inside one or provide `--repository /absolute/path/to/repository`.
 

@@ -12,6 +12,7 @@ import { assertRuntimeStartupSafety, runtimeTrustEvidence } from "../lib/runtime
 
 const approved = approvedMissionAgentArtifacts["0.6.8"].sha256;
 const approved072 = approvedMissionAgentArtifacts["0.7.2"].sha256;
+const approved080 = approvedMissionAgentArtifacts["0.8.0"].sha256;
 test("0.6.8 immutable artifact metadata and approved registry agree", async () => {
   const bytes = await readFile(new URL("../public/mission-agent-0.6.8.mjs", import.meta.url));
   const metadata = JSON.parse(
@@ -58,6 +59,28 @@ test("signed 0.7.2 heartbeat identity is approved without weakening v3 signer bi
     { sha256: "0".repeat(64) },
   ])
     assert.equal(verifyMissionAgentArtifact("0.7.2", { ...identity, ...mutation }).status, "mismatch");
+});
+
+test("signed 0.8.0 heartbeat identity is production approved without broadening signer binding", () => {
+  const identity = {
+    version: "0.8.0",
+    sha256: approved080,
+    manifestVersion: "3",
+    releaseAuthorityVersion: "v2",
+    signingKeyId: "mission-agent-release-2026-01",
+    publicKeyFingerprint: "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+  };
+  const verified = verifyMissionAgentArtifact("0.8.0", identity);
+  assert.equal(verified.status, "verified");
+  assert.equal(verified.identityProtocolVersion, "2");
+  for (const mutation of [
+    { releaseAuthorityVersion: "v1" },
+    { signingKeyId: "mission-agent-release-2026-02" },
+    { publicKeyFingerprint: `ed25519-spki-sha256:${"0".repeat(64)}` },
+    { manifestVersion: "1" },
+    { sha256: "0".repeat(64) },
+  ])
+    assert.equal(verifyMissionAgentArtifact("0.8.0", { ...identity, ...mutation }).status, "mismatch");
 });
 
 test("disposable mode accepts only an exact non-writable governed registry entry", async () => {
@@ -181,7 +204,7 @@ test("disposable mode accepts only an exact non-writable governed registry entry
     assert.equal(verifyMissionAgentArtifact("0.8.0", identity).status, "mismatch");
     await writeRegistry(registry);
     process.env.APP_ENV = "production";
-    assert.equal(verifyMissionAgentArtifact("0.8.0", identity).status, "unapproved_version");
+    assert.equal(verifyMissionAgentArtifact("0.8.0", identity).status, "mismatch");
     assert.throws(() => assertRuntimeStartupSafety(), /rejects disposable acceptance configuration/);
     process.env.APP_ENV = "disposable_acceptance";
     await writeRegistry({ ...registry, expiresAt: new Date(Date.now() - 1).toISOString() });

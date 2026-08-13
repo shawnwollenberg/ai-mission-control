@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1",
+  "sourceCommit": "33d4bcd62789f767a7bbe9b1f7588eee4f0f0549",
+  "releaseSourceCommit": "8a210b2ce26555e19f2c585f6281017ae8fbec3c",
+  "environment": "two independent clean installs using node@sha256:20a424ecd1d2064a44e12fe287bf3dae443aab31dc5e0c0cb6c74bef9c78911c",
+  "buildAPath": "/private/tmp/mission-agent-080-release/mission-agent-0.8.0-a.mjs",
+  "buildBPath": "/private/tmp/mission-agent-080-release/mission-agent-0.8.0-b.mjs",
+  "buildASha256": "c366c95674fed2c8f63dd9f0182e54ee25d9a7d71764afe89b0facd734864494",
+  "buildBSha256": "c366c95674fed2c8f63dd9f0182e54ee25d9a7d71764afe89b0facd734864494",
+  "capabilityManifestSha256": "aae4fe13b7cb613131accb870cbebb57cefbad4a955739fe85776a4488267394",
+  "byteLength": 346937,
+  "byteIdentical": true,
+  "matchesMergedReleaseArtifact": true,
+  "result": "passed"
+}
