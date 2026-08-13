@@ -61,7 +61,7 @@ export const consensusTransitions: Record<ConsensusStatus, readonly ConsensusSta
   revision_round: ["canonicalization", "consensus_not_reached", "failed", "cancelled"],
   canonicalization: ["awaiting_final_verdicts", "consensus_not_reached", "failed", "cancelled"],
   awaiting_final_verdicts: ["consensus_reached", "consensus_not_reached", "failed", "cancelled"],
-  consensus_reached: ["awaiting_human_approval", "failed", "cancelled"],
+  consensus_reached: ["awaiting_human_approval", "completed", "failed", "cancelled"],
   consensus_not_reached: ["cancelled"],
   awaiting_human_approval: ["approved", "rejected", "cancelled"],
   approved: ["implementation_mission_created", "rejected", "failed", "cancelled"],

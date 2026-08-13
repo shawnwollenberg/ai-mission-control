@@ -4,8 +4,10 @@ import { ConcurrencyConflictError, NotFoundError, ValidationFailedError } from "
 import { stableUuid } from "@/lib/stable-id";
 import { canonicalHash } from "@/lib/canonical-json";
 import {
-  assertDisposableLocalImplementationAuthority,
-  assertDisposableRepositoryAuthorityProjection,
+  assertRepositoryAuthority,
+  assertRepositoryAuthorityProjection,
+  assertProductionReadOnlyMissionAdmission,
+  PRODUCTION_READ_ONLY_PLANNING_PROFILE,
   repositoryAuthorityBindingHash,
 } from "@/domain/repository-authority";
 import { disposableApprovedAssignment, missionControlRuntimeMode, runtimeTrustEvidence } from "@/lib/runtime-trust";
@@ -201,7 +203,7 @@ async function assertCurrentRepositoryAuthority(
   ).rows[0];
   if (!row || row.repository_authority_hash !== expectedHash)
     throw new ValidationFailedError("Repository authority binding changed");
-  assertDisposableRepositoryAuthorityProjection({
+  assertRepositoryAuthorityProjection({
     authority: row.repository_authority,
     authorityHash: row.repository_authority_hash,
     authorityCommandId: row.authority_command_id,
@@ -442,6 +444,7 @@ export async function createConsensusPlanMission(input: {
   maximumArtifactBytes?: number;
   maximumCommandCount?: number;
   maximumRetryCount?: number;
+  planningOnly?: boolean;
 }) {
   if (input.plannerA.agentId === input.plannerB.agentId)
     throw new ValidationFailedError("Consensus planning requires two independently registered agents");
@@ -532,14 +535,15 @@ export async function createConsensusPlanMission(input: {
     repository.repository_state.relevantIgnoredCount !== 0
   )
     throw new ValidationFailedError(
-      "Disposable consensus acceptance requires a clean, complete content-addressed repository snapshot",
+      "Consensus planning requires a clean, complete content-addressed repository snapshot",
     );
   const baseBranch = input.baseBranch?.trim() || repository.default_branch;
   if (baseBranch !== repository.default_branch)
     throw new ValidationFailedError("Consensus base branch must match the registered repository branch");
   if (!repository.read_allowed)
     throw new ValidationFailedError("Consensus planning requires repository inspection authority");
-  const repositoryAuthority = assertDisposableLocalImplementationAuthority(repository.repository_authority);
+  const repositoryAuthority = assertRepositoryAuthority(repository.repository_authority);
+  const productionReadOnly = repositoryAuthority.profile === PRODUCTION_READ_ONLY_PLANNING_PROFILE;
   if (
     !repository.repository_authority_hash ||
     !repository.repository_authority_command_id ||
@@ -547,8 +551,8 @@ export async function createConsensusPlanMission(input: {
       repository.repository_authority_hash ||
     repository.write_allowed ||
     repository.commit_allowed ||
-    !repository.isolated_worktree_write_allowed ||
-    !repository.mission_agent_local_commit_allowed ||
+    repository.isolated_worktree_write_allowed !== !productionReadOnly ||
+    repository.mission_agent_local_commit_allowed !== !productionReadOnly ||
     repository.provider_direct_commit_allowed ||
     repository.push_allowed ||
     repository.pull_request_allowed ||
@@ -557,14 +561,27 @@ export async function createConsensusPlanMission(input: {
     repository.deployment_allowed ||
     repository.infrastructure_mutation_allowed
   )
-    throw new ValidationFailedError("Repository authority is not safe for disposable consensus execution");
+    throw new ValidationFailedError("Repository authority is not safe for consensus execution");
   const repositorySnapshot = repository.repository_snapshot_hash;
-  if (!input.preferredExecutorAgentId || !input.preferredExecutorModelId)
-    throw new ValidationFailedError("A preferred implementation executor and model are required before planning");
-  if (!repository.allowed_agent_ids.includes(input.preferredExecutorAgentId))
-    throw new ValidationFailedError("Preferred executor is not allowed for this repository");
-  if (!repositoryAuthority.implementationAgentIds.includes(input.preferredExecutorAgentId))
-    throw new ValidationFailedError("Preferred executor lacks isolated-worktree implementation authority");
+  if (productionReadOnly) {
+    assertProductionReadOnlyMissionAdmission({
+      authority: repositoryAuthority,
+      runtimeMode: missionControlRuntimeMode(),
+      planningOnly: input.planningOnly,
+      plannerAgentIds: [input.plannerA.agentId, input.plannerB.agentId, input.synthesizer.agentId],
+      preferredExecutorAgentId: input.preferredExecutorAgentId,
+      preferredExecutorModelId: input.preferredExecutorModelId,
+    });
+  } else {
+    if (input.planningOnly)
+      throw new ValidationFailedError("Planning-only admission requires production read-only repository authority");
+    if (!input.preferredExecutorAgentId || !input.preferredExecutorModelId)
+      throw new ValidationFailedError("A preferred implementation executor and model are required before planning");
+    if (!repository.allowed_agent_ids.includes(input.preferredExecutorAgentId))
+      throw new ValidationFailedError("Preferred executor is not allowed for this repository");
+    if (!repositoryAuthority.implementationAgentIds.includes(input.preferredExecutorAgentId))
+      throw new ValidationFailedError("Preferred executor lacks isolated-worktree implementation authority");
+  }
   const missionId = stableUuid(`consensus-plan:${input.commandId}`);
   const plannerAId = stableUuid(`${missionId}:planner_a`);
   const plannerBId = stableUuid(`${missionId}:planner_b`);
@@ -577,7 +594,7 @@ export async function createConsensusPlanMission(input: {
     "revise_plan",
     "review_canonical_plan",
   ];
-  const [plannerA, plannerB, synthesizer, executor] = await Promise.all([
+  const [plannerA, plannerB, synthesizer] = await Promise.all([
     validateParticipantBinding({
       workspaceId: input.actor.workspaceId,
       repositoryId: input.repositoryId,
@@ -631,26 +648,28 @@ export async function createConsensusPlanMission(input: {
       repositoryPermission: "read",
       requireProjectBrainContext: true,
     }),
-    validateParticipantBinding({
-      workspaceId: input.actor.workspaceId,
-      repositoryId: input.repositoryId,
-      participant: { agentId: input.preferredExecutorAgentId, modelId: input.preferredExecutorModelId },
-      assignmentId: executorId,
-      role: "executor",
-      modelRole: "executor",
-      missionRole: "executor",
-      operations: ["implement_change"],
-      requiredCapabilities: [
-        "repository.read",
-        "repository.isolated_worktree_write",
-        "code.implement",
-        "test.run",
-        "git.commit_local",
-      ],
-      repositoryPermission: "isolated_worktree_write",
-      requireRepositoryMutation: true,
-    }),
   ]);
+  const executor = productionReadOnly
+    ? undefined
+    : await validateParticipantBinding({
+        workspaceId: input.actor.workspaceId,
+        repositoryId: input.repositoryId,
+        participant: { agentId: input.preferredExecutorAgentId!, modelId: input.preferredExecutorModelId! },
+        assignmentId: executorId,
+        role: "executor",
+        modelRole: "executor",
+        missionRole: "executor",
+        operations: ["implement_change"],
+        requiredCapabilities: [
+          "repository.read",
+          "repository.isolated_worktree_write",
+          "code.implement",
+          "test.run",
+          "git.commit_local",
+        ],
+        repositoryPermission: "isolated_worktree_write",
+        requireRepositoryMutation: true,
+      });
   const reviewer = input.implementationReviewer
     ? await validateParticipantBinding({
         workspaceId: input.actor.workspaceId,
@@ -667,7 +686,7 @@ export async function createConsensusPlanMission(input: {
     : undefined;
   if (input.requireImplementationReview && !reviewer)
     throw new ValidationFailedError("Independent implementation review requires a selected reviewer agent and model");
-  if (input.requireImplementationReview && reviewer?.agentId === executor.agentId)
+  if (input.requireImplementationReview && reviewer?.agentId === executor?.agentId)
     throw new ValidationFailedError("Independent implementation reviewer must not be the executor agent");
   const maximumDurationSeconds = Math.min(Math.max(input.maximumDurationSeconds ?? 3600, 60), 86_400);
   const deadlineAt = new Date(Date.now() + maximumDurationSeconds * 1000).toISOString();
@@ -703,7 +722,7 @@ export async function createConsensusPlanMission(input: {
         plannerAId,
         plannerBId,
         synthesizerAssignmentId: synthesizerId,
-        executorAssignmentId: executorId,
+        executorAssignmentId: productionReadOnly ? null : executorId,
         implementationReviewerAssignmentId: reviewer?.assignmentId ?? null,
         planningSchemaVersion: "consensus-plan/1",
       },
@@ -738,7 +757,13 @@ export async function createConsensusPlanMission(input: {
           maximumCommandCount: Math.min(Math.max(input.maximumCommandCount ?? 100, 1), 1000),
           maximumRetryCount: Math.min(Math.max(input.maximumRetryCount ?? 2, 0), 10),
           deadlineAt,
-          participants: [plannerA, plannerB, synthesizer, executor, ...(reviewer ? [reviewer] : [])],
+          participants: [
+            plannerA,
+            plannerB,
+            synthesizer,
+            ...(executor ? [executor] : []),
+            ...(reviewer ? [reviewer] : []),
+          ],
         },
       },
     ],
@@ -1548,6 +1573,23 @@ export async function advanceConsensusAfterTask(
       consensusDecision: reached ? "reached" : "not_reached",
     });
     if (reached) {
+      const decided = await projection(workspaceId, missionId);
+      if (!decided.preferred_executor_agent_id && !decided.preferred_executor_model_id) {
+        await transitionConsensus({
+          actor,
+          commandId: stableUuid(`${missionId}:planning-only-complete`),
+          missionId,
+          target: "completed",
+          reason: "Production read-only consensus completed without implementation authority",
+        });
+        await handleMissionTransition({
+          actor: { workspaceId, userId: "consensus-coordinator", role: "owner" },
+          commandId: stableUuid(`${missionId}:mission-complete`),
+          missionId,
+          target: "completed",
+        });
+        return;
+      }
       await transitionConsensus({
         actor,
         commandId: stableUuid(`${missionId}:await-human-approval`),

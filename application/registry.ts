@@ -13,8 +13,10 @@ import {
 } from "@/application/repository-identity";
 import { parseCompleteRepositoryState, repositorySnapshotBytes } from "@/domain/repository-snapshot";
 import {
-  assertDisposableLocalImplementationAuthority,
+  assertRepositoryAuthority,
   disposableLocalImplementationAuthority,
+  productionReadOnlyPlanningAuthority,
+  PRODUCTION_READ_ONLY_PLANNING_PROFILE,
   repositoryAuthorityBindingHash,
 } from "@/domain/repository-authority";
 
@@ -420,10 +422,98 @@ export async function configureDisposableRepositoryAuthority(input: {
   ).rows[0];
 }
 
+export async function configureProductionReadOnlyPlanningAuthority(input: {
+  actor: RegistryActor;
+  commandId: string;
+  repositoryId: string;
+  planningAgentIds: string[];
+}) {
+  if (missionControlRuntimeMode() !== "production")
+    throw new ValidationFailedError("Production read-only planning authority is available only in production");
+  owner(input.actor);
+  const repository = (
+    await getDatabasePool().query<{
+      allowed_agent_ids: string[];
+      repository_authority_hash: string | null;
+      location_mode: string;
+    }>(
+      `SELECT allowed_agent_ids,repository_authority_hash,location_mode FROM repositories
+       WHERE workspace_id=$1 AND repository_id=$2 AND disabled_at IS NULL`,
+      [input.actor.workspaceId, input.repositoryId],
+    )
+  ).rows[0];
+  if (!repository) throw new NotFoundError("Repository");
+  if (repository.location_mode !== "mission_agent")
+    throw new ValidationFailedError("Production read-only planning authority requires a Mission Agent repository");
+  const activeExecution = await getDatabasePool().query(
+    `SELECT 1 FROM execution_projections execution
+     JOIN mission_projections mission ON mission.workspace_id=execution.workspace_id AND mission.mission_id=execution.mission_id
+     WHERE execution.workspace_id=$1 AND mission.repository_id=$2
+       AND execution.status NOT IN('succeeded','failed','timed_out','cancelled') LIMIT 1`,
+    [input.actor.workspaceId, input.repositoryId],
+  );
+  if (activeExecution.rowCount)
+    throw new ValidationFailedError(
+      "Production read-only authority cannot be rebound while repository execution is active",
+    );
+  const authority = productionReadOnlyPlanningAuthority(input.planningAgentIds);
+  if (authority.planningAgentIds.some((agentId) => !repository.allowed_agent_ids.includes(agentId)))
+    throw new ValidationFailedError("Planning authority cannot be granted to an unregistered repository agent");
+  const authorityHash = repositoryAuthorityBindingHash(authority, input.commandId);
+  const events = await loadAggregateEvents({
+    workspaceId: input.actor.workspaceId,
+    aggregateType: "repository",
+    aggregateId: input.repositoryId,
+  });
+  await appendEvents({
+    workspaceId: input.actor.workspaceId,
+    aggregateType: "repository",
+    aggregateId: input.repositoryId,
+    expectedVersion: events.length,
+    commandId: input.commandId,
+    commandType: "ConfigureProductionReadOnlyPlanningAuthority",
+    correlationId: input.repositoryId,
+    causationId: events.at(-1)?.eventId,
+    actor: { type: "human", id: input.actor.userId },
+    events: [
+      {
+        eventType: "repository.authority_configured",
+        eventSchemaVersion: 1,
+        payload: {
+          repositoryId: input.repositoryId,
+          authority,
+          authorityHash,
+          validationCommands: [],
+          previousAuthorityHash: repository.repository_authority_hash,
+          authorityReceipt: {
+            schemaVersion: "repository-authority-receipt/1",
+            actorUserId: input.actor.userId,
+            commandId: input.commandId,
+            authorityHash,
+          },
+        },
+      },
+    ],
+    applyProjections: applyRepositoryAuthorityProjection,
+  });
+  return (
+    await getDatabasePool().query(
+      `SELECT repository_id,authority_schema_version,repository_authority,repository_authority_hash,
+        read_allowed,isolated_worktree_write_allowed,mission_agent_local_commit_allowed,
+        provider_direct_commit_allowed,push_allowed,pull_request_allowed,publication_allowed,
+        deployment_allowed,infrastructure_mutation_allowed
+       FROM repositories WHERE workspace_id=$1 AND repository_id=$2`,
+      [input.actor.workspaceId, input.repositoryId],
+    )
+  ).rows[0];
+}
+
 export async function applyRepositoryAuthorityProjection(client: import("pg").PoolClient, events: DomainEvent[]) {
   for (const event of events) {
     if (event.eventType !== "repository.authority_configured") continue;
-    const authority = assertDisposableLocalImplementationAuthority(event.payload.authority);
+    const authority = assertRepositoryAuthority(event.payload.authority);
+    const readOnly = authority.profile === PRODUCTION_READ_ONLY_PLANNING_PROFILE;
+    const authorizedAgentIds = readOnly ? authority.planningAgentIds : authority.implementationAgentIds;
     const validationCommands = Array.isArray(event.payload.validationCommands) ? event.payload.validationCommands : [];
     if (
       validationCommands.some(
@@ -455,11 +545,25 @@ export async function applyRepositoryAuthorityProjection(client: import("pg").Po
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
         `${event.workspaceId}:${assignment.assignment_id}`,
       ]);
+    if (readOnly) {
+      const activeExecutions = await client.query(
+        `SELECT 1 FROM execution_projections execution
+         JOIN mission_projections mission
+           ON mission.workspace_id=execution.workspace_id AND mission.mission_id=execution.mission_id
+         WHERE execution.workspace_id=$1 AND mission.repository_id=$2
+           AND execution.status NOT IN('succeeded','failed','timed_out','cancelled') LIMIT 1`,
+        [event.workspaceId, event.payload.repositoryId],
+      );
+      if (activeAssignments.rowCount || activeExecutions.rowCount)
+        throw new ValidationFailedError(
+          "Production read-only authority cannot be rebound while repository execution is active",
+        );
+    }
     const updated = await client.query<{ allowed_agent_ids: string[] }>(
       `UPDATE repositories SET
          authority_schema_version=$3,repository_authority=$4,repository_authority_hash=$5,
          read_allowed=true,write_allowed=false,commit_allowed=false,
-         isolated_worktree_write_allowed=true,mission_agent_local_commit_allowed=true,
+         isolated_worktree_write_allowed=$8,mission_agent_local_commit_allowed=$8,
          provider_direct_commit_allowed=false,push_allowed=false,pull_request_allowed=false,merge_allowed=false,
          publication_allowed=false,deployment_allowed=false,infrastructure_mutation_allowed=false,
          validation_commands=$6,updated_at=$7
@@ -473,11 +577,12 @@ export async function applyRepositoryAuthorityProjection(client: import("pg").Po
         authorityHash,
         JSON.stringify(validationCommands),
         event.occurredAt,
+        !readOnly,
       ],
     );
     if (!updated.rowCount) throw new ValidationFailedError("Repository authority target is unavailable");
-    if (authority.implementationAgentIds.some((id) => !updated.rows[0].allowed_agent_ids.includes(id)))
-      throw new ValidationFailedError("Repository authority names an unregistered implementation agent");
+    if (authorizedAgentIds.some((id) => !updated.rows[0].allowed_agent_ids.includes(id)))
+      throw new ValidationFailedError("Repository authority names an unregistered agent");
     await client.query("SELECT set_config('mission_control.repository_authority_binding',$1,true)", [authorityHash]);
     await client.query(
       `UPDATE pull_assignments p SET status='released',lease_owner=NULL,lease_token_hash=NULL,
@@ -489,11 +594,11 @@ export async function applyRepositoryAuthorityProjection(client: import("pg").Po
     );
     await client.query(
       `UPDATE agent_resource_permissions SET
-         permissions=CASE WHEN agent_id=ANY($3::uuid[])
+         permissions=CASE WHEN $4 AND agent_id=ANY($3::uuid[])
            THEN '["read","isolated_worktree_write"]'::jsonb ELSE '["read"]'::jsonb END,
          revoked_at=NULL
        WHERE workspace_id=$1 AND resource_type='repository' AND resource_id=$2`,
-      [event.workspaceId, event.payload.repositoryId, authority.implementationAgentIds],
+      [event.workspaceId, event.payload.repositoryId, authorizedAgentIds, !readOnly],
     );
     await client.query(
       `INSERT INTO repository_authority_receipts(

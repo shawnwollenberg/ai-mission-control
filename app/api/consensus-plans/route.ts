@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       maximumCostAmount?: number;
       costCurrency?: string;
       maximumDurationSeconds?: number;
+      planningOnly?: boolean;
     };
     if (
       !body.repositoryId ||
@@ -43,11 +44,10 @@ export async function POST(request: Request) {
       !body.plannerB.modelId ||
       !body.synthesizer?.agentId ||
       !body.synthesizer.modelId ||
-      !body.preferredExecutorAgentId ||
-      !body.preferredExecutorModelId
+      (body.planningOnly !== true && (!body.preferredExecutorAgentId || !body.preferredExecutorModelId))
     )
       throw new ValidationFailedError(
-        "Repository, objective, planner A, planner B, synthesizer, and executor agent/model assignments are required",
+        "Repository, objective, planner A, planner B, and synthesizer assignments are required; non-planning-only missions also require an executor",
       );
     const result = await createConsensusPlanMission({
       actor: identity,
@@ -70,6 +70,7 @@ export async function POST(request: Request) {
       maximumCostAmount: body.maximumCostAmount,
       costCurrency: body.costCurrency,
       maximumDurationSeconds: body.maximumDurationSeconds,
+      planningOnly: body.planningOnly,
     });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
