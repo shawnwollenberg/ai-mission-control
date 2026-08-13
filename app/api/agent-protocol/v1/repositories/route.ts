@@ -4,6 +4,7 @@ import { completeProtocolMessage, releaseProtocolMessage } from "@/application/r
 import { apiErrorResponse } from "@/lib/http-errors";
 import { authenticatePullRequest } from "@/remote-agent/pull-request";
 import { auditProtocolSecurityFailure, securityReason } from "@/remote-agent/security";
+import { canonicalHash } from "@/lib/canonical-json";
 
 const path = "/api/agent-protocol/v1/repositories";
 export async function POST(request: Request) {
@@ -11,6 +12,13 @@ export async function POST(request: Request) {
   try {
     auth = await authenticatePullRequest(request, path, "AgentRepositoryRegistered", "repository");
     if (auth.receipt.duplicate) return NextResponse.json(auth.receipt.acknowledgement);
+    const registrationAuthority = {
+      schemaVersion: "authenticated-repository-registration/1",
+      messageId: auth.message.messageId,
+      credentialId: auth.credential.credential_id,
+      bodyChecksum: auth.headers.bodyChecksum,
+      receiptSchemaVersion: "agent-protocol-receipt/2",
+    };
     const repository = await registerMissionAgentRepository({
       workspaceId: auth.credential.workspace_id,
       agentId: auth.credential.agent_id,
@@ -19,6 +27,20 @@ export async function POST(request: Request) {
       defaultBranch: String(auth.message.payload.defaultBranch ?? ""),
       remoteUrl: auth.message.payload.remoteUrl ? String(auth.message.payload.remoteUrl) : undefined,
       commit: auth.message.payload.commit ? String(auth.message.payload.commit) : undefined,
+      identityVersion: auth.message.payload.identityVersion ? String(auth.message.payload.identityVersion) : undefined,
+      canonicalRemoteUrl: auth.message.payload.canonicalRemoteUrl
+        ? String(auth.message.payload.canonicalRemoteUrl)
+        : undefined,
+      selectedRemote: auth.message.payload.selectedRemote ? String(auth.message.payload.selectedRemote) : undefined,
+      remotes: Array.isArray(auth.message.payload.remotes)
+        ? auth.message.payload.remotes.map((remote) => ({
+            name: String((remote as Record<string, unknown>).name ?? ""),
+            url: String((remote as Record<string, unknown>).url ?? ""),
+          }))
+        : undefined,
+      protocolMessageId: auth.message.messageId,
+      repositoryState: auth.message.payload.repositoryState,
+      registrationAuthority: { ...registrationAuthority, authorizationHash: canonicalHash(registrationAuthority) },
     });
     const response = { protocolVersion: "1.0", messageId: auth.message.messageId, repository };
     await completeProtocolMessage(auth.credential, auth.message.messageId, response);

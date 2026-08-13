@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { requirePageIdentity } from "@/lib/page-auth";
 import { listApprovalInbox } from "@/application/governance-queries";
 import ApprovalInbox from "./inbox";
@@ -18,18 +18,7 @@ export default async function ApprovalsPage({
   const filters = await searchParams;
   return (
     <main className="durable-mission-shell">
-      <nav className="brandbar">
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Approval inbox</p>
-        </div>
-        <Link className="nav-link" href="/missions">
-          Missions
-        </Link>
-        <Link className="nav-link" href="/audit">
-          Audit
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Approval inbox" />
       <header className="mission-header compact">
         <div>
           <p className="section-label">Human authority</p>
@@ -37,7 +26,7 @@ export default async function ApprovalsPage({
           <p>Parameter-bound decisions for external actions.</p>
         </div>
       </header>
-      <form className="mission-actions">
+      <form className="mission-actions approval-filter-bar">
         <select name="status" defaultValue={filters.status ?? ""}>
           <option value="">All statuses</option>
           <option>pending</option>
@@ -57,7 +46,7 @@ export default async function ApprovalsPage({
           <option>moderate</option>
           <option>low</option>
         </select>
-        <button type="submit">Filter</button>
+        <button type="submit">Apply filters</button>
       </form>
       <ApprovalInbox approvals={await listApprovalInbox(identity.workspaceId, filters)} />
     </main>

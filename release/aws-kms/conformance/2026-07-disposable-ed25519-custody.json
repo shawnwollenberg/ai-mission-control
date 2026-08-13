@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "1",
+  "awsAccount": "661452835066",
+  "awsRegion": "us-east-1",
+  "awsProfile": "wallyweb-kms-conformance",
+  "caller": {
+    "principalType": "AssumedRole",
+    "arn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseConformance_98789deb03404e29/wallyweb-sso",
+    "temporaryCredentialsVerified": true,
+    "sessionTokenPresent": true,
+    "administratorAccessProbeDenied": true
+  },
+  "key": {
+    "keyId": "d303900a-4089-437c-82f5-fa1f926a83bb",
+    "arn": "arn:aws:kms:us-east-1:661452835066:key/d303900a-4089-437c-82f5-fa1f926a83bb",
+    "keySpec": "ECC_NIST_EDWARDS25519",
+    "keyUsage": "SIGN_VERIFY",
+    "origin": "AWS_KMS",
+    "keyManager": "CUSTOMER",
+    "multiRegion": false,
+    "aliases": [],
+    "grants": [],
+    "tags": {
+      "cleanup-intent": "schedule-deletion-7-days",
+      "environment": "disposable",
+      "owner": "Shawn",
+      "purpose": "release-authority-conformance"
+    }
+  },
+  "cloudTrail": {
+    "createKey": {
+      "eventTime": "2026-07-26T16:20:58-04:00",
+      "requestId": "f00f6bbe-cb4c-4fbe-89c1-bce48d63f10f",
+      "principalType": "AssumedRole"
+    },
+    "acceptedSign": {
+      "eventTime": "2026-07-26T16:24:45-04:00",
+      "requestId": "44cba13a-a16f-499b-a638-b179d058dd8b",
+      "principalType": "AssumedRole",
+      "signingAlgorithm": "ED25519_SHA_512",
+      "messageType": "RAW"
+    },
+    "acceptedGetPublicKey": {
+      "eventTime": "2026-07-26T16:21:17-04:00",
+      "requestId": "34c64ff8-39aa-4525-b30d-8cce67df02be",
+      "principalType": "AssumedRole"
+    },
+    "acceptedVerify": {
+      "eventTime": "2026-07-26T16:24:45-04:00",
+      "requestId": "8d5ce2c4-39b0-48fb-bc8d-a3feab89bd35",
+      "principalType": "AssumedRole"
+    },
+    "disableKey": {
+      "eventTime": "2026-07-26T16:26:29-04:00",
+      "requestId": "a3214380-f039-4e5e-ad94-e61950cfef32",
+      "principalType": "AssumedRole"
+    },
+    "scheduleKeyDeletion": {
+      "eventTime": "2026-07-26T16:26:30-04:00",
+      "requestId": "30ff958d-626f-449a-9b97-12bcec5dd49d",
+      "principalType": "AssumedRole"
+    }
+  },
+  "cleanup": {
+    "enabled": false,
+    "keyState": "PendingDeletion",
+    "pendingWindowInDays": 7,
+    "deletionDate": "2026-08-02T16:26:30.191000-04:00",
+    "aliasesAfterCleanup": [],
+    "grantsAfterCleanup": []
+  },
+  "productionTrustActivated": false,
+  "productionKeyCreated": false
+}

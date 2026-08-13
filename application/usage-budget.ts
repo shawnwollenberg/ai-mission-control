@@ -22,6 +22,10 @@ export async function recordUsage(input: {
   scheduleId?: string;
   templateId?: string;
   templateVersion?: number;
+  participantAssignmentId?: string;
+  assignmentRole?: string;
+  planningPhase?: string;
+  executionAttempt?: number;
   provider: string;
   runtime?: string;
   model?: string;
@@ -73,7 +77,7 @@ export async function applyUsageProjection(client: PoolClient, events: DomainEve
   for (const event of events)
     if (event.eventType === "usage.recorded")
       await client.query(
-        `INSERT INTO usage_records(workspace_id,usage_record_id,mission_id,task_id,execution_id,agent_id,schedule_id,template_id,template_version,provider,runtime,model,metric_type,quantity,unit,cost_amount,currency,cost_confidence,source,repository,domain,recorded_at,last_event_position) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23) ON CONFLICT(workspace_id,usage_record_id) DO NOTHING`,
+        `INSERT INTO usage_records(workspace_id,usage_record_id,mission_id,task_id,execution_id,agent_id,schedule_id,template_id,template_version,provider,runtime,model,metric_type,quantity,unit,cost_amount,currency,cost_confidence,source,repository,domain,recorded_at,last_event_position,participant_assignment_id,assignment_role,planning_phase,execution_attempt) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27) ON CONFLICT(workspace_id,usage_record_id) DO NOTHING`,
         [
           event.workspaceId,
           event.aggregateId,
@@ -98,6 +102,10 @@ export async function applyUsageProjection(client: PoolClient, events: DomainEve
           event.payload.domain,
           event.payload.recordedAt,
           event.position,
+          event.payload.participantAssignmentId,
+          event.payload.assignmentRole,
+          event.payload.planningPhase,
+          event.payload.executionAttempt,
         ],
       );
 }

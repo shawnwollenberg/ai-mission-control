@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "1",
+  "keyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+  "admin": {
+    "sessionArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1/wallyweb-sso",
+    "principalArn": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1",
+    "policyInspection": "allowed",
+    "policyUpdate": "allowed",
+    "sign": "explicitly-denied"
+  },
+  "signer": {
+    "sessionArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+    "principalArn": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d",
+    "describeKey": "allowed",
+    "getPublicKey": "allowed",
+    "signRawEd25519Sha512": "allowed",
+    "verifyRawEd25519Sha512": "allowed",
+    "getKeyPolicy": "explicitly-denied",
+    "listGrants": "explicitly-denied",
+    "prehashSigningAlgorithm": "denied",
+    "unrelatedIamAccess": "explicitly-denied",
+    "createGrant": "explicitly-denied-by-identity-and-key-policy",
+    "putKeyPolicy": "explicitly-denied-by-identity-and-key-policy",
+    "disableKey": "explicitly-denied-by-identity-and-key-policy",
+    "enableKey": "explicitly-denied-by-identity-and-key-policy",
+    "scheduleKeyDeletion": "explicitly-denied-by-identity-and-key-policy",
+    "tagResource": "explicitly-denied-by-identity-and-key-policy"
+  },
+  "effectivePolicy": {
+    "hashMethod": "SHA-256 of UTF-8 bytes emitted by jq -cS . (recursive object-key sorting, compact JSON, trailing newline retained)",
+    "reviewedSha256": "4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7",
+    "effectiveSha256": "4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7",
+    "match": true,
+    "resourceTagRestrictionsEnforcedByIdentityPolicy": true,
+    "keyPolicyResourceIsOwningKeyOnly": true
+  },
+  "nonReleaseValidation": {
+    "messagePath": "release/aws-kms/production-key/non-release-signer-validation-message.txt",
+    "messageSha256": "389f12f9d95ca58b6b7966f045076adbcb5514026c9d2e9c40c1f3532972ae5c",
+    "signatureSha256": "a25c4b32c4e9b124700f70b606db315d5a2962fd9de65bf0f158a99e466e9660",
+    "signatureBytes": 64,
+    "signingAlgorithm": "ED25519_SHA_512",
+    "messageType": "RAW",
+    "kmsVerification": true,
+    "isReleaseManifest": false,
+    "isTrustActivation": false
+  },
+  "cloudTrail": {
+    "putKeyPolicy": {
+      "eventTime": "2026-07-26T17:18:29-04:00",
+      "requestId": "9b2659dd-159d-46c0-b1eb-43d48eff7eaa"
+    },
+    "sign": {
+      "eventTime": "2026-07-26T17:19:21-04:00",
+      "requestId": "353254b7-8614-43fc-9fdc-0ccfb85aa558",
+      "principalArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+      "signingAlgorithm": "ED25519_SHA_512",
+      "messageType": "RAW"
+    },
+    "verify": {
+      "eventTime": "2026-07-26T17:19:21-04:00",
+      "requestId": "a27bc698-7365-49d8-a1b4-811d2f03b99f"
+    }
+  },
+  "releaseState": {
+    "trustStatus": "pending",
+    "missionAgent070ManifestSigned": false,
+    "published": false,
+    "deployed": false
+  }
+}

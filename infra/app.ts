@@ -13,7 +13,13 @@ const stage = app.node.tryGetContext("stage") ?? "app";
 if (stage === "registry") {
   new MissionControlRegistryStack(app, "MissionControlRegistry", { env });
 } else {
-  const imageTag = app.node.tryGetContext("imageTag");
-  if (!imageTag) throw new Error("Pass -c imageTag=<git-sha> when deploying the application stack");
-  new MissionControlAppStack(app, "MissionControlProduction", { env, imageTag });
+  const webImageDigest = app.node.tryGetContext("webImageDigest");
+  const projectBrainImageDigest = app.node.tryGetContext("projectBrainImageDigest");
+  if (!webImageDigest || !projectBrainImageDigest)
+    throw new Error("Pass -c webImageDigest=sha256:<digest> and -c projectBrainImageDigest=sha256:<digest>");
+  new MissionControlAppStack(app, "MissionControlProduction", {
+    env,
+    webImageDigest,
+    projectBrainImageDigest,
+  });
 }

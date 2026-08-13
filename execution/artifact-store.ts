@@ -3,6 +3,7 @@ import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getDatabasePool } from "@/lib/database";
+import { stableUuid } from "@/lib/stable-id";
 
 type ArtifactRow = { storage_provider: string; storage_key: string; checksum_sha256: string; [key: string]: unknown };
 const artifactProvider = () => process.env.ARTIFACT_STORAGE_PROVIDER ?? "local";
@@ -30,12 +31,45 @@ export async function storeExecutionArtifact(input: {
   body: string | Buffer;
   metadata?: Record<string, unknown>;
   maxBytes?: number;
+  idempotencyKey?: string;
 }) {
   const provider = artifactProvider();
   if (process.env.APP_ENV === "production" && provider !== "s3")
     throw new Error("Production artifacts require object storage");
   const body = Buffer.isBuffer(input.body) ? input.body : Buffer.from(input.body);
   const bytes = new Uint8Array(body);
+  const checksum = createHash("sha256").update(bytes).digest("hex");
+  const artifactId = input.idempotencyKey
+    ? stableUuid(`execution-artifact:${input.workspaceId}:${input.executionId}:${input.idempotencyKey}`)
+    : randomUUID();
+  const existing = (
+    await getDatabasePool().query<{
+      artifact_id: string;
+      kind: string;
+      byte_size: number;
+      checksum_sha256: string;
+      storage_key: string;
+    }>(
+      `SELECT artifact_id,kind,byte_size,checksum_sha256,storage_key FROM artifacts
+       WHERE workspace_id=$1 AND artifact_id=$2 AND deleted_at IS NULL`,
+      [input.workspaceId, artifactId],
+    )
+  ).rows[0];
+  if (existing) {
+    if (
+      existing.kind !== input.kind ||
+      Number(existing.byte_size) !== body.byteLength ||
+      existing.checksum_sha256 !== checksum
+    )
+      throw new Error("Artifact idempotency key was reused with different content");
+    return {
+      artifactId: existing.artifact_id,
+      kind: existing.kind,
+      byteSize: Number(existing.byte_size),
+      checksum: existing.checksum_sha256,
+      storageKey: existing.storage_key,
+    };
+  }
   const budget = (
     await getDatabasePool().query(
       `SELECT COALESCE(sum(a.byte_size),0)::bigint used,r.execution_budget FROM execution_projections e JOIN repositories r ON r.workspace_id=e.workspace_id AND r.repository_id=e.repository_id LEFT JOIN artifacts a ON a.workspace_id=e.workspace_id AND a.execution_id=e.execution_id AND a.deleted_at IS NULL WHERE e.workspace_id=$1 AND e.execution_id=$2 GROUP BY r.execution_budget`,
@@ -46,8 +80,6 @@ export async function storeExecutionArtifact(input: {
     used = Number(budget?.used ?? 0);
   if (body.byteLength > maximum || used + body.byteLength > maximum)
     throw new Error("Artifact exceeds configured execution limit");
-  const artifactId = randomUUID(),
-    checksum = createHash("sha256").update(bytes).digest("hex");
   const storageKey = `${process.env.APP_ENV ?? "local"}/${input.workspaceId}/${input.executionId}/${artifactId}.artifact`;
   if (provider === "s3") {
     if (!process.env.ARTIFACT_S3_BUCKET) throw new Error("ARTIFACT_S3_BUCKET is required");
@@ -67,7 +99,14 @@ export async function storeExecutionArtifact(input: {
     const root = await realpath(process.env.ARTIFACT_STORAGE_ROOT),
       target = path.join(root, storageKey);
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, bytes, { flag: "wx" });
+    try {
+      await writeFile(target, bytes, { flag: "wx" });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      const persisted = await readFile(target);
+      if (createHash("sha256").update(new Uint8Array(persisted)).digest("hex") !== checksum)
+        throw new Error("Artifact storage key already contains different bytes");
+    }
   }
   await getDatabasePool().query(
     `INSERT INTO artifacts(workspace_id,artifact_id,mission_id,task_id,execution_id,kind,media_type,byte_size,checksum_sha256,storage_provider,storage_key,provenance,metadata) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'live',$12)`,

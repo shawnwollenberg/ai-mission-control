@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1",
+  "version": "0.7.1",
+  "sourceCommit": "3227a1210462d2e4061d5e04fdcfc9f8fe6218cd",
+  "builds": 2,
+  "cleanDetachedWorktrees": true,
+  "nodeVersion": "22.22.0",
+  "firstArtifactSha256": "279365e5d1bcd18ce9bd8ac84d4b7e512cd3ff2f7f559e9892cd6fda3bf17803",
+  "secondArtifactSha256": "279365e5d1bcd18ce9bd8ac84d4b7e512cd3ff2f7f559e9892cd6fda3bf17803",
+  "firstArtifactBytes": 136520,
+  "secondArtifactBytes": 136520,
+  "byteIdentical": true,
+  "result": "passed"
+}

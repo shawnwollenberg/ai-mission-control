@@ -31,6 +31,13 @@ Sensitive effects are represented by a vendor-neutral Action Request aggregate. 
 
 ### Phase 4 authenticated remote-agent decision — 2026-07-18
 
+Repository identity upgrades are explicit governed operations. Legacy
+commit-bound identities and stable remote/name identities are versioned and
+retained together; the existing repository ID and authority relationships are
+never replaced. Preview, exact owner approval, independent agent/server
+derivation, completion, replay, and rollback are canonical events. See
+`docs/MISSION_AGENT_REPOSITORY_IDENTITY_MIGRATION.md`.
+
 Remote runtimes use protocol 1.0 through a generic HTTP adapter. Per-agent versioned HMAC credentials are hashed at rest; their secret is returned only at creation/rotation. Every transport request binds method, path, timestamp, nonce, message ID, body checksum, and protocol version. Canonical execution commands remain authoritative; delivery acknowledgement is not execution acceptance. A transactional outbox, bounded delivery worker, authenticated single callback endpoint, durable idempotency/replay records, checksummed artifact store, and deterministic health/capability filters support Hermes without runtime-specific coordinator branches. The first integration is a small restart-safe Hermes bridge process, not Discord. Full decisions are in `docs/PHASE_4_REMOTE_AGENTS.md`.
 
 ### Phase 5 daily-operations decision — 2026-07-19

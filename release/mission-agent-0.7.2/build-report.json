@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1",
+  "version": "0.7.2",
+  "sourceCommit": "31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
+  "artifactPath": "public/mission-agent-0.7.2.mjs",
+  "artifactByteLength": 148063,
+  "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+  "buildCommand": "node scripts/build-mission-agent-072.mjs --source-commit 31b45c98f2ffba613b56cd23819ba8b0c9c09a43 --output public/mission-agent-0.7.2.mjs",
+  "nodeVersion": "22.22.0",
+  "containerImage": "node:22.22.0-bookworm",
+  "containerImageDigest": "node@sha256:20a424ecd1d2064a44e12fe287bf3dae443aab31dc5e0c0cb6c74bef9c78911c",
+  "builderSha256": "4a3e9b186f60cf2d6f9c6b34582a6c6898d5819df2522c71855a0d97ecad333b",
+  "packageLockSha256": "b280c5b76c590b613fb82b3ceda4e323efaabcbbbc432fcc605d56b23856a1ea",
+  "manifestVersion": "3",
+  "releaseAuthorityVersion": "v2",
+  "canonicalizationVersion": "release-manifest-json-v3",
+  "signingStatus": "unsigned"
+}

@@ -1,0 +1,66 @@
+{
+  "evidenceVersion": "1",
+  "releaseVersion": "0.7.2",
+  "artifact": {
+    "path": "public/mission-agent-0.7.2.mjs",
+    "byteLength": 148063,
+    "sha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+    "sourceCommit": "31b45c98f2ffba613b56cd23819ba8b0c9c09a43"
+  },
+  "manifest": {
+    "path": "release/mission-agent-0.7.2/unsigned-manifest-v3.json",
+    "version": "3",
+    "releaseAuthorityVersion": "v2",
+    "canonicalizationVersion": "release-manifest-json-v3",
+    "byteLength": 1386,
+    "sha256": "b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace",
+    "trailingNewline": false
+  },
+  "signature": {
+    "encoding": "base64",
+    "value": "1OSpJnBTL/jupeLi2xMCEY+xZGRUdRE665k95By8mfpwf+NzH3kNY4oDs0ZAwNWkazvvnbbZGQzxAgFbjALwBw==",
+    "byteLength": 64,
+    "sha256": "4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583"
+  },
+  "trust": {
+    "releaseAuthorityKeyId": "mission-agent-release-2026-01",
+    "kmsKeyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+    "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+    "pendingRecordSha256": "91e8774f38bb64b4715169928fec4fe4a03ca861c687241795c93e706a3f7b6b",
+    "activeRecordSha256": "8bdc37c0030136e2d9339d87c0ca506d2cb41310fe1d5bc003ecffc4acd64fba",
+    "keyPolicySha256": "4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7"
+  },
+  "signing": {
+    "algorithm": "ED25519_SHA_512",
+    "messageType": "RAW",
+    "signRequestId": "6fb8434a-668a-46d0-a883-e55a5edb810b",
+    "verifyRequestId": "54e4158f-c01c-40c0-8293-1059f2cc8eeb",
+    "signerSessionArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+    "signerPrincipalArn": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d",
+    "signingTime": "2026-07-27T17:02:28.756Z"
+  },
+  "verification": {
+    "awsKms": "passed",
+    "standaloneEd25519": "passed",
+    "missionControlReleaseAuthority": "passed",
+    "missionControlOperationalSelection": "passed",
+    "missionAgent072Verifier": "passed",
+    "missionAgent072DefaultUpdater": "passed",
+    "immutableTrustEnabledReleaseSha": "6894601268a6571143f6cc9fd5a3667e31507403"
+  },
+  "cloudTrail": {
+    "lookupStatus": "verified",
+    "auditorPermissionSet": "MissionAgentReleaseAuditor",
+    "correlationEvidence": "release/mission-agent-0.7.2/cloudtrail-correlation.json",
+    "unexpectedSignEventsInCeremonyWindow": 0
+  },
+  "custody": {
+    "privateKeyNonExportable": true,
+    "privateMaterialWrittenLocally": false,
+    "credentialsOrTokensRecorded": false,
+    "signerCanAdminister": false,
+    "administratorCanSign": false
+  },
+  "publicationStatus": "blocked",
+  "deploymentStatus": "blocked"
+}

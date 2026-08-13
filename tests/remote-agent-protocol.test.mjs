@@ -8,6 +8,12 @@ import {
   signProtocolRequest,
   validateEnvelope,
 } from "../remote-agent/protocol.ts";
+import { rateCategory } from "../remote-agent/security.ts";
+
+test("agent and execution heartbeats have independent rate-limit categories", () => {
+  assert.equal(rateCategory({ messageType: "AgentHeartbeat" }), "agent_heartbeat");
+  assert.equal(rateCategory({ messageType: "ExecutionHeartbeat" }), "execution_heartbeat");
+});
 
 test("protocol signature binds every required transport field", () => {
   const key = deriveSigningKey("one-time-agent-secret");
@@ -47,6 +53,16 @@ test("protocol envelope rejects unknown fields and identity mismatch", () => {
     /unsupported fields/,
   );
   assert.throws(() => validateEnvelope(valid, { agentId: randomUUID(), workspaceId, messageId }), /identity mismatch/);
+  assert.throws(
+    () =>
+      validateEnvelope(valid, {
+        agentId,
+        workspaceId,
+        messageId,
+        sentAt: "2027-07-18T12:00:00.000Z",
+      }),
+    /timestamp does not match/,
+  );
 });
 
 test("execution messages require complete correlation fields", () => {

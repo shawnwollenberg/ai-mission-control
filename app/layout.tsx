@@ -14,9 +14,17 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const disposable = process.env.APP_ENV === "disposable_acceptance";
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {disposable ? (
+          <div className="disposable-acceptance-banner" role="status">
+            DISPOSABLE ACCEPTANCE — NON-PRODUCTION — NO RELEASE OR DEPLOYMENT AUTHORITY
+          </div>
+        ) : null}
+        {children}
+      </body>
     </html>
   );
 }

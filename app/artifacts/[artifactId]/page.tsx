@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { notFound } from "next/navigation";
 import { requirePageIdentity } from "@/lib/page-auth";
 import { readExecutionArtifact } from "@/execution/artifact-store";
@@ -16,14 +17,7 @@ export default async function ArtifactPage({ params }: { params: Promise<{ artif
     .replace(/[A-Za-z]:\\Users\\[^)\s]+\\mission-control(?=\\|[)\s])/g, "[repository]");
   return (
     <main className="archive-shell">
-      <nav className="brandbar">
-        <Link className="nav-link" href={`/missions/${metadata.mission_id}`}>
-          ← Mission
-        </Link>
-        <Link className="nav-link" href="/missions">
-          Mission archive
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Execution artifact" />
       <header className="archive-header">
         <div>
           <p className="section-label">Live execution artifact</p>
@@ -32,6 +26,9 @@ export default async function ArtifactPage({ params }: { params: Promise<{ artif
             {String((metadata.metadata as Record<string, unknown>)?.description ?? "Verified Mission Control artifact")}
           </p>
         </div>
+        <Link className="primary-link" href={`/missions/${metadata.mission_id}`}>
+          ← Source mission
+        </Link>
       </header>
       <section className="panel">
         <p className="section-label">

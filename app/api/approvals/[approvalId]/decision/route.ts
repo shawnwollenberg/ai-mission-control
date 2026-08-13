@@ -5,6 +5,7 @@ import { apiErrorResponse } from "@/lib/http-errors";
 import { getDatabasePool } from "@/lib/database";
 import { resolveActionApproval } from "@/application/action-commands";
 import { decideApproval } from "@/application/approval-commands";
+import { ValidationFailedError } from "@/lib/application-errors";
 export async function POST(request: Request, { params }: { params: Promise<{ approvalId: string }> }) {
   const origin = requireMutationOrigin(request);
   if (origin) return origin;
@@ -26,7 +27,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ app
       });
       return NextResponse.json({ applied });
     }
-    if (actionApproval.rows[0]?.approval_type === "remote_workflow") {
+    if (["remote_workflow", "consensus_plan"].includes(actionApproval.rows[0]?.approval_type)) {
+      if (actionApproval.rows[0]?.approval_type === "consensus_plan" && identity.role !== "owner")
+        throw new ValidationFailedError("Workspace owner permission is required for consensus-plan approval");
       const result = await decideApproval({
         workspaceId: identity.workspaceId,
         approvalId,

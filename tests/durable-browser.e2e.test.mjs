@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
-import { chmod, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -254,15 +254,29 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     assert.equal(response.status, 201);
     const connection = await response.json();
     assert.equal(connection.agentName, "My Computer – Codex");
-    assert.match(connection.command, /mission-agent-0\.5\.0\.mjs/);
-    assert.match(connection.command, /tmp_dir\/mission-agent-0\.5\.0\.mjs/);
+    assert.match(connection.command, /mission-agent-0\.7\.2\.mjs/);
+    assert.match(connection.command, /tmp_dir\/mission-agent-0\.7\.2\.mjs/);
+    assert.match(connection.command, /108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09/);
     assert.match(connection.command, /shasum -a 256 -c/);
     const encoded = connection.command.match(/ connect '([^']+)'$/)?.[1];
     assert.ok(encoded);
     const directory = await mkdtemp(join(tmpdir(), "mc-e2e-mission-agent-"));
+    const repositoryFixtureId = crypto.randomUUID();
+    const repositoryName = `mission-control-${repositoryFixtureId}`;
+    const repositoryRoot = join(directory, repositoryName);
+    await mkdir(repositoryRoot);
+    await run("git", ["init", "-b", "main"], { cwd: repositoryRoot });
+    await run("git", ["config", "user.email", "e2e@example.invalid"], { cwd: repositoryRoot });
+    await run("git", ["config", "user.name", "Mission Control E2E"], { cwd: repositoryRoot });
+    await writeFile(join(repositoryRoot, "README.md"), "# Mission Control E2E\n");
+    await run("git", ["add", "README.md"], { cwd: repositoryRoot });
+    await run("git", ["commit", "-m", "fixture"], { cwd: repositoryRoot });
+    await run("git", ["remote", "add", "origin", `https://github.com/example/${repositoryName}.git`], {
+      cwd: repositoryRoot,
+    });
     await run(
       process.execPath,
-      ["public/mission-agent-0.1.1.mjs", "connect", encoded, "--repository", process.cwd(), "--no-start"],
+      ["public/mission-agent-0.7.2.mjs", "connect", encoded, "--repository", repositoryRoot, "--no-start"],
       { env: { ...process.env, MISSION_AGENT_HOME: directory, MISSION_AGENT_SECRET_STORE: "file" } },
     );
 
@@ -272,11 +286,11 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     const connected = agents.find((agent) => agent.agent_id === connection.agentId);
     assert.ok(connected.last_heartbeat_at);
     assert.ok(connected.pull_ready_at);
-    assert.equal(connected.mission_agent_version, "0.1.1");
+    assert.equal(connected.mission_agent_version, "0.7.2");
     assert.equal(connected.credential_status, "active");
 
     const stored = JSON.parse(await readFile(join(directory, "config.json"), "utf8"));
-    assert.match(await readFile(join(directory, "mission-agent-0.1.1.mjs"), "utf8"), /^#!\/usr\/bin\/env node/);
+    assert.match(await readFile(join(directory, "mission-agent-0.7.2.mjs"), "utf8"), /^#!\/usr\/bin\/env node/);
     const repositoryId = Object.keys(stored.repositories)[0];
     assert.ok(repositoryId);
     const firstMissionPage = await fetch(`${origin}/`, {
@@ -287,7 +301,11 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     const launched = await fetch(`${origin}/api/onboarding/first-mission`, {
       method: "POST",
       headers: browserHeaders(cookie, { "content-type": "application/json", "idempotency-key": crypto.randomUUID() }),
-      body: JSON.stringify({ agentId: connection.agentId, repositoryId }),
+      body: JSON.stringify({
+        agentId: connection.agentId,
+        repositoryId,
+        objective: "Verify the FP1 production repository-registration and terminal mission lifecycle",
+      }),
     });
     assert.equal(launched.status, 201);
     const mission = await launched.json();
@@ -299,12 +317,12 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
       const fakeCodex = join(bin, "codex");
       await writeFile(
         fakeCodex,
-        `#!/bin/sh\nif [ "$1" = "--version" ]; then echo 'codex-test 1.0'; exit 0; fi\nwhile [ "$#" -gt 0 ]; do if [ "$1" = "-o" ]; then shift; output="$1"; fi; shift; done\nprintf '%s\\n' '# Repository analysis' '## Repository overview' 'A test repository.' '## Main technologies' 'Node.js.' '## Application structure' 'Application and tests.' '## Important commands' 'npm test.' '## Test setup' 'Node test runner.' '## Notable risks' 'Review dependencies.' '## Suggested next mission' 'Run the full validation suite.' > "$output"\n`,
+        `#!/bin/sh\nif [ "$1" = "--version" ]; then echo 'codex-test 1.0'; exit 0; fi\nwhile [ "$#" -gt 0 ]; do if [ "$1" = "-o" ]; then shift; output="$1"; fi; shift; done\ncase "$output" in\n  *recommendations-*) printf '%s\\n' '{"recommendations":[{"title":"Validate the fixture","description":"Run the repository test command.","reasoning":"The fixture documents its test entrypoint.","evidence":[{"path":"README.md","line":1,"description":"Fixture root"}],"estimatedImpact":"low","estimatedRisk":"low","estimatedEffort":"small","suggestedValidation":["npm test"],"acceptanceCriteria":["The test suite passes."]}],"observations":[{"dimension":"architecture","status":"unknown","severity":"low","summary":"Not enough fixture evidence.","evidence":[]},{"dimension":"tests","status":"unknown","severity":"low","summary":"Not enough fixture evidence.","evidence":[]},{"dimension":"security","status":"unknown","severity":"low","summary":"Not enough fixture evidence.","evidence":[]},{"dimension":"technical_debt","status":"unknown","severity":"low","summary":"Not enough fixture evidence.","evidence":[]},{"dimension":"documentation","status":"unknown","severity":"low","summary":"Not enough fixture evidence.","evidence":[]},{"dimension":"dependencies","status":"unknown","severity":"low","summary":"Not enough fixture evidence.","evidence":[]},{"dimension":"ci","status":"unknown","severity":"low","summary":"Not enough fixture evidence.","evidence":[]}]}' > "$output" ;;\n  *) printf '%s\\n' '# Repository analysis' '## Repository overview' 'A test repository.' '## Main technologies' 'Node.js.' '## Application structure' 'Application and tests.' '## Important commands' 'npm test.' '## Test setup' 'Node test runner.' '## Notable risks' 'Review dependencies.' '## Suggested next mission' 'Run the full validation suite.' > "$output" ;;\nesac\n`,
       );
       await chmod(fakeCodex, 0o700);
       agentPath = `${bin}:${process.env.PATH}`;
     }
-    await run(process.execPath, ["public/mission-agent-0.1.1.mjs", "run", "--once"], {
+    await run(process.execPath, ["public/mission-agent-0.7.2.mjs", "run", "--once"], {
       env: {
         ...process.env,
         PATH: agentPath,

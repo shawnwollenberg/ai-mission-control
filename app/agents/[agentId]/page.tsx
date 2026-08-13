@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { getAgentDetail } from "@/application/registry";
 import { requirePageIdentity } from "@/lib/page-auth";
 import CredentialControls from "./credential-controls";
@@ -12,23 +13,19 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
     await getAgentDetail(identity.workspaceId, (await params).agentId);
   return (
     <main className="durable-mission-shell">
-      <nav className="brandbar">
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Agent detail</p>
-        </div>
-        <Link className="nav-link" href="/agents">
-          Agent registry
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Agent detail" />
       <header className="mission-header compact">
         <div>
           <p className="section-label">
-            {agent.adapter_type === "codex"
-              ? "Live Codex agent"
-              : agent.adapter_type === "remote_http"
-                ? "Live Hermes agent"
-                : "Simulated agent"}
+            {agent.provider_id === "codex"
+              ? "Live Codex provider agent"
+              : agent.provider_id === "claude_code"
+                ? "Live Claude Code provider agent"
+                : agent.provider_id === "hermes"
+                  ? "Live Hermes provider agent"
+                  : agent.provider_id === "generic"
+                    ? "Live generic remote agent"
+                    : "Simulated agent"}
           </p>
           <h1>{agent.name}</h1>
           <p>{agent.description || "No description provided."}</p>
@@ -42,6 +39,29 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
             Concurrency: {agent.current_execution_count}/{agent.concurrency_limit}
           </p>
           <p>Trust level: {agent.trust_level}</p>
+          {agent.provider_id && (
+            <>
+              <p>
+                Provider: {agent.provider_id} · Agent version: {agent.agent_version ?? "unreported"}
+              </p>
+              <p>
+                Consensus runtime contract: {agent.provider_runtime_requirements_id ?? "missing"} · Heartbeat probe:{" "}
+                {agent.provider_runtime_requirements_satisfied ? "satisfied (not provider-attested)" : "not satisfied"}
+              </p>
+              {agent.provider_runtime_status && Object.keys(agent.provider_runtime_status).length > 0 && (
+                <p>
+                  Platform: {agent.provider_runtime_status.platform ?? "unreported"} · Executable:{" "}
+                  {agent.provider_runtime_status.executableAvailable ? "available" : "unavailable"} · Auth:{" "}
+                  {agent.provider_runtime_status.authenticationAvailable ? "available" : "unavailable"} · Isolation:{" "}
+                  {agent.provider_runtime_status.isolationAvailable
+                    ? agent.provider_runtime_status.isolationMechanism
+                    : "unavailable"}{" "}
+                  · Model selection: {agent.provider_runtime_status.modelSelectionMechanism ?? "unreported"} · Runtime
+                  identity: {agent.provider_runtime_status.runtimeModelIdentity ?? "unreported"}
+                </p>
+              )}
+            </>
+          )}
           {agent.adapter_type === "remote_http" && (
             <>
               <p>Protocol: {(agent.protocol_versions ?? []).join(", ")}</p>

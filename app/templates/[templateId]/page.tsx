@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { notFound } from "next/navigation";
 import { requirePageIdentity } from "@/lib/page-auth";
 import { getDatabasePool } from "@/lib/database";
@@ -28,14 +28,7 @@ export default async function TemplateDetail({
   ).rows;
   return (
     <main className="archive-shell">
-      <nav className="brandbar">
-        <Link className="nav-link" href="/templates">
-          Templates
-        </Link>
-        <Link className="nav-link" href="/schedules">
-          Schedules
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Mission template" />
       <header className="archive-header">
         <div>
           <p className="section-label">

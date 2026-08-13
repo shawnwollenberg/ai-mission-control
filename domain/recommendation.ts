@@ -12,11 +12,30 @@ export type RecommendationState = {
 const transitions: Record<RecommendationStatus, RecommendationStatus[]> = {
   open: ["accepted", "in_progress", "stale", "dismissed"],
   accepted: ["in_progress", "stale", "dismissed"],
-  in_progress: ["completed", "stale", "dismissed"],
-  completed: [],
+  // A terminal linked mission may be retried while the recommendation remains
+  // in progress. The new status event preserves the replacement mission link.
+  in_progress: ["in_progress", "completed", "stale", "dismissed"],
+  // A completed recommendation can produce a follow-up mission when its local
+  // change succeeded but publication evidence must be regenerated.
+  completed: ["in_progress"],
   stale: [],
   dismissed: [],
 };
+
+const recommendationValidationCommand = /^(npm|pnpm|yarn|bun|npx|node|go|cargo|pytest)( [A-Za-z0-9_./:@=,+-]+)*$/;
+const packageLifecycleScripts = new Set(["preinstall", "install", "postinstall", "prepare", "prepublish", "publish"]);
+
+export function assertSafeRecommendationValidation(command: string) {
+  const parts = command.split(/\s+/);
+  if (
+    !recommendationValidationCommand.test(command) ||
+    parts.some((part) => part.includes("..") && part !== "./...") ||
+    (["npm", "pnpm", "yarn", "bun"].includes(parts[0]) && parts[1] === "run" && packageLifecycleScripts.has(parts[2]))
+  )
+    throw new ValidationFailedError(
+      "Recommendation validation command is not allowed. Use one direct supported executable with simple repository-local arguments; inline code and shell operators are prohibited.",
+    );
+}
 
 export function createRecommendation(input: {
   repositoryId: string;
@@ -38,15 +57,7 @@ export function createRecommendation(input: {
   if (!input.evidence.length) throw new ValidationFailedError("Recommendation evidence is required");
   if (!input.acceptanceCriteria.length)
     throw new ValidationFailedError("Recommendation acceptance criteria are required");
-  const allowedValidation = /^(npm|pnpm|yarn|bun|npx|node|go|cargo|pytest)( [A-Za-z0-9_./:@=,+-]+)*$/;
-  if (
-    input.suggestedValidation.some(
-      (command) =>
-        !allowedValidation.test(command) ||
-        command.split(/\s+/).some((part) => part.includes("..") && part !== "./..."),
-    )
-  )
-    throw new ValidationFailedError("Recommendation validation command is not allowed");
+  input.suggestedValidation.forEach(assertSafeRecommendationValidation);
   return { eventType: "recommendation.created", eventSchemaVersion: 1, payload: { ...input, status: "open" } };
 }
 

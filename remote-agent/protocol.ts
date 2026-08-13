@@ -25,8 +25,23 @@ export const inboundMessageTypes = [
   "AgentApprovalStatusChecked",
   "AgentRepositoryRegistered",
   "AgentRepositoryRemoved",
+  "RepositoryIdentityMigrationPreviewed",
+  "RepositoryIdentityMigrationCompleted",
+  "RepositoryIdentityMigrationStatusChecked",
+  "RepositoryIdentityActivationRequested",
+  "RepositoryIdentityActivationAcknowledged",
   "AgentPublicationPullRequested",
   "AgentPublicationPushCompleted",
+  "AgentPublicationFailed",
+  "AgentProjectBrainPullRequested",
+  "AgentProjectBrainAssignmentAcknowledged",
+  "AgentProjectBrainLeaseRenewed",
+  "AgentProjectBrainReauthorizationRequested",
+  "RemoteProjectBrainOperationAccepted",
+  "RemoteProjectBrainOperationStarted",
+  "RemoteProjectBrainOperationDenied",
+  "RemoteProjectBrainOperationSucceeded",
+  "RemoteProjectBrainOperationFailed",
 ] as const;
 export const outboundMessageTypes = [
   "ExecutionRequested",
@@ -37,6 +52,7 @@ export const outboundMessageTypes = [
   "ApprovalExpired",
   "ApprovalCancelled",
   "AgentConfigurationChanged",
+  "RemoteProjectBrainOperationRequested",
 ] as const;
 export type InboundMessageType = (typeof inboundMessageTypes)[number];
 export type OutboundMessageType = (typeof outboundMessageTypes)[number];
@@ -124,7 +140,7 @@ export function parseProtocolHeaders(request: Request): ProtocolHeaders {
 }
 export function validateEnvelope(
   value: unknown,
-  expected: { agentId: string; workspaceId: string; messageId: string },
+  expected: { agentId: string; workspaceId: string; messageId: string; sentAt?: string },
 ): ProtocolEnvelope {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new ValidationFailedError("Protocol body must be an object");
@@ -160,6 +176,8 @@ export function validateEnvelope(
     body.messageId !== expected.messageId
   )
     throw new ValidationFailedError("Protocol identity mismatch");
+  if (expected.sentAt !== undefined && body.sentAt !== expected.sentAt)
+    throw new ValidationFailedError("Protocol envelope timestamp does not match the authenticated timestamp");
   if (
     typeof body.idempotencyKey !== "string" ||
     body.idempotencyKey.length < 1 ||

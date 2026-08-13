@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { requirePageIdentity } from "@/lib/page-auth";
 import { getDatabasePool } from "@/lib/database";
 import { NOTIFICATION_CATEGORIES } from "@/application/notification-preferences";
@@ -19,14 +20,7 @@ export default async function NotificationsPage() {
   ).rows[0];
   return (
     <main className="archive-shell">
-      <nav className="brandbar">
-        <Link className="nav-link" href="/schedules">
-          Schedules
-        </Link>
-        <Link className="nav-link" href="/missions">
-          Missions
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Notifications" />
       <header className="archive-header">
         <div>
           <p className="section-label">Notification center</p>

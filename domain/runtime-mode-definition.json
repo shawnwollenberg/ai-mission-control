@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "mission-control-runtime-modes/1",
+  "modes": {
+    "local": { "releaseTrust": "production_signed_only", "productionResources": false },
+    "test": { "releaseTrust": "test_fixtures_only", "productionResources": false },
+    "production": { "releaseTrust": "production_signed_registry", "productionResources": true },
+    "disposable_acceptance": {
+      "releaseTrust": "operator_disposable_exact_checksum_registry",
+      "productionResources": false,
+      "operatorSelectionRequired": true,
+      "localhostInference": false,
+      "unsignedFallback": false
+    }
+  }
+}

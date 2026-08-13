@@ -1,0 +1,120 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowAccountRootBreakGlassAdministrationWithoutSigning",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::661452835066:root"
+      },
+      "Action": [
+        "kms:CancelKeyDeletion",
+        "kms:DescribeKey",
+        "kms:DisableKey",
+        "kms:EnableKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:GetPublicKey",
+        "kms:ListAliases",
+        "kms:ListGrants",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:UpdateKeyDescription",
+        "kms:Verify"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowExactIdentityCenterKeyAdministratorWithoutSigning",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1"
+      },
+      "Action": [
+        "kms:DescribeKey",
+        "kms:DisableKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:GetPublicKey",
+        "kms:ListAliases",
+        "kms:ListGrants",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:Verify"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowExactIdentityCenterSignerInspection",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d"
+      },
+      "Action": ["kms:DescribeKey", "kms:GetPublicKey"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowExactIdentityCenterSignerRawEd25519Signing",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d"
+      },
+      "Action": ["kms:Sign", "kms:Verify"],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:KeySpec": "ECC_NIST_EDWARDS25519",
+          "kms:KeyUsage": "SIGN_VERIFY",
+          "kms:KeyOrigin": "AWS_KMS",
+          "kms:SigningAlgorithm": "ED25519_SHA_512",
+          "kms:MessageType": "RAW"
+        },
+        "Bool": {
+          "kms:MultiRegion": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenySigningToEveryPrincipalExceptExactReleaseSigner",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "kms:Sign",
+      "Resource": "*",
+      "Condition": {
+        "ArnNotEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d"
+        }
+      }
+    },
+    {
+      "Sid": "DenySignerKeyAdministration",
+      "Effect": "Deny",
+      "Principal": {
+        "AWS": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d"
+      },
+      "Action": [
+        "kms:CancelKeyDeletion",
+        "kms:CreateGrant",
+        "kms:DisableKey",
+        "kms:EnableKey",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:UpdateKeyDescription"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyGrantCreationForEveryPrincipal",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "kms:CreateGrant",
+      "Resource": "*"
+    }
+  ]
+}

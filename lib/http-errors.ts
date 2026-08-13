@@ -14,23 +14,42 @@ const statuses = {
   database_unavailable: 503,
 } as const;
 
+type StructuralApplicationError = {
+  code: keyof typeof statuses;
+  message: string;
+  details?: Record<string, unknown>;
+};
+
+export const serializeApplicationError = (error: ApplicationError, correlationId: string) => ({
+  error: {
+    code: error.code,
+    message: error.message,
+    correlationId,
+    ...(error.details ? { details: error.details } : {}),
+  },
+});
+
+export function structuralApplicationErrorResponse(error: StructuralApplicationError, correlationId = randomUUID()) {
+  return NextResponse.json(
+    {
+      error: {
+        code: error.code,
+        message: error.message,
+        correlationId,
+        ...(error.details ? { details: error.details } : {}),
+      },
+    },
+    { status: statuses[error.code] },
+  );
+}
+
 export function apiErrorResponse(error: unknown, context: string) {
   const correlationId = randomUUID();
   if (error instanceof ApplicationError) {
     console.warn(
       JSON.stringify({ level: "warn", event: context, correlationId, code: error.code, details: error.details }),
     );
-    return NextResponse.json(
-      {
-        error: {
-          code: error.code,
-          message: error.message,
-          correlationId,
-          ...(error.details ? { details: error.details } : {}),
-        },
-      },
-      { status: statuses[error.code] },
-    );
+    return structuralApplicationErrorResponse(error, correlationId);
   }
   console.error(
     JSON.stringify({ level: "error", event: context, correlationId, message: "Unhandled application error" }),

@@ -1,0 +1,10 @@
+{
+  "evidenceVersion": "1",
+  "status": "active",
+  "releaseAuthorityKeyId": "mission-agent-release-2026-01",
+  "publicKeyFingerprint": "ed25519-spki-sha256:__SHA256_OF_DER_SPKI__",
+  "kmsKeyArn": "__KMS_KEY_ARN__",
+  "missionControlReleaseSha": "__DEPLOYED_TRUST_UPDATE_SHA__",
+  "activatedAt": "__CANONICAL_ACTIVATION_TIMESTAMP__",
+  "approvalReference": "__SEPARATE_TRUST_ACTIVATION_APPROVAL__"
+}

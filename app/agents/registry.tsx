@@ -14,7 +14,32 @@ type Agent = {
   effective_status?: string;
   credential_status?: string;
   supported_domains?: string[];
+  provider_id?: string;
+  agent_version?: string;
+  supported_mission_roles?: string[];
+  supported_operations?: string[];
+  supported_models?: string[];
+  provider_runtime_requirements_id?: string;
+  provider_runtime_requirements_hash?: string;
+  provider_runtime_requirements_satisfied?: boolean;
+  provider_runtime_status?: {
+    platform?: string;
+    providerVersion?: string | null;
+    executableAvailable?: boolean;
+    authenticationAvailable?: boolean;
+    isolationMechanism?: string;
+    isolationAvailable?: boolean;
+    modelSelectionMechanism?: string;
+    runtimeModelIdentity?: string;
+  };
 };
+function providerLabel(agent: Agent) {
+  if (agent.provider_id === "codex") return "Live Codex provider agent";
+  if (agent.provider_id === "claude_code") return "Live Claude Code provider agent";
+  if (agent.provider_id === "hermes") return "Live Hermes provider agent";
+  if (agent.provider_id === "generic") return "Live generic remote agent";
+  return agent.adapter_type === "mock" ? "Simulated agent" : "Connected provider agent";
+}
 export default function AgentRegistry({ initialAgents }: { initialAgents: Agent[] }) {
   const [agents, setAgents] = useState(initialAgents),
     [name, setName] = useState("Codex Worker"),
@@ -67,6 +92,10 @@ export default function AgentRegistry({ initialAgents }: { initialAgents: Agent[
       <section className="durable-grid">
         <section className="command-panel">
           <h2>Register agent</h2>
+          <p>
+            For a governed local provider, use guided onboarding: <Link href="/onboarding?agent=codex">Codex</Link> ·{" "}
+            <Link href="/onboarding?agent=claude_code">Claude Code</Link>
+          </p>
           <select value={adapterType} onChange={(event) => setAdapterType(event.target.value as typeof adapterType)}>
             <option value="codex">Codex worker</option>
             <option value="remote_http">Remote HTTP / Hermes</option>
@@ -101,12 +130,7 @@ export default function AgentRegistry({ initialAgents }: { initialAgents: Agent[
                     <Link href={`/agents/${agent.agent_id}`}>{agent.name}</Link>
                   </strong>
                   <small>
-                    {agent.adapter_type === "codex"
-                      ? "Live Codex agent"
-                      : agent.adapter_type === "remote_http"
-                        ? "Live Hermes agent"
-                        : "Simulated agent"}{" "}
-                    · {agent.effective_status ?? agent.status} · {agent.current_execution_count}/
+                    {providerLabel(agent)} · {agent.effective_status ?? agent.status} · {agent.current_execution_count}/
                     {agent.concurrency_limit} active
                   </small>
                   <p>{agent.capabilities.join(" · ")}</p>
@@ -114,6 +138,37 @@ export default function AgentRegistry({ initialAgents }: { initialAgents: Agent[
                     Domains: {(agent.supported_domains ?? []).join(" · ") || "None"} · Credential:{" "}
                     {agent.credential_status ?? "n/a"}
                   </p>
+                  <p>
+                    Provider: {agent.provider_id ?? "generic"} · Version: {agent.agent_version ?? "unreported"} ·
+                    Models: {(agent.supported_models ?? []).join(" · ") || "none advertised"}
+                  </p>
+                  {!!agent.supported_mission_roles?.length && (
+                    <p>
+                      Roles: {agent.supported_mission_roles.join(" · ")} · Operations:{" "}
+                      {(agent.supported_operations ?? []).join(" · ")}
+                    </p>
+                  )}
+                  {agent.provider_runtime_requirements_id && (
+                    <p>
+                      Consensus runtime contract: {agent.provider_runtime_requirements_id} · Heartbeat probe:{" "}
+                      {agent.provider_runtime_requirements_satisfied
+                        ? "satisfied (not provider-attested)"
+                        : "not satisfied"}{" "}
+                      · Binding: {agent.provider_runtime_requirements_hash?.slice(0, 12) ?? "missing"}
+                    </p>
+                  )}
+                  {agent.provider_runtime_status && Object.keys(agent.provider_runtime_status).length > 0 && (
+                    <p>
+                      Runtime: {agent.provider_runtime_status.platform ?? "unknown platform"} ·{" "}
+                      {agent.provider_runtime_status.providerVersion ?? "version unavailable"} · Auth:{" "}
+                      {agent.provider_runtime_status.authenticationAvailable ? "available" : "unavailable"} · Isolation:{" "}
+                      {agent.provider_runtime_status.isolationAvailable
+                        ? agent.provider_runtime_status.isolationMechanism
+                        : "unavailable"}{" "}
+                      · Model selection: {agent.provider_runtime_status.modelSelectionMechanism ?? "unreported"} ·
+                      Identity: {agent.provider_runtime_status.runtimeModelIdentity ?? "unreported"}
+                    </p>
+                  )}
                   <p>
                     Last heartbeat:{" "}
                     {agent.last_heartbeat_at ? new Date(agent.last_heartbeat_at).toLocaleString() : "Never"}

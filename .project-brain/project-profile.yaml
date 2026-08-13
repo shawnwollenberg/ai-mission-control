@@ -1,0 +1,117 @@
+schema_version: 2.5.0
+artifact_type: project-profile
+repository:
+  id: ai-mission-control
+  name: ai-mission-control
+  identity_source: git_remote
+  checkout_path: /Users/shawnwollenberg/Developer/mission-control-agent-068-identity
+  remote_url: https://github.com/shawnwollenberg/ai-mission-control.git
+  root: .
+  head_sha: d4200d643c5fdcab1a4a2453dfad5a85db518958
+detected:
+  languages:
+    - JavaScript/TypeScript
+  frameworks:
+    - Next.js
+    - React
+  package_managers:
+    - npm
+  commands:
+    build: npm run build
+    test: npm run test
+    lint: npm run lint
+    typecheck: npm run typecheck
+  ci:
+    - .github/workflows/validate.yml
+  deployment:
+    - Dockerfile
+  documentation:
+    - AGENTS.md
+    - CONTRIBUTING.md
+    - PLANS.md
+    - README.md
+    - SECURITY.md
+    - STATUS.md
+    - docs/ARCHITECTURE.md
+    - docs/AUTHENTICATION.md
+    - docs/BACKLOG.md
+    - docs/CLAUDE_CODE_HOOKS.md
+    - docs/DEMO_SCRIPT.md
+    - docs/DEPLOYMENT.md
+    - docs/DURABLE_BROWSER_OPERATIONS.md
+    - docs/EVENT_MODEL.md
+    - docs/INTERNAL_PRODUCT_ENGINEERING_ROADMAP.md
+    - docs/MISSION_AGENT_0_6_8.md
+    - docs/MISSION_AGENT_0_6_8_PRODUCTION_RELEASE.md
+    - docs/MISSION_AGENT_0_6_9_UNSIGNED_RELEASE_CANDIDATE.md
+    - docs/MISSION_AGENT_CLI.md
+    - docs/MISSION_AGENT_FIRST_MISSION_ACCEPTANCE.md
+    - docs/MISSION_AGENT_PROTOCOL.md
+    - docs/MISSION_AGENT_RELEASE_SIGNING.md
+    - docs/MISSION_AGENT_REPOSITORY_IDENTITY_MIGRATION.md
+    - docs/MISSION_CONTROL_0_6_PRODUCTION_ACCEPTANCE.md
+    - docs/MISSION_CONTROL_0_7_REVIEW_AND_MERGE.md
+    - docs/NEXT_SHARP_SECURITY_MAINTENANCE.md
+    - docs/OPTIMIZER_DESIGN.md
+    - docs/PHASE_1_COMPLETION_REPORT.md
+    - docs/PHASE_2_CODEX_EXECUTION.md
+    - docs/PHASE_2_COMPLETION_REPORT.md
+    - docs/PHASE_2_OPERATIONS.md
+    - docs/PHASE_3_COMPLETION_REPORT.md
+    - docs/PHASE_3_OPERATIONS.md
+    - docs/PHASE_3_POLICY_APPROVALS.md
+    - docs/PHASE_4_CLOSEOUT_ACCEPTANCE.md
+    - docs/PHASE_4_COMPLETION_REPORT.md
+    - docs/PHASE_4_OPERATIONS.md
+    - docs/PHASE_4_REMOTE_AGENTS.md
+    - docs/PHASE_5_COMPLETION_REPORT.md
+    - docs/PHASE_5_FIRST_BOUNDARY.md
+    - docs/PHASE_5_OPERATIONS.md
+    - docs/PHASE_6_DEPLOYMENT_PROCEDURE.md
+    - docs/PHASE_6_DEPLOYMENT_TARGET_REVIEW.md
+    - docs/PHASE_6_ENVIRONMENT_MANIFEST.md
+    - docs/PHASE_6_PRODUCTION_LAUNCH_REPORT.md
+    - docs/PHASE_6_PROVIDER_INPUTS.md
+    - docs/PHASE_6_RUNBOOKS.md
+    - docs/POST_MVP_EXECUTIVE_ADVISOR.md
+    - docs/PRODUCTION_ACCEPTANCE_LOG.md
+    - docs/PRODUCTION_ARCHITECTURE.md
+    - docs/PRODUCTION_GAP_ANALYSIS.md
+    - docs/PRODUCT_BRIEF.md
+    - docs/PROJECT_BRAIN_0.4_PRODUCTION_ACCEPTANCE.md
+    - docs/PROJECT_BRAIN_0.4_RELEASE_NOTES.md
+    - docs/PROJECT_BRAIN_0_4_1_DEPENDENCY_ASSESSMENT.md
+    - docs/PROJECT_BRAIN_0_4_1_GOVERNED_EXECUTION_REPORT.md
+    - docs/PROJECT_BRAIN_0_4_2_REMOTE_TRANSPORT_REPORT.md
+    - docs/PROJECT_BRAIN_FINAL_RELEASE_ACCEPTANCE.md
+    - docs/PROJECT_BRAIN_INTEGRATION.md
+    - docs/PROJECT_BRAIN_PRODUCTION_PACKAGING.md
+    - docs/WORKER_OPERATIONS.md
+    - docs/adr/0008-dedicated-project-brain-worker-image.md
+    - docs/hackathon-update/ARCHITECTURE_SUMMARY.md
+    - docs/hackathon-update/FEATURE_CHANGELOG.md
+    - docs/hackathon-update/PROJECT_UPDATE.md
+    - docs/hackathon-update/README.md
+    - docs/hackathon-update/SCREENSHOT_CAPTIONS.md
+    - docs/hackathon-update/video/DEVPOST_VIDEO_UPDATE.md
+    - docs/hackathon-update/video/FINAL_SCRIPT.md
+    - docs/hackathon-update/video/SHOT_LIST.md
+    - docs/hackathon-update/video/STORYBOARD.md
+    - docs/hackathon-update/video/YOUTUBE_DESCRIPTION.md
+    - docs/security/MISSION_AGENT_OLD_KEY_DISPOSITION.md
+    - docs/security/RELEASE_AUTHORITY_V2.md
+    - docs/security/RELEASE_KEY_CEREMONY.md
+observations:
+  - claim: "runtime: Node.js"
+    classification: observed
+    evidence:
+      - kind: file
+        reference: package.json
+  - claim: "package_manager: npm"
+    classification: observed
+    evidence:
+      - kind: file
+        reference: package-lock.json
+inferences: []
+uncertainties: []
+updated_at: "2026-07-25T17:37:55+00:00"

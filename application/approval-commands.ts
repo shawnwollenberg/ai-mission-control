@@ -106,7 +106,14 @@ export async function applyApprovalProjection(client: PoolClient, events: Domain
       );
     else if (e.eventType.startsWith("approval.")) {
       await client.query(
-        "UPDATE approval_projections SET status=$3,aggregate_version=$4,decided_by=COALESCE($5,decided_by),decision_reason=COALESCE($6,decision_reason),decided_at=COALESCE(decided_at,$7),consumed_at=CASE WHEN $3='consumed' THEN $7 ELSE consumed_at END,policy_version_at_execution=COALESCE($8,policy_version_at_execution) WHERE workspace_id=$1 AND approval_id=$2",
+        `UPDATE approval_projections SET status=$3,aggregate_version=$4,
+          decided_by=COALESCE($5,decided_by),decision_reason=COALESCE($6,decision_reason),
+          decided_at=COALESCE(decided_at,$7),
+          consumed_at=CASE WHEN $3='consumed' THEN $7 ELSE consumed_at END,
+          policy_version_at_execution=COALESCE($8,policy_version_at_execution),
+          consumed_by_operation_id=COALESCE($9,consumed_by_operation_id),
+          consumed_action_hash=COALESCE($10,consumed_action_hash)
+         WHERE workspace_id=$1 AND approval_id=$2`,
         [
           e.workspaceId,
           e.aggregateId,
@@ -116,6 +123,8 @@ export async function applyApprovalProjection(client: PoolClient, events: Domain
           e.payload.reason,
           e.occurredAt,
           e.payload.policyVersionAtExecution ?? null,
+          e.payload.operationId ?? null,
+          e.payload.actionHash ?? null,
         ],
       );
       if (["approval.granted", "approval.denied", "approval.expired"].includes(e.eventType))
@@ -142,6 +151,9 @@ export async function requestActionApproval(input: {
   evidence: unknown[];
   requestedBy: string;
   expiresAt: string;
+  requestedAction?: Record<string, unknown>;
+  riskExplanation?: string;
+  supportingEvidenceSummary?: string;
 }) {
   const approvalId = stableUuid(`action-approval:${input.actionRequestId}`);
   const result = await appendEvents({
@@ -164,15 +176,19 @@ export async function requestActionApproval(input: {
           agentId: input.agentId,
           actionRequestId: input.actionRequestId,
           approvalType: input.approvalType,
-          requestedAction: { actionType: input.actionType, targetResource: input.targetResource },
+          requestedAction: input.requestedAction ?? {
+            actionType: input.actionType,
+            targetResource: input.targetResource,
+          },
           actionHash: input.actionHash,
-          riskExplanation: "External publication requires owner approval",
+          riskExplanation: input.riskExplanation ?? "External publication requires owner approval",
           riskLevel: "high",
           policyReasons: input.policyReasons,
           policyVersion: input.policyVersion,
           evidence: input.evidence,
           requestedBy: input.requestedBy,
-          supportingEvidenceSummary: "Exact execution, branch, commit, remote, and policy evidence",
+          supportingEvidenceSummary:
+            input.supportingEvidenceSummary ?? "Exact execution, branch, commit, remote, and policy evidence",
           expiresAt: input.expiresAt,
           status: "pending",
         },
@@ -253,8 +269,18 @@ export async function decideApproval(input: {
   });
   if (!events.length) throw new NotFoundError("Approval");
   const last = events.at(-1)!;
-  if (["approval.granted", "approval.denied", "approval.expired"].includes(last.eventType))
+  if (["approval.granted", "approval.denied", "approval.expired"].includes(last.eventType)) {
+    if (projection.approval_type === "consensus_plan" && last.eventType !== "approval.expired")
+      await (
+        await import("@/application/consensus-plan-commands")
+      ).onConsensusApprovalDecision({
+        workspaceId: input.workspaceId,
+        approvalId: input.approvalId,
+        granted: last.eventType === "approval.granted",
+        actorId: input.actorId,
+      });
     return { applied: false, event: last };
+  }
   const eventType = input.granted ? "approval.granted" : "approval.denied";
   const result = await appendEvents({
     workspaceId: input.workspaceId,
@@ -310,8 +336,27 @@ export async function decideApproval(input: {
             : { approvalId: input.approvalId, missionId: last.missionId, taskId: last.payload.taskId, eventType },
       },
     ],
+    beforeAppend:
+      projection.approval_type === "consensus_plan"
+        ? async (client) =>
+            (await import("@/application/consensus-plan-commands")).assertConsensusApprovalDecisionAllowed({
+              workspaceId: input.workspaceId,
+              approvalId: input.approvalId,
+              granted: input.granted,
+              database: client,
+            })
+        : undefined,
     applyProjections: applyApprovalProjection,
   });
+  if (projection.approval_type === "consensus_plan")
+    await (
+      await import("@/application/consensus-plan-commands")
+    ).onConsensusApprovalDecision({
+      workspaceId: input.workspaceId,
+      approvalId: input.approvalId,
+      granted: input.granted,
+      actorId: input.actorId,
+    });
   if (
     input.granted &&
     projection.approval_type === "remote_workflow" &&
@@ -357,6 +402,8 @@ export async function consumeApproval(input: {
   approvalId: string;
   actorId: string;
   policyVersion: string;
+  operationId?: string;
+  actionHash?: string;
 }) {
   const events = await loadAggregateEvents({
     workspaceId: input.workspaceId,
@@ -388,20 +435,37 @@ export async function consumeApproval(input: {
           reason: "Consumed by exact approved action",
           taskId: last.payload.taskId,
           policyVersionAtExecution: input.policyVersion,
+          operationId: input.operationId,
+          actionHash: input.actionHash,
         },
       },
     ],
     applyProjections: async (client, events) => {
       await applyApprovalProjection(client, events);
       await client.query(
-        "UPDATE approval_projections SET consumed_at=$3,policy_version_at_execution=$4 WHERE workspace_id=$1 AND approval_id=$2",
-        [input.workspaceId, input.approvalId, events[0].occurredAt, input.policyVersion],
+        `UPDATE approval_projections SET consumed_at=$3,policy_version_at_execution=$4,
+          consumed_by_operation_id=COALESCE($5,consumed_by_operation_id),
+          consumed_action_hash=COALESCE($6,consumed_action_hash)
+         WHERE workspace_id=$1 AND approval_id=$2`,
+        [
+          input.workspaceId,
+          input.approvalId,
+          events[0].occurredAt,
+          input.policyVersion,
+          input.operationId ?? null,
+          input.actionHash ?? null,
+        ],
       );
     },
   });
   return { applied: true, event: result.events[0] };
 }
-export async function expireApproval(input: { workspaceId: string; approvalId: string; actorId: string }) {
+export async function expireApproval(input: {
+  workspaceId: string;
+  approvalId: string;
+  actorId: string;
+  reason?: string;
+}) {
   const events = await loadAggregateEvents({
     workspaceId: input.workspaceId,
     aggregateType: "approval",
@@ -416,7 +480,7 @@ export async function expireApproval(input: { workspaceId: string; approvalId: s
     aggregateId: input.approvalId,
     missionId: last.missionId,
     expectedVersion: last.aggregateVersion,
-    commandId: stableUuid(`expire:${input.approvalId}`),
+    commandId: stableUuid(`expire:${input.approvalId}:${input.reason ?? "validity_window_elapsed"}`),
     commandType: "ExpireApproval",
     correlationId: last.correlationId,
     causationId: last.eventId,
@@ -425,7 +489,11 @@ export async function expireApproval(input: { workspaceId: string; approvalId: s
       {
         eventType: "approval.expired",
         eventSchemaVersion: 1,
-        payload: { status: "expired", reason: "Approval validity window elapsed", taskId: last.payload.taskId },
+        payload: {
+          status: "expired",
+          reason: input.reason ?? "Approval validity window elapsed",
+          taskId: last.payload.taskId,
+        },
       },
     ],
     applyProjections: applyApprovalProjection,

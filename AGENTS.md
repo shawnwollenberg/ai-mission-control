@@ -8,11 +8,22 @@ The hackathon goal is not to build a complete enterprise platform. The goal is t
 
 Aegis smart accounts may provide spending controls and policy enforcement, but Aegis is supporting infrastructure rather than the main product.
 
-## Current phase
+## Current phase and release governance
 
-Phase 5 daily operations are complete. Further production expansion requires a newly reviewed and explicitly approved phase.
+Phase 5 daily operations and the approved Phase 6 production launch are complete. Preserve their scope in `PLANS.md`, `docs/PHASE_5_OPERATIONS.md`, and the Phase 6 operational documents. Preserve the existing mission, task, execution, approval, policy, action-request, event, and projection authority. Templates and schedules create new mission instances through the existing command layer; they never bypass agent eligibility, resources, policy, or approvals.
 
-Preserve the completed Phase 5 scope in `PLANS.md` and `docs/PHASE_5_OPERATIONS.md`. Preserve the existing mission, task, execution, approval, policy, action-request, event, and projection authority. Templates and schedules create new mission instances through the existing command layer; they never bypass agent eligibility, resources, policy, or approvals. Stop before merge, deployment, production remediation, secrets access, infrastructure modification, blockchain transactions, wallet signing, asset movement, or unrestricted remote command execution.
+Further production changes require a documented release authorization in `PLANS.md` or a linked release record. Documentation prepared by Codex is review evidence, not human approval. Codex may not approve its own release. Stop before commit, push, merge, or production deployment unless the repository's existing approval mechanism contains an actual human approval for the exact documented release scope.
+
+Classify every proposed production change before release:
+
+1. **Routine governed application release:** bounded presentation or application behavior that does not change authentication, authorization, tenant isolation, credentials, agent execution authority, signing, infrastructure, destructive mutation behavior, or Project Brain authority. A compact release record is permitted, but it must document exact scope, acceptance criteria, validation, rollout, rollback, risks, and human approval.
+2. **Security-sensitive application release:** any application change involving authentication, authorization, workspace or tenant isolation, credentials, agent protocol/runtime behavior, policy enforcement, signing, destructive mutations, or sensitive audit evidence. It requires a dedicated reviewed production phase with threat-focused tests and explicit human approval.
+3. **Infrastructure/runtime release:** deployment topology, databases, networks, secret providers, IAM, workers, runtime versions, build/release infrastructure, or production remediation. It requires a dedicated reviewed production phase, operational validation, rollback evidence, and explicit human approval.
+4. **Not safe to release:** acceptance criteria are unmet, authority is ambiguous, validation or rollback is inadequate, secrets may leak, tenant boundaries may fail, destructive effects are uncontrolled, or required human approval is absent.
+
+Project Brain initialization, schema/authority changes, curation automation, provider migration, or release-process integration are high-risk and require a dedicated reviewed production phase. Routine edits to already-authorized project documentation may use the routine release path only when they do not change Project Brain authority or automation.
+
+High-risk releases remain narrow: approval for one release never authorizes unrelated future production changes. No production deployment may occur without an explicitly documented release authorization and corresponding human approval. Continue to stop before production remediation, secrets access, infrastructure modification, blockchain transactions, wallet signing, asset movement, or unrestricted remote command execution unless a dedicated approved phase explicitly authorizes the exact action.
 
 ## Source-of-truth documents
 

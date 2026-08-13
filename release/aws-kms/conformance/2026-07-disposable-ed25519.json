@@ -1,0 +1,41 @@
+{
+  "reportVersion": "1",
+  "testReleaseIdentifier": "release-authority-conformance-2026-07",
+  "releaseVersion": "99.0.0",
+  "sourceSha": "cccccccccccccccccccccccccccccccccccccccc",
+  "artifactSha256": "cc0b2fcdde2d47708d053dde395bea814964ee3718c6dc0a7856ef1c3e710b22",
+  "canonicalManifestSha256": "b9917f205ba4fdb38a05943dacd710337ee14f03c567ce2440f38b10679a8aa2",
+  "releaseAuthorityKeyId": "mission-agent-release-2099-99",
+  "kmsKeyArn": "arn:aws:kms:us-east-1:661452835066:key/d303900a-4089-437c-82f5-fa1f926a83bb",
+  "publicKeyFingerprint": "ed25519-spki-sha256:8c3685cf269684907fab73ea0967372b603013ef06d03202d4bc846ba8d0413d",
+  "signingAlgorithm": "ED25519_SHA_512",
+  "messageType": "RAW",
+  "awsRequestId": "44cba13a-a16f-499b-a638-b179d058dd8b",
+  "signerPrincipalArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseConformance_98789deb03404e29/wallyweb-sso",
+  "signingTime": "2026-07-26T20:24:45.780Z",
+  "signatureSha256": "1d6e4d6b98d1c31d3472e8d5394167d00c69bb417bed93676df2b3ca5ee1242c",
+  "signatureLengthBytes": 64,
+  "verification": {
+    "awsKms": true,
+    "standaloneLocalEd25519": true,
+    "missionControl": true,
+    "missionAgent070": true
+  },
+  "negativeCases": {
+    "modifiedArtifactChecksum": true,
+    "modifiedSourceSha": true,
+    "modifiedVersion": true,
+    "modifiedSigningKeyId": true,
+    "modifiedIdentityProtocol": true,
+    "modifiedActivationProtocol": true,
+    "invalidSignature": true,
+    "truncatedSignature": true,
+    "unknownField": true,
+    "missingRequiredField": true,
+    "modifiedManifestByte": true,
+    "wrongPublicKey": true,
+    "wrongKmsKey": true,
+    "noncanonicalSerialization": true,
+    "duplicateField": true
+  }
+}

@@ -1,0 +1,12 @@
+schema_version: "2.0.0"
+artifact_type: "context-pack"
+objective: ""
+role: ""
+repository_sha: ""
+selection:
+  strategy: "deterministic-v2"
+  sources: []
+  omitted_sources: []
+  total_bytes: 0
+  estimated_tokens: 0
+created_at: ""

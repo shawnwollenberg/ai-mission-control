@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "1",
+  "version": "0.7.1",
+  "sourceCommit": "3227a1210462d2e4061d5e04fdcfc9f8fe6218cd",
+  "artifactSha256": "279365e5d1bcd18ce9bd8ac84d4b7e512cd3ff2f7f559e9892cd6fda3bf17803",
+  "canonicalManifestSha256": "8fc90fb63b1b6440e590a58e7c3eda5318b2fbd7c96c41a6cb97636bc9882275",
+  "embeddedKeyId": "mission-agent-release-2026-01",
+  "embeddedPublicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+  "embeddedTrustState": "active",
+  "bootstrapAuthorization": "production-trust-root-0.7.1",
+  "repositoryTrustState": "pending",
+  "defaultUpdatePathUsesEmbeddedTrust": true,
+  "silentExternalTrustOverrideRejected": true,
+  "missionControlCanonicalizationMatched": true,
+  "missionControlFixtureVerification": true,
+  "missionAgentFixtureVerification": true,
+  "productionKmsSignatureCreated": false,
+  "negativeCases": {
+    "unknownKeyId": true,
+    "wrongFingerprint": true,
+    "wrongPublicKey": true,
+    "pendingKey": true,
+    "retiredKey": true,
+    "revokedKey": true,
+    "missingTrustEntry": true,
+    "duplicateFingerprint": true,
+    "conflictingTrustEntry": true,
+    "malformedSpki": true,
+    "modifiedArtifactChecksum": true,
+    "modifiedSourceSha": true,
+    "modifiedReleaseVersion": true,
+    "modifiedIdentityProtocol": true,
+    "modifiedActivationProtocol": true,
+    "modifiedCanonicalizationVersion": true,
+    "modifiedPlatformMetadata": true,
+    "noncanonicalManifest": true,
+    "unknownManifestField": true,
+    "missingManifestField": true,
+    "duplicateManifestField": true,
+    "invalidSignature": true,
+    "truncatedSignature": true,
+    "extendedSignature": true,
+    "signatureOverDifferentCanonicalBytes": true,
+    "externalTrustStoreOverride": true,
+    "defaultPathWithoutExternalTrustArgument": true
+  },
+  "validation": {
+    "unitTests": {
+      "passed": 145,
+      "failed": 0
+    },
+    "integrationTests": {
+      "passed": 53,
+      "failed": 4,
+      "classification": [
+        "Two authentication failures require the integration owner seed/password harness and are unrelated to this artifact-only change.",
+        "Two Mission Agent pull failures are byte-for-byte stack-equivalent to the previously proven untouched-base failures."
+      ]
+    },
+    "typecheck": "passed",
+    "eslint": "passed",
+    "productionBuild": "passed",
+    "productionDependencyAuditVulnerabilities": 0,
+    "changedFileFormatting": "passed",
+    "repositoryWideFormatting": {
+      "status": "failed-on-9-pre-existing-files",
+      "candidateFilesAffected": 0
+    }
+  },
+  "independentReview": {
+    "criticalFindings": 0,
+    "highFindings": 0,
+    "acceptanceBlockingMediumFindings": 0,
+    "disposition": "accepted-unsigned-bootstrap-candidate"
+  },
+  "signingStatus": "unsigned",
+  "publicationStatus": "blocked",
+  "installationStatus": "not-attempted",
+  "deploymentStatus": "not-attempted"
+}

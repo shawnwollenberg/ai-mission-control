@@ -7,7 +7,7 @@ import { validateExecutionRequest } from "../execution/protocol.ts";
 import { runSafeProcess } from "../execution/safe-process.ts";
 import { executionBranch, validateRepositoryPath } from "../execution/worktree-manager.ts";
 import { failureDisposition, failurePolicies } from "../execution/failures.ts";
-import { requestExecution, rehydrateExecution, transitionExecution } from "../domain/execution.ts";
+import { executionFact, requestExecution, rehydrateExecution, transitionExecution } from "../domain/execution.ts";
 const id = () => crypto.randomUUID();
 test("protocol 1.0 validates identity and rejects unsupported versions", () => {
   const request = {
@@ -125,6 +125,15 @@ test("execution aggregate enforces valid and terminal transitions", () => {
     };
   const requested = rehydrateExecution([created]);
   assert.equal(transitionExecution(requested, "accepted").eventType, "execution.accepted");
+  const accepted = { ...requested, status: "accepted" };
+  assert.equal(
+    executionFact(accepted, "execution.provider_diagnostic_recorded", {}).eventType,
+    "execution.provider_diagnostic_recorded",
+  );
+  assert.throws(
+    () => executionFact(accepted, "execution.progress_reported", {}),
+    (error) => error?.code === "invalid_transition",
+  );
   assert.throws(
     () => transitionExecution(requested, "succeeded"),
     (error) => error?.code === "invalid_transition",

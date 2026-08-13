@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { requirePageIdentity } from "@/lib/page-auth";
 import { getDatabasePool } from "@/lib/database";
 export const dynamic = "force-dynamic";
@@ -12,18 +13,7 @@ export default async function TemplatesPage() {
   ).rows;
   return (
     <main className="archive-shell">
-      <nav className="brandbar">
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Mission templates</p>
-        </div>
-        <Link className="nav-link" href="/schedules">
-          Schedules
-        </Link>
-        <Link className="nav-link" href="/missions">
-          Missions
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Mission templates" />
       <header className="archive-header">
         <div>
           <p className="section-label">Reusable workflows</p>

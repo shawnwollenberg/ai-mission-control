@@ -1,0 +1,44 @@
+schema_version: 2.5.0
+artifact_type: mission-result
+id: 2026-07-25-prepare-release-authority-v2-without-exposing-private-keys-or-ac
+objective: Prepare Release Authority v2 without exposing private keys or activating
+  production trust
+role: release security engineer
+agent: codex
+status: completed
+start_sha: c0e3a629d81ce3f58fe00c3cf6de34510210c826
+end_sha: 59223eccd8a95ad5b60e33d4acbbf990f7b29e95
+acceptance_criteria:
+  - Release Authority v2 pre-activation controls are documented, tested, and fail closed
+  - Mission Agent 0.6.9 remains unsigned, unpublished, unadvertised, and undeployed
+acceptance_outcome: passed
+files_changed:
+  - integrations/mission-agent/release-authority.ts
+  - tests/release-authority-v2.test.mjs
+  - docs/security/RELEASE_AUTHORITY_V2.md
+checks:
+  - command: npm run test:release-authority
+    result: passed
+  - command: npm test
+    result: passed
+  - command: npm run typecheck
+    result: passed
+review_cycles: []
+findings_and_resolutions: []
+risks: []
+evidence:
+  - kind: file
+    reference: integrations/mission-agent/release-authority.ts
+  - kind: file
+    reference: tests/release-authority-v2.test.mjs
+  - kind: file
+    reference: docs/security/MISSION_AGENT_OLD_KEY_DISPOSITION.md
+  - kind: file
+    reference: docs/security/RELEASE_KEY_CEREMONY.md
+artifacts: []
+state_updates:
+  - Release Authority v2 is prepared but production activation remains blocked on an
+    authorized human public key, completed custody evidence, and a separately authorized
+    v2-capable Mission Agent artifact
+follow_ups: []
+completed_at: "2026-07-25T17:38:11+00:00"

@@ -1,0 +1,18 @@
+{
+  "approvalReference": "Activate Production Trust and Sign Mission Agent 0.7.2 Manifest v3",
+  "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+  "awsRequestId": "6fb8434a-668a-46d0-a883-e55a5edb810b",
+  "awsVerifyRequestId": "54e4158f-c01c-40c0-8293-1059f2cc8eeb",
+  "canonicalManifestSha256": "b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace",
+  "independentVerification": { "awsKms": true, "localEd25519": true },
+  "kmsKeyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+  "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+  "receiptVersion": "1",
+  "releaseAuthorityKeyId": "mission-agent-release-2026-01",
+  "releaseVersion": "0.7.2",
+  "signatureSha256": "4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583",
+  "signerPrincipalArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+  "signingAlgorithm": "ED25519_SHA_512",
+  "signingTime": "2026-07-27T17:02:28.756Z",
+  "sourceSha": "31b45c98f2ffba613b56cd23819ba8b0c9c09a43"
+}

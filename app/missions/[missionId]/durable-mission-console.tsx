@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BrandSprite } from "@/app/brand-assets";
+import { AppNavigation } from "@/app/app-navigation";
 import type { MissionReadModel } from "@/lib/mission-projection-store";
 import type { MissionTimelineEntry } from "@/lib/mission-queries";
 import type { ActionReadModel, ApprovalReadModel, ExecutionReadModel, TaskReadModel } from "@/lib/execution-queries";
@@ -151,6 +151,22 @@ export default function DurableMissionConsole({
     if (!response.ok) setError(body.error?.message ?? "Publication approval could not be requested.");
     setPending(false);
   }
+  async function reconcilePublication(actionRequestId: string) {
+    setPending(true);
+    setError("");
+    const response = await fetch(`/api/actions/${actionRequestId}/reconcile-publication`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok)
+      setError(
+        body.error?.message ??
+          "Mission Control could not confirm the existing pull request. Check GitHub before starting a new publication attempt.",
+      );
+    setPending(false);
+  }
 
   async function command(name: string) {
     if (pending) return;
@@ -186,19 +202,7 @@ export default function DurableMissionConsole({
 
   return (
     <main className="durable-mission-shell">
-      <nav className="brandbar">
-        <BrandSprite asset="mark-compact" />
-        <div>
-          <p className="eyebrow">Mission Control</p>
-          <p className="brand-subtitle">Durable mission command</p>
-        </div>
-        <Link className="nav-link" href="/missions">
-          Mission archive
-        </Link>
-        <a className="nav-link" href="/logout">
-          Log out
-        </a>
-      </nav>
+      <AppNavigation subtitle="Durable mission command" />
       <header className="mission-header compact">
         <div>
           <p className="section-label">Mission / {mission.missionId.slice(0, 8)}</p>
@@ -310,9 +314,10 @@ export default function DurableMissionConsole({
                 </p>
                 <p>{execution.progressSummary ?? "Waiting for progress"}</p>
                 <small>
-                  Last heartbeat:{" "}
-                  {execution.lastHeartbeat ? new Date(execution.lastHeartbeat).toLocaleString() : "Not received"} ·{" "}
-                  {execution.commandsCompleted} commands · {execution.artifacts.length} artifacts
+                  {execution.status === "failed" && execution.stage === "assignment_received"
+                    ? "Execution heartbeat: Not expected — stopped during repository preflight"
+                    : `Last heartbeat: ${execution.lastHeartbeat ? new Date(execution.lastHeartbeat).toLocaleString() : "Not received"}`}{" "}
+                  · {execution.commandsCompleted} commands · {execution.artifacts.length} artifacts
                 </small>
                 {execution.commitId && (
                   <>
@@ -324,11 +329,20 @@ export default function DurableMissionConsole({
                       !actions.some(
                         (action) =>
                           action.executionId === execution.executionId &&
-                          action.actionType === "repository.publish_for_review",
+                          action.actionType === "repository.publish_for_review" &&
+                          (action.status !== "failed" ||
+                            String(action.result?.message ?? "").includes("evidence checksum")),
                       ) && (
                         <div className="mission-actions">
                           <button disabled={pending} onClick={() => publishForReview(execution.executionId)}>
-                            Publish for Review
+                            {actions.some(
+                              (action) =>
+                                action.executionId === execution.executionId &&
+                                action.actionType === "repository.publish_for_review" &&
+                                action.status === "failed",
+                            )
+                              ? "Start New Publication Attempt"
+                              : "Publish for Review"}
                           </button>
                           <small>
                             Push this exact commit and open an evidence-rich pull request. Merge and deployment stay
@@ -338,7 +352,22 @@ export default function DurableMissionConsole({
                       )}
                   </>
                 )}
-                {execution.failureClassification && <p>Failure: {execution.failureClassification}</p>}
+                {execution.failureClassification && (
+                  <p>
+                    Failure type:{" "}
+                    {execution.failureClassification === "local_adapter_failure"
+                      ? execution.stage === "assignment_received"
+                        ? "Repository preflight blocked"
+                        : "Local Mission Agent execution"
+                      : execution.failureClassification.replaceAll("_", " ")}
+                  </p>
+                )}
+                {execution.status === "failed" && execution.stage === "assignment_received" && (
+                  <p>
+                    Mission Control stopped safely before Codex made changes. Resolve the repository issue above, then
+                    retry the Change Mission from its recommendation.
+                  </p>
+                )}
                 <ul>
                   {execution.artifacts.map((artifact) => (
                     <li key={artifact.artifactId}>
@@ -394,14 +423,54 @@ export default function DurableMissionConsole({
                   ))}
                 </ul>
                 {action.result && (
-                  <p>
+                  <p className={action.status === "failed" ? "form-error" : undefined}>
                     {action.actionType === "repository.publish_for_review"
-                      ? `Provider-confirmed pull request: ${String((action.result.pullRequest as Record<string, unknown> | undefined)?.url ?? "pending")}`
+                      ? action.status === "failed"
+                        ? `Publication stopped safely: ${String(action.result.message ?? "Review the failure and request a new publication approval.")}`
+                        : `Provider-confirmed pull request: ${String((action.result.pullRequest as Record<string, unknown> | undefined)?.url ?? "pending")}`
                       : action.actionType === "repository.create_pull_request"
                         ? `Provider-confirmed pull request: ${String(action.result.url)}`
                         : `Remote branch: ${String(action.result.remoteRef)}`}
                   </p>
                 )}
+                {action.status === "failed" && String(action.result?.message ?? "").includes("evidence checksum") && (
+                  <p>
+                    This approval cannot be reused because its evidence was incomplete. Open the source recommendation
+                    and create a follow-up Change Mission to regenerate complete evidence.
+                  </p>
+                )}
+                {action.actionType === "repository.publish_for_review" &&
+                  action.status === "failed" &&
+                  String(action.result?.message ?? "").includes("GitHub did not confirm the pull request") && (
+                    <div className="mission-actions">
+                      <p>
+                        The branch and pull request may already exist on GitHub. Check the repository for a pull request
+                        matching this mission&apos;s branch and commit. If it exists, confirm it here; Mission Control
+                        will verify and record the existing pull request without pushing or creating another one.
+                      </p>
+                      <div className="button-row">
+                        <a
+                          className="secondary-link"
+                          href={`https://github.com/${String(action.parameters.providerRepository)}/pulls`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Check GitHub pull requests
+                        </a>
+                        <button
+                          disabled={pending}
+                          onClick={() => reconcilePublication(action.actionRequestId)}
+                          type="button"
+                        >
+                          Confirm Existing Pull Request
+                        </button>
+                      </div>
+                      <small>
+                        If no matching pull request exists, use Start New Publication Attempt above. That creates a
+                        separate approval-gated publication request.
+                      </small>
+                    </div>
+                  )}
               </div>
             ))}
           </section>
@@ -513,7 +582,9 @@ export default function DurableMissionConsole({
                 seconds. The recorded {modeLabel(mission.executionMode, executions).toLowerCase()} outcome is{" "}
                 {mission.status}.
                 {actions.some(
-                  (action) => action.actionType === "repository.push_branch" && action.status === "succeeded",
+                  (action) =>
+                    ["repository.push_branch", "repository.publish_for_review"].includes(action.actionType) &&
+                    action.status === "succeeded",
                 )
                   ? " The exact approved branch was pushed."
                   : " No branch push was recorded."}{" "}

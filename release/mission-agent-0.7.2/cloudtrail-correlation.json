@@ -1,0 +1,65 @@
+{
+  "evidenceVersion": "1",
+  "correlationStatus": "verified",
+  "accountId": "661452835066",
+  "region": "us-east-1",
+  "keyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+  "signerSessionArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+  "signerRoleArn": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d",
+  "auditor": {
+    "permissionSet": "MissionAgentReleaseAuditor",
+    "profile": "wallyweb-release-auditor",
+    "principalArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseAuditor_89f04b6c154de211/wallyweb-sso",
+    "temporarySession": true,
+    "sessionTokenPresent": true,
+    "auditTimestamp": "2026-07-27T18:02:02.000Z",
+    "cloudTrailLookupEvents": "allowed",
+    "kmsAccess": "explicitly-denied",
+    "unrelatedAwsAccess": "denied"
+  },
+  "events": [
+    {
+      "eventId": "78da3db8-ab2b-468c-93d1-adeaa1a8876e",
+      "requestId": "6fb8434a-668a-46d0-a883-e55a5edb810b",
+      "eventTime": "2026-07-27T17:02:28Z",
+      "eventSource": "kms.amazonaws.com",
+      "eventName": "Sign",
+      "region": "us-east-1",
+      "keyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+      "principalArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+      "sessionIssuerRoleArn": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d",
+      "signingAlgorithm": "ED25519_SHA_512",
+      "messageType": "RAW",
+      "correlationStatus": "verified"
+    },
+    {
+      "eventId": "7077a242-67af-4e14-96e5-ba08f237fb4b",
+      "requestId": "54e4158f-c01c-40c0-8293-1059f2cc8eeb",
+      "eventTime": "2026-07-27T17:02:28Z",
+      "eventSource": "kms.amazonaws.com",
+      "eventName": "Verify",
+      "region": "us-east-1",
+      "keyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+      "principalArn": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+      "sessionIssuerRoleArn": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d",
+      "signingAlgorithm": "ED25519_SHA_512",
+      "messageType": "RAW",
+      "cloudTrailVerificationResult": "not-recorded-by-service",
+      "recordedKmsVerificationResult": true,
+      "correlationStatus": "verified"
+    }
+  ],
+  "ceremonyWindow": {
+    "start": "2026-07-27T16:55:00Z",
+    "end": "2026-07-27T17:10:00Z",
+    "productionKeySignEventCount": 1,
+    "unexpectedSignEvents": 0
+  },
+  "linkedEvidence": {
+    "signingReceipt": "release/mission-agent-0.7.2/production-signing-receipt.json",
+    "verificationEvidence": "release/mission-agent-0.7.2/production-verification-evidence.json",
+    "trustActivationRecord": "release/mission-agent-0.7.2/trust-activation-record.json",
+    "signedManifest": "release/mission-agent-0.7.2/signed-manifest-v3.json",
+    "immutableSignedCandidateCommit": "6894601268a6571143f6cc9fd5a3667e31507403"
+  }
+}

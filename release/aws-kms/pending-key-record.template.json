@@ -1,0 +1,27 @@
+{
+  "keyId": "mission-agent-release-2026-01",
+  "algorithm": "Ed25519",
+  "publicKeySpkiBase64": "__FROM_KMS_GET_PUBLIC_KEY__",
+  "publicKeyFingerprint": "ed25519-spki-sha256:__SHA256_OF_DER_SPKI__",
+  "status": "pending",
+  "purpose": "mission-agent-release",
+  "createdAt": "__KMS_CREATION_TIMESTAMP__",
+  "activatedAt": null,
+  "retiresAt": null,
+  "revokedAt": null,
+  "replacedBy": null,
+  "historicalVersions": [],
+  "kms": {
+    "provider": "aws-kms",
+    "accountId": "__AWS_ACCOUNT_ID__",
+    "region": "__AWS_REGION__",
+    "keyArn": "__KMS_KEY_ARN__",
+    "keyId": "__KMS_KEY_ID__",
+    "keySpec": "ECC_NIST_EDWARDS25519",
+    "keyUsage": "SIGN_VERIFY",
+    "signingAlgorithm": "ED25519_SHA_512",
+    "origin": "AWS_KMS",
+    "keyManager": "CUSTOMER",
+    "multiRegion": false
+  }
+}

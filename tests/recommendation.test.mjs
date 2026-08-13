@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { parseRepositoryRecommendations } from "../application/remote-agent-messages.ts";
-import { createRecommendation, rehydrateRecommendation, transitionRecommendation } from "../domain/recommendation.ts";
+import {
+  assertSafeRecommendationValidation,
+  createRecommendation,
+  rehydrateRecommendation,
+  transitionRecommendation,
+} from "../domain/recommendation.ts";
 
 const input = {
   repositoryId: "repo",
@@ -23,6 +28,57 @@ test("recommendations require structured evidence, acceptance criteria, and safe
   assert.throws(() => createRecommendation({ ...input, suggestedValidation: ["rm -rf ."] }), /not allowed/);
   assert.throws(() => createRecommendation({ ...input, suggestedValidation: ["npm test ../other"] }), /not allowed/);
   assert.doesNotThrow(() => createRecommendation({ ...input, suggestedValidation: ["go test ./..."] }));
+});
+test("production-rejected inline evaluation remains prohibited while canonical direct commands remain allowed", () => {
+  const productionRejected =
+    "node -e \"const fs=require('fs');const c=fs.readFileSync('.git/config','utf8');if(/github\\\\.com\\\\/example\\\\//.test(c)||!c.includes('[branch \\\\\"main\\\\\"]'))process.exit(1)\"";
+  assert.throws(
+    () => assertSafeRecommendationValidation(productionRejected),
+    /inline code and shell operators are prohibited/,
+  );
+  for (const command of [
+    "npm test",
+    "npm run lint",
+    "npm run build",
+    "pnpm test",
+    "yarn test",
+    "bun test",
+    "node --test",
+    "go test ./...",
+    "cargo test",
+    "pytest tests/unit",
+  ])
+    assert.doesNotThrow(() => assertSafeRecommendationValidation(command), command);
+});
+test("recommendation validation rejects adversarial command forms without broadening execution", () => {
+  for (const command of [
+    "",
+    "node -e process.exit(0)",
+    "node --eval=process.exit(0)",
+    "npm test -- --output=../../outside",
+    "npm test ../outside",
+    "npm test; rm -rf .",
+    "npm test && node evil.js",
+    "npm test || true",
+    "npm test | tee result",
+    "npm test > result",
+    "npm test 2>&1",
+    "npm $(echo test)",
+    "npm `echo test`",
+    "NODE_OPTIONS=--require=evil npm test",
+    "npm test $SECRET",
+    "sh -c npm test",
+    "bash -c npm test",
+    "curl https://example.invalid",
+    "sudo npm test",
+    "rm -rf .",
+    "/usr/bin/npm test",
+    "npm run preinstall",
+    "pnpm run postinstall",
+    "yarn run prepare",
+    "bun run publish",
+  ])
+    assert.throws(() => assertSafeRecommendationValidation(command), command);
 });
 test("recommendation ingestion normalizes one structured evidence object without weakening validation", () => {
   const [parsed] = parseRepositoryRecommendations(
@@ -67,6 +123,18 @@ test("recommendation lifecycle is explicit and terminal states cannot reopen", (
   assert.equal(
     transitionRecommendation(state, "in_progress", { linkedMissionId: "mission-2" }).payload.linkedMissionId,
     "mission-2",
+  );
+  assert.equal(
+    transitionRecommendation({ ...state, status: "in_progress", linkedMissionId: "failed-mission" }, "in_progress", {
+      linkedMissionId: "retry-mission",
+    }).payload.linkedMissionId,
+    "retry-mission",
+  );
+  assert.equal(
+    transitionRecommendation({ ...state, status: "completed" }, "in_progress", {
+      linkedMissionId: "follow-up-mission",
+    }).payload.linkedMissionId,
+    "follow-up-mission",
   );
   assert.throws(() => transitionRecommendation({ ...state, status: "completed" }, "open"), /Invalid/);
 });

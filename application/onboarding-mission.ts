@@ -39,9 +39,9 @@ export async function launchFirstRepositoryMission(input: {
   if (!resource) throw new NotFoundError("Ready Mission Agent repository");
   if (resource.mission_agent_adapter !== "codex")
     throw new ValidationFailedError("This adapter can connect but cannot execute the first local mission yet");
-  if (missionType === "change" && !supportsRepositoryChanges(resource.mission_agent_version))
+  if (!supportsMissionExecution(resource.mission_agent_version))
     throw new ValidationFailedError(
-      "Repository Change Missions require Mission Agent 0.3.1 or newer. Run mission-agent update, then try again.",
+      "Repository missions require Mission Agent 0.3.1 or newer. Run mission-agent update, then try again.",
     );
   const missionId = randomUUID();
   await handleCreateMission({
@@ -93,7 +93,7 @@ export async function launchFirstRepositoryMission(input: {
       instructions:
         missionType === "change"
           ? `Plan the requested change, pause for write approval, then implement it in an isolated worktree. Objective: ${objective}`
-          : `Inspect repository structure, configuration, commands, and tests; produce evidence-based Markdown findings. Analysis objective: ${objective}`,
+          : `Inspect repository structure, configuration, commands, and tests; produce evidence-based Markdown findings. Analysis objective: ${objective}. Suggested validation must use only direct repository-local npm, pnpm, yarn, bun, npx, node, go, cargo, or pytest commands with simple arguments. Never suggest inline code evaluation (including node -e), shell wrappers, chaining, separators, pipes, redirects, substitutions, environment assignments, privilege escalation, network commands, destructive commands, or paths outside the repository. When no governed validation command is evidenced by repository files, return an empty suggestedValidation array instead of inventing one.`,
       expectedOutput:
         missionType === "change"
           ? "Implementation plan, changed files, diff, validation evidence, and one local commit for human review."
@@ -135,7 +135,7 @@ export async function launchFirstRepositoryMission(input: {
   return { missionId, taskId, executionId: execution.executionId };
 }
 
-function supportsRepositoryChanges(version: unknown) {
+function supportsMissionExecution(version: unknown) {
   const match = String(version ?? "").match(/^(\d+)\.(\d+)\.(\d+)$/);
   if (!match) return false;
   const [, major, minor, patch] = match.map(Number);

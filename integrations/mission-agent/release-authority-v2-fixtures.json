@@ -1,0 +1,34 @@
+{
+  "activationAcknowledgement": {
+    "activationProtocolVersion": "1",
+    "agentVersion": "0.7.0",
+    "artifactSha256": "3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e",
+    "identityProtocolVersion": "2",
+    "migrationId": "00000000-0000-4000-8000-000000000070",
+    "repositoryId": "00000000-0000-4000-8000-000000000071",
+    "stableFingerprint": "16f52ff7b63fbd3c2ed4c2fe33526533b12ce273834f4bf4a24f7b22a64bfeed"
+  },
+  "rollbackAcknowledgement": {
+    "activationProtocolVersion": "1",
+    "agentVersion": "0.7.0",
+    "fromFingerprint": "16f52ff7b63fbd3c2ed4c2fe33526533b12ce273834f4bf4a24f7b22a64bfeed",
+    "identityProtocolVersion": "2",
+    "migrationId": "00000000-0000-4000-8000-000000000070",
+    "repositoryId": "00000000-0000-4000-8000-000000000071",
+    "toFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "unsignedManifest": {
+    "activationProtocolVersion": "1",
+    "agentVersion": "0.7.0",
+    "artifactPath": "/mission-agent-0.7.0.mjs",
+    "artifactSha256": "3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e",
+    "buildId": "mission-agent-0.7.0-a6d867f2",
+    "createdAt": "2026-07-25T18:01:20.000Z",
+    "expiresAt": "2026-08-24T18:01:20.000Z",
+    "identityProtocolVersion": "2",
+    "manifestVersion": "2",
+    "minimumMissionControlVersion": "0.1.0",
+    "signingKeyId": "mission-agent-release-2026-01",
+    "sourceCommit": "a6d867f217c6e28ce811fbb5b8bf8778fad193c4"
+  }
+}

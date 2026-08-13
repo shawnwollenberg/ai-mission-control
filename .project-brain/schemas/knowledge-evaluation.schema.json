@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "knowledge-evaluation.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "evaluation_id",
+    "repository_sha",
+    "evaluator",
+    "reviewer",
+    "experience_events",
+    "evaluations",
+    "summary",
+    "generated_at",
+    "note"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^2\\." },
+    "artifact_type": { "const": "knowledge-evaluation" },
+    "evaluation_id": { "type": "string", "minLength": 1 },
+    "repository_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "evaluator": { "const": "project-brain-deterministic-v1" },
+    "reviewer": { "type": "string", "minLength": 1 },
+    "experience_events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "learning_id", "event", "evidence"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "learning_id": { "type": "string", "minLength": 1 },
+          "event": { "enum": ["observed", "reused", "contradicted", "superseded"] },
+          "evidence": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "evaluations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "learning_id",
+          "proposal_fingerprint",
+          "claim",
+          "scope",
+          "scope_classification",
+          "novelty",
+          "evidence_quality",
+          "contradictions",
+          "confidence",
+          "encoding",
+          "promotion"
+        ],
+        "properties": {
+          "learning_id": { "type": "string", "minLength": 1 },
+          "proposal_fingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "claim": { "type": "string", "minLength": 1 },
+          "scope": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "scope_classification": { "enum": ["repository", "organization"] },
+          "novelty": {
+            "type": "object",
+            "required": ["score", "classification", "matches"],
+            "properties": {
+              "score": { "type": "number", "minimum": 0, "maximum": 1 },
+              "classification": { "enum": ["new", "overlap", "duplicate"] },
+              "matches": { "type": "array" }
+            }
+          },
+          "evidence_quality": {
+            "type": "object",
+            "required": [
+              "score",
+              "classification",
+              "inspectable",
+              "total",
+              "evidence_kinds",
+              "claim_terms_supported",
+              "issues"
+            ],
+            "properties": {
+              "score": { "type": "number", "minimum": 0, "maximum": 1 },
+              "classification": { "enum": ["weak", "adequate", "strong"] },
+              "inspectable": { "type": "integer", "minimum": 0 },
+              "total": { "type": "integer", "minimum": 0 },
+              "evidence_kinds": { "type": "array" },
+              "claim_terms_supported": { "type": "array" },
+              "issues": { "type": "array" }
+            }
+          },
+          "contradictions": { "type": "array" },
+          "confidence": {
+            "type": "object",
+            "required": ["score", "observed", "reused", "contradicted", "superseded", "formula"],
+            "properties": {
+              "score": { "type": "number", "minimum": 0, "maximum": 1 },
+              "observed": { "type": "integer", "minimum": 0 },
+              "reused": { "type": "integer", "minimum": 0 },
+              "contradicted": { "type": "integer", "minimum": 0 },
+              "superseded": { "type": "boolean" },
+              "formula": { "type": "string", "minLength": 1 }
+            }
+          },
+          "encoding": {
+            "type": "object",
+            "required": ["primary", "primary_score", "rationale", "alternatives"],
+            "properties": {
+              "primary": { "enum": ["lesson", "adr", "playbook", "test", "policy", "followup_issue", "mission_local"] },
+              "primary_score": { "type": "number", "minimum": 0, "maximum": 1 },
+              "rationale": { "type": "string", "minLength": 1 },
+              "alternatives": { "type": "array" }
+            }
+          },
+          "promotion": {
+            "type": "object",
+            "required": ["recommendation", "rationale", "human_approval", "automatic_promotion"],
+            "properties": {
+              "recommendation": {
+                "enum": ["human_review", "merge", "mission_local", "needs_evidence", "resolve_contradiction"]
+              },
+              "rationale": { "type": "string", "minLength": 1 },
+              "human_approval": { "const": "required" },
+              "automatic_promotion": { "const": false }
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "proposals_evaluated",
+        "need_human_review",
+        "duplicates_or_merges",
+        "contradictions",
+        "weak_evidence"
+      ]
+    },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "note": { "type": "string", "minLength": 1 }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "knowledge-review.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "repository_sha",
+    "reviewer",
+    "recommendations",
+    "generated_at",
+    "note"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^2\\." },
+    "artifact_type": { "const": "knowledge-review" },
+    "repository_sha": { "type": "string", "minLength": 7 },
+    "reviewer": { "type": "string", "minLength": 1 },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["learning_id", "action", "rationale", "target", "human_approval", "resulting_status", "evidence"],
+        "properties": {
+          "learning_id": { "type": "string", "minLength": 1 },
+          "action": {
+            "enum": [
+              "reject",
+              "mission_local",
+              "merge",
+              "confirm",
+              "adr",
+              "playbook",
+              "test",
+              "policy",
+              "followup_issue",
+              "stale",
+              "supersede"
+            ]
+          },
+          "rationale": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "minLength": 1 },
+          "human_approval": { "enum": ["required", "approved", "rejected"] },
+          "resulting_status": { "type": "string", "minLength": 1 },
+          "evidence": { "type": "array" }
+        }
+      }
+    },
+    "generated_at": { "type": "string" },
+    "note": { "type": "string" }
+  }
+}

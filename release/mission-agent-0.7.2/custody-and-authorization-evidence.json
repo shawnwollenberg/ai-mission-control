@@ -1,0 +1,39 @@
+{
+  "evidenceVersion": "1",
+  "releaseVersion": "0.7.2",
+  "key": {
+    "arn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+    "origin": "AWS_KMS",
+    "privateKeyExportable": false,
+    "aliases": [],
+    "grants": []
+  },
+  "separationOfDuties": {
+    "signerPrincipal": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d",
+    "signerCanAdminister": false,
+    "administratorPrincipal": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1",
+    "administratorCanSign": false,
+    "applicationCanSign": false,
+    "workerCanSign": false,
+    "ciCanSign": false,
+    "deploymentRoleCanSign": false,
+    "missionAgentCanSign": false
+  },
+  "localHandling": {
+    "privateMaterialWritten": false,
+    "credentialsRecorded": false,
+    "sessionTokensRecorded": false,
+    "onlyPublicKeyAndSignatureEvidenceCommitted": true
+  },
+  "priorBoundaryEvidence": [
+    "release/aws-kms/production-key/custody-evidence.json",
+    "release/aws-kms/production-key/signer-boundary-evidence.json",
+    "release/aws-kms/production-permission-set/final-production-key-policy.json"
+  ],
+  "procedures": {
+    "recovery": "docs/release/RELEASE_AUTHORITY.md#10-lost-mfa-device-or-unavailable-signer",
+    "freeze": "docs/release/RELEASE_AUTHORITY.md#8-emergency-freeze",
+    "rotation": "docs/release/RELEASE_AUTHORITY.md#7-key-rotation",
+    "revocation": "docs/release/RELEASE_AUTHORITY.md#9-suspected-signer-compromise"
+  }
+}

@@ -1,8 +1,8 @@
 # Mission Control Agent Protocol 1.0 — Pull Transport
 
-**Status:** Approved implementation boundary — updated 2026-07-21
+**Status:** Protocol 1.0 with additive Mission Agent 0.8.0 candidate consensus fields — updated 2026-08-04
 
-Mission Agent is the outbound-only local runtime for Mission Control. Codex, Hermes, Claude Code, and generic command adapters sit behind this runtime. The first execution-capable adapter is Codex, limited to read-only repository analysis.
+Mission Agent is the outbound-only local runtime for Mission Control. Codex, Hermes, Claude Code, and generic command adapters sit behind this runtime. Codex and Claude Code are execution-capable through the same signed boundary; Hermes retains its existing scope.
 
 ## Authority and source of truth
 
@@ -20,14 +20,18 @@ Credentials are created by a workspace owner and displayed once. Mission Control
 
 1. `AgentHeartbeat` advertises Mission Agent version, adapter, and `assignment.pull` capability.
 2. `POST /api/agent-protocol/v1/assignments/pull` waits for at most 20 seconds and returns an eligible assignment or `204`.
-3. Claiming creates a 60-second operational lease and an opaque lease token. Duplicate pulls by the same runtime return its active lease.
+3. Claiming creates a 60-second operational lease, an opaque lease token, and increments a monotonic fencing token. Consensus operations must present the exact fence on acknowledgement, lease, cancellation, approval checks, release, and protocol callbacks.
 4. `POST /api/agent-protocol/v1/assignments/{id}/acknowledge` records `ExecutionAccepted` through the canonical execution command path.
 5. `POST /api/agent-protocol/v1/assignments/{id}/lease` renews the lease while the same execution remains nonterminal.
 6. Existing signed protocol messages report heartbeat, bounded progress, artifact, success, failure, and cancellation acknowledgement.
 7. `POST /api/agent-protocol/v1/assignments/{id}/cancellation` reports whether cancellation was requested.
 8. `POST /api/agent-protocol/v1/assignments/{id}/release` makes safely abandoned, nonterminal work recoverable after policy checks.
 
-Lease tokens are stored as SHA-256 hashes and are bound to workspace, agent, assignment, execution attempt, and lease owner. Losing a lease prevents late completion from overwriting a newer attempt. Terminal executions cannot be reclaimed.
+Lease tokens are ephemeral response-bound bearer credentials. The assignment row stores only SHA-256, and protocol receipts and Mission Agent state store only a strictly validated non-secret authorization receipt containing endpoint-explicit kind, UUID lease ID, token fingerprint, issue/expiry times, fence, and exact workspace/agent/credential/assignment/execution-or-operation/owner binding. Project Brain receipts remain operation-kind even when linked to an execution. Repeating the same signed pull message returns that non-secret receipt, not the original token. A fresh pull by the same lease owner while the lease is active returns no authority-shaped assignment; the original in-memory holder may continue until expiry. After expiry a fresh claim rotates the fence and issues a new ephemeral token. Losing a pull response therefore fails closed for at most the bounded lease interval instead of reconstructing authority from durable storage. Terminal executions cannot be reclaimed.
+
+Receipt-v2 migration requires protocol traffic to be drained. It stops if an unexpired legacy receipt remains, removes
+only expired invalid operational receipts, and validates the structural constraint before completion. Retained forensic
+databases are not migrated or sanitized until their separately governed evidence-destruction step.
 
 ## Assignment eligibility
 
@@ -51,8 +55,16 @@ Mission Agent 0.5.0 extends that same read-only pass with bounded observations a
 
 ## Recovery and cancellation
 
-Mission Agent persists only assignment identity, lease metadata, stage, artifact checksum, and acknowledgement state. On restart it heartbeats, reconciles the active assignment, renews a still-valid lease, and retransmits idempotent results. Expired leases become reclaimable; terminal results remain terminal. Cancellation polling stops new stages, asks the adapter to stop, preserves bounded evidence, acknowledges cancellation, and releases the lease.
+Mission Agent persists only assignment identity, non-secret lease receipt metadata, stage, artifact checksum, and acknowledgement state. It never persists the raw bearer token. On restart it heartbeats and reacquires a freshly fenced assignment after the prior bounded lease expires; it may retransmit idempotent non-authorizing results. Terminal results remain terminal. Cancellation polling stops new stages, asks the adapter to stop, preserves bounded evidence, acknowledges cancellation, and releases the in-memory lease.
 
 ## Limits and compatibility
 
 Long polls are bounded to 20 seconds with client jitter. Pull, heartbeat, progress, and artifact categories have independent per-agent limits. Inline Markdown artifacts remain capped by the existing protocol and execution budgets. Protocol additions are backward compatible with push-mode 1.0 agents. Rollback disables pull registration and endpoints, stops Mission Agent clients, and leaves additive schema and canonical history intact.
+
+## Consensus assignment extension
+
+Mission Agent 0.8.0 adds a compatible `missionType: consensus_plan` task envelope containing operation, role assignment, planning round, exact repository snapshot/base commit, one immutable Project Brain artifact/hash, selected model, released source artifacts, and turn/artifact/command/retry limits. Proposal assignments contain no other proposal. Later source packages are selected server-side and normalized before delivery.
+
+The heartbeat advertises stable provider identity, runtime version, roles, operations, models, structured-output support, Project Brain support, and repository-mutation support. Mission Control accepts only a subset of owner-approved registration capability and filters assignments by capability rather than provider name. Existing agents that omit the additive provider profile remain valid for their earlier missions but are ineligible for consensus.
+
+Every consensus artifact is JSON except the Project Brain YAML/JSON context pack. The server checks the active execution, lease/fence, operation, role, mission, assignment, snapshot, context, schema, source artifact, reviewed artifact, canonical hash, checksum, size, and secret scan before appending canonical metadata. Agents never submit authoritative phase transitions.

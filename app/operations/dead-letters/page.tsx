@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import Link from "next/link";
+import { AppNavigation } from "@/app/app-navigation";
 import { requirePageIdentity } from "@/lib/page-auth";
 import { getDatabasePool } from "@/lib/database";
 import { deadLetterAction } from "./actions";
@@ -14,11 +14,7 @@ export default async function DeadLettersPage() {
   ).rows;
   return (
     <main className="archive-shell">
-      <nav className="brandbar">
-        <Link className="nav-link" href="/operations">
-          Operations
-        </Link>
-      </nav>
+      <AppNavigation subtitle="Dead-letter jobs" />
       <header className="archive-header">
         <div>
           <p className="section-label">Safe recovery</p>

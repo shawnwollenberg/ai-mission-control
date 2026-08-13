@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "complete_repository_state/3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "repositoryIdentity",
+    "repositoryRootIdentity",
+    "baseBranch",
+    "baseCommit",
+    "headCommit",
+    "cleanWorktree",
+    "trackedStatusHash",
+    "trackedStatusEmpty",
+    "trackedIndexHash",
+    "trackedManifestHash",
+    "trackedCount",
+    "trackedContentMatchesIndex",
+    "trackedManifest",
+    "untrackedPolicyId",
+    "untrackedManifestHash",
+    "untrackedCount",
+    "untrackedManifest",
+    "ignoredPolicyId",
+    "relevantIgnoredManifestHash",
+    "relevantIgnoredCount",
+    "relevantIgnoredManifest",
+    "submoduleStatusHash",
+    "submodules",
+    "snapshotHash"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "complete_repository_state/3" },
+    "repositoryIdentity": { "$ref": "#/$defs/hash" },
+    "repositoryRootIdentity": { "$ref": "#/$defs/hash" },
+    "baseBranch": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "baseCommit": { "$ref": "#/$defs/commit" },
+    "headCommit": { "$ref": "#/$defs/commit" },
+    "cleanWorktree": { "type": "boolean" },
+    "trackedStatusHash": { "$ref": "#/$defs/hash" },
+    "trackedStatusEmpty": { "type": "boolean" },
+    "trackedIndexHash": { "$ref": "#/$defs/hash" },
+    "trackedManifestHash": { "$ref": "#/$defs/hash" },
+    "trackedCount": { "type": "integer", "minimum": 0, "maximum": 100000 },
+    "trackedContentMatchesIndex": { "type": "boolean" },
+    "trackedManifest": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/entry" } },
+    "untrackedPolicyId": { "const": "include-untracked/1" },
+    "untrackedManifestHash": { "$ref": "#/$defs/hash" },
+    "untrackedCount": { "type": "integer", "minimum": 0, "maximum": 2048 },
+    "untrackedManifest": { "type": "array", "maxItems": 2048, "items": { "$ref": "#/$defs/entry" } },
+    "ignoredPolicyId": { "const": "runtime-relevant-ignored/1" },
+    "relevantIgnoredManifestHash": { "$ref": "#/$defs/hash" },
+    "relevantIgnoredCount": { "type": "integer", "minimum": 0, "maximum": 2048 },
+    "relevantIgnoredManifest": {
+      "type": "array",
+      "maxItems": 2048,
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "submoduleStatusHash": { "$ref": "#/$defs/hash" },
+    "submodules": { "type": "array", "maxItems": 1024, "items": { "$ref": "#/$defs/submodule" } },
+    "snapshotHash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "type", "mode", "size", "contentSha256", "gitObjectId", "symlinkTarget"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "type": { "enum": ["file", "symlink", "submodule"] },
+        "mode": { "enum": ["100644", "100755", "120000", "160000"] },
+        "size": { "type": "integer", "minimum": 0, "maximum": 1000000000 },
+        "contentSha256": { "$ref": "#/$defs/hash" },
+        "gitObjectId": { "anyOf": [{ "$ref": "#/$defs/commit" }, { "type": "null" }] },
+        "symlinkTarget": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 4096 }, { "type": "null" }] }
+      }
+    },
+    "submodule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "commit", "status"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "commit": { "$ref": "#/$defs/commit" },
+        "status": { "enum": ["clean", "modified", "uninitialized", "conflict"] }
+      }
+    }
+  }
+}

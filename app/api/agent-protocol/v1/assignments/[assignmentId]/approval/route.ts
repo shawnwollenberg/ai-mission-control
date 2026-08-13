@@ -18,6 +18,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ass
       executionId: String(auth.message.executionId ?? ""),
       leaseOwner: String(auth.message.payload.leaseOwner ?? ""),
       leaseToken: String(auth.message.payload.leaseToken ?? ""),
+      fencingToken: Number(auth.message.payload.fencingToken),
     });
     const approval = (
       await getDatabasePool().query(

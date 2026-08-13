@@ -1,0 +1,11 @@
+{
+  "artifactByteLength": 148063,
+  "canonicalizationVersion": "release-manifest-json-v3",
+  "manifestVersion": "3",
+  "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+  "releaseAuthorityVersion": "v2",
+  "sha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+  "signingKeyId": "mission-agent-release-2026-01",
+  "sourceCommit": "31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
+  "version": "0.7.2"
+}

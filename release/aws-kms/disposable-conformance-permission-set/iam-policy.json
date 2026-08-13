@@ -1,0 +1,161 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CreateOnlyTaggedDisposableEd25519SigningKeys",
+      "Effect": "Allow",
+      "Action": ["kms:CreateKey", "kms:TagResource"],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "kms:KeySpec": "ECC_NIST_EDWARDS25519",
+          "kms:KeyUsage": "SIGN_VERIFY",
+          "kms:KeyOrigin": "AWS_KMS",
+          "aws:RequestTag/purpose": "release-authority-conformance",
+          "aws:RequestTag/environment": "disposable",
+          "aws:RequestTag/owner": "Shawn",
+          "aws:RequestTag/cleanup-intent": "schedule-deletion-7-days"
+        },
+        "Bool": {
+          "kms:MultiRegion": "false"
+        },
+        "ForAllValues:StringEquals": {
+          "aws:TagKeys": ["purpose", "environment", "owner", "cleanup-intent"]
+        }
+      }
+    },
+    {
+      "Sid": "InspectOnlyTaggedDisposableConformanceKeys",
+      "Effect": "Allow",
+      "Action": ["kms:DescribeKey", "kms:GetKeyPolicy", "kms:GetPublicKey", "kms:ListGrants", "kms:ListResourceTags"],
+      "Resource": "arn:aws:kms:us-east-1:661452835066:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/purpose": "release-authority-conformance",
+          "aws:ResourceTag/environment": "disposable",
+          "aws:ResourceTag/owner": "Shawn",
+          "aws:ResourceTag/cleanup-intent": "schedule-deletion-7-days",
+          "kms:KeySpec": "ECC_NIST_EDWARDS25519",
+          "kms:KeyUsage": "SIGN_VERIFY",
+          "kms:KeyOrigin": "AWS_KMS"
+        },
+        "Bool": {
+          "kms:MultiRegion": "false"
+        }
+      }
+    },
+    {
+      "Sid": "SignAndVerifyOnlyRawEd25519ConformanceMessages",
+      "Effect": "Allow",
+      "Action": ["kms:Sign", "kms:Verify"],
+      "Resource": "arn:aws:kms:us-east-1:661452835066:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/purpose": "release-authority-conformance",
+          "aws:ResourceTag/environment": "disposable",
+          "aws:ResourceTag/owner": "Shawn",
+          "aws:ResourceTag/cleanup-intent": "schedule-deletion-7-days",
+          "kms:KeySpec": "ECC_NIST_EDWARDS25519",
+          "kms:KeyUsage": "SIGN_VERIFY",
+          "kms:KeyOrigin": "AWS_KMS",
+          "kms:SigningAlgorithm": "ED25519_SHA_512",
+          "kms:MessageType": "RAW"
+        },
+        "Bool": {
+          "kms:MultiRegion": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DisableOnlyTaggedDisposableConformanceKeys",
+      "Effect": "Allow",
+      "Action": "kms:DisableKey",
+      "Resource": "arn:aws:kms:us-east-1:661452835066:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/purpose": "release-authority-conformance",
+          "aws:ResourceTag/environment": "disposable",
+          "aws:ResourceTag/owner": "Shawn",
+          "aws:ResourceTag/cleanup-intent": "schedule-deletion-7-days",
+          "kms:KeySpec": "ECC_NIST_EDWARDS25519",
+          "kms:KeyUsage": "SIGN_VERIFY",
+          "kms:KeyOrigin": "AWS_KMS"
+        },
+        "Bool": {
+          "kms:MultiRegion": "false"
+        }
+      }
+    },
+    {
+      "Sid": "ScheduleSevenDayDeletionOnlyForTaggedDisposableConformanceKeys",
+      "Effect": "Allow",
+      "Action": "kms:ScheduleKeyDeletion",
+      "Resource": "arn:aws:kms:us-east-1:661452835066:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/purpose": "release-authority-conformance",
+          "aws:ResourceTag/environment": "disposable",
+          "aws:ResourceTag/owner": "Shawn",
+          "aws:ResourceTag/cleanup-intent": "schedule-deletion-7-days",
+          "kms:KeySpec": "ECC_NIST_EDWARDS25519",
+          "kms:KeyUsage": "SIGN_VERIFY",
+          "kms:KeyOrigin": "AWS_KMS"
+        },
+        "Bool": {
+          "kms:MultiRegion": "false"
+        },
+        "NumericEquals": {
+          "kms:ScheduleKeyDeletionPendingWindowInDays": "7"
+        }
+      }
+    },
+    {
+      "Sid": "InspectAliasesInApprovedAccountAndRegion",
+      "Effect": "Allow",
+      "Action": "kms:ListAliases",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "kms:CallerAccount": "661452835066"
+        }
+      }
+    },
+    {
+      "Sid": "InspectKmsCloudTrailEvidence",
+      "Effect": "Allow",
+      "Action": "cloudtrail:LookupEvents",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "DenyEveryUnrelatedAwsAction",
+      "Effect": "Deny",
+      "NotAction": [
+        "kms:CreateKey",
+        "kms:TagResource",
+        "kms:DescribeKey",
+        "kms:GetKeyPolicy",
+        "kms:GetPublicKey",
+        "kms:ListAliases",
+        "kms:ListGrants",
+        "kms:ListResourceTags",
+        "kms:Sign",
+        "kms:Verify",
+        "kms:DisableKey",
+        "kms:ScheduleKeyDeletion",
+        "cloudtrail:LookupEvents"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

@@ -7,7 +7,10 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 
-type MissionControlAppStackProps = cdk.StackProps & { imageTag: string };
+type MissionControlAppStackProps = cdk.StackProps & {
+  webImageDigest: string;
+  projectBrainImageDigest: string;
+};
 
 export class MissionControlAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: MissionControlAppStackProps) {
@@ -77,12 +80,19 @@ export class MissionControlAppStack extends cdk.Stack {
       target: route53.RecordTarget.fromIpAddresses(elasticIp.ref),
     });
 
-    const image = `${repository.repositoryUri}:${props.imageTag}`;
+    if (
+      !/^sha256:[a-f0-9]{64}$/.test(props.webImageDigest) ||
+      !/^sha256:[a-f0-9]{64}$/.test(props.projectBrainImageDigest)
+    )
+      throw new Error("Production image references must be immutable sha256 digests");
+    const image = `${repository.repositoryUri}@${props.webImageDigest}`;
+    const projectBrainImage = `${repository.repositoryUri}@${props.projectBrainImageDigest}`;
     instance.userData.addCommands(
       "set -euo pipefail",
       "dnf install -y docker",
       "systemctl enable --now docker",
-      "mkdir -p /opt/mission-control/{postgres,caddy-data,caddy-config}",
+      "mkdir -p /opt/mission-control/{postgres,caddy-data,caddy-config,repositories}",
+      "chown 1001:1001 /opt/mission-control/repositories",
       `aws secretsmanager get-secret-value --region ${this.region} --secret-id ${bootstrapSecret.secretArn} --query SecretString --output text > /root/mission-control-bootstrap`,
       "chmod 600 /root/mission-control-bootstrap",
       "MASTER_SECRET=$(cat /root/mission-control-bootstrap)",
@@ -90,13 +100,15 @@ export class MissionControlAppStack extends cdk.Stack {
       "SESSION_SECRET=$(printf '%ssession' \"$MASTER_SECRET\" | sha256sum | cut -d' ' -f1)",
       `aws ecr get-login-password --region ${this.region} | docker login --username AWS --password-stdin ${this.account}.dkr.ecr.${this.region}.amazonaws.com`,
       "docker network create mission-control || true",
-      "docker rm -f mission-control-postgres mission-control-web mission-control-caddy 2>/dev/null || true",
+      "docker rm -f mission-control-postgres mission-control-web mission-control-generic-worker mission-control-project-brain-worker mission-control-caddy 2>/dev/null || true",
       'docker run -d --name mission-control-postgres --restart unless-stopped --network mission-control -e POSTGRES_DB=mission_control -e POSTGRES_USER=mission_control -e POSTGRES_PASSWORD="$DB_PASSWORD" -v /opt/mission-control/postgres:/var/lib/postgresql/data postgres:16.4-bookworm',
       "until docker exec mission-control-postgres pg_isready -U mission_control -d mission_control; do sleep 2; done",
       `docker run --rm --network mission-control -e APP_ENV=production -e DATABASE_URL=\"postgresql://mission_control:$DB_PASSWORD@mission-control-postgres:5432/mission_control\" -e SECRET_PROVIDER=aws-secrets-manager -e ALLOW_PRODUCTION_MIGRATIONS=MISSION_CONTROL_PRODUCTION ${image} node node_modules/tsx/dist/cli.mjs scripts/migrate.ts`,
       `OWNER_COUNT=$(docker exec mission-control-postgres psql -U mission_control -d mission_control -tAc \"SELECT count(*) FROM workspace_memberships WHERE role='owner'\")`,
       `if [ \"$OWNER_COUNT\" = \"0\" ]; then printf '%s' \"$MASTER_SECRET\" | docker run -i --rm --network mission-control -e APP_ENV=production -e DATABASE_URL=\"postgresql://mission_control:$DB_PASSWORD@mission-control-postgres:5432/mission_control\" -e SECRET_PROVIDER=aws-secrets-manager -e PUBLIC_APP_URL=https://app.missioncontrol.wallyweb.com -e SECURE_COOKIES=true -e MISSION_CONTROL_SESSION_SECRET=\"$SESSION_SECRET\" -e ARTIFACT_STORAGE_PROVIDER=s3 -e ARTIFACT_S3_BUCKET=${artifacts.bucketName} -e ARTIFACT_S3_REGION=${this.region} -e ARTIFACT_S3_ENDPOINT=https://s3.${this.region}.amazonaws.com -e ARTIFACT_S3_USE_IAM_ROLE=true -e MISSION_CONTROL_OWNER_EMAIL=admin@wallyweb.com -e MISSION_CONTROL_OWNER_NAME='WallyWeb Owner' -e PRODUCTION_CONFIRMATION=PROVISION_MISSION_CONTROL_OWNER ${image} node node_modules/tsx/dist/cli.mjs scripts/provision-production-owner.ts; fi`,
-      `docker run -d --name mission-control-web --restart unless-stopped --network mission-control -e APP_ENV=production -e NODE_ENV=production -e DATABASE_URL=\"postgresql://mission_control:$DB_PASSWORD@mission-control-postgres:5432/mission_control\" -e SECRET_PROVIDER=aws-secrets-manager -e PUBLIC_APP_URL=https://app.missioncontrol.wallyweb.com -e SECURE_COOKIES=true -e MISSION_CONTROL_SESSION_SECRET=\"$SESSION_SECRET\" -e ARTIFACT_STORAGE_PROVIDER=s3 -e ARTIFACT_S3_BUCKET=${artifacts.bucketName} -e ARTIFACT_S3_REGION=${this.region} -e ARTIFACT_S3_ENDPOINT=https://s3.${this.region}.amazonaws.com -e ARTIFACT_S3_USE_IAM_ROLE=true ${image}`,
+      `docker run -d --name mission-control-web --restart unless-stopped --network mission-control -e APP_ENV=production -e NODE_ENV=production -e PROJECT_BRAIN_LOCAL_EXECUTION=disabled -e DATABASE_URL=\"postgresql://mission_control:$DB_PASSWORD@mission-control-postgres:5432/mission_control\" -e SECRET_PROVIDER=aws-secrets-manager -e PUBLIC_APP_URL=https://app.missioncontrol.wallyweb.com -e SECURE_COOKIES=true -e MISSION_CONTROL_SESSION_SECRET=\"$SESSION_SECRET\" -e ARTIFACT_STORAGE_PROVIDER=s3 -e ARTIFACT_S3_BUCKET=${artifacts.bucketName} -e ARTIFACT_S3_REGION=${this.region} -e ARTIFACT_S3_ENDPOINT=https://s3.${this.region}.amazonaws.com -e ARTIFACT_S3_USE_IAM_ROLE=true ${image}`,
+      `docker run -d --name mission-control-generic-worker --restart unless-stopped --network mission-control -e APP_ENV=production -e PROCESS_TYPE=generic -e DATABASE_URL=\"postgresql://mission_control:$DB_PASSWORD@mission-control-postgres:5432/mission_control\" -e SECRET_PROVIDER=aws-secrets-manager -e WORKER_ID=mc-generic-1 ${image} node node_modules/tsx/dist/cli.mjs scripts/worker.ts`,
+      `docker run -d --name mission-control-project-brain-worker --restart unless-stopped --network mission-control --mount type=bind,src=/opt/mission-control/repositories,dst=/repositories,readonly -e APP_ENV=production -e PROCESS_TYPE=project_brain -e DATABASE_URL=\"postgresql://mission_control:$DB_PASSWORD@mission-control-postgres:5432/mission_control\" -e SECRET_PROVIDER=aws-secrets-manager -e WORKER_ID=mc-project-brain-1 -e CODEX_REPOSITORY_ROOT=/repositories -e PROJECT_BRAIN_LOCAL_EXECUTION=disabled -e PROJECT_BRAIN_EXECUTABLE=/opt/project-brain/bin/project-brain -e PROJECT_BRAIN_REQUIRED_VERSION=0.4.0 -e PROJECT_BRAIN_CONTRACT_VERSION=1.0 -e PROJECT_BRAIN_TIMEOUT_MS=15000 -e PROJECT_BRAIN_MAX_OUTPUT_BYTES=1000000 -e ARTIFACT_STORAGE_PROVIDER=s3 -e ARTIFACT_S3_BUCKET=${artifacts.bucketName} -e ARTIFACT_S3_REGION=${this.region} -e ARTIFACT_S3_ENDPOINT=https://s3.${this.region}.amazonaws.com -e ARTIFACT_S3_USE_IAM_ROLE=true ${projectBrainImage}`,
       "cat > /opt/mission-control/Caddyfile <<'EOF'",
       "missioncontrol.wallyweb.com, app.missioncontrol.wallyweb.com {",
       "  reverse_proxy mission-control-web:3000",

@@ -13,11 +13,14 @@ export async function POST(request: Request) {
     if (authenticated.receipt.duplicate)
       return NextResponse.json(authenticated.receipt.acknowledgement, { status: 200 });
     const leaseOwner = String(authenticated.message.payload.leaseOwner ?? "");
+    const assignmentId = authenticated.message.payload.assignmentId
+      ? String(authenticated.message.payload.assignmentId)
+      : undefined;
     const waitSeconds = Math.min(Math.max(Number(authenticated.message.payload.waitSeconds ?? 0), 0), 20);
     const deadline = Date.now() + waitSeconds * 1000;
     let claimed;
     do {
-      claimed = await claimNextAssignment({ credential: authenticated.credential, leaseOwner });
+      claimed = await claimNextAssignment({ credential: authenticated.credential, leaseOwner, assignmentId });
       if (claimed || Date.now() >= deadline) break;
       await new Promise((resolve) => setTimeout(resolve, 750));
     } while (true);
@@ -34,13 +37,17 @@ export async function POST(request: Request) {
             attempt: claimed.assignment.attempt,
             leaseOwner: claimed.assignment.lease_owner,
             leaseToken: claimed.leaseToken,
-            leaseExpiresAt: claimed.assignment.lease_expires_at,
+            leaseIssuedAt: new Date(claimed.assignment.last_renewed_at).toISOString(),
+            leaseExpiresAt: new Date(claimed.assignment.lease_expires_at).toISOString(),
+            fencingToken: Number(claimed.assignment.fencing_token),
             resumed: claimed.resumed,
             ...claimed.assignment.payload,
           },
         }
       : { protocolVersion: "1.0", messageId: authenticated.message.messageId, assignment: null };
-    await completeProtocolMessage(authenticated.credential, authenticated.message.messageId, result);
+    await completeProtocolMessage(authenticated.credential, authenticated.message.messageId, result, {
+      leaseKind: "execution_assignment",
+    });
     return claimed ? NextResponse.json(result) : new NextResponse(null, { status: 204 });
   } catch (error) {
     if (authenticated)

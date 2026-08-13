@@ -1,0 +1,44 @@
+{
+  "evidenceVersion": "1",
+  "releaseAuthorityKeyId": "mission-agent-release-2026-01",
+  "transition": {
+    "from": "pending",
+    "to": "active",
+    "activatedAt": "2026-07-27T16:58:06.000Z",
+    "reason": "Explicit authorization to activate production trust and sign the exact approved Mission Agent 0.7.2 Manifest v3 candidate."
+  },
+  "records": {
+    "pendingPath": "release/aws-kms/production-key/pending-trust-record.json",
+    "pendingCanonicalSha256": "91e8774f38bb64b4715169928fec4fe4a03ca861c687241795c93e706a3f7b6b",
+    "activePath": "release/aws-kms/production-key/active-trust-record.json",
+    "activeCanonicalSha256": "8bdc37c0030136e2d9339d87c0ca506d2cb41310fe1d5bc003ecffc4acd64fba",
+    "trustEnabledReleaseSha": "6894601268a6571143f6cc9fd5a3667e31507403"
+  },
+  "identity": {
+    "activationAuthority": "Explicit user authorization recorded in the Codex task",
+    "awsIdentityUsedForKeyVerification": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+    "signerPrincipalArn": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d",
+    "administratorPrincipalArn": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1"
+  },
+  "key": {
+    "arn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+    "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+    "keyPolicySha256": "4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7"
+  },
+  "candidate": {
+    "version": "0.7.2",
+    "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+    "artifactSourceCommit": "31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
+    "manifestVersion": "3",
+    "releaseAuthorityVersion": "v2",
+    "canonicalizationVersion": "release-manifest-json-v3"
+  },
+  "acceptanceEvidence": [
+    "release/mission-agent-0.7.2/acceptance.json",
+    "release/mission-agent-0.7.2/build-report.json",
+    "release/mission-agent-0.7.2/reproducibility.json",
+    "release/mission-agent-0.7.2/unsigned-candidate-record.json",
+    "release/aws-kms/production-key/signer-boundary-evidence.json"
+  ],
+  "unchangedKeyRecords": ["mission-agent-release-2026-00"]
+}

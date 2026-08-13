@@ -5,14 +5,18 @@ import { appendEvents, loadAggregateEvents, type DomainEvent } from "@/lib/postg
 import { getDatabasePool } from "@/lib/database";
 import { deriveSigningKey } from "@/remote-agent/protocol";
 import type { RegistryActor } from "@/application/registry";
+import { parseAgentProviderProfile, type AgentProviderProfile } from "@/domain/agent-provider";
+import { canonicalHash } from "@/lib/canonical-json";
 
 const allowedCapabilities = new Set([
   "repository.read",
   "repository.write",
+  "repository.isolated_worktree_write",
   "code.implement",
   "code.review",
   "test.run",
   "git.commit",
+  "git.commit_local",
   "artifact.create",
   "metrics.read",
   "logs.read",
@@ -32,6 +36,11 @@ const allowedCapabilities = new Set([
   "content.review",
   "report.create",
   "summary.create",
+  "plan.generate",
+  "plan.critique",
+  "plan.revise",
+  "plan.review",
+  "project_brain.context",
 ]);
 function requireOwner(actor: RegistryActor) {
   if (actor.role !== "owner") throw new ValidationFailedError("Workspace owner permission is required");
@@ -49,8 +58,10 @@ async function projectRegistration(client: PoolClient, events: DomainEvent[], se
   const registered = events.find((event) => event.eventType === "agent.registered")!;
   const credential = events.find((event) => event.eventType === "agent.credential_created")!;
   const p = registered.payload;
+  const providerProfile = parseAgentProviderProfile(p.providerProfile);
+  const capabilityAttestation = p.capabilityAttestation as Record<string, unknown>;
   await client.query(
-    `INSERT INTO agents(workspace_id,agent_id,name,description,adapter_type,capabilities,supported_domains,trust_level,status,concurrency_limit,endpoint,protocol_versions,allowed_callback_actions,credential_status,credential_rotated_at,delivery_mode,mission_agent_adapter) VALUES($1,$2,$3,$4,'remote_http',$5,$6,$7,'offline',$8,$9,$10,$11,'active',$12,$13,$14)`,
+    `INSERT INTO agents(workspace_id,agent_id,name,description,adapter_type,capabilities,supported_domains,trust_level,status,concurrency_limit,endpoint,protocol_versions,allowed_callback_actions,credential_status,credential_rotated_at,delivery_mode,mission_agent_adapter,provider_id,agent_version,supported_mission_roles,supported_operations,supported_models,model_capabilities,capability_attestation_hash,capability_attestation_version,capability_source,capability_attested_at,capability_attestation_expires_at,structured_output,project_brain_context,repository_mutation,provider_runtime_requirements_id,provider_runtime_requirements_hash) VALUES($1,$2,$3,$4,'remote_http',$5,$6,$7,'offline',$8,$9,$10,$11,'active',$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)`,
     [
       registered.workspaceId,
       registered.aggregateId,
@@ -66,7 +77,52 @@ async function projectRegistration(client: PoolClient, events: DomainEvent[], se
       credential.occurredAt,
       p.deliveryMode ?? "push",
       p.missionAgentAdapter ?? null,
+      providerProfile.provider,
+      providerProfile.agentVersion,
+      JSON.stringify(providerProfile.supportedMissionRoles),
+      JSON.stringify(providerProfile.supportedOperations),
+      JSON.stringify(providerProfile.supportedModels),
+      JSON.stringify(providerProfile.modelCapabilities),
+      capabilityAttestation.attestationHash,
+      providerProfile.capabilityAttestationVersion,
+      providerProfile.capabilitySource,
+      capabilityAttestation.advertisedAt,
+      capabilityAttestation.expiresAt,
+      providerProfile.structuredOutput,
+      providerProfile.projectBrainContext,
+      providerProfile.repositoryMutation,
+      providerProfile.runtimeRequirements!.requirementsId,
+      providerProfile.runtimeRequirements!.requirementsHash,
     ],
+  );
+  await client.query(
+    `INSERT INTO agent_model_capability_attestations(
+       workspace_id,capability_attestation_id,agent_id,provider_id,agent_version,
+       attestation_version,capability_source,supported_models,model_capabilities,
+       provider_runtime_requirements_id,provider_runtime_requirements_hash,attestation_hash,
+       advertised_at,expires_at
+     ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+    [
+      registered.workspaceId,
+      capabilityAttestation.attestationId,
+      registered.aggregateId,
+      providerProfile.provider,
+      providerProfile.agentVersion,
+      providerProfile.capabilityAttestationVersion,
+      providerProfile.capabilitySource,
+      JSON.stringify(providerProfile.supportedModels),
+      JSON.stringify(providerProfile.modelCapabilities),
+      providerProfile.runtimeRequirements!.requirementsId,
+      providerProfile.runtimeRequirements!.requirementsHash,
+      capabilityAttestation.attestationHash,
+      capabilityAttestation.advertisedAt,
+      capabilityAttestation.expiresAt,
+    ],
+  );
+  await client.query(
+    `UPDATE agents SET capability_attestation_id=$3
+     WHERE workspace_id=$1 AND agent_id=$2`,
+    [registered.workspaceId, registered.aggregateId, capabilityAttestation.attestationId],
   );
   await client.query(
     `INSERT INTO agent_credentials(workspace_id,credential_id,agent_id,version,secret_verifier,status,allowed_protocol_versions,created_at,expires_at) VALUES($1,$2,$3,1,$4,'active',$5,$6,$7)`,
@@ -93,16 +149,72 @@ export async function registerRemoteAgent(input: {
   expiresAt?: string;
   deliveryMode?: "push" | "pull";
   missionAgentAdapter?: "codex" | "hermes" | "claude-code" | "generic";
+  providerProfile?: AgentProviderProfile;
 }) {
   requireOwner(input.actor);
   if (!input.name.trim()) throw new ValidationFailedError("Agent name is required");
   if (!input.capabilities.length || input.capabilities.some((capability) => !allowedCapabilities.has(capability)))
     throw new ValidationFailedError("Remote agent capabilities contain unsupported or prohibited values");
+  const inferredProvider =
+    input.missionAgentAdapter === "claude-code"
+      ? "claude_code"
+      : input.missionAgentAdapter === "codex"
+        ? "codex"
+        : input.missionAgentAdapter === "hermes"
+          ? "hermes"
+          : "generic";
+  const providerProfile = parseAgentProviderProfile(
+    input.providerProfile ?? {
+      provider: inferredProvider,
+      agent_version: "unreported",
+      supported_mission_roles: [],
+      supported_operations: ["inspect_repository"],
+      supported_models: ["default"],
+      model_capabilities: [
+        {
+          model_id: "default",
+          display_name: "Default provider model (unverified)",
+          provider: inferredProvider,
+          // Legacy registrations remain deliberately ineligible for every
+          // consensus role until an owner approves a complete attestation.
+          supported_roles: ["implementation_reviewer"],
+          supported_operations: ["inspect_repository"],
+          structured_output: false,
+          repository_read: true,
+          repository_mutation: false,
+          plan_mode: true,
+          runtime_model_identity: "unverifiable",
+        },
+      ],
+      capability_attestation_version: 1,
+      capability_source: "operator_allowlist",
+      structured_output: false,
+      project_brain_context: false,
+      repository_mutation: false,
+    },
+  );
+  if (providerProfile.provider !== inferredProvider)
+    throw new ValidationFailedError("Provider profile does not match the registered Mission Agent adapter");
   const agentId = randomUUID(),
     credentialId = randomUUID(),
     secret = `mc_agent_${randomBytes(32).toString("base64url")}`,
     verifier = deriveSigningKey(secret),
     now = new Date().toISOString();
+  const capabilityAttestation = {
+    attestationId: randomUUID(),
+    attestationHash: canonicalHash({
+      agentId,
+      provider: providerProfile.provider,
+      agentVersion: providerProfile.agentVersion,
+      attestationVersion: providerProfile.capabilityAttestationVersion,
+      capabilitySource: providerProfile.capabilitySource,
+      supportedModels: providerProfile.supportedModels,
+      modelCapabilities: providerProfile.modelCapabilities,
+      runtimeRequirements: providerProfile.runtimeRequirements,
+    }),
+    advertisedAt: now,
+    expiresAt: new Date(Date.parse(now) + 5 * 60_000).toISOString(),
+  };
   await appendEvents({
     workspaceId: input.actor.workspaceId,
     aggregateType: "agent",
@@ -136,6 +248,8 @@ export async function registerRemoteAgent(input: {
           ],
           deliveryMode: input.deliveryMode ?? "push",
           missionAgentAdapter: input.missionAgentAdapter,
+          providerProfile,
+          capabilityAttestation,
         },
       },
       {

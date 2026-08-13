@@ -1,0 +1,43 @@
+{
+  "keyId": "mission-agent-release-2026-01",
+  "algorithm": "Ed25519",
+  "publicKeySpkiBase64": "MCowBQYDK2VwAyEAvSkEoddFoGfJn2PauL+KEl4ykZ+5WM5B2PklJOZOAKE=",
+  "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+  "status": "active",
+  "purpose": "mission-agent-release",
+  "createdAt": "2026-07-26T20:50:15.575Z",
+  "activatedAt": "2026-07-27T16:58:06.000Z",
+  "retiresAt": null,
+  "revokedAt": null,
+  "replacedBy": null,
+  "historicalVersions": [],
+  "kms": {
+    "provider": "aws-kms",
+    "accountId": "661452835066",
+    "region": "us-east-1",
+    "keyArn": "arn:aws:kms:us-east-1:661452835066:key/cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+    "keyId": "cd9ebd3d-f2c6-44cb-83d6-fd4893008fee",
+    "keySpec": "ECC_NIST_EDWARDS25519",
+    "keyUsage": "SIGN_VERIFY",
+    "signingAlgorithm": "ED25519_SHA_512",
+    "origin": "AWS_KMS",
+    "keyManager": "CUSTOMER",
+    "multiRegion": false
+  },
+  "activation": {
+    "authorization": "Activate Production Trust and Sign Mission Agent 0.7.2 Manifest v3",
+    "activationAuthority": "Explicit user authorization recorded in the Codex task",
+    "awsIdentityUsedForKeyVerification": "arn:aws:sts::661452835066:assumed-role/AWSReservedSSO_MissionAgentReleaseSigner_6d0f08fa6781c70d/wallyweb-sso",
+    "pendingRecordSha256": "91e8774f38bb64b4715169928fec4fe4a03ca861c687241795c93e706a3f7b6b",
+    "reviewedKeyPolicySha256": "4e7a8e177eb46c4c173a777e3e150c639b846fc5a0f026196f8a97b15e7d4bb7"
+  },
+  "recovery": {
+    "administrativePrincipal": "arn:aws:iam::661452835066:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_MissionAgentReleaseAdmin_240a7ff2222406d1",
+    "accountRecoveryPrincipal": "arn:aws:iam::661452835066:root",
+    "rotationMode": "manual-governed"
+  },
+  "revocation": {
+    "procedure": "Disable the key, mark the trust record revoked through governed review, and preserve historical verification evidence.",
+    "destructiveDeletionRequiresSeparateAuthorization": true
+  }
+}

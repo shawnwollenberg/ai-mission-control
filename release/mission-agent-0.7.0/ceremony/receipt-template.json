@@ -1,0 +1,19 @@
+{
+  "approvalReference": "<human-entered>",
+  "artifactSha256": "3626d62a3bba757c6a8d153c651ca13d332d6fe4478897f34344a41e6473a70e",
+  "awsRequestId": "<from-kms-sign>",
+  "canonicalManifestSha256": "<calculated>",
+  "independentVerification": {
+    "awsKms": false,
+    "localEd25519": false
+  },
+  "kmsKeyArn": "<exact-key-arn>",
+  "publicKeyFingerprint": "<from-der-spki>",
+  "releaseAuthorityKeyId": "mission-agent-release-2026-01",
+  "releaseVersion": "0.7.0",
+  "signatureSha256": "<calculated>",
+  "signerPrincipalArn": "<from-sts-get-caller-identity>",
+  "signingAlgorithm": "ED25519_SHA_512",
+  "signingTime": "<from-signing-command>",
+  "sourceSha": "a6d867f217c6e28ce811fbb5b8bf8778fad193c4"
+}

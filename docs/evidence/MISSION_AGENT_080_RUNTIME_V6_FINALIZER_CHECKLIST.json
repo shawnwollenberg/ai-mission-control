@@ -1,0 +1,99 @@
+{
+  "schema_version": "consensus-acceptance-finalizer-checklist/1",
+  "contract_sha256": "151adccdd5897f8e4c9e47a3ac0cde81997c6538c4c7ccbe7db6da79b2d20786",
+  "executable_registry_sha256": "1bcdafac1c1b9408603a77ef1291ba3303319c94b993fbfad26a2abca691db95",
+  "validator_registry_sha256": "4dff87f4dfeb3dc3ffb93d23841267587f14679e75c264e46fab2e07a8365043",
+  "scope": ["review", "cleanup", "post_cleanup"],
+  "steps": [
+    {
+      "step_id": "review.independent_security_correctness_runtime",
+      "requirement_id": "REQ-0D416986235E2ABE",
+      "lifecycle_phase": "review",
+      "implementation_identity": "de297fbf8fe91dbd5d96238d8a1e9350b8f5065f1d2bad36bb2bf0ffd1086bd6",
+      "validator_id": "validate:review.independent_security_correctness_runtime/1",
+      "validator_identity": "cf9868571a6a5ae5eb8d6eec09ba821ddcafae63449654df6430dfde4d9a1a4b",
+      "required_evidence_fields": ["passCriteriaId", "observation", "details"],
+      "pass_criteria_id": "pass:review.independent_security_correctness_runtime/1"
+    },
+    {
+      "step_id": "review.zero_unresolved_high",
+      "requirement_id": "REQ-A559EA17DCDE7FAF",
+      "lifecycle_phase": "review",
+      "implementation_identity": "f2eaed1e9f72d7badef7496f15043d1cdb3dc69aad8299923a842ebf5d98b3b4",
+      "validator_id": "validate:review.zero_unresolved_high/1",
+      "validator_identity": "e1eef863c2adafc335b5f264b65789b2c193a7ec1ec23dd1193bc0035fb9167d",
+      "required_evidence_fields": ["passCriteriaId", "observation", "details"],
+      "pass_criteria_id": "pass:review.zero_unresolved_high/1"
+    },
+    {
+      "step_id": "review.zero_unresolved_medium",
+      "requirement_id": "REQ-4CC48C3CA4595609",
+      "lifecycle_phase": "review",
+      "implementation_identity": "00e65343b380c31fd65e3999dafba27d3d7e98a27d35550a8cf159d458f74176",
+      "validator_id": "validate:review.zero_unresolved_medium/1",
+      "validator_identity": "fb6be5a07b5ec2638311231cadd34f6dc479b6dbaf8295ea06129e9a617f13f7",
+      "required_evidence_fields": ["passCriteriaId", "observation", "details"],
+      "pass_criteria_id": "pass:review.zero_unresolved_medium/1"
+    },
+    {
+      "step_id": "review.contract_evidence_complete",
+      "requirement_id": "REQ-84526330832EBDD8",
+      "lifecycle_phase": "review",
+      "implementation_identity": "3f95dbfbf4c94eee13298f3e4c21ed28e6b5b2a8cc7937e8d330df3bb79f9b1f",
+      "validator_id": "validate:review.contract_evidence_complete/1",
+      "validator_identity": "beb4d4ce9e915d6b8fb19b41e7cd30bcbb410dfbc8e640a36c5fb2c013bc72f6",
+      "required_evidence_fields": ["passCriteriaId", "observation", "details"],
+      "pass_criteria_id": "pass:review.contract_evidence_complete/1"
+    },
+    {
+      "step_id": "cleanup.provider_processes_quiescent",
+      "requirement_id": "REQ-05C3C845422AD31A",
+      "lifecycle_phase": "cleanup",
+      "implementation_identity": "6eadda3e7274908d4954457a07310a53c2c4a034bd389ad44fdae0b773f10507",
+      "validator_id": "validate:cleanup.provider_processes_quiescent/1",
+      "validator_identity": "cff91241d12a6859ee4a58bdf0d6a0e13607f269413828ae92f1f90e7658dc12",
+      "required_evidence_fields": ["passCriteriaId", "observation", "details"],
+      "pass_criteria_id": "pass:cleanup.provider_processes_quiescent/1"
+    },
+    {
+      "step_id": "cleanup.server_stopped",
+      "requirement_id": "REQ-435CF42127C1DB5B",
+      "lifecycle_phase": "cleanup",
+      "implementation_identity": "b6e5b622598d0f42a13db7603a1f4e980c227e5390bb2651b55cc25f0a518641",
+      "validator_id": "validate:cleanup.server_stopped/1",
+      "validator_identity": "2bb785cf5932a15600a58634265ac5ac2021d29ced42e62ce66fd6315f5d6a18",
+      "required_evidence_fields": ["passCriteriaId", "observation", "details"],
+      "pass_criteria_id": "pass:cleanup.server_stopped/1"
+    },
+    {
+      "step_id": "cleanup.database_removed",
+      "requirement_id": "REQ-ADB401A097122DEE",
+      "lifecycle_phase": "cleanup",
+      "implementation_identity": "787d2cf60c466cdb3841eb3f323fb4d4c61ab622577fdc5a8574efe83447b7c1",
+      "validator_id": "validate:cleanup.database_removed/1",
+      "validator_identity": "60bce86fead9c9af9cc988d2a5961765822502f51a27f9d2ed869d3c6bd51024",
+      "required_evidence_fields": ["passCriteriaId", "observation", "details"],
+      "pass_criteria_id": "pass:cleanup.database_removed/1"
+    },
+    {
+      "step_id": "cleanup.disposable_files_accounted",
+      "requirement_id": "REQ-EAED666463A41269",
+      "lifecycle_phase": "cleanup",
+      "implementation_identity": "b9a35f0f9b1070f80ce1f2078a90e8a1dfc21d33488a1f55b73d5dc746788468",
+      "validator_id": "validate:cleanup.disposable_files_accounted/1",
+      "validator_identity": "ade7401297744f757d3cfcc456986b735f8cc971e80eda2dd0a51cceffaa0813",
+      "required_evidence_fields": ["passCriteriaId", "observation", "details"],
+      "pass_criteria_id": "pass:cleanup.disposable_files_accounted/1"
+    },
+    {
+      "step_id": "cleanup.production_untouched",
+      "requirement_id": "REQ-C869807FD8B3E7E9",
+      "lifecycle_phase": "cleanup",
+      "implementation_identity": "d5c5eef03b5e81a525a45400dbe5de842ad0c061f3ce28a8003bdfceaa7b7ab8",
+      "validator_id": "validate:cleanup.production_untouched/1",
+      "validator_identity": "448aff56e72ea6455f8f1731dfde062d444ed2b00f907d5f6197c24c6a55fbab",
+      "required_evidence_fields": ["passCriteriaId", "observation", "details"],
+      "pass_criteria_id": "pass:cleanup.production_untouched/1"
+    }
+  ]
+}

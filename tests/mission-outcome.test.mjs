@@ -141,17 +141,44 @@ test("event ids make canonical append idempotent", async () => {
 });
 
 test("concurrent controlled advances cannot duplicate mission progress", async () => {
-  const created = await createMission({ objective: "Concurrent mission", deadline: "Today", priority: "High" });
+  const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-  const [first, second] = await Promise.all([
-    appendNextControlledEvent(created.id),
-    appendNextControlledEvent(created.id),
-  ]);
-  const events = await readMissionEvents(created.id);
+  for (let iteration = 0; iteration < 100; iteration += 1) {
+    const created = await createMission({
+      objective: `Concurrent mission ${iteration}`,
+      deadline: "Today",
+      priority: "High",
+    });
+    const [first, second] = await Promise.all([
+      delay(Math.floor(Math.random() * 4)).then(() => appendNextControlledEvent(created.id)),
+      delay(Math.floor(Math.random() * 4)).then(() => appendNextControlledEvent(created.id)),
+    ]);
+    const events = await readMissionEvents(created.id);
+    const repeatedRead = await readMissionEvents(created.id);
 
-  assert.deepEqual(second, first);
-  assert.equal(events.length, 2);
-  assert.equal(events.at(-1)?.type, "plan.created");
+    assert.deepEqual(repeatedRead, events);
+    assert.deepEqual(
+      events.map((event) => event.sequence),
+      Array.from({ length: events.length }, (_, index) => index + 1),
+    );
+    assert.equal(events[0]?.type, "mission.created");
+    assert.equal(events[1]?.type, "plan.created");
+    assert.equal(events[1]?.causationId, events[0]?.eventId);
+    if (events.length === 3) {
+      assert.equal(events[2]?.type, "agent.activated");
+      assert.equal(events[2]?.producer.id, "research");
+      assert.equal(events[2]?.causationId, events[1]?.eventId);
+    } else {
+      assert.equal(events.length, 2);
+    }
+    const returnedEvents = [first, second].filter(Boolean);
+    assert.ok(returnedEvents.length >= 1);
+    for (const returned of returnedEvents) {
+      assert.equal(events.filter((event) => event.eventId === returned.eventId).length, 1);
+    }
+    assert.equal(new Set(events.map((event) => event.eventId)).size, events.length);
+    assert.deepEqual(projectMission(JSON.parse(JSON.stringify(events))), await getMissionProjection(created.id));
+  }
 });
 
 test("the controlled preview produces checkout evidence for every plan", () => {

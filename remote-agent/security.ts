@@ -3,7 +3,8 @@ import { ValidationFailedError } from "@/lib/application-errors";
 import type { ProtocolEnvelope } from "@/remote-agent/protocol";
 const limits: Record<string, number> = {
   callback: 120,
-  heartbeat: 6,
+  agent_heartbeat: 6,
+  execution_heartbeat: 60,
   progress: 60,
   artifact: 10,
   approval: 10,
@@ -13,7 +14,8 @@ const limits: Record<string, number> = {
   repository: 10,
 };
 export function rateCategory(message: ProtocolEnvelope) {
-  if (message.messageType === "AgentHeartbeat" || message.messageType === "ExecutionHeartbeat") return "heartbeat";
+  if (message.messageType === "AgentHeartbeat") return "agent_heartbeat";
+  if (message.messageType === "ExecutionHeartbeat") return "execution_heartbeat";
   if (message.messageType === "ExecutionProgressReported") return "progress";
   if (message.messageType === "ExecutionArtifactSubmitted") return "artifact";
   if (message.messageType === "ExecutionApprovalRequested") return "approval";

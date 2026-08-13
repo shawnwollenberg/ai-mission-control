@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1",
+  "version": "0.7.2",
+  "sourceCommit": "31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
+  "artifactPath": "public/mission-agent-0.7.2.mjs",
+  "artifactByteLength": 148063,
+  "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+  "unsignedManifestPath": "release/mission-agent-0.7.2/unsigned-manifest-v3.json",
+  "canonicalManifestByteLength": 1386,
+  "canonicalManifestSha256": "b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace",
+  "manifestSchemaSha256": "e4731d44f5b1e35ad7bd3ba9b429609af3bd8a095ac43daa1c0c1bc0e82e90d7",
+  "canonicalizationImplementation": "integrations/mission-agent/release-authority.ts@31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
+  "releaseAuthorityVersion": "v2",
+  "manifestVersion": "v3",
+  "canonicalizationVersion": "release-manifest-json-v3",
+  "signingKeyId": "mission-agent-release-2026-01",
+  "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+  "repositoryTrustState": "pending",
+  "signingStatus": "unsigned",
+  "publicationStatus": "blocked",
+  "installationStatus": "not-attempted",
+  "deploymentStatus": "not-attempted"
+}

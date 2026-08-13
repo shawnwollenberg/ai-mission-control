@@ -1,0 +1,23 @@
+{
+  "version": "0.7.1",
+  "sourceCommit": "3227a1210462d2e4061d5e04fdcfc9f8fe6218cd",
+  "artifactPath": "public/mission-agent-0.7.1.mjs",
+  "artifactPlatform": "portable Node.js 22 executable module",
+  "artifactSha256": "279365e5d1bcd18ce9bd8ac84d4b7e512cd3ff2f7f559e9892cd6fda3bf17803",
+  "artifactBytes": 136520,
+  "manifestPath": "release/mission-agent-0.7.1/unsigned-manifest-v2.json",
+  "canonicalManifestSha256": "8fc90fb63b1b6440e590a58e7c3eda5318b2fbd7c96c41a6cb97636bc9882275",
+  "canonicalManifestBytes": 497,
+  "canonicalization": "Release Authority v2 canonical JSON: recursively sorted object keys, compact UTF-8, no trailing newline in signed bytes",
+  "releaseAuthorityVersion": "2",
+  "manifestVersion": "2",
+  "signingKeyId": "mission-agent-release-2026-01",
+  "publicKeyFingerprint": "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+  "identityProtocolVersion": "2",
+  "activationProtocolVersion": "1",
+  "bootstrapTrustState": "active",
+  "repositoryTrustState": "pending",
+  "signingStatus": "unsigned",
+  "publicationStatus": "blocked",
+  "deploymentStatus": "blocked"
+}

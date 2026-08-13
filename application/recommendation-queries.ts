@@ -18,14 +18,16 @@ export type RecommendationReadModel = {
   acceptanceCriteria: string[];
   status: string;
   linkedMissionId?: string;
+  linkedMissionStatus?: string;
   supersededBy?: string;
   statusReason?: string;
   createdAt: string;
   updatedAt: string;
 };
 
-const select = `SELECT p.*,r.name repository_name FROM recommendation_projections p
-  JOIN repositories r ON r.workspace_id=p.workspace_id AND r.repository_id=p.repository_id`;
+const select = `SELECT p.*,r.name repository_name,lm.status linked_mission_status FROM recommendation_projections p
+  JOIN repositories r ON r.workspace_id=p.workspace_id AND r.repository_id=p.repository_id
+  LEFT JOIN mission_projections lm ON lm.workspace_id=p.workspace_id AND lm.mission_id=p.linked_mission_id`;
 type RecommendationRow = {
   recommendation_id: string;
   repository_id: string;
@@ -44,6 +46,7 @@ type RecommendationRow = {
   acceptance_criteria: string[];
   status: string;
   linked_mission_id: string | null;
+  linked_mission_status: string | null;
   superseded_by: string | null;
   status_reason: string | null;
   created_at: Date;
@@ -68,6 +71,7 @@ function map(row: RecommendationRow): RecommendationReadModel {
     acceptanceCriteria: row.acceptance_criteria,
     status: row.status,
     ...(row.linked_mission_id ? { linkedMissionId: row.linked_mission_id } : {}),
+    ...(row.linked_mission_status ? { linkedMissionStatus: row.linked_mission_status } : {}),
     ...(row.superseded_by ? { supersededBy: row.superseded_by } : {}),
     ...(row.status_reason ? { statusReason: row.status_reason } : {}),
     createdAt: row.created_at.toISOString(),

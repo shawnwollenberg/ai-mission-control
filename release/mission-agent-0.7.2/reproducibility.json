@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1",
+  "sourceCommit": "31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
+  "environment": "two detached clean worktrees using node@sha256:20a424ecd1d2064a44e12fe287bf3dae443aab31dc5e0c0cb6c74bef9c78911c",
+  "buildAPath": "/tmp/mission-agent-072-v3-build-a/mission-agent-0.7.2.exact.mjs",
+  "buildBPath": "/tmp/mission-agent-072-v3-build-b/mission-agent-0.7.2.exact.mjs",
+  "buildASha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+  "buildBSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+  "byteLength": 148063,
+  "byteIdentical": true,
+  "result": "passed"
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "consumer-envelope.schema.json",
+  "title": "Project Brain consumer integration envelope",
+  "type": "object",
+  "required": [
+    "contract_version",
+    "operation",
+    "status",
+    "repository",
+    "artifacts",
+    "warnings",
+    "blockers",
+    "required_actions",
+    "human_approval_required",
+    "repository_files_changed",
+    "exit_classification",
+    "data"
+  ],
+  "properties": {
+    "contract_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "operation": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["succeeded", "failed"] },
+    "repository": { "type": ["object", "null"] },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "path", "sha256", "bytes"],
+        "properties": {
+          "kind": { "type": "string" },
+          "path": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "bytes": { "type": "integer", "minimum": 0 },
+          "schema_version": { "type": "string" }
+        }
+      }
+    },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "blockers": { "type": "array", "items": { "type": "string" } },
+    "required_actions": { "type": "array", "items": { "type": "string" } },
+    "human_approval_required": { "type": "boolean" },
+    "repository_files_changed": { "type": "boolean" },
+    "exit_classification": { "type": "string" },
+    "data": {}
+  },
+  "additionalProperties": false
+}

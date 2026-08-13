@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "1",
+  "version": "0.7.2",
+  "sourceCommit": "31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
+  "artifactSha256": "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09",
+  "canonicalManifestSha256": "b9f7d17b54219a50f4298817db1bcece1fec49eb9311e27aa9a6f4f9a5947ace",
+  "manifestV3ParsedByMissionControl": true,
+  "manifestV3ParsedByMissionAgent": true,
+  "canonicalBytesMatched": true,
+  "testSignatureVerifiedByMissionControl": true,
+  "testSignatureVerifiedByMissionAgent": true,
+  "defaultUpdaterRequiresManifestV3": true,
+  "defaultUpdaterUsesEmbeddedTrust": true,
+  "defaultUpdaterChecksArtifactByteLength": true,
+  "defaultUpdaterChecksArtifactSha256": true,
+  "manifestV2ProductionDowngradeRejected": true,
+  "productionKmsContacted": true,
+  "productionSignatureCreated": true,
+  "repositoryTrustActivated": true,
+  "validation": {
+    "focusedManifestAndAgentTests": {
+      "passed": 22,
+      "failed": 0
+    },
+    "fullUnitSuite": {
+      "passed": 159,
+      "failed": 0,
+      "classification": "passed under Node 22.23.1"
+    },
+    "integrationSuite": {
+      "passed": 53,
+      "failed": 4,
+      "classification": [
+        "Two authentication failures require the integration owner seed/password harness.",
+        "Two Mission Agent pull failures are previously documented untouched-base failures."
+      ]
+    },
+    "migrations": "0001-0028 passed on a disposable empty PostgreSQL database",
+    "typecheck": "passed",
+    "eslint": "passed",
+    "productionBuild": "passed",
+    "changedFileFormatting": "passed",
+    "repositoryWideFormatting": "failed on 9 pre-existing files; no candidate file failed",
+    "productionDependencyAuditVulnerabilities": 0,
+    "jsonValidation": "passed",
+    "secretScan": "passed",
+    "gitWhitespace": "passed"
+  },
+  "independentReview": {
+    "criticalFindings": 0,
+    "highFindings": 0,
+    "resolvedHighFindings": 1,
+    "acceptanceBlockingMediumFindings": 0,
+    "resolvedFindings": [
+      "The updater now compares signed platform metadata with the actual Node major, operating system, and architecture before release eligibility.",
+      "The production KMS signing and human signing CLI paths now require strict Manifest v3 for new releases.",
+      "Mission Control production release selection now invokes the strict signed Manifest v3 gate.",
+      "Build provenance hashes and minimum Mission Control compatibility are now signed and enforced.",
+      "The activation evidence is bound to an immutable trust-enabled commit.",
+      "An independent read-only auditor correlated the exact KMS Sign and Verify request IDs and found no unexpected Sign event in the ceremony window."
+    ],
+    "disposition": "signed-candidate-accepted-unpublished"
+  },
+  "signingStatus": "signed-candidate-unpublished",
+  "productionSignature": {
+    "signatureByteLength": 64,
+    "signatureSha256": "4c86744ec6e8749b743b9130c65f23e6e2b324d3ccac3d0bf01c828b91d1a583",
+    "kmsSignRequestId": "6fb8434a-668a-46d0-a883-e55a5edb810b",
+    "kmsVerifyRequestId": "54e4158f-c01c-40c0-8293-1059f2cc8eeb",
+    "activeTrustRecordSha256": "8bdc37c0030136e2d9339d87c0ca506d2cb41310fe1d5bc003ecffc4acd64fba"
+  },
+  "publicationStatus": "not-authorized",
+  "deploymentStatus": "blocked"
+}
