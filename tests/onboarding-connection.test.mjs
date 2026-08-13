@@ -92,6 +92,18 @@ test("Mission Agent maintains pull readiness with periodic signed heartbeats", a
   assert.match(source, /assignment\.instructions \?\? assignment\.taskObjective/);
 });
 
+test("owner Mission Agent registration explicitly uses pull delivery", async () => {
+  const source = await readFile(new URL("../app/api/agents/route.ts", import.meta.url), "utf8");
+  const remoteRegistration = source.slice(
+    source.indexOf('if (body.adapterType === "remote_http")'),
+    source.indexOf("return NextResponse.json(registration", source.indexOf('if (body.adapterType === "remote_http")')),
+  );
+  assert.match(remoteRegistration, /deliveryMode: body\.missionAgentAdapter \? "pull" : undefined/);
+  assert.match(remoteRegistration, /missionAgentAdapter: body\.missionAgentAdapter/);
+  assert.match(remoteRegistration, /providerProfile: body\.providerProfile/);
+  assert.doesNotMatch(source.slice(source.indexOf("const agent = await registerAgent")), /deliveryMode:/);
+});
+
 test("live mission form makes analysis and change objectives explicit and editable", async () => {
   const source = await readFile(new URL("../app/first-mission-form.tsx", import.meta.url), "utf8");
   assert.match(source, /Analyze Repository/);

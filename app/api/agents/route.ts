@@ -37,6 +37,7 @@ export async function POST(request: Request) {
         capabilities: body.capabilities ?? [],
         supportedDomains: body.supportedDomains ?? [],
         concurrencyLimit: body.concurrencyLimit,
+        deliveryMode: body.missionAgentAdapter ? "pull" : undefined,
         missionAgentAdapter: body.missionAgentAdapter,
         providerProfile: body.providerProfile ? parseAgentProviderProfile(body.providerProfile) : undefined,
       });
