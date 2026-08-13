@@ -45,7 +45,13 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
+      - name: Run unit tests
+        run: npm test
+        env:
+          # The governed Claude execution fixture requires the audited macOS
+          # sandbox-exec boundary and is exercised by the macOS acceptance chain.
+          NODE_OPTIONS: >-
+            --test-skip-pattern=Claude planning uses a fenced read-only process and submits structured provenance
       - run: npm run test:integration
       - run: npm run build
       - run: npm run test:e2e
