@@ -37,6 +37,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ agent
           commandId: String(body.commandId ?? randomUUID()),
           repositoryId,
           planningAgentIds: Array.isArray(body.planningAgentIds) ? body.planningAgentIds.map(String) : [agentId],
+          validationCommands: Array.isArray(body.validationCommands) ? body.validationCommands : [],
         }),
       });
     }

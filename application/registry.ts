@@ -427,6 +427,7 @@ export async function configureProductionReadOnlyPlanningAuthority(input: {
   commandId: string;
   repositoryId: string;
   planningAgentIds: string[];
+  validationCommands: string[][];
 }) {
   if (missionControlRuntimeMode() !== "production")
     throw new ValidationFailedError("Production read-only planning authority is available only in production");
@@ -457,6 +458,17 @@ export async function configureProductionReadOnlyPlanningAuthority(input: {
       "Production read-only authority cannot be rebound while repository execution is active",
     );
   const authority = productionReadOnlyPlanningAuthority(input.planningAgentIds);
+  const validationCommands = input.validationCommands;
+  if (
+    !validationCommands.length ||
+    validationCommands.some(
+      (command) =>
+        !Array.isArray(command) || !command.length || command.some((part) => typeof part !== "string" || !part),
+    )
+  )
+    throw new ValidationFailedError(
+      "Production read-only planning authority requires owner-governed validation commands",
+    );
   if (authority.planningAgentIds.some((agentId) => !repository.allowed_agent_ids.includes(agentId)))
     throw new ValidationFailedError("Planning authority cannot be granted to an unregistered repository agent");
   const authorityHash = repositoryAuthorityBindingHash(authority, input.commandId);
@@ -483,7 +495,7 @@ export async function configureProductionReadOnlyPlanningAuthority(input: {
           repositoryId: input.repositoryId,
           authority,
           authorityHash,
-          validationCommands: [],
+          validationCommands,
           previousAuthorityHash: repository.repository_authority_hash,
           authorityReceipt: {
             schemaVersion: "repository-authority-receipt/1",

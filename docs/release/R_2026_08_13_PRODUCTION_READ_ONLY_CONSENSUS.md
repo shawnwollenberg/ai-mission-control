@@ -9,6 +9,8 @@ first non-destructive production Consensus Plan on 2026-08-13.
 
 - Add a separately defined, fail-closed production repository authority for planning only.
 - Bind it to exact registered planning agents and the existing planning operation allowlist.
+- Require at least one explicit owner-governed validation command for canonical-plan recommendations; commands are
+  proposed only and receive no execution authority in this profile.
 - Admit only `planningOnly=true` missions with no executor.
 - Complete successful read-only consensus without approval or an implementation child.
 - Reject authority rebinding while governed repository execution or assignments are active.
@@ -20,7 +22,9 @@ publication, deployment, infrastructure mutation, and implementation execution r
 
 Exact authority and projection tests reject every mutation-capability expansion. DB integration proves an
 owner-authenticated receipt, durable read-only projection, read-only agent grants, owner enforcement, and continued
-production prohibition of `disposable_local_implementation/1`. Existing containment, provider eligibility, runtime
+production prohibition of `disposable_local_implementation/1`. The production failure that exposed an empty command
+set is retained as fail-closed evidence; focused integration proves an empty set rejects and the exact command arrays
+persist through the same authority event/projection. Existing containment, provider eligibility, runtime
 identity, lease/fencing, and protocol tests remain green. Static/build gates and security review require zero HIGH or
 MEDIUM findings.
 
