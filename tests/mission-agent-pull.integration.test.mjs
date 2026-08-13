@@ -7,7 +7,7 @@ import test from "node:test";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for integration tests");
 const { getDatabasePool, closeDatabasePool } = await import("../lib/database.ts");
-const { registerRemoteAgent } = await import("../application/remote-agent-registry.ts");
+const { registerRemoteAgent, revokeRemoteAgentCredential } = await import("../application/remote-agent-registry.ts");
 const { processRemoteMessage } = await import("../application/remote-agent-messages.ts");
 const { registerMissionAgentRepository } = await import("../application/registry.ts");
 const { launchFirstRepositoryMission } = await import("../application/onboarding-mission.ts");
@@ -67,6 +67,64 @@ test.before(async () => {
     defaultBranch: "main",
     commit: "b".repeat(40),
   });
+});
+
+test("pull registration is durable, repository-resolvable, and does not relax push-agent lookup", async () => {
+  const stored = (
+    await getDatabasePool().query("SELECT delivery_mode FROM agents WHERE workspace_id=$1 AND agent_id=$2", [
+      workspaceId,
+      registration.agentId,
+    ])
+  ).rows[0];
+  assert.equal(stored.delivery_mode, "pull");
+  assert.ok(repository.repository_id);
+
+  const push = await registerRemoteAgent({
+    actor,
+    name: "Push-only remote agent",
+    endpoint: "https://push.invalid/messages",
+    capabilities: ["repository.read"],
+    supportedDomains: ["software_delivery"],
+    missionAgentAdapter: "generic",
+  });
+  const pushStored = (
+    await getDatabasePool().query("SELECT delivery_mode FROM agents WHERE workspace_id=$1 AND agent_id=$2", [
+      workspaceId,
+      push.agentId,
+    ])
+  ).rows[0];
+  assert.equal(pushStored.delivery_mode, "push");
+  await assert.rejects(
+    registerMissionAgentRepository({
+      workspaceId,
+      agentId: push.agentId,
+      name: "push-agent-repository",
+      fingerprint: "c".repeat(64),
+      defaultBranch: "main",
+    }),
+    /Mission Agent was not found/,
+  );
+  await revokeRemoteAgentCredential({ actor, agentId: push.agentId, revokeAll: true });
+  const credential = (
+    await getDatabasePool().query(
+      "SELECT status,secret_verifier FROM agent_credentials WHERE workspace_id=$1 AND agent_id=$2",
+      [workspaceId, push.agentId],
+    )
+  ).rows[0];
+  assert.equal(credential.status, "revoked");
+  assert.notEqual(credential.secret_verifier, push.credential.secret);
+  await assert.rejects(
+    registerRemoteAgent({
+      actor: { ...actor, role: "member" },
+      name: "Unauthorized Mission Agent",
+      endpoint: "https://unauthorized.invalid/messages",
+      capabilities: ["repository.read"],
+      supportedDomains: ["software_delivery"],
+      deliveryMode: "pull",
+      missionAgentAdapter: "generic",
+    }),
+    /Workspace owner permission is required/,
+  );
 });
 
 test("multiple valid inline artifacts use the repository execution budget rather than a cumulative transport limit", async () => {
