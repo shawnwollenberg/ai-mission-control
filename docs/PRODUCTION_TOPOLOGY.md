@@ -62,6 +62,44 @@ Caddy and PostgreSQL remain running. The Project Brain worker is independently
 versioned and remains running. The unrouted canary remains documented legacy
 state and must not be used as a production endpoint.
 
+## Runtime-v6 deployment result
+
+Runtime-v6 was promoted on 2026-08-13 from exact application source
+`8a210b2ce26555e19f2c585f6281017ae8fbec3c`. Web, generic worker, and
+action worker now run the immutable ECR digest
+`sha256:2fd754869f5b6e3a93a9a7cf4283175df3676104afee13cc9de85069acc1a58b`.
+The image records the same source revision. Project Brain, PostgreSQL, Caddy,
+and the unrouted 0.7.2 canary retained their pre-release digests.
+
+The host has Docker Engine but no Compose CLI/plugin. The checked-in Compose
+file remains the declared target topology; this release used equivalent
+digest-pinned `docker run` commands through SSM after validating the target
+worker configuration. The previous web, generic-worker, and action-worker
+containers are stopped and retained under release-specific rollback names.
+The production environment gained the documented non-secret
+`GIT_PROVIDER=github` setting required by the action-worker readiness gate.
+
+The database was quiesced before migration. A custom-format logical backup was
+sealed at
+`/opt/mission-control/backups/pre-runtime-v6-8a210b2-20260813.dump` with
+SHA-256
+`e75d3de43cb6c6f6944760748811a2bceea22bfe7f299a1ff047312425a36031`.
+Migrations 0029, 0030, and 0031 passed first against a disposable restored
+database and then against production; the production ledger has 31 applied
+migrations and zero pending.
+
+Post-promotion evidence includes both public health/readiness endpoints,
+authenticated owner/session and protected-route checks, action/generic
+configuration readiness, zero container restarts, encrypted artifact-storage
+put/head/get/checksum/delete, existing Mission Agent registration and heartbeat
+compatibility, repository projection reads, a completed mission read, Consensus
+Plan route/schema availability, and a healthy independently versioned Project
+Brain worker with successful durable operations. The signed public
+`mission-agent-latest.json` remains version 0.7.2. Mission Agent 0.8 production
+publication and onboarding require their own signed release-authority step;
+the unsigned/disposable Runtime-v6 acceptance artifact must not be represented
+as a production release.
+
 ## Rollback
 
 Application rollback restores each renamed pre-deploy web/generic/action
@@ -75,7 +113,14 @@ endpoints. Caddy, PostgreSQL, and Project Brain are not replaced.
 ## Follow-up infrastructure backlog
 
 - Consolidate application promotion into one declared, digest-pinned Compose
-  control plane and add deploy/rollback automation.
+  control plane, install/pin its execution tooling on the host, and add
+  deploy/rollback automation.
+- Publish Mission Agent 0.8 through the governed signed production release
+  process, update the signed latest manifest, and onboard production
+  capability attestations before running a real production Consensus Plan.
+- Decouple the artifact-storage smoke from Codex-worker configuration (or
+  provide a process-specific runner) so the documented smoke command is
+  directly runnable on the reconciled web/action/generic topology.
 - Retire the unrouted mission-control-web-ma072 canary after a separate
   evidence-retention decision.
 - Remove exited historical containers under a separately approved cleanup.
