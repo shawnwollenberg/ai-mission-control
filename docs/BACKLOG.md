@@ -157,3 +157,19 @@ Cut rule: the Advisor is not the optimizer, orchestrator, canonical-state owner,
 - [ ] Invalidate approval for every specified head/base/CI/finding/policy/strategy change.
 - [ ] Record and replay provider-confirmed post-merge evidence.
 - [ ] Prove the full blocking-finding → fix → re-review → stale-approval → merge acceptance path.
+
+## Security-sensitive candidate — Consensus Plan and Claude Code
+
+- [x] Add stable provider profiles and first-class Claude Code onboarding/heartbeat capability advertisement.
+- [x] Add Mission Agent 0.8.0 Claude planning and governed isolated-worktree implementation adapters.
+- [x] Add exactly-two-planner consensus state, immutable Project Brain context, proposal withholding, critique, revision, canonicalization, exact-plan verdicts, and objection tracking.
+- [x] Add owner-only exact-plan approval and one idempotent, snapshot-checked child Repository Change Mission.
+- [x] Add role/phase/attempt usage dimensions, bounded cost/duration/turn/artifact/command/retry enforcement, and fencing tokens.
+- [x] Add mission launch/history/approval/executor UI plus proposed Project Brain completion-learning evidence.
+- [x] Add a disposable-database Codex + Claude simulated-provider integration and mocked real-process Claude adapter test.
+- [x] Add explicit per-role agent/model assignments, immutable expiring capability attestations, exact invocation/receipt/usage provenance, and filtered role-model UI.
+- [x] Resolve duplicate approval, success evidence, macOS credential isolation, timeout, cancellation, continuous authorization, crash recovery, attestation expiry, heartbeat expiry, and revision provenance findings in the development candidate.
+- [ ] Wire automatic non-executor post-implementation review.
+- [x] Run full real-provider disposable-repository acceptance with operator-supplied Codex and Claude credentials (123/123 passed on 2026-08-13).
+- [x] Complete threat-focused release review and record exact human production approval in `docs/release/R_2026_08_13_RUNTIME_V6_CONSENSUS.md`.
+- [ ] Refresh the standalone synthetic consensus-observation fixture to model the richer durable cancelled-claim and wrong-plan-hash payloads. The governed mock and authenticated producers/validators pass; this fixture-only mismatch does not affect product runtime authority or accepted evidence.

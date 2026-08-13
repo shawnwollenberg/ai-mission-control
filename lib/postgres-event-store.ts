@@ -273,6 +273,36 @@ export async function loadAggregateEvents(input: {
   }
 }
 
+export async function loadAggregateHead(input: {
+  workspaceId: string;
+  aggregateType: string;
+  aggregateId: string;
+}): Promise<{ version: number; eventId: string | null }> {
+  try {
+    const result = await getDatabasePool().query<{ version: number; event_id: string | null }>(
+      `SELECT heads.version, latest.event_id
+         FROM aggregate_heads heads
+         LEFT JOIN LATERAL (
+           SELECT event_id
+             FROM events
+            WHERE workspace_id = heads.workspace_id
+              AND aggregate_type = heads.aggregate_type
+              AND aggregate_id = heads.aggregate_id
+            ORDER BY aggregate_version DESC
+            LIMIT 1
+         ) latest ON true
+        WHERE heads.workspace_id = $1
+          AND heads.aggregate_type = $2
+          AND heads.aggregate_id = $3`,
+      [input.workspaceId, input.aggregateType, input.aggregateId],
+    );
+    const row = result.rows[0];
+    return row ? { version: row.version, eventId: row.event_id } : { version: 0, eventId: null };
+  } catch (error) {
+    return translateDatabaseError(error);
+  }
+}
+
 export async function loadMissionEvents(input: { workspaceId: string; missionId: string }): Promise<DomainEvent[]> {
   try {
     const result = await getDatabasePool().query<EventRow>(

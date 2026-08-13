@@ -118,14 +118,93 @@ test("message receipt is idempotent and changed-payload reuse is rejected", asyn
     await reserveProtocolMessage({ credential, message, nonce: input.nonce, checksum: input.bodyChecksum }),
     { duplicate: false },
   );
-  await completeProtocolMessage(credential, input.messageId, { received: true });
-  assert.equal(
-    (await reserveProtocolMessage({ credential, message, nonce: input.nonce, checksum: input.bodyChecksum })).duplicate,
-    true,
+  const rawLeaseToken = `mc_lease_${"durable-receipt-prohibited".repeat(2)}`;
+  await completeProtocolMessage(
+    credential,
+    input.messageId,
+    {
+      received: true,
+      assignment: {
+        assignmentId: randomUUID(),
+        executionId: randomUUID(),
+        leaseOwner: "receipt-test",
+        leaseToken: rawLeaseToken,
+        leaseIssuedAt: "2026-08-04T12:00:00.000Z",
+        leaseExpiresAt: "2026-08-04T12:01:00.000Z",
+        fencingToken: 4,
+      },
+    },
+    { leaseKind: "execution_assignment" },
   );
+  const duplicate = await reserveProtocolMessage({
+    credential,
+    message,
+    nonce: input.nonce,
+    checksum: input.bodyChecksum,
+  });
+  assert.equal(duplicate.duplicate, true);
+  assert.equal(duplicate.acknowledgement.status, "completed");
+  assert.equal(duplicate.acknowledgement.authorization.binding.credentialId, credential.credential_id);
+  assert.equal(duplicate.acknowledgement.authorization.fencingToken, 4);
+  const durable = (
+    await getDatabasePool().query(
+      "SELECT acknowledgement,acknowledgement::text body FROM agent_protocol_receipts WHERE workspace_id=$1 AND agent_id=$2 AND message_id=$3",
+      [workspaceId, registration.agentId, input.messageId],
+    )
+  ).rows[0];
+  assert.equal(durable.body.includes(rawLeaseToken), false);
+  assert.equal(/mc_(?:pb_)?lease_[A-Za-z0-9_-]{20,}/i.test(durable.body), false);
+  assert.match(durable.acknowledgement.authorization.tokenFingerprint, /^[a-f0-9]{64}$/);
   await assert.rejects(
     () => reserveProtocolMessage({ credential, message, nonce: input.nonce, checksum: "a".repeat(64) }),
     /replay or changed-payload/,
+  );
+  const malformedMessageId = randomUUID();
+  await assert.rejects(
+    getDatabasePool().query(
+      `INSERT INTO agent_protocol_receipts(workspace_id,agent_id,message_id,nonce,body_checksum,acknowledgement,expires_at)
+       VALUES($1,$2,$3,$4,$5,$6,now()+interval '10 minutes')`,
+      [
+        workspaceId,
+        registration.agentId,
+        malformedMessageId,
+        randomUUID(),
+        "b".repeat(64),
+        JSON.stringify({
+          schemaVersion: "agent-protocol-receipt/2",
+          status: "completed",
+          protocolVersion: "1.0",
+          messageId: malformedMessageId,
+          responseChecksum: "c".repeat(64),
+          nested: { LeaseToken: rawLeaseToken },
+        }),
+      ],
+    ),
+    /agent_protocol_receipt_v2_structure_check/,
+  );
+  const wrongKindMessageId = randomUUID();
+  await assert.rejects(
+    getDatabasePool().query(
+      `INSERT INTO agent_protocol_receipts(workspace_id,agent_id,message_id,nonce,body_checksum,acknowledgement,expires_at)
+       VALUES($1,$2,$3,$4,$5,$6,now()+interval '10 minutes')`,
+      [
+        workspaceId,
+        registration.agentId,
+        wrongKindMessageId,
+        randomUUID(),
+        "d".repeat(64),
+        JSON.stringify({
+          ...durable.acknowledgement,
+          messageId: wrongKindMessageId,
+          authorization: {
+            ...durable.acknowledgement.authorization,
+            kind: "project_brain_assignment",
+            binding: { ...durable.acknowledgement.authorization.binding, operationId: null },
+          },
+        }),
+      ],
+    ),
+    /agent_protocol_receipt_v2_structure_check/,
   );
 });
 test("invalid signature and expired timestamp are rejected", async () => {

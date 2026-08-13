@@ -50,7 +50,22 @@ export default async function LaunchPage() {
       )
     ).rows;
     if (!repositories.length) return <RepositoryRequiredHome workspaceName={state.name} />;
-    return <FirstMissionForm repositories={repositories} />;
+    const planningAgents = (
+      await getDatabasePool().query(
+        `SELECT agent_id,name,provider_id,supported_models,model_capabilities,
+           capability_attestation_id,capability_attestation_hash,supported_mission_roles,supported_operations
+         FROM agents WHERE workspace_id=$1 AND status='active' AND delivery_mode='pull'
+           AND last_heartbeat_at>now()-interval '5 minutes' AND pull_ready_at>now()-interval '5 minutes'
+           AND provider_credentials_available=true
+           AND mission_agent_checksum_status='verified'
+           AND mission_agent_capability_expires_at>now()
+           AND capability_attestation_id IS NOT NULL AND capability_attestation_expires_at>now()
+           AND jsonb_array_length(model_capabilities)>0
+         ORDER BY name,agent_id`,
+        [identity.workspaceId],
+      )
+    ).rows;
+    return <FirstMissionForm repositories={repositories} planningAgents={planningAgents} />;
   }
   return (
     <PublicShell>

@@ -2,6 +2,7 @@ import { access, constants, realpath } from "node:fs/promises";
 import path from "node:path";
 import { getDatabasePool } from "@/lib/database";
 import { assertSupportedNodeVersion } from "@/lib/runtime-version";
+import { assertRuntimeStartupSafety, missionControlRuntimeMode } from "@/lib/runtime-trust";
 
 export type ProcessType =
   | "web"
@@ -44,7 +45,8 @@ export async function validateProductionConfiguration(
   processType: ProcessType,
   options: { requireCurrentSchema?: boolean } = {},
 ) {
-  const production = process.env.APP_ENV === "production";
+  const runtimeMode = missionControlRuntimeMode();
+  const production = runtimeMode === "production";
   const checks: ConfigurationCheck[] = [];
   try {
     assertSupportedNodeVersion();
@@ -55,10 +57,30 @@ export async function validateProductionConfiguration(
   checks.push(
     check(
       "environment",
-      ["local", "test", "production"].includes(process.env.APP_ENV ?? ""),
-      "APP_ENV is explicitly local, test, or production",
+      ["local", "test", "production", "disposable_acceptance"].includes(process.env.APP_ENV ?? ""),
+      "APP_ENV is explicitly local, test, production, or disposable_acceptance",
     ),
   );
+  try {
+    const trust = assertRuntimeStartupSafety();
+    checks.push(
+      check(
+        "runtime_trust",
+        true,
+        trust.disposable
+          ? `Disposable registry ${trust.registryContentHash} is bound to ${trust.registryPath}`
+          : `${trust.runtimeMode} trust authority is ${trust.trustAuthority}`,
+      ),
+    );
+  } catch (error) {
+    checks.push(
+      check(
+        "runtime_trust",
+        false,
+        error instanceof Error ? error.message.slice(0, 500) : "Runtime trust validation failed",
+      ),
+    );
+  }
   checks.push(
     check("database_configuration", configured("DATABASE_URL"), "Dedicated database connection is configured"),
   );
@@ -268,7 +290,7 @@ export async function validateProductionConfiguration(
   const failed = checks.filter((item) => item.required && !item.ok);
   return {
     processType,
-    environment: process.env.APP_ENV ?? "unset",
+    environment: runtimeMode,
     ready: failed.length === 0,
     checks,
     failed: failed.map((item) => item.name),

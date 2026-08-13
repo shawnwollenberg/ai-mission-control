@@ -21,6 +21,31 @@ export async function POST(request: Request, { params }: { params: Promise<{ ass
       assignmentId,
       leaseOwner: String(auth.message.payload.leaseOwner ?? ""),
       leaseToken: String(auth.message.payload.leaseToken ?? ""),
+      fencingToken: Number(auth.message.payload.fencingToken),
+      acknowledgedPlanHash: auth.message.payload.acknowledgedPlanHash
+        ? String(auth.message.payload.acknowledgedPlanHash)
+        : undefined,
+      acknowledgedAgentId: auth.message.payload.acknowledgedAgentId
+        ? String(auth.message.payload.acknowledgedAgentId)
+        : undefined,
+      acknowledgedProviderId: auth.message.payload.acknowledgedProviderId
+        ? String(auth.message.payload.acknowledgedProviderId)
+        : undefined,
+      acknowledgedModelId: auth.message.payload.acknowledgedModelId
+        ? String(auth.message.payload.acknowledgedModelId)
+        : undefined,
+      acknowledgedRepositorySnapshot: auth.message.payload.acknowledgedRepositorySnapshot
+        ? String(auth.message.payload.acknowledgedRepositorySnapshot)
+        : undefined,
+      acknowledgedRepositoryAuthorityHash: auth.message.payload.acknowledgedRepositoryAuthorityHash
+        ? String(auth.message.payload.acknowledgedRepositoryAuthorityHash)
+        : undefined,
+      acknowledgedContextPackHash: auth.message.payload.acknowledgedContextPackHash
+        ? String(auth.message.payload.acknowledgedContextPackHash)
+        : undefined,
+      acknowledgedPermissionProfileHash: auth.message.payload.acknowledgedPermissionProfileHash
+        ? String(auth.message.payload.acknowledgedPermissionProfileHash)
+        : undefined,
     });
     const result =
       assignment.execution_status === "requested"
@@ -32,7 +57,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ ass
               taskId: assignment.task_id,
               executionId: assignment.execution_id,
               attempt: assignment.attempt,
-              payload: { stage: "assignment_received", summary: "Mission Agent acknowledged the assignment" },
+              payload: {
+                stage: "assignment_received",
+                summary: "Mission Agent acknowledged the assignment",
+                acknowledgedPlanHash: auth.message.payload.acknowledgedPlanHash ?? null,
+              },
             },
             auth.credential,
           )

@@ -1,0 +1,141 @@
+{
+  "contractVersion": "provider-runtime-requirements/1",
+  "contractScope": "consensus_execution",
+  "providers": {
+    "codex": {
+      "requirementsId": "codex-cli/macos-v1",
+      "executionMode": "local_cli",
+      "executable": "codex",
+      "supportedCliVersions": ["0.146.0"],
+      "authenticationProbe": ["login", "status"],
+      "supportedPlatforms": ["darwin"],
+      "isolation": {
+        "mechanism": "sandbox-exec",
+        "network": "outbound_and_local_ipc",
+        "temporaryStorage": "invocation_private_read_write",
+        "credentialReadScopes": ["codex_home"],
+        "planningRepositoryAccess": "none",
+        "implementationRepositoryAccess": "isolated_worktree",
+        "processControl": true
+      },
+      "modelSelection": {
+        "mechanism": "argv",
+        "argument": "--model",
+        "fallback": "disabled",
+        "runtimeIdentity": "unverifiable"
+      },
+      "structuredOutput": "json_schema_file",
+      "requiresCleanPlanningWorktree": true,
+      "diagnosticRedaction": "consensus-secret-v1",
+      "consensusEligible": true
+    },
+    "claude_code": {
+      "requirementsId": "claude-code-cli/macos-v1",
+      "executionMode": "local_cli",
+      "executable": "claude",
+      "supportedCliVersions": ["2.1.224"],
+      "authenticationProbe": ["auth", "status"],
+      "supportedPlatforms": ["darwin"],
+      "isolation": {
+        "mechanism": "sandbox-exec",
+        "network": "outbound",
+        "temporaryStorage": "invocation_private_read_write",
+        "credentialReadScopes": ["claude_home", "macos_keychain_service"],
+        "planningRepositoryAccess": "none",
+        "implementationRepositoryAccess": "isolated_worktree",
+        "processControl": true
+      },
+      "modelSelection": {
+        "mechanism": "argv",
+        "argument": "--model",
+        "fallback": "disabled",
+        "runtimeIdentity": "unverifiable"
+      },
+      "structuredOutput": "inline_json_schema",
+      "requiresCleanPlanningWorktree": true,
+      "diagnosticRedaction": "consensus-secret-v1",
+      "consensusEligible": true
+    },
+    "hermes": {
+      "requirementsId": "hermes-bridge/protocol-v1",
+      "executionMode": "protocol_bridge",
+      "executable": null,
+      "supportedCliVersions": [],
+      "authenticationProbe": [],
+      "supportedPlatforms": [],
+      "isolation": {
+        "mechanism": "external_agent_boundary",
+        "network": "authenticated_protocol",
+        "temporaryStorage": "provider_managed",
+        "credentialReadScopes": ["mission_agent_credential"],
+        "planningRepositoryAccess": "advertised_capability",
+        "implementationRepositoryAccess": "advertised_capability",
+        "processControl": false
+      },
+      "modelSelection": {
+        "mechanism": "provider_managed",
+        "argument": null,
+        "fallback": "not_attested",
+        "runtimeIdentity": "unverifiable"
+      },
+      "structuredOutput": "protocol_artifact",
+      "requiresCleanPlanningWorktree": true,
+      "diagnosticRedaction": "consensus-secret-v1",
+      "consensusEligible": false
+    },
+    "generic": {
+      "requirementsId": "generic-agent/protocol-v1",
+      "executionMode": "remote_protocol",
+      "executable": null,
+      "supportedCliVersions": [],
+      "authenticationProbe": [],
+      "supportedPlatforms": [],
+      "isolation": {
+        "mechanism": "external_agent_boundary",
+        "network": "authenticated_protocol",
+        "temporaryStorage": "provider_managed",
+        "credentialReadScopes": ["mission_agent_credential"],
+        "planningRepositoryAccess": "advertised_capability",
+        "implementationRepositoryAccess": "advertised_capability",
+        "processControl": false
+      },
+      "modelSelection": {
+        "mechanism": "provider_managed",
+        "argument": null,
+        "fallback": "not_attested",
+        "runtimeIdentity": "unverifiable"
+      },
+      "structuredOutput": "protocol_artifact",
+      "requiresCleanPlanningWorktree": true,
+      "diagnosticRedaction": "consensus-secret-v1",
+      "consensusEligible": false
+    },
+    "mock": {
+      "requirementsId": "mock/in-process-v1",
+      "executionMode": "in_process_test",
+      "executable": null,
+      "supportedCliVersions": [],
+      "authenticationProbe": [],
+      "supportedPlatforms": [],
+      "isolation": {
+        "mechanism": "test_process",
+        "network": "none",
+        "temporaryStorage": "test_fixture",
+        "credentialReadScopes": [],
+        "planningRepositoryAccess": "fixture_only",
+        "implementationRepositoryAccess": "fixture_only",
+        "processControl": false
+      },
+      "modelSelection": {
+        "mechanism": "fixture",
+        "argument": null,
+        "fallback": "disabled",
+        "runtimeIdentity": "verified"
+      },
+      "structuredOutput": "fixture",
+      "requiresCleanPlanningWorktree": true,
+      "diagnosticRedaction": "consensus-secret-v1",
+      "consensusEligible": false
+    }
+  }
+}

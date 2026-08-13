@@ -28,6 +28,14 @@ export type CreateMissionInput = {
   resolvedTaskPlan?: unknown[];
   originScheduleId?: string;
   intendedRunAt?: string;
+  missionType?: "standard" | "repository_analysis" | "repository_change" | "consensus_plan";
+  repositoryId?: string;
+  baseBranch?: string;
+  baseCommit?: string;
+  repositorySnapshot?: string;
+  parentConsensusMissionId?: string;
+  approvedPlanArtifactId?: string;
+  approvedPlanHash?: string;
 };
 
 const transitions: Record<MissionStatus, readonly MissionStatus[]> = {
@@ -71,6 +79,14 @@ export function createMissionEvent(input: CreateMissionInput): NewDomainEvent {
       resolvedTaskPlan: input.resolvedTaskPlan ?? [],
       originScheduleId: input.originScheduleId ?? null,
       intendedRunAt: input.intendedRunAt ?? null,
+      missionType: input.missionType ?? "standard",
+      repositoryId: input.repositoryId ?? null,
+      baseBranch: input.baseBranch ?? null,
+      baseCommit: input.baseCommit ?? null,
+      repositorySnapshot: input.repositorySnapshot ?? null,
+      parentConsensusMissionId: input.parentConsensusMissionId ?? null,
+      approvedPlanArtifactId: input.approvedPlanArtifactId ?? null,
+      approvedPlanHash: input.approvedPlanHash ?? null,
       status: "draft",
     },
   };

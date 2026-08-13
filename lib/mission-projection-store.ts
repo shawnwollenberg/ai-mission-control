@@ -30,6 +30,14 @@ export type MissionReadModel = {
   createdAt: string;
   updatedAt: string;
   lastEventPosition: number;
+  missionType: string;
+  repositoryId?: string;
+  baseBranch?: string;
+  baseCommit?: string;
+  repositorySnapshot?: string;
+  parentConsensusMissionId?: string;
+  approvedPlanArtifactId?: string;
+  approvedPlanHash?: string;
 };
 
 type MissionProjectionRow = {
@@ -62,6 +70,14 @@ type MissionProjectionRow = {
   created_at: Date;
   updated_at: Date;
   last_event_position: string;
+  mission_type: string;
+  repository_id: string | null;
+  base_branch: string | null;
+  base_commit: string | null;
+  repository_snapshot: string | null;
+  parent_consensus_mission_id: string | null;
+  approved_plan_artifact_id: string | null;
+  approved_plan_hash: string | null;
 };
 
 function mapMission(row: MissionProjectionRow): MissionReadModel {
@@ -95,6 +111,14 @@ function mapMission(row: MissionProjectionRow): MissionReadModel {
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     lastEventPosition: Number(row.last_event_position),
+    missionType: row.mission_type,
+    ...(row.repository_id ? { repositoryId: row.repository_id } : {}),
+    ...(row.base_branch ? { baseBranch: row.base_branch } : {}),
+    ...(row.base_commit ? { baseCommit: row.base_commit } : {}),
+    ...(row.repository_snapshot ? { repositorySnapshot: row.repository_snapshot } : {}),
+    ...(row.parent_consensus_mission_id ? { parentConsensusMissionId: row.parent_consensus_mission_id } : {}),
+    ...(row.approved_plan_artifact_id ? { approvedPlanArtifactId: row.approved_plan_artifact_id } : {}),
+    ...(row.approved_plan_hash ? { approvedPlanHash: row.approved_plan_hash } : {}),
   };
 }
 
@@ -102,7 +126,8 @@ const columns = `workspace_id, mission_id, aggregate_version, name, objective, d
   status, requested_outcome, success_criteria, constraints, budget_limits, deadline, total_task_count,
   completed_task_count, blocked_task_count, ready_task_count, running_task_count,
   waiting_approval_task_count, failed_task_count, cancelled_task_count, current_critical_blocker,
-  execution_mode, created_by, created_at, updated_at, last_event_position`;
+  execution_mode, created_by, created_at, updated_at, last_event_position,mission_type,repository_id,base_branch,
+  base_commit,repository_snapshot,parent_consensus_mission_id,approved_plan_artifact_id,approved_plan_hash`;
 
 export async function getMissionProjection(
   workspaceId: string,

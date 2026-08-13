@@ -25,6 +25,10 @@ Every meaningful state change is recorded as a structured event. The append-only
 
 Whether all fields are needed in the MVP remains undecided.
 
+### Consensus objection identity
+
+`consensus.artifact_recorded` is the only projection input for a critique objection. Each blocker carries a Mission Control `objectionId` plus the provider's `rawProviderObjectionId`. The canonical ID is a deterministic UUID over schema version, mission ID, consensus attempt, source critique artifact ID, critique participant-assignment ID, round, and raw provider label. The raw label is display/provenance only. `consensus.objections_resolved` names canonical IDs and the exact source critique artifact; projectors never substitute in-memory normalized artifacts for event payloads. Live application and replay therefore execute the identical identity and resolution path.
+
 ## Candidate event families
 
 ### Mission
@@ -134,6 +138,12 @@ Given the same ordered event stream and projector version, Mission Control must 
 
 Replay is also a user-visible demo projection: it re-emits historical projection states on a compressed clock without appending new canonical mission events.
 
+## Repository authority aggregate
+
+`repository.authority_configured` is the canonical owner-authorized transition for the disposable local implementation profile. Its payload contains the exact `repository-authority/1` value, canonical command-bound authority hash, previous binding hash, governed validation commands, and a bounded authenticated receipt. Projection writes set the narrow local capabilities and all explicit remote/publication/deployment prohibitions together, update agent-specific read/write permissions, and insert an immutable receipt. Projection deletion and replay recreate both the repository authority and receipt without consulting the harness or filesystem.
+
+Repository authority is evidence and capability, not a provider instruction. Provider processes receive no Git metadata write authority and may not commit. Mission Agent may make one local commit only after renewing its fenced lease and revalidating the current binding. A later authority event invalidates previously bound assignments, approvals, and delayed output even if its permission document is subsequently restored.
+
 ## Mission Health projection
 
 Mission Health answers exactly three executive questions:
@@ -205,3 +215,26 @@ The projection owns no independent facts. Rebuild consumes recommendation events
 `review.requested → review.started → review.completed | review.failed | review.stale` binds one exact revision and stores scope results, counts, confidence, disposition, CI evidence, and result checksum. `review_finding.created` records category, severity, blocking flag, confidence, evidence, ranges, resolution and validation suggestions. `review_finding.status_changed` moves through `open`, `accepted`, `in_progress`, `resolved`, `dismissed`, or `stale`; resolution includes the linked fix mission and confirming review when present.
 
 `merge_readiness.evaluated` records every required predicate and an overall fail-closed decision. Merge uses the existing action/approval vocabulary with `repository.merge_pull_request`. `merge.approval_invalidated` records the changed predicate. `merge.provider_confirmed` records actor, timestamp, merge commit, final head, base, strategy, provider URL, and full mission/recommendation/review traceability. Replay projects those facts and never calls the provider.
+
+## Consensus Plan aggregate
+
+The `consensus_plan` aggregate adds the following canonical metadata events while reusing normal mission, task, execution, approval, artifact, usage, and receipt events:
+
+- `consensus.created` binds the repository snapshot, base commit, planning schema, fixed execution budget, and explicit `planner_a`, `planner_b`, `synthesizer`, `executor`, and optional `implementation_reviewer` agent/provider/model/capability assignments.
+- `consensus.status_changed` records every legal server-decided phase transition and terminal reason.
+- `consensus.assignment_output_fenced` records the participant assignment, execution, triggering task, and reason when concurrent planner output is fenced in the same append as terminal consensus failure. The pull-assignment fence rejects later progress, artifacts, and success while still permitting distinct failure or cancellation acknowledgement evidence.
+- `consensus.turn_requested` and `consensus.turn_completed` link a bounded operation to its Task, Execution, participant, round, and released source artifact IDs.
+- `consensus.artifact_recorded` stores artifact identity, checksum, schema, binding metadata, reviewed artifact, blocker count, verdict, and canonical hash; raw bodies remain in the artifact store.
+- `consensus.objections_resolved` links explicit objection IDs to the resolving immutable revision.
+- `consensus.approval_requested` links the exact-plan approval whose action hash also binds the deterministic child, executor assignment/attestation, permission profile, execution budget, owner-governed validation commands, bounded effects, and prohibitions.
+- `consensus.stale_detected` records repository drift before child creation.
+- `consensus.implementation_mission_created` binds the unique child mission, executor/model, plan hash, and approval.
+- `consensus.learning_candidate_proposed` links a Project Brain candidate whose governance status is only `proposed`.
+
+Rebuilding projects participant, turn, artifact, objection, approval, child, and learning-candidate references without rerunning providers, regenerating context, creating a child twice, or promoting knowledge.
+
+## Disposable acceptance and repository snapshot evidence
+
+Authenticated `repository.registered` and `repository.registration_refreshed` events for Mission Agent 0.8 carry `complete_repository_state/3`, its exact snapshot hash and deterministic snapshot-artifact ID, and `authenticated-repository-registration/1` authority. That authority binds the signed protocol message ID, credential ID, body checksum, receipt schema, and canonical authorization hash. The projection stores a non-updatable snapshot row with the complete manifest, checksum, byte size, registration event, actor agent, and authority. Re-registration of unchanged state converges without changing the artifact; replay restores the same state and snapshot from events.
+
+In `disposable_acceptance`, heartbeat and artifact-verification events include the server runtime-trust record and exact approved packet. Capability attestations bind the same runtime mode, registry identity, packet, provider contract, profile, executable/authentication evidence, and model capabilities. Protocol receipts include the bounded runtime-trust binding but never credential or lease bearer material.

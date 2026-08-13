@@ -1,0 +1,556 @@
+{
+  "manifestVersion": "mission-agent-capabilities/1",
+  "version": "0.8.0",
+  "artifactSha256": "c366c95674fed2c8f63dd9f0182e54ee25d9a7d71764afe89b0facd734864494",
+  "sourceCommit": "33d4bcd62789f767a7bbe9b1f7588eee4f0f0549",
+  "sourceTemplateSha256": "bd319e083604f314c9eb18c13196d10059dbab528f7f39a54a343df36dbcaba2",
+  "providerRuntimeRequirements": {
+    "contractVersion": "provider-runtime-requirements/1",
+    "contractScope": "consensus_execution",
+    "providers": {
+      "codex": {
+        "requirementsId": "codex-cli/macos-v1",
+        "executionMode": "local_cli",
+        "executable": "codex",
+        "supportedCliVersions": ["0.146.0"],
+        "authenticationProbe": ["login", "status"],
+        "supportedPlatforms": ["darwin"],
+        "isolation": {
+          "mechanism": "sandbox-exec",
+          "network": "outbound_and_local_ipc",
+          "temporaryStorage": "invocation_private_read_write",
+          "credentialReadScopes": ["codex_home"],
+          "planningRepositoryAccess": "none",
+          "implementationRepositoryAccess": "isolated_worktree",
+          "processControl": true
+        },
+        "modelSelection": {
+          "mechanism": "argv",
+          "argument": "--model",
+          "fallback": "disabled",
+          "runtimeIdentity": "unverifiable"
+        },
+        "structuredOutput": "json_schema_file",
+        "requiresCleanPlanningWorktree": true,
+        "diagnosticRedaction": "consensus-secret-v1",
+        "consensusEligible": true
+      },
+      "claude_code": {
+        "requirementsId": "claude-code-cli/macos-v1",
+        "executionMode": "local_cli",
+        "executable": "claude",
+        "supportedCliVersions": ["2.1.224"],
+        "authenticationProbe": ["auth", "status"],
+        "supportedPlatforms": ["darwin"],
+        "isolation": {
+          "mechanism": "sandbox-exec",
+          "network": "outbound",
+          "temporaryStorage": "invocation_private_read_write",
+          "credentialReadScopes": ["claude_home", "macos_keychain_service"],
+          "planningRepositoryAccess": "none",
+          "implementationRepositoryAccess": "isolated_worktree",
+          "processControl": true
+        },
+        "modelSelection": {
+          "mechanism": "argv",
+          "argument": "--model",
+          "fallback": "disabled",
+          "runtimeIdentity": "unverifiable"
+        },
+        "structuredOutput": "inline_json_schema",
+        "requiresCleanPlanningWorktree": true,
+        "diagnosticRedaction": "consensus-secret-v1",
+        "consensusEligible": true
+      },
+      "hermes": {
+        "requirementsId": "hermes-bridge/protocol-v1",
+        "executionMode": "protocol_bridge",
+        "executable": null,
+        "supportedCliVersions": [],
+        "authenticationProbe": [],
+        "supportedPlatforms": [],
+        "isolation": {
+          "mechanism": "external_agent_boundary",
+          "network": "authenticated_protocol",
+          "temporaryStorage": "provider_managed",
+          "credentialReadScopes": ["mission_agent_credential"],
+          "planningRepositoryAccess": "advertised_capability",
+          "implementationRepositoryAccess": "advertised_capability",
+          "processControl": false
+        },
+        "modelSelection": {
+          "mechanism": "provider_managed",
+          "argument": null,
+          "fallback": "not_attested",
+          "runtimeIdentity": "unverifiable"
+        },
+        "structuredOutput": "protocol_artifact",
+        "requiresCleanPlanningWorktree": true,
+        "diagnosticRedaction": "consensus-secret-v1",
+        "consensusEligible": false
+      },
+      "generic": {
+        "requirementsId": "generic-agent/protocol-v1",
+        "executionMode": "remote_protocol",
+        "executable": null,
+        "supportedCliVersions": [],
+        "authenticationProbe": [],
+        "supportedPlatforms": [],
+        "isolation": {
+          "mechanism": "external_agent_boundary",
+          "network": "authenticated_protocol",
+          "temporaryStorage": "provider_managed",
+          "credentialReadScopes": ["mission_agent_credential"],
+          "planningRepositoryAccess": "advertised_capability",
+          "implementationRepositoryAccess": "advertised_capability",
+          "processControl": false
+        },
+        "modelSelection": {
+          "mechanism": "provider_managed",
+          "argument": null,
+          "fallback": "not_attested",
+          "runtimeIdentity": "unverifiable"
+        },
+        "structuredOutput": "protocol_artifact",
+        "requiresCleanPlanningWorktree": true,
+        "diagnosticRedaction": "consensus-secret-v1",
+        "consensusEligible": false
+      },
+      "mock": {
+        "requirementsId": "mock/in-process-v1",
+        "executionMode": "in_process_test",
+        "executable": null,
+        "supportedCliVersions": [],
+        "authenticationProbe": [],
+        "supportedPlatforms": [],
+        "isolation": {
+          "mechanism": "test_process",
+          "network": "none",
+          "temporaryStorage": "test_fixture",
+          "credentialReadScopes": [],
+          "planningRepositoryAccess": "fixture_only",
+          "implementationRepositoryAccess": "fixture_only",
+          "processControl": false
+        },
+        "modelSelection": {
+          "mechanism": "fixture",
+          "argument": null,
+          "fallback": "disabled",
+          "runtimeIdentity": "verified"
+        },
+        "structuredOutput": "fixture",
+        "requiresCleanPlanningWorktree": true,
+        "diagnosticRedaction": "consensus-secret-v1",
+        "consensusEligible": false
+      }
+    }
+  },
+  "providerRuntimeRequirementsSha256": "a0bf9d6ed1380e0ec95dca7c4961f40dff25aa30d9ad8663001d0bee75fbbf19",
+  "providerRuntimeProfiles": {
+    "catalogVersion": "provider-runtime-profiles/2",
+    "status": "proposed_for_disposable_acceptance",
+    "platform": "darwin",
+    "sandboxPolicyTemplate": "(version 1)\n(deny default)\n(allow process*)\n(allow network-outbound\n  (remote tcp) (remote udp)\n  (literal \"/private/var/run/mDNSResponder\"))\n(deny network-outbound (remote ip \"localhost:*\"))\n(allow sysctl-read)\n(allow mach-lookup)\n(allow file-read-metadata)\n(allow file-read*\n  (require-all\n    (require-not (subpath \"{{REAL_HOME}}\"))\n    (require-not (subpath \"/Volumes\"))\n    (require-not (subpath \"/private/tmp\"))\n    (require-not (subpath \"/tmp\"))\n    (require-not (subpath \"/private/var/folders\"))))\n(allow file-read*\n  (subpath \"/System\") (subpath \"/usr\") (subpath \"/bin\") (subpath \"/sbin\")\n  (subpath \"/private/etc\") (subpath \"/dev\")\n  (subpath \"{{INSTALLATION_ROOT}}\")\n  (subpath \"{{EXECUTABLE_DIRECTORY}}\")\n  (subpath \"{{LEXICAL_RUNTIME_ROOT}}\")\n  (subpath \"{{AGENT_RUNTIME_ROOT}}\")\n  (subpath \"{{ALLOWED_ROOT}}\")\n  (subpath \"{{PROVIDER_ROOT}}\")\n  {{SOURCE_AUTH_RULE}})\n(allow file-write*\n  (subpath \"{{PROVIDER_ROOT}}\"))\n{{REPOSITORY_WRITE_RULE}}\n",
+    "profiles": {
+      "codex-planning-macos-v2": {
+        "provider": "codex",
+        "providerInvocation": {
+          "mode": "direct_native_binary",
+          "relativeExecutableFromInstallationRoot": "node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/bin/codex"
+        },
+        "approvedRuntimeBinding": {
+          "providerExecutableSha256": "134063e133f0b4244fa3b251acf973d4fe4b4aeeacbdc135211bf480f59f1477",
+          "resolvedExecutableIdentitySha256": "08220b43699e76e5092e0f3dffc677260cf0a0e67e95e52b23a3ce304fbf022b",
+          "invokedExecutableSha256": "ae1d3ffe6d48aec6a4dc3f50e7eb8e0d11962485a6a9406c5a7012139383da02",
+          "invokedExecutableIdentitySha256": "9eb32b01468c8f8f3c7def1f259ca93730b576ec245a56684cd4518a3b3ad8cc",
+          "installationRootIdentitySha256": "d78ffd5a1cd3788694425ad6f6c64a6bfdca1e2a8028f3dad83aa673a8f38fba",
+          "lexicalRuntimeRootIdentitySha256": "e34b29ea13352de312ad7bb7dc7a3b038f8a45fa63657281be289fbe7c14109f",
+          "agentRuntimeRootIdentitySha256": "e34b29ea13352de312ad7bb7dc7a3b038f8a45fa63657281be289fbe7c14109f",
+          "providerCredentialIdentitySha256": "2f1d4f26e54b03dbcb4f6d70751d826a885ab860c640f9227786e9a87ce09120",
+          "keychainIdentitySha256": null,
+          "keychainAccountIdentitySha256": null
+        },
+        "supportedCliVersions": ["0.146.0"],
+        "supportedMissionRoles": ["planner", "synthesizer"],
+        "supportedOperations": [
+          "inspect_repository",
+          "prepare_project_brain_context",
+          "generate_structured_plan",
+          "critique_plan",
+          "revise_plan",
+          "review_canonical_plan"
+        ],
+        "filesystemReadScope": [
+          "exact_registered_repository",
+          "codex_installation_tree",
+          "node_runtime_tree",
+          "exact_codex_auth_read_reference",
+          "darwin_system_runtime"
+        ],
+        "filesystemWriteScope": ["assignment_private_state"],
+        "temporaryDirectoryScope": "assignment_private_state/tmp",
+        "providerCredentialScope": "exact_read_only_codex_auth_json_via_isolated_symlink",
+        "keychainScope": "none",
+        "networkPolicy": "external_tcp_udp_and_mdns_resolution_only",
+        "loopbackPolicy": "denied",
+        "unixSocketPolicy": "mdns_resolver_only",
+        "childProcessPolicy": "provider_process_tree_only_with_shell_tool_disabled",
+        "gitPolicy": "repository_read_only_no_git_mutation",
+        "shellPolicy": "provider_shell_tool_disabled",
+        "environmentAllowlist": ["CODEX_HOME", "HOME", "LANG", "LC_ALL", "LOGNAME", "PATH", "TERM", "TMPDIR", "USER"],
+        "timeoutSecondsMaximum": 3600,
+        "outputBytesMaximum": 2000000,
+        "diagnosticPolicy": "provider-runtime-diagnostic/1+consensus-secret-v1",
+        "cancellationBehavior": "poll_5s_sigterm_then_sigkill_after_5s",
+        "processTreeTerminationBehavior": "detached_process_group",
+        "cleanWorktreeRequirement": true,
+        "snapshotBindingRequirement": "complete_repository_state/3",
+        "runtimeHashInputs": [
+          "catalog_version",
+          "profile_definition",
+          "provider_cli_version",
+          "provider_executable_sha256",
+          "invoked_executable_sha256",
+          "invoked_executable_identity_sha256",
+          "resolved_installation_root",
+          "resolved_runtime_root",
+          "provider_credential_identity_sha256",
+          "sandbox_profile_sha256"
+        ],
+        "knownPlatformLimitations": [
+          "macos_sandbox_exec_only",
+          "actual_primary_model_identity_not_independently_verifiable",
+          "provider_service_destinations_not_hostname_allowlisted_by_sandbox_exec"
+        ]
+      },
+      "codex-implementation-macos-v2": {
+        "provider": "codex",
+        "providerInvocation": {
+          "mode": "direct_native_binary",
+          "relativeExecutableFromInstallationRoot": "node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/bin/codex"
+        },
+        "approvedRuntimeBinding": {
+          "providerExecutableSha256": "134063e133f0b4244fa3b251acf973d4fe4b4aeeacbdc135211bf480f59f1477",
+          "resolvedExecutableIdentitySha256": "08220b43699e76e5092e0f3dffc677260cf0a0e67e95e52b23a3ce304fbf022b",
+          "invokedExecutableSha256": "ae1d3ffe6d48aec6a4dc3f50e7eb8e0d11962485a6a9406c5a7012139383da02",
+          "invokedExecutableIdentitySha256": "9eb32b01468c8f8f3c7def1f259ca93730b576ec245a56684cd4518a3b3ad8cc",
+          "installationRootIdentitySha256": "d78ffd5a1cd3788694425ad6f6c64a6bfdca1e2a8028f3dad83aa673a8f38fba",
+          "lexicalRuntimeRootIdentitySha256": "e34b29ea13352de312ad7bb7dc7a3b038f8a45fa63657281be289fbe7c14109f",
+          "agentRuntimeRootIdentitySha256": "e34b29ea13352de312ad7bb7dc7a3b038f8a45fa63657281be289fbe7c14109f",
+          "providerCredentialIdentitySha256": "2f1d4f26e54b03dbcb4f6d70751d826a885ab860c640f9227786e9a87ce09120",
+          "keychainIdentitySha256": null,
+          "keychainAccountIdentitySha256": null
+        },
+        "supportedCliVersions": ["0.146.0"],
+        "supportedMissionRoles": ["executor"],
+        "supportedOperations": ["implement_change"],
+        "filesystemReadScope": [
+          "exact_isolated_worktree",
+          "codex_installation_tree",
+          "node_runtime_tree",
+          "exact_codex_auth_read_reference",
+          "darwin_system_runtime"
+        ],
+        "filesystemWriteScope": ["exact_isolated_worktree_excluding_git_metadata", "assignment_private_state"],
+        "temporaryDirectoryScope": "assignment_private_state/tmp",
+        "providerCredentialScope": "exact_read_only_codex_auth_json_via_isolated_symlink",
+        "keychainScope": "none",
+        "networkPolicy": "external_tcp_udp_and_mdns_resolution_only",
+        "loopbackPolicy": "denied",
+        "unixSocketPolicy": "mdns_resolver_only",
+        "childProcessPolicy": "provider_process_tree_with_shell_tool_disabled_and_mission_agent_supervised_unix_socket_implementation_tools_only",
+        "gitPolicy": "provider_git_mutation_denied_mission_agent_validates_and_commits",
+        "shellPolicy": "provider_shell_tool_disabled_mission_agent_mediates_inspect_edit_diff_and_owner_approved_validation",
+        "environmentAllowlist": ["CODEX_HOME", "HOME", "LANG", "LC_ALL", "LOGNAME", "PATH", "TERM", "TMPDIR", "USER"],
+        "timeoutSecondsMaximum": 3600,
+        "outputBytesMaximum": 2000000,
+        "diagnosticPolicy": "provider-runtime-diagnostic/1+consensus-secret-v1",
+        "cancellationBehavior": "poll_5s_sigterm_then_sigkill_after_5s",
+        "processTreeTerminationBehavior": "detached_process_group",
+        "cleanWorktreeRequirement": true,
+        "snapshotBindingRequirement": "complete_repository_state/3",
+        "runtimeHashInputs": [
+          "catalog_version",
+          "profile_definition",
+          "provider_cli_version",
+          "provider_executable_sha256",
+          "invoked_executable_sha256",
+          "invoked_executable_identity_sha256",
+          "resolved_installation_root",
+          "resolved_runtime_root",
+          "provider_credential_identity_sha256",
+          "sandbox_profile_sha256"
+        ],
+        "knownPlatformLimitations": [
+          "macos_sandbox_exec_only",
+          "outer_sandbox_is_sole_filesystem_authority_because_nested_codex_sandbox_fails",
+          "codex_implementation_requires_mission_agent_supervised_tool_evidence",
+          "actual_primary_model_identity_not_independently_verifiable",
+          "provider_service_destinations_not_hostname_allowlisted_by_sandbox_exec"
+        ]
+      },
+      "claude-planning-macos-v2": {
+        "provider": "claude_code",
+        "providerInvocation": { "mode": "direct_executable", "relativeExecutableFromInstallationRoot": "2.1.224" },
+        "approvedRuntimeBinding": {
+          "providerExecutableSha256": "391df9d2ab04e4cf32199335720ac7715a582e91eaecfd4d2198a16f57ea59b3",
+          "resolvedExecutableIdentitySha256": "75c342cc706ad06d985b0073dce7866cd9e25419487c2266c9940313b9953db7",
+          "invokedExecutableSha256": "391df9d2ab04e4cf32199335720ac7715a582e91eaecfd4d2198a16f57ea59b3",
+          "invokedExecutableIdentitySha256": "75c342cc706ad06d985b0073dce7866cd9e25419487c2266c9940313b9953db7",
+          "installationRootIdentitySha256": "7bfd48fb5d06eedcdaba61e45b22f3562b65e416f33947ac359bd3d0b4b4f100",
+          "lexicalRuntimeRootIdentitySha256": "7bfd48fb5d06eedcdaba61e45b22f3562b65e416f33947ac359bd3d0b4b4f100",
+          "agentRuntimeRootIdentitySha256": "e34b29ea13352de312ad7bb7dc7a3b038f8a45fa63657281be289fbe7c14109f",
+          "providerCredentialIdentitySha256": null,
+          "keychainIdentitySha256": "b6b16c5c773956701722b15f360e9d57c41d1101a8a58a39906382c4c219747d",
+          "keychainAccountIdentitySha256": "8b247fc4204448ce545fe9bfd1694d59ec46aa1d15cd7021accc111e5f516599"
+        },
+        "supportedCliVersions": ["2.1.224"],
+        "supportedMissionRoles": ["planner", "synthesizer"],
+        "supportedOperations": [
+          "inspect_repository",
+          "prepare_project_brain_context",
+          "generate_structured_plan",
+          "critique_plan",
+          "revise_plan",
+          "review_canonical_plan"
+        ],
+        "filesystemReadScope": ["exact_registered_repository", "claude_installation_tree", "darwin_system_runtime"],
+        "filesystemWriteScope": ["assignment_private_state"],
+        "temporaryDirectoryScope": "assignment_private_state/tmp",
+        "providerCredentialScope": "brokered_claude_code_oauth_access_token_environment_only",
+        "keychainScope": "mission_agent_broker_reads_exact_Claude_Code-credentials_item_before_sandbox",
+        "networkPolicy": "external_tcp_udp_and_mdns_resolution_only",
+        "loopbackPolicy": "denied",
+        "unixSocketPolicy": "mdns_resolver_only",
+        "childProcessPolicy": "provider_process_tree_and_mission_agent_filesystem_guard_only",
+        "gitPolicy": "repository_read_only_no_git_mutation",
+        "shellPolicy": "bash_and_shell_tools_disabled",
+        "environmentAllowlist": [
+          "CLAUDE_CODE_OAUTH_TOKEN",
+          "CLAUDE_CODE_TMPDIR",
+          "HOME",
+          "LANG",
+          "LC_ALL",
+          "LOGNAME",
+          "PATH",
+          "TERM",
+          "TMPDIR",
+          "USER"
+        ],
+        "timeoutSecondsMaximum": 3600,
+        "outputBytesMaximum": 2000000,
+        "diagnosticPolicy": "provider-runtime-diagnostic/1+consensus-secret-v1",
+        "cancellationBehavior": "poll_10s_sigterm_then_sigkill_after_5s",
+        "processTreeTerminationBehavior": "detached_process_group",
+        "cleanWorktreeRequirement": true,
+        "snapshotBindingRequirement": "complete_repository_state/3",
+        "runtimeHashInputs": [
+          "catalog_version",
+          "profile_definition",
+          "provider_cli_version",
+          "provider_executable_sha256",
+          "invoked_executable_sha256",
+          "invoked_executable_identity_sha256",
+          "resolved_installation_root",
+          "provider_credential_identity_sha256",
+          "sandbox_profile_sha256",
+          "credential_broker_contract"
+        ],
+        "knownPlatformLimitations": [
+          "macos_sandbox_exec_only",
+          "actual_primary_model_identity_not_independently_verifiable",
+          "provider_reported_auxiliary_model_activity_not_independently_verifiable",
+          "provider_service_destinations_not_hostname_allowlisted_by_sandbox_exec"
+        ]
+      },
+      "claude-implementation-macos-v2": {
+        "provider": "claude_code",
+        "providerInvocation": { "mode": "direct_executable", "relativeExecutableFromInstallationRoot": "2.1.224" },
+        "approvedRuntimeBinding": {
+          "providerExecutableSha256": "391df9d2ab04e4cf32199335720ac7715a582e91eaecfd4d2198a16f57ea59b3",
+          "resolvedExecutableIdentitySha256": "75c342cc706ad06d985b0073dce7866cd9e25419487c2266c9940313b9953db7",
+          "invokedExecutableSha256": "391df9d2ab04e4cf32199335720ac7715a582e91eaecfd4d2198a16f57ea59b3",
+          "invokedExecutableIdentitySha256": "75c342cc706ad06d985b0073dce7866cd9e25419487c2266c9940313b9953db7",
+          "installationRootIdentitySha256": "7bfd48fb5d06eedcdaba61e45b22f3562b65e416f33947ac359bd3d0b4b4f100",
+          "lexicalRuntimeRootIdentitySha256": "7bfd48fb5d06eedcdaba61e45b22f3562b65e416f33947ac359bd3d0b4b4f100",
+          "agentRuntimeRootIdentitySha256": "e34b29ea13352de312ad7bb7dc7a3b038f8a45fa63657281be289fbe7c14109f",
+          "providerCredentialIdentitySha256": null,
+          "keychainIdentitySha256": "b6b16c5c773956701722b15f360e9d57c41d1101a8a58a39906382c4c219747d",
+          "keychainAccountIdentitySha256": "8b247fc4204448ce545fe9bfd1694d59ec46aa1d15cd7021accc111e5f516599"
+        },
+        "supportedCliVersions": ["2.1.224"],
+        "supportedMissionRoles": ["executor"],
+        "supportedOperations": ["implement_change"],
+        "filesystemReadScope": ["exact_isolated_worktree", "claude_installation_tree", "darwin_system_runtime"],
+        "filesystemWriteScope": ["exact_isolated_worktree_excluding_git_metadata", "assignment_private_state"],
+        "temporaryDirectoryScope": "assignment_private_state/tmp",
+        "providerCredentialScope": "brokered_claude_code_oauth_access_token_environment_only",
+        "keychainScope": "mission_agent_broker_reads_exact_Claude_Code-credentials_item_before_sandbox",
+        "networkPolicy": "external_tcp_udp_and_mdns_resolution_only",
+        "loopbackPolicy": "denied",
+        "unixSocketPolicy": "mdns_resolver_only",
+        "childProcessPolicy": "provider_process_tree_and_mission_agent_filesystem_guard_only",
+        "gitPolicy": "provider_git_mutation_denied_mission_agent_validates_and_commits",
+        "shellPolicy": "bash_and_shell_tools_disabled",
+        "environmentAllowlist": [
+          "CLAUDE_CODE_OAUTH_TOKEN",
+          "CLAUDE_CODE_TMPDIR",
+          "HOME",
+          "LANG",
+          "LC_ALL",
+          "LOGNAME",
+          "PATH",
+          "TERM",
+          "TMPDIR",
+          "USER"
+        ],
+        "timeoutSecondsMaximum": 3600,
+        "outputBytesMaximum": 2000000,
+        "diagnosticPolicy": "provider-runtime-diagnostic/1+consensus-secret-v1",
+        "cancellationBehavior": "poll_10s_sigterm_then_sigkill_after_5s",
+        "processTreeTerminationBehavior": "detached_process_group",
+        "cleanWorktreeRequirement": true,
+        "snapshotBindingRequirement": "complete_repository_state/3",
+        "runtimeHashInputs": [
+          "catalog_version",
+          "profile_definition",
+          "provider_cli_version",
+          "provider_executable_sha256",
+          "invoked_executable_sha256",
+          "invoked_executable_identity_sha256",
+          "resolved_installation_root",
+          "provider_credential_identity_sha256",
+          "sandbox_profile_sha256",
+          "credential_broker_contract"
+        ],
+        "knownPlatformLimitations": [
+          "macos_sandbox_exec_only",
+          "actual_primary_model_identity_not_independently_verifiable",
+          "provider_reported_auxiliary_model_activity_not_independently_verifiable",
+          "provider_service_destinations_not_hostname_allowlisted_by_sandbox_exec"
+        ]
+      }
+    }
+  },
+  "providerRuntimeProfilesSha256": "b3af6275b8df1a7c4628d1757df0bf08c8c05d0fc4fdba0e3e8fb209543b48dc",
+  "runtimeModeDefinition": {
+    "schemaVersion": "mission-control-runtime-modes/1",
+    "modes": {
+      "local": { "releaseTrust": "production_signed_only", "productionResources": false },
+      "test": { "releaseTrust": "test_fixtures_only", "productionResources": false },
+      "production": { "releaseTrust": "production_signed_registry", "productionResources": true },
+      "disposable_acceptance": {
+        "releaseTrust": "operator_disposable_exact_checksum_registry",
+        "productionResources": false,
+        "operatorSelectionRequired": true,
+        "localhostInference": false,
+        "unsignedFallback": false
+      }
+    }
+  },
+  "runtimeModeDefinitionFileSha256": "2077ca55a498d1d510e1c36f4d3b76388dd76c4d17adbbfbd1d61a6c0857e688",
+  "runtimeModeDefinitionCanonicalSha256": "107e2b383603effb3572a023921c642cbb231567a7f9a73d682fcf82f5e0ed61",
+  "disposableAcceptanceRegistrySchema": "mission-agent-disposable-acceptance/2",
+  "disposableAcceptanceRegistrySchemaSha256": "f491034c9d1b0d975dfb89efda00567bcc0ae67b1569debad61d993a01110ba6",
+  "repositorySnapshotSchema": "complete_repository_state/3",
+  "repositorySnapshotSchemaSha256": "c5d816220f9421222c99660c4f5b280bf427d31586a1dfe2130788153e18584e",
+  "repositoryAuthoritySchema": "repository-authority/1",
+  "repositoryAuthoritySchemaSha256": "608277e1f791740462631b05e809d627b8a9a22351db6655093a7472b881f4e2",
+  "acceptanceSourceManifest": "mission-control-acceptance-source-manifest/1",
+  "acceptanceSourceManifestSha256": "bd1aa2948969b80f833fe9eaed8acc73c766f366fb11484ed118841bbc4a1ca1",
+  "acceptanceSourceManifestSchema": "mission-control-acceptance-source-manifest/1",
+  "acceptanceSourceManifestSchemaSha256": "6040a5db9c49e890717f19bb026963c8a910bc489f2cb74c7779252a27ed4f53",
+  "acceptanceContract": "consensus-real-provider-acceptance-contract/3",
+  "acceptanceContractFileSha256": "e16c51d5a103e5fc3347acb714fd3d008d9598576ea884349752ce377b1f0623",
+  "acceptanceContractCanonicalSha256": "151adccdd5897f8e4c9e47a3ac0cde81997c6538c4c7ccbe7db6da79b2d20786",
+  "acceptanceContractSchema": "consensus-real-provider-acceptance-contract/3",
+  "acceptanceContractSchemaSha256": "9c3b0c60269c91d78166d1446958ab67e3c2c511e119b70453ad896e3261556d",
+  "acceptanceExecutableRegistryFileSha256": "752c260ab35a85f4242799029ffed900d0a871799243ef382643a22da04cffc3",
+  "acceptanceExecutableRegistryCanonicalSha256": "1bcdafac1c1b9408603a77ef1291ba3303319c94b993fbfad26a2abca691db95",
+  "repositoryAuthority": {
+    "profile": "disposable_local_implementation/1",
+    "repositoryReadAllowed": true,
+    "isolatedWorktreeWriteAllowed": true,
+    "missionAgentLocalCommitAllowed": true,
+    "providerDirectCommitAllowed": false,
+    "pushAllowed": false,
+    "pullRequestAllowed": false,
+    "mergeAllowed": false,
+    "publicationAllowed": false,
+    "deploymentAllowed": false,
+    "infrastructureMutationAllowed": false,
+    "binding": "authenticated_owner_command_event_and_immutable_receipt",
+    "revalidation": [
+      "mission_creation",
+      "planner_dispatch_claim_renewal",
+      "human_approval",
+      "child_creation",
+      "executor_dispatch_claim_renewal",
+      "before_mutation",
+      "before_local_commit",
+      "terminal_success"
+    ]
+  },
+  "providers": ["claude_code", "codex"],
+  "modelDiscovery": {
+    "providerEnumeration": "used_when_reliable",
+    "operatorAllowlistFallback": true,
+    "allowlistMustBeExplicitValidatedVersionedAndAttested": true
+  },
+  "roleSpecificModelSelection": ["planner_a", "planner_b", "synthesizer", "executor"],
+  "reservedUnsupportedRoles": ["implementation_reviewer"],
+  "invocationBinding": {
+    "exactProviderModelArgument": true,
+    "silentFallbackRejectedWhenDetected": true,
+    "runtimeModelIdentity": "unverifiable",
+    "limitation": "Installed Codex and Claude Code CLIs do not provide an independently verifiable actual-model identity for every invocation."
+  },
+  "permissions": {
+    "planning": { "repository": "read_only", "tools": [], "writes": "execution_specific_provider_sandbox_only" },
+    "implementation": {
+      "repository": "isolated_worktree_write_and_local_commit",
+      "codexTools": ["provider_internal_editing_without_shell_tool"],
+      "claudeCodeTools": ["Read", "Edit", "Write", "Grep", "Glob"],
+      "validation": "owner_governed_repository_local_commands_only"
+    },
+    "prohibited": [
+      "git.push",
+      "pull_request.create",
+      "repository.merge",
+      "deployment.execute",
+      "transaction.sign",
+      "transaction.submit",
+      "unrestricted_shell",
+      "unrelated_home_or_credential_access"
+    ]
+  },
+  "isolation": {
+    "host": "macos",
+    "mechanism": "sandbox-exec",
+    "providerSpecificCredentialReadOnlyAccess": true,
+    "unrelatedRepositoryAccess": "not_guaranteed_for_os_readable_paths_outside_denied_roots",
+    "repositoryReadScope": "registered_repository_plus_broad_non_home_runtime_reads",
+    "failsClosedWhenUnavailable": true
+  },
+  "disposableAcceptance": {
+    "runtimeMode": "disposable_acceptance",
+    "productionTrustRejected": true,
+    "exactRegistryChecksumRequired": true,
+    "registryPathAndHashBoundToReadinessEligibilityEventsAndReceipts": true,
+    "productionResourcesRejectedAtStartup": true,
+    "repositorySnapshotSchema": "complete_repository_state/3",
+    "authenticatedRepositoryRegistrationRequired": true
+  },
+  "evidence": {
+    "requiredImplementationArtifacts": ["implementation_plan", "git_patch", "validation_results", "change_summary"],
+    "durableAuthenticatedValidationReceipt": true,
+    "everyProviderAttemptDiagnostic": true,
+    "runtimeModelIdentityIndependentlyVerifiable": false
+  },
+  "leaseAuthority": {
+    "bearerTokenStorage": "ephemeral_memory_only",
+    "durableReceiptSchema": "lease-authorization-receipt/1",
+    "durableFields": ["kind", "leaseId", "tokenFingerprint", "issuedAt", "expiresAt", "fencingToken", "binding"],
+    "restartBehavior": "fresh_fenced_lease_required"
+  }
+}

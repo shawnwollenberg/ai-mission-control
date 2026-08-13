@@ -4,31 +4,62 @@ import { getDatabasePool } from "@/lib/database";
 import { recordOnboardingEvent } from "@/application/onboarding-events";
 import { apiErrorResponse } from "@/lib/http-errors";
 import { requireApiIdentity, requireMutationOrigin, unauthenticatedResponse } from "@/lib/request-auth";
+import { parseAgentProviderProfile } from "@/domain/agent-provider";
 
 const profiles = {
   codex: {
     name: "Codex",
     description: "Codex connector installed during guided onboarding",
-    capabilities: ["repository.read", "code.review", "test.run", "artifact.create"],
+    capabilities: [
+      "repository.read",
+      "repository.write",
+      "code.implement",
+      "code.review",
+      "test.run",
+      "git.commit",
+      "artifact.create",
+      "plan.generate",
+      "plan.critique",
+      "plan.revise",
+      "plan.review",
+      "project_brain.context",
+    ],
     domains: ["software_delivery"],
+    providerProfile: undefined,
   },
   hermes: {
     name: "Hermes",
     description: "Hermes coordinator connected during guided onboarding",
     capabilities: ["metrics.read", "logs.read", "health.verify", "report.create", "summary.create"],
     domains: ["systems_monitoring", "business_operations"],
+    providerProfile: undefined,
   },
   claude_code: {
     name: "Claude Code",
     description: "Claude Code connector installed during guided onboarding",
-    capabilities: ["repository.read", "code.review", "test.run", "artifact.create"],
+    capabilities: [
+      "repository.read",
+      "repository.write",
+      "code.implement",
+      "code.review",
+      "test.run",
+      "git.commit",
+      "artifact.create",
+      "plan.generate",
+      "plan.critique",
+      "plan.revise",
+      "plan.review",
+      "project_brain.context",
+    ],
     domains: ["software_delivery"],
+    providerProfile: undefined,
   },
   generic_remote: {
     name: "Generic Remote Agent",
     description: "Protocol 1.0 remote agent connected during guided onboarding",
     capabilities: ["repository.read", "report.create", "summary.create"],
     domains: ["software_delivery", "business_operations"],
+    providerProfile: undefined,
   },
 } as const;
 
@@ -69,6 +100,7 @@ export async function POST(request: Request) {
           : body.agentType === "generic_remote"
             ? "generic"
             : body.agentType,
+      providerProfile: profile.providerProfile ? parseAgentProviderProfile(profile.providerProfile) : undefined,
     });
     const config = Buffer.from(
       JSON.stringify({
@@ -80,6 +112,7 @@ export async function POST(request: Request) {
         agentType: body.agentType,
         agentName,
         capabilities: profile.capabilities,
+        providerProfile: profile.providerProfile ? parseAgentProviderProfile(profile.providerProfile) : undefined,
         workspaceName: workspaceName ?? "My Workspace",
       }),
     ).toString("base64url");

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { apiErrorResponse } from "@/lib/http-errors";
+import { apiErrorResponse, structuralApplicationErrorResponse } from "@/lib/http-errors";
 import { authenticateProtocolRequest } from "@/remote-agent/authenticate";
 import { validateEnvelope } from "@/remote-agent/protocol";
 import {
   completeProtocolMessage,
+  acquireProtocolMessageFence,
   processRemoteMessage,
   releaseProtocolMessage,
   reserveProtocolMessage,
+  validateExecutionAuthorityPresentation,
 } from "@/application/remote-agent-messages";
 import {
   auditProtocolSecurityFailure,
@@ -14,9 +16,16 @@ import {
   rateCategory,
   securityReason,
 } from "@/remote-agent/security";
-import { validateExecutionLease } from "@/application/pull-assignments";
+import { acquireExecutionLeaseFence } from "@/application/pull-assignments";
 import { validateRemoteProjectBrainLease } from "@/application/remote-project-brain-assignments";
 import { ConcurrencyConflictError } from "@/lib/application-errors";
+import {
+  captureActivePresentationState,
+  activeProviderAttemptId,
+  activePresentationAcceptanceEnabled,
+  recordActivePresentationRejection,
+} from "@/application/acceptance-authority-presentation-observations";
+import type { ProtocolEnvelope } from "@/remote-agent/protocol";
 
 const path = "/api/agent-protocol/v1/messages";
 const agentStatusMaxAttempts = 16;
@@ -38,6 +47,17 @@ async function processAuthenticatedMessage(
 }
 
 export async function POST(request: Request) {
+  let releaseExecutionFence: (() => Promise<void>) | undefined;
+  let releaseMessageFence: (() => Promise<void>) | undefined;
+  let activeScenario:
+    | {
+        message: ProtocolEnvelope;
+        workspaceId: string;
+        agentId: string;
+        baselineValid: boolean;
+        stateBefore: Awaited<ReturnType<typeof captureActivePresentationState>>;
+      }
+    | undefined;
   try {
     const authenticated = await authenticateProtocolRequest(request, path);
     const message = validateEnvelope(JSON.parse(authenticated.body), {
@@ -46,18 +66,51 @@ export async function POST(request: Request) {
       messageId: authenticated.headers.messageId,
       sentAt: authenticated.headers.timestamp,
     });
+    releaseMessageFence = await acquireProtocolMessageFence(authenticated.credential, message.messageId);
     if (
       message.executionId &&
       !String(message.messageType).startsWith("RemoteProjectBrain") &&
       authenticated.credential.delivery_mode === "pull"
     )
-      await validateExecutionLease({
+      releaseExecutionFence = await acquireExecutionLeaseFence({
         credential: authenticated.credential,
         executionId: message.executionId,
         assignmentId: request.headers.get("x-mc-assignment-id") ?? "",
         leaseOwner: request.headers.get("x-mc-lease-owner") ?? "",
         leaseToken: request.headers.get("x-mc-lease-token") ?? "",
+        fencingToken: Number(request.headers.get("x-mc-fencing-token") ?? ""),
       });
+    const scenario = message.payload.acceptanceAuthorityPresentationScenario as Record<string, unknown> | undefined;
+    if (scenario && activePresentationAcceptanceEnabled()) {
+      const assignmentId = request.headers.get("x-mc-assignment-id") ?? "";
+      const stateBefore = await captureActivePresentationState(authenticated.credential.workspace_id, assignmentId);
+      const persistedProviderAttemptId = await activeProviderAttemptId(
+        authenticated.credential.workspace_id,
+        String(message.executionId),
+        assignmentId,
+      );
+      if (!persistedProviderAttemptId) throw new Error("Active provider-attempt authority is unavailable");
+      await validateExecutionAuthorityPresentation(
+        { ...message, payload: { ...message.payload, executionAuthorityPresentation: scenario.baselinePresentation } },
+        authenticated.credential,
+        undefined,
+        persistedProviderAttemptId,
+      );
+      activeScenario = {
+        message,
+        workspaceId: authenticated.credential.workspace_id,
+        agentId: authenticated.credential.agent_id,
+        baselineValid: true,
+        stateBefore,
+      };
+      await validateExecutionAuthorityPresentation(
+        message,
+        authenticated.credential,
+        undefined,
+        persistedProviderAttemptId,
+      );
+      throw new Error("Active authority mutation scenario unexpectedly passed presentation validation");
+    }
     if (
       String(message.messageType).startsWith("RemoteProjectBrain") &&
       authenticated.credential.delivery_mode === "pull"
@@ -93,7 +146,36 @@ export async function POST(request: Request) {
       throw error;
     }
   } catch (error) {
-    await auditProtocolSecurityFailure(request, securityReason(error)).catch(() => undefined);
-    return apiErrorResponse(error, "agent_protocol_message_rejected");
+    let responseError = error;
+    let recordedScenarioError:
+      | {
+          code: Parameters<typeof structuralApplicationErrorResponse>[0]["code"];
+          message: string;
+          details?: Record<string, unknown>;
+        }
+      | undefined;
+    if (activeScenario) {
+      const recordedApplicationError = await recordActivePresentationRejection({ ...activeScenario, error }).catch(
+        () => undefined,
+      );
+      if (recordedApplicationError) {
+        recordedScenarioError = {
+          code: recordedApplicationError.code,
+          message: recordedApplicationError.message,
+          details: {
+            ...recordedApplicationError.details,
+            acceptance_scenario_baseline_valid: true,
+            acceptance_scenario_rejection_recorded: true,
+          },
+        };
+        responseError = recordedScenarioError;
+      }
+    }
+    await auditProtocolSecurityFailure(request, securityReason(responseError)).catch(() => undefined);
+    if (recordedScenarioError) return structuralApplicationErrorResponse(recordedScenarioError);
+    return apiErrorResponse(responseError, "agent_protocol_message_rejected");
+  } finally {
+    await releaseExecutionFence?.();
+    await releaseMessageFence?.();
   }
 }

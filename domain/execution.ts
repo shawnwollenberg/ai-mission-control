@@ -25,11 +25,11 @@ export type ExecutionState = {
   cancellationRequested: boolean;
 };
 const transitions: Record<ExecutionStatus, readonly ExecutionStatus[]> = {
-  requested: ["accepted", "cancelled", "failed"],
-  accepted: ["preparing", "cancelled", "failed"],
+  requested: ["accepted", "cancelled", "failed", "timed_out"],
+  accepted: ["preparing", "cancelled", "failed", "timed_out"],
   preparing: ["running", "cancelled", "failed", "timed_out"],
   running: ["waiting_for_approval", "paused", "verifying", "failed", "timed_out", "cancelled"],
-  waiting_for_approval: ["running", "paused", "failed", "cancelled"],
+  waiting_for_approval: ["running", "paused", "failed", "timed_out", "cancelled"],
   paused: ["running", "cancelled", "failed", "timed_out"],
   verifying: ["succeeded", "failed", "timed_out", "cancelled"],
   succeeded: [],
@@ -101,12 +101,19 @@ export function executionFact(
     | "execution.command_completed"
     | "execution.artifact_produced"
     | "execution.heartbeat_received"
+    | "execution.provider_diagnostic_recorded"
+    | "execution.provider_diagnostic_rejected"
     | "execution.remote_approval_denied"
     | "execution.approval_decision_acknowledged",
   payload: Record<string, unknown>,
 ): NewDomainEvent {
-  if (!["preparing", "running", "waiting_for_approval", "verifying"].includes(state.status))
-    throw new InvalidTransitionError("Execution", state.status, type);
+  const allowedStatuses = ["preparing", "running", "waiting_for_approval", "verifying"];
+  if (
+    ["execution.provider_diagnostic_recorded", "execution.provider_diagnostic_rejected"].includes(type) &&
+    state.status === "accepted"
+  )
+    allowedStatuses.push("accepted");
+  if (!allowedStatuses.includes(state.status)) throw new InvalidTransitionError("Execution", state.status, type);
   return { eventType: type, eventSchemaVersion: 1, payload: { ...payload, status: state.status } };
 }
 export function requestExecutionCancellation(state: ExecutionState): NewDomainEvent | undefined {

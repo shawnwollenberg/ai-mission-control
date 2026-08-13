@@ -16,6 +16,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ass
       assignmentId,
       leaseOwner: String(auth.message.payload.leaseOwner ?? ""),
       leaseToken: String(auth.message.payload.leaseToken ?? ""),
+      fencingToken: Number(auth.message.payload.fencingToken),
     });
     const response = { protocolVersion: "1.0", messageId: auth.message.messageId, released: true };
     await completeProtocolMessage(auth.credential, auth.message.messageId, response);

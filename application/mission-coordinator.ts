@@ -45,12 +45,31 @@ export async function coordinateAfterTask(workspaceId: string, missionId: string
           details: { reason: "dependencies_satisfied" },
         });
   }
-  const mission = await getDatabasePool().query<{ status: string; total: string; completed: string; failed: string }>(
-    `SELECT m.status,count(t.*)::text total,count(t.*) FILTER(WHERE t.status='completed')::text completed,count(t.*) FILTER(WHERE t.status='failed')::text failed FROM mission_projections m LEFT JOIN task_projections t ON t.workspace_id=m.workspace_id AND t.mission_id=m.mission_id WHERE m.workspace_id=$1 AND m.mission_id=$2 GROUP BY m.status`,
+  const mission = await getDatabasePool().query<{
+    status: string;
+    mission_type: string;
+    total: string;
+    completed: string;
+    failed: string;
+    cancelled: string;
+  }>(
+    `SELECT m.status,m.mission_type,count(t.*)::text total,
+       count(t.*) FILTER(WHERE t.status='completed')::text completed,
+       count(t.*) FILTER(WHERE t.status='failed')::text failed,
+       count(t.*) FILTER(WHERE t.status='cancelled')::text cancelled
+     FROM mission_projections m LEFT JOIN task_projections t
+       ON t.workspace_id=m.workspace_id AND t.mission_id=m.mission_id
+     WHERE m.workspace_id=$1 AND m.mission_id=$2 GROUP BY m.status,m.mission_type`,
     [workspaceId, missionId],
   );
   const row = mission.rows[0];
   if (!row || row.status !== "running") return;
+  if (row.mission_type === "consensus_plan") {
+    await (
+      await import("@/application/consensus-plan-commands")
+    ).advanceConsensusAfterTask(workspaceId, missionId, taskId, eventType);
+    return;
+  }
   const actor: CommandActor = { workspaceId, userId: "mission-coordinator", role: "owner" };
   if (Number(row.failed) > 0)
     await handleMissionTransition({
@@ -58,6 +77,16 @@ export async function coordinateAfterTask(workspaceId: string, missionId: string
       commandId: stableUuid(`mission-failed:${missionId}:${taskId}`),
       missionId,
       target: "failed",
+    });
+  else if (
+    Number(row.cancelled) > 0 &&
+    Number(row.total) === Number(row.completed) + Number(row.failed) + Number(row.cancelled)
+  )
+    await handleMissionTransition({
+      actor,
+      commandId: stableUuid(`mission-cancelled:${missionId}:${taskId}`),
+      missionId,
+      target: "cancelled",
     });
   else if (Number(row.total) > 0 && Number(row.total) === Number(row.completed)) {
     await handleMissionTransition({
@@ -79,6 +108,9 @@ export async function coordinateAfterTask(workspaceId: string, missionId: string
         reason: "Linked change mission completed",
         linkedMissionId: missionId,
       });
+    await (
+      await import("@/application/consensus-plan-commands")
+    ).completeConsensusImplementation(workspaceId, missionId);
   }
 }
 

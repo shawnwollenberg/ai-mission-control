@@ -8,6 +8,8 @@ import { getDatabasePool } from "@/lib/database";
 import { ProjectBrainPanel } from "@/integrations/project-brain/project-brain-panel";
 import { revalidatePath } from "next/cache";
 import { requestProjectBrainOperation, requestProjectBrainWriteApproval } from "@/application/project-brain-commands";
+import { getConsensusHistory } from "@/application/consensus-plan-commands";
+import ConsensusPlanConsole from "./consensus-plan-console";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +18,56 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
   const identity = await requirePageIdentity(`/missions/${missionId}`);
   const mission = await getMissionProjection(identity.workspaceId, missionId);
   if (!mission) return notFound();
+  if (mission.missionType === "consensus_plan") {
+    const executors = (
+      await getDatabasePool().query(
+        `SELECT agent_id,name,provider_id,supported_models,model_capabilities FROM agents
+         WHERE workspace_id=$1 AND status='active' AND delivery_mode='pull'
+           AND repository_mutation=true AND structured_output=true
+           AND provider_credentials_available=true
+           AND capability_attestation_id IS NOT NULL AND capability_attestation_expires_at>now()
+           AND mission_agent_checksum_status='verified' AND mission_agent_capability_expires_at>now()
+           AND supported_mission_roles ? 'executor' AND supported_operations ? 'implement_change'
+         ORDER BY name,agent_id`,
+        [identity.workspaceId],
+      )
+    ).rows;
+    return (
+      <ConsensusPlanConsole
+        mission={mission}
+        initialHistory={await getConsensusHistory(identity.workspaceId, missionId)}
+        executors={executors}
+        owner={identity.role === "owner"}
+      />
+    );
+  }
   const missionObjective = mission.objective;
   const missionSuccessCriteria = mission.successCriteria ?? [];
   const execution = await getMissionExecution(identity.workspaceId, missionId);
+  const childRoleUsage = mission.parentConsensusMissionId
+    ? (
+        await getDatabasePool().query<{
+          role: string;
+          provider_id: string;
+          model_id: string;
+          metric_type: string | null;
+          quantity: string | null;
+          unit: string | null;
+          cost_amount: string | null;
+          currency: string | null;
+        }>(
+          `SELECT p.role,p.provider_id,p.model_id,u.metric_type,
+             sum(u.quantity)::text quantity,u.unit,sum(u.cost_amount)::text cost_amount,u.currency
+           FROM consensus_participant_assignments p
+           LEFT JOIN usage_records u ON u.workspace_id=p.workspace_id
+             AND u.participant_assignment_id=p.participant_assignment_id AND u.mission_id=$3
+           WHERE p.workspace_id=$1 AND p.mission_id=$2 AND p.role IN('executor','implementation_reviewer')
+           GROUP BY p.role,p.provider_id,p.model_id,u.metric_type,u.unit,u.currency
+           ORDER BY p.role,u.metric_type`,
+          [identity.workspaceId, mission.parentConsensusMissionId, missionId],
+        )
+      ).rows
+    : [];
   const registeredRepository = (
     await getDatabasePool().query<{ repository_id: string; local_path: string }>(
       `SELECT r.repository_id,r.local_path FROM repositories r
@@ -253,6 +302,41 @@ export default async function MissionPage({ params }: { params: Promise<{ missio
         initialActions={execution.actions}
         initialRecommendations={await listMissionRecommendations(identity.workspaceId, missionId)}
       />
+      {mission.parentConsensusMissionId ? (
+        <section className="project-brain-mission-shell" aria-label="Implementation role usage">
+          <div className="command-panel project-brain-controls">
+            <div className="panel-title">
+              <div>
+                <p className="section-label">Assignment-bound accounting</p>
+                <h2>Executor and reviewer usage</h2>
+              </div>
+            </div>
+            {Array.from(new Set(childRoleUsage.map((item) => item.role))).map((role) => {
+              const rows = childRoleUsage.filter((item) => item.role === role);
+              return (
+                <div className="log-item" key={role}>
+                  <span className="log-sequence">Σ</span>
+                  <div>
+                    <strong>{role.replaceAll("_", " ")}</strong>
+                    <p>
+                      {rows[0]?.provider_id} · {rows[0]?.model_id}
+                    </p>
+                    <small>
+                      {rows
+                        .filter((item) => item.metric_type)
+                        .map(
+                          (item) =>
+                            `${item.metric_type} ${item.quantity ?? item.cost_amount ?? "unreported"} ${item.unit ?? item.currency ?? ""}`,
+                        )
+                        .join(" · ") || "No usage reported for this role"}
+                    </small>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
       {registeredRepository || projectBrainProjection ? (
         <section className="project-brain-mission-shell" aria-label="Project Brain mission evidence">
           <ProjectBrainPanel projection={projectBrainProjection} />

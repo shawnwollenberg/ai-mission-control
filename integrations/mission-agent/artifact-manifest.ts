@@ -1,3 +1,11 @@
+import {
+  disposableArtifactApproval,
+  missionControlRuntimeMode,
+  runtimeTrustEvidence,
+  type DisposableAcceptanceArtifact,
+  type RuntimeTrustEvidence,
+} from "@/lib/runtime-trust";
+
 export type MissionAgentArtifactVerification = {
   advertisedChecksum: string | null;
   expectedChecksum: string | null;
@@ -6,6 +14,8 @@ export type MissionAgentArtifactVerification = {
   compatible: boolean;
   identityProtocolVersion: string | null;
   rejectionReason: string | null;
+  runtimeTrust: RuntimeTrustEvidence;
+  disposablePacket: DisposableAcceptanceArtifact | null;
 };
 
 // Generated from the detached release manifest after the immutable artifact is
@@ -41,7 +51,22 @@ export function verifyMissionAgentArtifact(version: unknown, artifact: unknown):
     artifact && typeof artifact === "object" && !Array.isArray(artifact) ? (artifact as Record<string, unknown>) : {};
   const advertisedChecksum = typeof candidate.sha256 === "string" ? candidate.sha256 : null;
   const manifestVersion = typeof candidate.manifestVersion === "string" ? candidate.manifestVersion : null;
-  const approved = typeof version === "string" ? approvedMissionAgentArtifacts[version] : undefined;
+  const runtimeMode = missionControlRuntimeMode();
+  const runtimeTrust = runtimeTrustEvidence();
+  const disposableApproval =
+    runtimeMode === "disposable_acceptance" && typeof version === "string"
+      ? disposableArtifactApproval(version).artifact
+      : undefined;
+  // Disposable mode has its own exact-checksum authority and can never fall
+  // back to the production signed registry. Other modes never accept the
+  // disposable registry.
+  const approved =
+    typeof version === "string"
+      ? runtimeMode === "disposable_acceptance"
+        ? disposableApproval
+        : approvedMissionAgentArtifacts[version]
+      : undefined;
+  const disposablePacket = disposableApproval ?? null;
   const expectedChecksum = approved?.sha256 ?? null;
   const identityProtocolVersion = approved?.identityProtocolVersion ?? null;
   if (!advertisedChecksum)
@@ -53,6 +78,8 @@ export function verifyMissionAgentArtifact(version: unknown, artifact: unknown):
       compatible: false,
       identityProtocolVersion,
       rejectionReason: "mission_agent_artifact_checksum_missing",
+      runtimeTrust,
+      disposablePacket,
     };
   if (!/^[a-f0-9]{64}$/.test(advertisedChecksum) || !["1", "3"].includes(manifestVersion ?? ""))
     return {
@@ -63,6 +90,8 @@ export function verifyMissionAgentArtifact(version: unknown, artifact: unknown):
       compatible: false,
       identityProtocolVersion,
       rejectionReason: "mission_agent_artifact_identity_malformed",
+      runtimeTrust,
+      disposablePacket,
     };
   if (!approved)
     return {
@@ -73,10 +102,15 @@ export function verifyMissionAgentArtifact(version: unknown, artifact: unknown):
       compatible: false,
       identityProtocolVersion,
       rejectionReason: "mission_agent_version_unapproved",
+      runtimeTrust,
+      disposablePacket,
     };
   if (
     advertisedChecksum !== approved.sha256 ||
     manifestVersion !== approved.manifestVersion ||
+    (disposableApproval !== undefined &&
+      (candidate.artifactMetadataSha256 !== disposableApproval.artifactMetadataSha256 ||
+        candidate.capabilityManifestSha256 !== disposableApproval.capabilityManifestSha256)) ||
     (approved.manifestVersion === "3" &&
       (candidate.releaseAuthorityVersion !== approved.releaseAuthorityVersion ||
         candidate.signingKeyId !== approved.signingKeyId ||
@@ -90,6 +124,8 @@ export function verifyMissionAgentArtifact(version: unknown, artifact: unknown):
       compatible: false,
       identityProtocolVersion,
       rejectionReason: "mission_agent_artifact_checksum_mismatch",
+      runtimeTrust,
+      disposablePacket,
     };
   return {
     advertisedChecksum,
@@ -99,5 +135,7 @@ export function verifyMissionAgentArtifact(version: unknown, artifact: unknown):
     compatible: true,
     identityProtocolVersion,
     rejectionReason: null,
+    runtimeTrust,
+    disposablePacket,
   };
 }

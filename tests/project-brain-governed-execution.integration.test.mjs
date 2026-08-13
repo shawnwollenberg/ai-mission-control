@@ -72,7 +72,7 @@ test("authorized read creates canonical events, projection, outbox, and one leas
   );
   let job;
   for (let index = 0; index < 100 && !job; index += 1) {
-    await processOneOutbox("project-brain-outbox-test");
+    await processOneOutbox("project-brain-outbox-test", workspaceId);
     job = await claimJob("project-brain-worker-test", 30, workspaceId, "project_brain_operation");
   }
   assert.ok(job);

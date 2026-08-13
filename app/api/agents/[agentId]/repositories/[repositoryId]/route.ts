@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { removeMissionAgentRepositoryAssociation, setRepositoryEnabled } from "@/application/registry";
+import {
+  configureDisposableRepositoryAuthority,
+  removeMissionAgentRepositoryAssociation,
+  setRepositoryEnabled,
+} from "@/application/registry";
+import { randomUUID } from "node:crypto";
 import { apiErrorResponse } from "@/lib/http-errors";
 import { requireApiIdentity, requireMutationOrigin, unauthenticatedResponse } from "@/lib/request-auth";
 
@@ -7,9 +12,23 @@ export async function PATCH(request: Request, context: { params: Promise<{ agent
   const identity = await requireApiIdentity();
   if (!identity) return unauthenticatedResponse();
   try {
-    requireMutationOrigin(request);
+    const originError = requireMutationOrigin(request);
+    if (originError) return originError;
     const { agentId, repositoryId } = await context.params;
     const body = await request.json();
+    if (body.authorityProfile === "disposable_local_implementation/1") {
+      return NextResponse.json({
+        repository: await configureDisposableRepositoryAuthority({
+          actor: identity,
+          commandId: String(body.commandId ?? randomUUID()),
+          repositoryId,
+          implementationAgentIds: Array.isArray(body.implementationAgentIds)
+            ? body.implementationAgentIds.map(String)
+            : [agentId],
+          validationCommands: Array.isArray(body.validationCommands) ? body.validationCommands : undefined,
+        }),
+      });
+    }
     return NextResponse.json({
       repository: await setRepositoryEnabled({
         actor: identity,
@@ -30,7 +49,8 @@ export async function DELETE(
   const identity = await requireApiIdentity();
   if (!identity) return unauthenticatedResponse();
   try {
-    requireMutationOrigin(request);
+    const originError = requireMutationOrigin(request);
+    if (originError) return originError;
     if (identity.role !== "owner") throw new Error("Workspace owner permission is required");
     const { agentId, repositoryId } = await context.params;
     return NextResponse.json({

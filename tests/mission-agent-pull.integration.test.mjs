@@ -13,6 +13,8 @@ const { registerMissionAgentRepository } = await import("../application/registry
 const { launchFirstRepositoryMission } = await import("../application/onboarding-mission.ts");
 const { claimNextAssignment, acknowledgeAssignment, renewAssignmentLease, validateExecutionLease, releaseAssignment } =
   await import("../application/pull-assignments.ts");
+const { handleExecutionTransition, handleMissionAgentGenerationTermination } =
+  await import("../application/execution-commands.ts");
 
 const workspaceId = randomUUID();
 const userId = randomUUID();
@@ -273,8 +275,7 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
   assert.ok(claimed.leaseToken.startsWith("mc_lease_"));
 
   const duplicate = await claimNextAssignment({ credential, leaseOwner: "test-runtime" });
-  assert.equal(duplicate.assignment.assignment_id, claimed.assignment.assignment_id);
-  assert.equal(duplicate.resumed, true);
+  assert.equal(duplicate, undefined, "active bearer authority is not reconstructed from durable state");
 
   const lease = {
     credential,
@@ -389,6 +390,101 @@ test("pull-ready Mission Agent claims, renews, validates, and releases one durab
   );
 });
 
+test("launcher lifecycle reconciliation repairs task and mission after a committed execution failure", async () => {
+  const launched = await launchFirstRepositoryMission({
+    actor,
+    commandId: randomUUID(),
+    agentId: registration.agentId,
+    repositoryId: repository.repository_id,
+    objective: "Exercise launcher-owned lifecycle consequence repair",
+  });
+  const leaseOwner = `acceptance:${randomUUID()}:0123456789abcdef`;
+  const claimed = await claimNextAssignment({ credential, leaseOwner });
+  assert.ok(claimed);
+  const lease = {
+    credential,
+    assignmentId: claimed.assignment.assignment_id,
+    leaseOwner,
+    leaseToken: claimed.leaseToken,
+  };
+  await acknowledgeAssignment(lease);
+  await processRemoteMessage(
+    {
+      protocolVersion: "1.0",
+      messageId: randomUUID(),
+      idempotencyKey: randomUUID(),
+      agentId: registration.agentId,
+      workspaceId,
+      sentAt: new Date().toISOString(),
+      messageType: "ExecutionAccepted",
+      correlationId: launched.executionId,
+      missionId: launched.missionId,
+      taskId: launched.taskId,
+      executionId: launched.executionId,
+      attempt: 1,
+      payload: { stage: "assignment_received", summary: "Assignment accepted" },
+    },
+    credential,
+  );
+  const authority = (
+    await getDatabasePool().query(
+      `SELECT e.aggregate_version,p.attempt,p.lease_receipt_id,p.lease_token_fingerprint,p.fencing_token
+         FROM execution_projections e JOIN pull_assignments p
+           ON p.workspace_id=e.workspace_id AND p.execution_id=e.execution_id
+        WHERE e.workspace_id=$1 AND e.execution_id=$2`,
+      [workspaceId, launched.executionId],
+    )
+  ).rows[0];
+  await handleExecutionTransition({
+    actor: { workspaceId, id: "lifecycle-fixture", type: "system" },
+    commandId: randomUUID(),
+    executionId: launched.executionId,
+    target: "failed",
+    expectedVersion: authority.aggregate_version,
+    details: { classification: "mission_agent_generation_terminated" },
+  });
+  const processIdentity = "b".repeat(64);
+  const repaired = await handleMissionAgentGenerationTermination({
+    actor: { workspaceId, id: "lifecycle-fixture", type: "system" },
+    commandId: randomUUID(),
+    executionId: launched.executionId,
+    assignmentId: claimed.assignment.assignment_id,
+    assignmentAttempt: authority.attempt,
+    leaseReceiptId: authority.lease_receipt_id,
+    leaseTokenFingerprint: authority.lease_token_fingerprint,
+    leaseOwner,
+    fencingToken: Number(authority.fencing_token),
+    invocationId: randomUUID(),
+    registeredProcessIdentitySha256: processIdentity,
+    observedProcessIdentitySha256: processIdentity,
+    expectedVersion: authority.aggregate_version,
+    exitCode: 1,
+    terminationSignal: null,
+    diagnosticIdentitySha256: "c".repeat(64),
+  });
+  assert.equal(repaired.disposition, "already_terminal");
+  const terminal = (
+    await getDatabasePool().query(
+      `SELECT e.status execution_status,t.status task_status,m.status mission_status,
+              p.status assignment_status,p.lease_token_hash,p.lease_expires_at
+         FROM execution_projections e
+         JOIN task_projections t ON t.workspace_id=e.workspace_id AND t.task_id=e.task_id
+         JOIN mission_projections m ON m.workspace_id=e.workspace_id AND m.mission_id=e.mission_id
+         JOIN pull_assignments p ON p.workspace_id=e.workspace_id AND p.execution_id=e.execution_id
+        WHERE e.workspace_id=$1 AND e.execution_id=$2`,
+      [workspaceId, launched.executionId],
+    )
+  ).rows[0];
+  assert.deepEqual(terminal, {
+    execution_status: "failed",
+    task_status: "failed",
+    mission_status: "failed",
+    assignment_status: "completed",
+    lease_token_hash: null,
+    lease_expires_at: null,
+  });
+});
+
 test("change mission assignment carries bounded write approval, validation, evidence, and permanent prohibitions", async () => {
   const launched = await launchFirstRepositoryMission({
     actor,
@@ -421,6 +517,7 @@ test("change mission assignment carries bounded write approval, validation, evid
     assignmentId: claimed.assignment.assignment_id,
     leaseOwner: "change-runtime",
     leaseToken: claimed.leaseToken,
+    fencingToken: Number(claimed.assignment.fencing_token),
   };
   await acknowledgeAssignment(lease);
   await processRemoteMessage(
@@ -485,6 +582,27 @@ test("change mission assignment carries bounded write approval, validation, evid
     credential,
   );
   assert.equal(approval.status, "approval_required");
+  await assert.rejects(
+    processRemoteMessage(
+      {
+        protocolVersion: "1.0",
+        messageId: randomUUID(),
+        idempotencyKey: randomUUID(),
+        agentId: registration.agentId,
+        workspaceId,
+        sentAt: new Date().toISOString(),
+        messageType: "ExecutionSucceeded",
+        correlationId: launched.executionId,
+        missionId: launched.missionId,
+        taskId: launched.taskId,
+        executionId: launched.executionId,
+        attempt: 1,
+        payload: { summary: "Attempted to bypass the pending write approval" },
+      },
+      credential,
+    ),
+    /cannot complete without an unexpired repository\.modify approval/,
+  );
   await processRemoteMessage(
     {
       protocolVersion: "1.0",

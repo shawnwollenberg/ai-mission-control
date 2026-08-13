@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mission-agent-disposable-acceptance/2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "registryVersion",
+    "runtimeMode",
+    "authority",
+    "scope",
+    "disposable",
+    "productionAuthorityAccepted",
+    "issuedAt",
+    "expiresAt",
+    "artifacts"
+  ],
+  "properties": {
+    "registryVersion": { "const": "mission-agent-disposable-acceptance/2" },
+    "runtimeMode": { "const": "disposable_acceptance" },
+    "authority": { "const": "operator_disposable_exact_checksum" },
+    "scope": { "const": "consensus_real_provider_acceptance" },
+    "disposable": { "const": true },
+    "productionAuthorityAccepted": { "const": false },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "artifacts": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/artifact" }
+    }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "model"],
+      "properties": {
+        "provider": { "enum": ["codex", "claude_code"] },
+        "model": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:/-]{0,127}$" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sha256",
+        "manifestVersion",
+        "identityProtocolVersion",
+        "releaseAuthorityVersion",
+        "signingKeyId",
+        "publicKeyFingerprint",
+        "artifactMetadataSha256",
+        "capabilityManifestSha256",
+        "sourceCommit",
+        "sourceTemplateSha256",
+        "buildScriptSha256",
+        "providerRequirementsFileSha256",
+        "providerRequirementsCanonicalSha256",
+        "providerProfilesFileSha256",
+        "providerProfilesCanonicalSha256",
+        "discoveryHarnessSha256",
+        "realAcceptanceHarnessSha256",
+        "artifactFixtureSha256",
+        "migrationSha256",
+        "rollbackSha256",
+        "repositoryAuthorityMigrationSha256",
+        "repositoryAuthorityRollbackSha256",
+        "runtimeModeDefinitionFileSha256",
+        "disposableRegistrySchemaSha256",
+        "repositorySnapshotSchemaSha256",
+        "repositoryAuthoritySchemaSha256",
+        "acceptanceSourceManifestSha256",
+        "acceptanceSourceManifestCanonicalSha256",
+        "acceptanceSourceManifestSchemaSha256",
+        "acceptanceContractFileSha256",
+        "acceptanceContractCanonicalSha256",
+        "acceptanceContractSchemaSha256",
+        "acceptanceExecutableRegistryFileSha256",
+        "acceptanceExecutableRegistryCanonicalSha256",
+        "modelAllowlist",
+        "runtimeBindings"
+      ],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/hash" },
+        "manifestVersion": { "const": "3" },
+        "identityProtocolVersion": { "const": "2" },
+        "releaseAuthorityVersion": { "const": "v2" },
+        "signingKeyId": { "type": "string", "minLength": 1 },
+        "publicKeyFingerprint": { "type": "string", "pattern": "^ed25519-spki-sha256:[a-f0-9]{64}$" },
+        "artifactMetadataSha256": { "$ref": "#/$defs/hash" },
+        "capabilityManifestSha256": { "$ref": "#/$defs/hash" },
+        "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "sourceTemplateSha256": { "$ref": "#/$defs/hash" },
+        "buildScriptSha256": { "$ref": "#/$defs/hash" },
+        "providerRequirementsFileSha256": { "$ref": "#/$defs/hash" },
+        "providerRequirementsCanonicalSha256": { "$ref": "#/$defs/hash" },
+        "providerProfilesFileSha256": { "$ref": "#/$defs/hash" },
+        "providerProfilesCanonicalSha256": { "$ref": "#/$defs/hash" },
+        "discoveryHarnessSha256": { "$ref": "#/$defs/hash" },
+        "realAcceptanceHarnessSha256": { "$ref": "#/$defs/hash" },
+        "artifactFixtureSha256": { "$ref": "#/$defs/hash" },
+        "migrationSha256": { "$ref": "#/$defs/hash" },
+        "rollbackSha256": { "$ref": "#/$defs/hash" },
+        "repositoryAuthorityMigrationSha256": { "$ref": "#/$defs/hash" },
+        "repositoryAuthorityRollbackSha256": { "$ref": "#/$defs/hash" },
+        "runtimeModeDefinitionFileSha256": { "$ref": "#/$defs/hash" },
+        "disposableRegistrySchemaSha256": { "$ref": "#/$defs/hash" },
+        "repositorySnapshotSchemaSha256": { "$ref": "#/$defs/hash" },
+        "repositoryAuthoritySchemaSha256": { "$ref": "#/$defs/hash" },
+        "acceptanceSourceManifestSha256": { "$ref": "#/$defs/hash" },
+        "acceptanceSourceManifestCanonicalSha256": { "$ref": "#/$defs/hash" },
+        "acceptanceSourceManifestSchemaSha256": { "$ref": "#/$defs/hash" },
+        "acceptanceContractFileSha256": { "$ref": "#/$defs/hash" },
+        "acceptanceContractCanonicalSha256": { "$ref": "#/$defs/hash" },
+        "acceptanceContractSchemaSha256": { "$ref": "#/$defs/hash" },
+        "acceptanceExecutableRegistryFileSha256": { "$ref": "#/$defs/hash" },
+        "acceptanceExecutableRegistryCanonicalSha256": { "$ref": "#/$defs/hash" },
+        "modelAllowlist": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["planner_a", "planner_b", "synthesizer", "executor"],
+          "properties": {
+            "planner_a": { "$ref": "#/$defs/assignment" },
+            "planner_b": { "$ref": "#/$defs/assignment" },
+            "synthesizer": { "$ref": "#/$defs/assignment" },
+            "executor": { "$ref": "#/$defs/assignment" }
+          }
+        },
+        "runtimeBindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "claude-implementation-macos-v2",
+            "claude-planning-macos-v2",
+            "codex-implementation-macos-v2",
+            "codex-planning-macos-v2"
+          ],
+          "properties": {
+            "claude-implementation-macos-v2": { "$ref": "#/$defs/hash" },
+            "claude-planning-macos-v2": { "$ref": "#/$defs/hash" },
+            "codex-implementation-macos-v2": { "$ref": "#/$defs/hash" },
+            "codex-planning-macos-v2": { "$ref": "#/$defs/hash" }
+          }
+        }
+      }
+    }
+  }
+}

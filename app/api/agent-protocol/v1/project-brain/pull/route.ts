@@ -31,13 +31,16 @@ export async function POST(request: Request) {
             agentId: claimed.assignment.agent_id,
             leaseOwner: claimed.assignment.lease_owner,
             leaseToken: claimed.leaseToken,
-            leaseExpiresAt: claimed.assignment.lease_expires_at,
+            leaseIssuedAt: new Date(claimed.assignment.last_renewed_at).toISOString(),
+            leaseExpiresAt: new Date(claimed.assignment.lease_expires_at).toISOString(),
             requestChecksum: claimed.assignment.request_checksum,
             ...claimed.assignment.request,
           },
         }
       : { protocolVersion: "1.0", messageId: authenticated.message.messageId, assignment: null };
-    await completeProtocolMessage(authenticated.credential, authenticated.message.messageId, result);
+    await completeProtocolMessage(authenticated.credential, authenticated.message.messageId, result, {
+      leaseKind: "project_brain_assignment",
+    });
     return claimed ? NextResponse.json(result) : new NextResponse(null, { status: 204 });
   } catch (error) {
     if (authenticated)

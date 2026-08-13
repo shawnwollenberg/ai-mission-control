@@ -4,7 +4,7 @@ import { claimJob, completeJob, failJob } from "../lib/job-store";
 import { processOneOutbox } from "../lib/outbox-dispatcher";
 import { runSimulationJob } from "../application/simulated-executor";
 import { assertSupportedNodeVersion } from "../lib/runtime-version";
-import { expireDueApprovals } from "../application/governance-maintenance";
+import { expireDueApprovals, reconcileConsensusOperations } from "../application/governance-maintenance";
 import { startWorkerPresence } from "./worker-presence";
 
 assertSupportedNodeVersion();
@@ -29,6 +29,7 @@ async function main() {
     let worked = false;
     try {
       if ((await expireDueApprovals(workerId)) > 0) worked = true;
+      if ((await reconcileConsensusOperations(workerId)) > 0) worked = true;
       worked = await processOneOutbox(workerId);
       const job = simulationJobsEnabled ? await claimJob(workerId, 30, undefined, "simulate_task") : undefined;
       if (job) {

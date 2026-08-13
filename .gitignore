@@ -4,6 +4,8 @@ node_modules/
 *.tsbuildinfo
 .DS_Store
 .mission-control/
+.agents/
+/agent/
 .env*
 !.env.example
 videos/hyperframes/.thumbnails/

@@ -12,6 +12,7 @@
     "mission-agent:build:070": "node scripts/build-mission-agent-070.mjs",
     "mission-agent:build:071": "node scripts/build-mission-agent-071.mjs",
     "mission-agent:build:072": "node scripts/build-mission-agent-072.mjs",
+    "mission-agent:build:080": "node scripts/build-mission-agent-080.mjs",
     "mission-agent:release:build:v3": "tsx scripts/mission-agent-release-build-v3.ts",
     "mission-agent:release:sign": "tsx scripts/mission-agent-release-sign.ts",
     "mission-agent:release:kms-key-record": "tsx scripts/mission-agent-kms-key-record.ts",
@@ -19,6 +20,7 @@
     "auth:hash": "tsx scripts/hash-password.ts",
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node --import tsx scripts/generate-acceptance-standalone-authority.mjs",
     "db:down": "docker compose down",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
@@ -29,6 +31,10 @@
     "worker:project-brain:health": "tsx scripts/project-brain-worker-health.ts",
     "acceptance:project-brain:local": "tsx scripts/run-project-brain-final-local-acceptance.ts",
     "acceptance:project-brain:remote": "tsx scripts/run-project-brain-042-remote-acceptance.ts",
+    "acceptance:consensus:real": "tsx scripts/run-consensus-real-acceptance.ts",
+    "acceptance:contract:generate": "node --import tsx scripts/generate-consensus-acceptance-contract.mjs",
+    "acceptance:contract:check": "node --import tsx scripts/generate-consensus-acceptance-contract.mjs --check",
+    "acceptance:finalize": "node --import tsx scripts/finalize-consensus-real-acceptance.ts",
     "worker:actions": "tsx scripts/action-worker.ts",
     "worker:remote-agents": "tsx scripts/remote-agent-worker.ts",
     "worker:hermes": "tsx agents/hermes/bridge.ts",
@@ -53,8 +59,9 @@
     "projections:verify": "tsx scripts/projections.ts --verify",
     "legacy:import-dynamodb": "tsx scripts/import-dynamodb.ts",
     "start": "next start",
-    "test": "node --import tsx --test tests/mission-agent-artifact.test.mjs tests/mission-agent-070.test.mjs tests/mission-agent-071.test.mjs tests/mission-agent-072.test.mjs tests/release-authority-v2.test.mjs tests/release-authority-v3.test.mjs tests/kms-release-signer.test.mjs tests/mission-outcome.test.mjs tests/task-state.test.mjs tests/action-state.test.mjs tests/execution-safety.test.mjs tests/policy-engine.test.mjs tests/remote-agent-protocol.test.mjs tests/remote-project-brain-transport.test.mjs tests/agent-health.test.mjs tests/publication-preflight.test.mjs tests/publish-for-review.test.mjs tests/schedule.test.mjs tests/registration.test.mjs tests/mission-agent-cli.test.mjs tests/onboarding-connection.test.mjs tests/production-workspace-mode.test.mjs tests/recommendation.test.mjs tests/repository-health.test.mjs tests/project-brain-adapter.test.mjs tests/project-brain-governance.test.mjs tests/project-brain-packaging.test.mjs tests/repository-index-ui.test.mjs",
-    "test:integration": "node --import tsx --test tests/*.integration.test.mjs",
+    "test:repository-authority": "node --import tsx --test tests/repository-authority.test.mjs",
+    "test": "node --import tsx --test tests/mission-agent-artifact.test.mjs tests/mission-agent-070.test.mjs tests/mission-agent-071.test.mjs tests/mission-agent-072.test.mjs tests/release-authority-v2.test.mjs tests/release-authority-v3.test.mjs tests/kms-release-signer.test.mjs tests/mission-outcome.test.mjs tests/task-state.test.mjs tests/action-state.test.mjs tests/execution-safety.test.mjs tests/policy-engine.test.mjs tests/remote-agent-protocol.test.mjs tests/remote-project-brain-transport.test.mjs tests/agent-health.test.mjs tests/publication-preflight.test.mjs tests/publish-for-review.test.mjs tests/schedule.test.mjs tests/registration.test.mjs tests/mission-agent-cli.test.mjs tests/mission-agent-0.8.test.mjs tests/consensus-plan.test.mjs tests/repository-snapshot.test.mjs tests/runtime-trust.test.mjs tests/onboarding-connection.test.mjs tests/production-workspace-mode.test.mjs tests/recommendation.test.mjs tests/repository-health.test.mjs tests/project-brain-adapter.test.mjs tests/project-brain-governance.test.mjs tests/project-brain-packaging.test.mjs tests/repository-index-ui.test.mjs",
+    "test:integration": "node --import tsx --test --test-concurrency=1 tests/*.integration.test.mjs",
     "test:repository-identity": "node --import tsx --test tests/repository-identity.test.mjs tests/repository-identity.integration.test.mjs",
     "test:release-authority": "node --import tsx --test tests/release-authority-v2.test.mjs",
     "test:mission-agent-070": "node --import tsx --test tests/mission-agent-070.test.mjs",
@@ -86,7 +93,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "aws-cdk": "^2.1132.0",
-    "aws-cdk-lib": "^2.261.0",
+    "aws-cdk-lib": "^2.263.0",
     "constructs": "^10.7.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.11",
@@ -95,7 +102,7 @@
     "typescript": "5.9.3"
   },
   "overrides": {
-    "postcss": "8.5.19",
+    "postcss": "8.5.25",
     "sharp": "0.35.0"
   }
 }
