@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   configureDisposableRepositoryAuthority,
+  configureProductionReadOnlyPlanningAuthority,
   removeMissionAgentRepositoryAssociation,
   setRepositoryEnabled,
 } from "@/application/registry";
@@ -26,6 +27,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ agent
             ? body.implementationAgentIds.map(String)
             : [agentId],
           validationCommands: Array.isArray(body.validationCommands) ? body.validationCommands : undefined,
+        }),
+      });
+    }
+    if (body.authorityProfile === "production_read_only_planning/1") {
+      return NextResponse.json({
+        repository: await configureProductionReadOnlyPlanningAuthority({
+          actor: identity,
+          commandId: String(body.commandId ?? randomUUID()),
+          repositoryId,
+          planningAgentIds: Array.isArray(body.planningAgentIds) ? body.planningAgentIds.map(String) : [agentId],
         }),
       });
     }

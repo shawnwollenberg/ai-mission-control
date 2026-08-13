@@ -1,5 +1,11 @@
 # Mission Control — Production Readiness Execution Plan
 
+**Production read-only Consensus Plan decision (2026-08-13):** The operator authorized the separately defined
+`production_read_only_planning/1` repository authority for one initial non-destructive production Consensus Plan. The
+profile is exact-agent/read-operation bound, has no implementation or mutation capabilities, requires explicit
+planning-only admission with no executor, and completes without approval or implementation-child creation. Production
+implementation authority remains a separate human decision.
+
 ## Pending release — R_2026_07_30_PUBLICATION_RECONCILIATION_UX
 
 The narrowly scoped publication-reconciliation and mission-filter UX change is documented in

@@ -1,5 +1,16 @@
 # Mission Control — Production Architecture Proposal
 
+## Production read-only Consensus Plan authority
+
+`production_read_only_planning/1` is the only production repository-authority profile for the initial Consensus Plan
+onboarding milestone. It binds exact registered planning agents and the existing planning operation allowlist. Its
+projection permits repository read and denies generic write, isolated-worktree write, local/provider commit, push, pull
+request, merge, publication, deployment, and infrastructure mutation. Admission requires explicit `planningOnly=true`
+with no executor assignment. Successful consensus completes without an approval or implementation-child path.
+
+The disposable implementation profile remains unavailable in production. A separate human decision and release are
+required before any production implementation authority can exist.
+
 **Status:** Approved through Phase 4 remote-agent architecture — 2026-07-18
 
 **Date:** 2026-07-18
