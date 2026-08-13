@@ -26,6 +26,22 @@ services:
         exec node node_modules/tsx/dist/cli.mjs scripts/worker.ts
     networks: [mission-control]
 
+  action-worker:
+    image: ${MISSION_CONTROL_WEB_IMAGE:?immutable web image digest required}
+    container_name: mission-control-action-worker
+    restart: unless-stopped
+    env_file: ${MISSION_CONTROL_ENV_FILE:?production environment file required}
+    environment:
+      PROCESS_TYPE: action
+      WORKER_ID: production-action-worker-1
+    command:
+      - sh
+      - -c
+      - >-
+        node node_modules/tsx/dist/cli.mjs scripts/validate-production-config.ts action &&
+        exec node node_modules/tsx/dist/cli.mjs scripts/action-worker.ts
+    networks: [mission-control]
+
   project-brain-worker:
     image: ${MISSION_CONTROL_PROJECT_BRAIN_IMAGE:?immutable Project Brain worker image digest required}
     container_name: mission-control-project-brain-worker

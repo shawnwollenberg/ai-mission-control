@@ -28,6 +28,12 @@ There is no RDS database, load balancer, ECS service, or multi-instance applicat
 
 PostgreSQL stores the canonical append-only event log, commands, projections, authentication state, jobs, schedules, notifications, and governance records. Application state must remain reconstructable from canonical events except for explicitly ephemeral UI state.
 
+The exact running-container inventory, split CloudFormation/SSM ownership,
+digest-pinned application promotion, and rollback ordering are maintained in
+[the production topology runbook](PRODUCTION_TOPOLOGY.md). CloudFormation owns
+the durable AWS shell; post-bootstrap application releases use the reconciled
+SSM/Docker procedure and do not replay EC2 user data.
+
 ## Permanent safety boundary
 
 Mission Control agents may not autonomously deploy, merge, modify infrastructure or secrets, sign transactions, or submit transactions. A human-approved release of Mission Control itself is a development activity outside that agent capability boundary.

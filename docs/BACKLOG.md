@@ -2,6 +2,16 @@
 
 **Status:** Approved and frozen — implementation authorized 2026-07-15
 
+## Production topology consolidation
+
+- Move all application containers to one digest-pinned Compose deployment and
+  automate the current SSM rollout/rollback checks.
+- Reconcile CloudFormation bootstrap user data with the live post-bootstrap
+  topology without replacing the production EC2 host during an application
+  release.
+- Retire the unrouted Mission Agent 0.7.2 canary and exited rollback containers
+  only after a separate evidence-retention and cleanup review.
+
 ## Now: product decisions
 
 - [x] Select one exact target user and current alternative
