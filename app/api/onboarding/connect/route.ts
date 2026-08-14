@@ -116,11 +116,20 @@ export async function POST(request: Request) {
         workspaceName: workspaceName ?? "My Workspace",
       }),
     ).toString("base64url");
-    const missionAgentVersion = "0.8.0";
-    const missionAgentChecksum = "c366c95674fed2c8f63dd9f0182e54ee25d9a7d71764afe89b0facd734864494";
-    const artifactMetadataChecksum = "6455ae5f4fa0fa5c7dffd2e1069092d11b9834616fdd93ae6cdfdcc714c419a1";
-    const capabilityManifestChecksum = "aae4fe13b7cb613131accb870cbebb57cefbad4a955739fe85776a4488267394";
-    const command = `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && capabilities="$tmp.capabilities.json" && agent_home="\${MISSION_AGENT_HOME:-$HOME/.mission-agent}" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs.artifact.json' -o "$metadata" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs.capabilities.json' -o "$capabilities" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" '${artifactMetadataChecksum}' "$metadata" '${capabilityManifestChecksum}' "$capabilities" | shasum -a 256 -c - && mkdir -p "$agent_home" && chmod 700 "$agent_home" && install -m 600 "$metadata" "$agent_home/mission-agent-${missionAgentVersion}.mjs.artifact.json" && install -m 600 "$capabilities" "$agent_home/mission-agent-${missionAgentVersion}.mjs.capabilities.json" && node "$(realpath "$tmp")" connect '${config}'`;
+    const missionAgentVersion = "0.7.2";
+    const missionAgentChecksum = "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09";
+    const artifactMetadata = JSON.stringify({
+      artifactByteLength: 148063,
+      canonicalizationVersion: "release-manifest-json-v3",
+      manifestVersion: "3",
+      publicKeyFingerprint: "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+      releaseAuthorityVersion: "v2",
+      sha256: missionAgentChecksum,
+      signingKeyId: "mission-agent-release-2026-01",
+      sourceCommit: "31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
+      version: missionAgentVersion,
+    });
+    const command = `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && printf '%s\\n' '${artifactMetadata}' > "$metadata" && chmod 600 "$metadata" && node "$tmp" connect '${config}'`;
     await recordOnboardingEvent({
       workspaceId: identity.workspaceId,
       actorId: identity.userId,

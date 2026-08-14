@@ -4,7 +4,7 @@ import test from "node:test";
 
 const projectBrainCommit = "09cae9482712decc20f043aecb38d944beacfe20";
 const sourceChecksum = "1d127947f5a0ca5497d4a06c1497e36e00057d0551839ac2855b798c275c0d26";
-const missionAgentChecksum = "c366c95674fed2c8f63dd9f0182e54ee25d9a7d71764afe89b0facd734864494";
+const missionAgentChecksum = "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09";
 
 test("dedicated worker image pins Project Brain and keeps runtime installation offline", async () => {
   const worker = await readFile("Dockerfile.project-brain-worker", "utf8");
