@@ -43,6 +43,12 @@ test("Consensus connection verifies signed sidecars, uses realpath, and does not
   assert.match(route, /mission-agent-\$\{missionAgentVersion\}\.mjs\.capabilities\.json/);
   assert.match(route, /node "\$\(realpath "\$tmp"\)" connect/);
   assert.match(route, /--no-start/);
+  assert.match(route, /cp "\$metadata" "\$agent_home\/mission-agent-\$\{missionAgentVersion\}\.mjs\.artifact\.json"/);
+  assert.match(
+    route,
+    /cp "\$capabilities" "\$agent_home\/mission-agent-\$\{missionAgentVersion\}\.mjs\.capabilities\.json"/,
+  );
+  assert.match(route, /chmod 600 "\$agent_home\/mission-agent-\$\{missionAgentVersion\}\.mjs\.artifact\.json"/);
   assert.match(route, /nohup env MISSION_AGENT_HOME=/);
   assert.doesNotMatch(route, /mission-agent-latest\.json/);
 });

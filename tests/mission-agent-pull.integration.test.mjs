@@ -11,6 +11,7 @@ const { registerRemoteAgent, revokeRemoteAgentCredential } = await import("../ap
 const { processRemoteMessage } = await import("../application/remote-agent-messages.ts");
 const { registerMissionAgentRepository } = await import("../application/registry.ts");
 const { launchFirstRepositoryMission } = await import("../application/onboarding-mission.ts");
+const { handleMissionTransition } = await import("../application/mission-commands.ts");
 const { claimNextAssignment, acknowledgeAssignment, renewAssignmentLease, validateExecutionLease, releaseAssignment } =
   await import("../application/pull-assignments.ts");
 const { handleExecutionTransition, handleMissionAgentGenerationTermination } =
@@ -184,6 +185,42 @@ test("multiple valid inline artifacts use the repository execution budget rather
     envelope("ExecutionFailed", { classification: "test_cleanup", summary: "Artifact regression complete" }),
     credential,
   );
+});
+
+test("cancelling a mission terminalizes an unclaimed pull execution and assignment without lease residue", async () => {
+  const launched = await launchFirstRepositoryMission({
+    actor,
+    commandId: randomUUID(),
+    agentId: registration.agentId,
+    repositoryId: repository.repository_id,
+    objective: "Cancel this unclaimed governed assignment",
+  });
+  await handleMissionTransition({
+    actor,
+    commandId: randomUUID(),
+    missionId: launched.missionId,
+    target: "cancelled",
+  });
+  const execution = (
+    await getDatabasePool().query(
+      "SELECT status FROM execution_projections WHERE workspace_id=$1 AND execution_id=$2",
+      [workspaceId, launched.executionId],
+    )
+  ).rows[0];
+  assert.equal(execution.status, "cancelled");
+  const assignment = (
+    await getDatabasePool().query(
+      `SELECT status,lease_owner,lease_token_hash,lease_expires_at FROM pull_assignments
+       WHERE workspace_id=$1 AND execution_id=$2`,
+      [workspaceId, launched.executionId],
+    )
+  ).rows[0];
+  assert.deepEqual(assignment, {
+    status: "completed",
+    lease_owner: null,
+    lease_token_hash: null,
+    lease_expires_at: null,
+  });
 });
 
 test("unsupported recommendation validation fails closed with explicit terminal evidence", async () => {

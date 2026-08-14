@@ -44,3 +44,12 @@ Restore the prior application image. Do not delete agents, credentials, reposito
 - **Representation/identity drift:** all three immutable release files are downloaded and checked against exact approved SHA-256 values before canonical invocation.
 - **Wrong mission type:** Standard admission rejects 0.8 before mission creation; Consensus admission already requires exact attested profiles/models.
 - **Authority expansion:** capability/model bindings remain frozen; production implementation remains disabled for the authorized read-only repository profile.
+
+## Post-deployment correction evidence
+
+Production verification exposed two narrow defects inside this release's approved acceptance criteria:
+
+- The dedicated persistent 0.8 launcher installed the verified artifact but did not copy its already-verified immutable metadata and capability sidecars into the dedicated agent home. The correction copies those exact sidecars only after checksum verification and before starting the persistent runner; any copy or permission failure prevents startup.
+- Canonical mission cancellation left a never-claimed legacy pull execution in `requested` with an `available` assignment. The correction terminalizes only unclaimed, lease-free, non-Consensus pull executions through the existing execution cancellation command and completes the existing pull assignment. Consensus cancellation and all claimed/leased execution semantics remain unchanged.
+
+The correction does not modify signed Mission Agent bytes, provider/model bindings, Consensus Plan semantics, repository/filesystem authority, lease/fencing, or production implementation authority. Rollback remains restoration of the prior application image; canonical events and registered agents are retained.
