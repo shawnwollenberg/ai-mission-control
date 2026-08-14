@@ -254,12 +254,9 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     assert.equal(response.status, 201);
     const connection = await response.json();
     assert.equal(connection.agentName, "My Computer – Codex");
-    assert.match(connection.command, /mission-agent-0\.8\.0\.mjs/);
-    assert.match(connection.command, /tmp_dir\/mission-agent-0\.8\.0\.mjs/);
-    assert.match(connection.command, /c366c95674fed2c8f63dd9f0182e54ee25d9a7d71764afe89b0facd734864494/);
-    assert.match(connection.command, /mission-agent-0\.8\.0\.mjs\.artifact\.json/);
-    assert.match(connection.command, /mission-agent-0\.8\.0\.mjs\.capabilities\.json/);
-    assert.match(connection.command, /node "\$\(realpath "\$tmp"\)" connect/);
+    assert.match(connection.command, /mission-agent-0\.7\.2\.mjs/);
+    assert.match(connection.command, /tmp_dir\/mission-agent-0\.7\.2\.mjs/);
+    assert.match(connection.command, /108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09/);
     assert.match(connection.command, /shasum -a 256 -c/);
     const encoded = connection.command.match(/ connect '([^']+)'$/)?.[1];
     assert.ok(encoded);

@@ -1,13 +1,5 @@
 # Mission Control — Production Readiness Execution Plan
 
-**Mission Agent 0.8 onboarding compatibility correction (2026-08-14):** A production WalletLens execution proved that
-guided onboarding still installed signed 0.7.2, which cannot satisfy Runtime-v6 assignment fencing. The human operator
-authorized the narrow security-sensitive delivery correction recorded in
-`docs/release/R_2026_08_14_MISSION_AGENT_080_ONBOARDING_COMPAT.md`: distribute the unchanged signed 0.8.0 artifact,
-verify and preinstall its immutable metadata/capability sidecars, invoke the guarded CLI through `realpath`, deploy via
-the established protected path, reconnect the exact agent, cancel the unrecoverable 0.7.2 execution, and create one
-fresh governed mission. No authority expansion or unrelated production change is authorized.
-
 **Production read-only Consensus Plan decision (2026-08-13):** The operator authorized the separately defined
 `production_read_only_planning/1` repository authority for one initial non-destructive production Consensus Plan. The
 profile is exact-agent/read-operation bound, has no implementation or mutation capabilities, requires explicit
