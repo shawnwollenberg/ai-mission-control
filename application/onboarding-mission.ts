@@ -37,6 +37,10 @@ export async function launchFirstRepositoryMission(input: {
     )
   ).rows[0];
   if (!resource) throw new NotFoundError("Ready Mission Agent repository");
+  if (resource.mission_agent_version === "0.8.0")
+    throw new ValidationFailedError(
+      "Governed Consensus agents accept Consensus Plan assignments only. Choose a Standard agent for this mission.",
+    );
   if (resource.mission_agent_adapter !== "codex")
     throw new ValidationFailedError("This adapter can connect but cannot execute the first local mission yet");
   if (!supportsMissionExecution(resource.mission_agent_version))

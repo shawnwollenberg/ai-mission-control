@@ -6,6 +6,7 @@ import { BrandSprite } from "@/app/brand-assets";
 import { connectionProgress } from "./connection-progress";
 
 type AgentType = "codex" | "hermes" | "claude_code" | "generic_remote";
+type OnboardingMode = "standard" | "consensus";
 type Agent = {
   agent_id: string;
   name: string;
@@ -21,6 +22,7 @@ type Connection = {
   command: string;
   endpoint: string;
   protocolVersion: string;
+  onboardingMode: OnboardingMode;
 };
 const choices: { id: AgentType; label: string; description: string }[] = [
   { id: "codex", label: "Codex", description: "Analyze and review a local repository." },
@@ -31,14 +33,17 @@ const choices: { id: AgentType; label: string; description: string }[] = [
 
 export default function OnboardingWizard({
   workspaceName,
+  initialMode = "standard",
   initialAgentType,
   agents: initialAgents,
 }: {
   workspaceName: string;
+  initialMode?: OnboardingMode;
   initialAgentType?: AgentType;
   agents: Agent[];
 }) {
   const [choice, setChoice] = useState<AgentType>(initialAgentType ?? "codex");
+  const [mode, setMode] = useState<OnboardingMode>(initialMode);
   const [agents, setAgents] = useState(initialAgents);
   const [connection, setConnection] = useState<Connection>();
   const [creating, setCreating] = useState(false);
@@ -48,7 +53,16 @@ export default function OnboardingWizard({
   const currentAgent =
     agents.find((agent) => agent.agent_id === connection?.agentId) ??
     (!connection
-      ? agents.find((agent) => agent.last_heartbeat_at && agent.pull_ready_at && (agent.repository_count ?? 0) > 0)
+      ? agents.find(
+          (agent) =>
+            agent.last_heartbeat_at &&
+            agent.pull_ready_at &&
+            (agent.repository_count ?? 0) > 0 &&
+            (mode === "consensus"
+              ? agent.mission_agent_version === "0.8.0"
+              : agent.mission_agent_version !== "0.8.0") &&
+            agent.mission_agent_adapter === (choice === "claude_code" ? "claude-code" : choice),
+        )
       : undefined);
   const progress = connectionProgress(Boolean(connection), currentAgent);
   const connected = progress.heartbeat && progress.pullReady && progress.repository ? currentAgent : undefined;
@@ -81,7 +95,7 @@ export default function OnboardingWizard({
       const response = await fetch("/api/onboarding/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentType: choice }),
+        body: JSON.stringify({ agentType: choice, mode }),
       });
       const body = (await response.json()) as Connection & { error?: { message?: string } };
       if (!response.ok) throw new Error(body.error?.message ?? "Mission Control could not create the connection.");
@@ -96,7 +110,11 @@ export default function OnboardingWizard({
   async function copyCommand(mode: "default" | "advanced" = "default") {
     if (!connection) return;
     const command =
-      mode === "advanced" ? `${connection.command} --repository /absolute/path/to/repository` : connection.command;
+      mode === "advanced" && connection.onboardingMode === "consensus"
+        ? connection.command.replace(" --no-start &&", " --repository /absolute/path/to/repository --no-start &&")
+        : mode === "advanced"
+          ? `${connection.command} --repository /absolute/path/to/repository`
+          : connection.command;
     try {
       await navigator.clipboard.writeText(command);
       await fetch("/api/onboarding/events", {
@@ -155,19 +173,40 @@ export default function OnboardingWizard({
         {!connection && !connected && (
           <>
             <p className="section-label">Connect agent</p>
-            <h2 className="onboarding-heading">Choose the agent running on this computer.</h2>
+            <h2 className="onboarding-heading">Choose how this agent will work.</h2>
+            <div className="agent-choice-grid onboarding-mode-grid">
+              <button className={mode === "standard" ? "selected" : ""} onClick={() => setMode("standard")}>
+                <span className="choice-radio">{mode === "standard" ? "●" : "○"}</span>
+                <strong>Standard</strong>
+                <small>Mission Agent 0.7.2 for existing Analyze and Change Mission workflows.</small>
+              </button>
+              <button
+                className={mode === "consensus" ? "selected" : ""}
+                onClick={() => {
+                  setMode("consensus");
+                  if (!["codex", "claude_code"].includes(choice)) setChoice("codex");
+                }}
+              >
+                <span className="choice-radio">{mode === "consensus" ? "●" : "○"}</span>
+                <strong>Governed Consensus</strong>
+                <small>Mission Agent 0.8 for exact-model Consensus Plan roles. Not a Standard-agent upgrade.</small>
+              </button>
+            </div>
+            <h3 className="onboarding-heading">Choose the provider running on this computer.</h3>
             <div className="agent-choice-grid">
-              {choices.map((agent) => (
-                <button
-                  className={choice === agent.id ? "selected" : ""}
-                  key={agent.id}
-                  onClick={() => setChoice(agent.id)}
-                >
-                  <span className="choice-radio">{choice === agent.id ? "●" : "○"}</span>
-                  <strong>{agent.label}</strong>
-                  <small>{agent.description}</small>
-                </button>
-              ))}
+              {choices
+                .filter((agent) => mode === "standard" || ["codex", "claude_code"].includes(agent.id))
+                .map((agent) => (
+                  <button
+                    className={choice === agent.id ? "selected" : ""}
+                    key={agent.id}
+                    onClick={() => setChoice(agent.id)}
+                  >
+                    <span className="choice-radio">{choice === agent.id ? "●" : "○"}</span>
+                    <strong>{agent.label}</strong>
+                    <small>{agent.description}</small>
+                  </button>
+                ))}
             </div>
             {error && (
               <p className="form-error" role="alert">
@@ -183,6 +222,11 @@ export default function OnboardingWizard({
           <div className="command-stage">
             <p className="section-label">{adapterName} · Mission Agent</p>
             <h1 className="onboarding-heading">Connect {environmentName}</h1>
+            <p className="truth-banner controlled">
+              {connection.onboardingMode === "consensus"
+                ? "Governed Consensus uses Mission Agent 0.8 with exact provider/model authority. It accepts Consensus Plan work only."
+                : "Standard uses Mission Agent 0.7.2 and preserves the existing Analyze and Change Mission workflow."}
+            </p>
             <p className="onboarding-lede">
               Open a terminal inside the first Git repository you want Mission Control to manage.
             </p>
@@ -231,7 +275,14 @@ export default function OnboardingWizard({
               <summary>Advanced: connect a repository by absolute path</summary>
               <p>Use this when you do not want to change directories before connecting.</p>
               <div className="command-copy">
-                <code>{commandPreview} --repository /absolute/path/to/repository</code>
+                <code>
+                  {connection.onboardingMode === "consensus"
+                    ? commandPreview?.replace(
+                        " --no-start &&",
+                        " --repository /absolute/path/to/repository --no-start &&",
+                      )
+                    : `${commandPreview} --repository /absolute/path/to/repository`}
+                </code>
                 <button
                   aria-label="Copy complete connection command with repository path"
                   onClick={() => copyCommand("advanced")}
@@ -300,8 +351,14 @@ export default function OnboardingWizard({
             <div className="first-mission-card">
               <div>
                 <p className="section-label">Next</p>
-                <h3>Analyze this repository</h3>
-                <p>Start with a small, read-only mission and watch its execution become an artifact.</p>
+                <h3>
+                  {connection?.onboardingMode === "consensus" ? "Create a Consensus Plan" : "Analyze this repository"}
+                </h3>
+                <p>
+                  {connection?.onboardingMode === "consensus"
+                    ? "Use exact governed planning roles; Standard Change Missions are intentionally unavailable to this agent."
+                    : "Start with a small, read-only mission and watch its execution become an artifact."}
+                </p>
               </div>
               <Link className="launch-button onboarding-action" href="/">
                 Launch repository mission →

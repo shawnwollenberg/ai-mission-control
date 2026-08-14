@@ -93,8 +93,12 @@ export default function AgentRegistry({ initialAgents }: { initialAgents: Agent[
         <section className="command-panel">
           <h2>Register agent</h2>
           <p>
-            For a governed local provider, use guided onboarding: <Link href="/onboarding?agent=codex">Codex</Link> ·{" "}
-            <Link href="/onboarding?agent=claude_code">Claude Code</Link>
+            Standard onboarding: <Link href="/onboarding?mode=standard&agent=codex">Codex</Link> ·{" "}
+            <Link href="/onboarding?mode=standard&agent=claude_code">Claude Code</Link>
+          </p>
+          <p>
+            Governed Consensus onboarding: <Link href="/onboarding?mode=consensus&agent=codex">Codex</Link> ·{" "}
+            <Link href="/onboarding?mode=consensus&agent=claude_code">Claude Code</Link>
           </p>
           <select value={adapterType} onChange={(event) => setAdapterType(event.target.value as typeof adapterType)}>
             <option value="codex">Codex worker</option>

@@ -1,5 +1,13 @@
 # Mission Control — Production Readiness Execution Plan
 
+**Dedicated Governed Consensus onboarding release (2026-08-14):** The operator approved the security-sensitive release
+recorded in `docs/release/R_2026_08_14_DEDICATED_CONSENSUS_080_ONBOARDING.md`. Standard onboarding remains on signed
+Mission Agent 0.7.2. A separate capability-oriented path may deliver the unchanged signed Mission Agent 0.8.0 artifact
+and exact Codex/Sol+Luna and Claude/Fable profiles for Consensus Plan work only. Standard missions must reject the
+Consensus-only runtime before mission creation, Consensus must not fall back to 0.7.2, existing agents are not upgraded,
+and production implementation authority remains disabled. The approved rollout includes protected PR/CI/deployment,
+canonical cancellation of the stuck legacy execution, and non-destructive compatibility smoke only.
+
 **Production read-only Consensus Plan decision (2026-08-13):** The operator authorized the separately defined
 `production_read_only_planning/1` repository authority for one initial non-destructive production Consensus Plan. The
 profile is exact-agent/read-operation bound, has no implementation or mutation capabilities, requires explicit

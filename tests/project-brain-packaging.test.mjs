@@ -48,15 +48,17 @@ test("supported topology gives Project Brain a private worker and unsupported Re
 });
 
 test("packaging repair preserves contracts and publishes the checksum-bound Mission Agent", async () => {
-  const [manifest, onboarding, migration25, migration26, migration27] = await Promise.all([
+  const [manifest, onboarding, onboardingProfiles, migration25, migration26, migration27] = await Promise.all([
     readFile("public/mission-agent-latest.json", "utf8"),
     readFile("app/api/onboarding/connect/route.ts", "utf8"),
+    readFile("lib/mission-agent-onboarding.ts", "utf8"),
     readFile("db/migrations/0025_project_brain_governed_execution.sql", "utf8"),
     readFile("db/migrations/0026_remote_project_brain_transport.sql", "utf8"),
     readFile("db/migrations/0027_mission_agent_artifact_identity.sql", "utf8"),
   ]);
   assert.equal(JSON.parse(manifest).artifactSha256, missionAgentChecksum);
-  assert.match(onboarding, new RegExp(missionAgentChecksum));
+  assert.match(onboarding, /onboardingProfile/);
+  assert.match(onboardingProfiles, new RegExp(missionAgentChecksum));
   assert.ok(migration25.length > 0);
   assert.ok(migration26.length > 0);
   assert.ok(migration27.length > 0);

@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
+import pg from "pg";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for end-to-end tests");
 
@@ -14,6 +15,8 @@ let server;
 let serverOutput = "";
 let worker;
 const run = promisify(execFile);
+const database = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+test.after(async () => database.end());
 
 async function startServer() {
   serverOutput = "";
@@ -249,7 +252,7 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     const response = await fetch(`${origin}/api/onboarding/connect`, {
       method: "POST",
       headers: browserHeaders(cookie, { "content-type": "application/json" }),
-      body: JSON.stringify({ agentType: "codex" }),
+      body: JSON.stringify({ agentType: "codex", mode: "standard" }),
     });
     assert.equal(response.status, 201);
     const connection = await response.json();
@@ -258,6 +261,32 @@ test("guided onboarding connects Mission Agent and completes a pulled repository
     assert.match(connection.command, /tmp_dir\/mission-agent-0\.7\.2\.mjs/);
     assert.match(connection.command, /108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09/);
     assert.match(connection.command, /shasum -a 256 -c/);
+    assert.equal(connection.onboardingMode, "standard");
+    const consensusResponse = await fetch(`${origin}/api/onboarding/connect`, {
+      method: "POST",
+      headers: browserHeaders(cookie, { "content-type": "application/json" }),
+      body: JSON.stringify({ agentType: "claude_code", mode: "consensus" }),
+    });
+    assert.equal(consensusResponse.status, 201);
+    const consensusConnection = await consensusResponse.json();
+    assert.equal(consensusConnection.onboardingMode, "consensus");
+    assert.equal(consensusConnection.missionAgentVersion, "0.8.0");
+    assert.match(consensusConnection.command, /mission-agent-0\.8\.0\.mjs/);
+    assert.match(consensusConnection.command, /mission-agent-0\.8\.0\.mjs\.artifact\.json/);
+    assert.match(consensusConnection.command, /mission-agent-0\.8\.0\.mjs\.capabilities\.json/);
+    assert.match(consensusConnection.command, /node "\$\(realpath "\$tmp"\)" connect/);
+    const consensusAgent = (
+      await database.query(
+        `SELECT agent_version,provider_id,supported_models,supported_mission_roles,repository_mutation
+         FROM agents WHERE agent_id=$1`,
+        [consensusConnection.agentId],
+      )
+    ).rows[0];
+    assert.equal(consensusAgent.agent_version, "0.8.0");
+    assert.equal(consensusAgent.provider_id, "claude_code");
+    assert.deepEqual(consensusAgent.supported_models, ["claude-fable-5"]);
+    assert.deepEqual(consensusAgent.supported_mission_roles, ["planner", "reviewer"]);
+    assert.equal(consensusAgent.repository_mutation, false);
     const encoded = connection.command.match(/ connect '([^']+)'$/)?.[1];
     assert.ok(encoded);
     const directory = await mkdtemp(join(tmpdir(), "mc-e2e-mission-agent-"));
