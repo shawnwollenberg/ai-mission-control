@@ -5,63 +5,12 @@ import { recordOnboardingEvent } from "@/application/onboarding-events";
 import { apiErrorResponse } from "@/lib/http-errors";
 import { requireApiIdentity, requireMutationOrigin, unauthenticatedResponse } from "@/lib/request-auth";
 import { parseAgentProviderProfile } from "@/domain/agent-provider";
-
-const profiles = {
-  codex: {
-    name: "Codex",
-    description: "Codex connector installed during guided onboarding",
-    capabilities: [
-      "repository.read",
-      "repository.write",
-      "code.implement",
-      "code.review",
-      "test.run",
-      "git.commit",
-      "artifact.create",
-      "plan.generate",
-      "plan.critique",
-      "plan.revise",
-      "plan.review",
-      "project_brain.context",
-    ],
-    domains: ["software_delivery"],
-    providerProfile: undefined,
-  },
-  hermes: {
-    name: "Hermes",
-    description: "Hermes coordinator connected during guided onboarding",
-    capabilities: ["metrics.read", "logs.read", "health.verify", "report.create", "summary.create"],
-    domains: ["systems_monitoring", "business_operations"],
-    providerProfile: undefined,
-  },
-  claude_code: {
-    name: "Claude Code",
-    description: "Claude Code connector installed during guided onboarding",
-    capabilities: [
-      "repository.read",
-      "repository.write",
-      "code.implement",
-      "code.review",
-      "test.run",
-      "git.commit",
-      "artifact.create",
-      "plan.generate",
-      "plan.critique",
-      "plan.revise",
-      "plan.review",
-      "project_brain.context",
-    ],
-    domains: ["software_delivery"],
-    providerProfile: undefined,
-  },
-  generic_remote: {
-    name: "Generic Remote Agent",
-    description: "Protocol 1.0 remote agent connected during guided onboarding",
-    capabilities: ["repository.read", "report.create", "summary.create"],
-    domains: ["software_delivery", "business_operations"],
-    providerProfile: undefined,
-  },
-} as const;
+import {
+  onboardingProfile,
+  standardArtifactMetadata,
+  type OnboardingAgentType,
+  type OnboardingMode,
+} from "@/lib/mission-agent-onboarding";
 
 export async function POST(request: Request) {
   const originError = requireMutationOrigin(request);
@@ -69,8 +18,9 @@ export async function POST(request: Request) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthenticatedResponse();
   try {
-    const body = (await request.json()) as { agentType?: keyof typeof profiles };
-    const profile = body.agentType ? profiles[body.agentType] : undefined;
+    const body = (await request.json()) as { agentType?: OnboardingAgentType; mode?: OnboardingMode };
+    const mode = body.mode ?? "standard";
+    const profile = body.agentType ? onboardingProfile(mode, body.agentType) : undefined;
     if (!profile) return NextResponse.json({ error: { message: "Choose a supported agent type." } }, { status: 400 });
 
     const publicUrl = (
@@ -110,31 +60,24 @@ export async function POST(request: Request) {
         credentialId: registration.credential.credentialId,
         secret: registration.credential.secret,
         agentType: body.agentType,
+        onboardingMode: mode,
         agentName,
         capabilities: profile.capabilities,
         providerProfile: profile.providerProfile ? parseAgentProviderProfile(profile.providerProfile) : undefined,
         workspaceName: workspaceName ?? "My Workspace",
       }),
     ).toString("base64url");
-    const missionAgentVersion = "0.7.2";
-    const missionAgentChecksum = "108e5587e8ffce0c37639e041cd2dcc2b51079f395beb04b26c1d4d9330bee09";
-    const artifactMetadata = JSON.stringify({
-      artifactByteLength: 148063,
-      canonicalizationVersion: "release-manifest-json-v3",
-      manifestVersion: "3",
-      publicKeyFingerprint: "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
-      releaseAuthorityVersion: "v2",
-      sha256: missionAgentChecksum,
-      signingKeyId: "mission-agent-release-2026-01",
-      sourceCommit: "31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
-      version: missionAgentVersion,
-    });
-    const command = `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && printf '%s\\n' '${artifactMetadata}' > "$metadata" && chmod 600 "$metadata" && node "$tmp" connect '${config}'`;
+    const missionAgentVersion = profile.missionAgentVersion;
+    const missionAgentChecksum = profile.missionAgentChecksum;
+    const command =
+      mode === "consensus"
+        ? `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && capabilities="$tmp.capabilities.json" && agent_home="$HOME/.mission-agent-consensus-${body.agentType}" && agent_bin="$HOME/.local/mission-agent-consensus-${body.agentType}" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs.artifact.json' -o "$metadata" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs.capabilities.json' -o "$capabilities" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" '${profile.artifactMetadataChecksum}' "$metadata" '${profile.capabilityManifestChecksum}' "$capabilities" | shasum -a 256 -c - && mkdir -p "$agent_home" "$agent_bin" && chmod 700 "$agent_home" "$agent_bin" && MISSION_AGENT_HOME="$agent_home" MISSION_AGENT_BIN_DIR="$agent_bin" node "$(realpath "$tmp")" connect '${config}' --no-start && (nohup env MISSION_AGENT_HOME="$agent_home" node "$agent_home/mission-agent-${missionAgentVersion}.mjs" run </dev/null >>"$agent_home/mission-agent.log" 2>>"$agent_home/mission-agent-error.log" &)`
+        : `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && printf '%s\\n' '${standardArtifactMetadata()}' > "$metadata" && chmod 600 "$metadata" && node "$tmp" connect '${config}'`;
     await recordOnboardingEvent({
       workspaceId: identity.workspaceId,
       actorId: identity.userId,
       eventType: "onboarding.agent_selected",
-      payload: { agentType: body.agentType, agentId: registration.agentId },
+      payload: { agentType: body.agentType, onboardingMode: mode, agentId: registration.agentId },
     });
     await recordOnboardingEvent({
       workspaceId: identity.workspaceId,
@@ -150,6 +93,7 @@ export async function POST(request: Request) {
         endpoint: `${publicUrl}/api/agent-protocol/v1/messages`,
         credentialId: registration.credential.credentialId,
         protocolVersion: registration.credential.protocolVersion,
+        onboardingMode: mode,
         missionAgentVersion,
         missionAgentChecksum,
       },

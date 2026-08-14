@@ -81,11 +81,13 @@ test("Mission Agent maintains pull readiness with periodic signed heartbeats", a
   const manifest = JSON.parse(manifestText);
   const source = await readFile(new URL(`../public/${manifest.artifactName}`, import.meta.url), "utf8");
   const connectRoute = await readFile(new URL("../app/api/onboarding/connect/route.ts", import.meta.url), "utf8");
-  assert.match(connectRoute, new RegExp(`missionAgentVersion = "${manifest.releaseVersion}"`));
-  assert.match(connectRoute, new RegExp(`missionAgentChecksum = "${manifest.artifactSha256}"`));
-  assert.match(connectRoute, /canonicalizationVersion: "release-manifest-json-v3"/);
-  assert.match(connectRoute, /releaseAuthorityVersion: "v2"/);
-  assert.match(connectRoute, /signingKeyId: "mission-agent-release-2026-01"/);
+  const onboarding = await readFile(new URL("../lib/mission-agent-onboarding.ts", import.meta.url), "utf8");
+  assert.match(onboarding, new RegExp(`missionAgentVersion: "${manifest.releaseVersion}"`));
+  assert.match(onboarding, new RegExp(`missionAgentChecksum: "${manifest.artifactSha256}"`));
+  assert.match(onboarding, /canonicalizationVersion: "release-manifest-json-v3"/);
+  assert.match(onboarding, /releaseAuthorityVersion: "v2"/);
+  assert.match(onboarding, /signingKeyId: "mission-agent-release-2026-01"/);
+  assert.match(connectRoute, /mode === "consensus"/);
   assert.match(source, /const heartbeatTimer = setInterval/);
   assert.match(source, /60_000/);
   assert.match(source, /heartbeatTimer\.unref\(\)/);
