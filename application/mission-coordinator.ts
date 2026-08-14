@@ -115,6 +115,18 @@ export async function coordinateAfterTask(workspaceId: string, missionId: string
 }
 
 export async function cancelMissionTasks(workspaceId: string, missionId: string, causation: string) {
+  const executions = await getDatabasePool().query<{ execution_id: string }>(
+    `SELECT execution_id FROM execution_projections WHERE workspace_id=$1 AND mission_id=$2
+     AND status NOT IN ('succeeded','failed','timed_out','cancelled')`,
+    [workspaceId, missionId],
+  );
+  const { handleExecutionCancellation } = await import("@/application/execution-commands");
+  for (const execution of executions.rows)
+    await handleExecutionCancellation({
+      actor: systemActor(workspaceId),
+      commandId: stableUuid(`cancel-execution:${causation}:${execution.execution_id}`),
+      executionId: execution.execution_id,
+    });
   const tasks = await getDatabasePool().query<{ task_id: string }>(
     "SELECT task_id FROM task_projections WHERE workspace_id=$1 AND mission_id=$2 AND status NOT IN ('completed','failed','cancelled')",
     [workspaceId, missionId],

@@ -948,6 +948,43 @@ export async function handleExecutionCancellation(input: {
   const state = rehydrateExecution(events);
   if (!state) throw new NotFoundError("Execution");
   const event = requestExecutionCancellation(state);
-  if (!event) return { executionId: input.executionId, events: [], state, duplicateCommand: false };
-  return append(input.actor, input.commandId, input.executionId, event, "RequestExecutionCancellation", state.version);
+  const requested = event
+    ? await append(
+        input.actor,
+        input.commandId,
+        input.executionId,
+        event,
+        "RequestExecutionCancellation",
+        state.version,
+      )
+    : { executionId: input.executionId, events: [], state, duplicateCommand: false };
+  const assignment = (
+    await getDatabasePool().query<{
+      status: string;
+      lease_owner: string | null;
+      lease_token_hash: string | null;
+      lease_expires_at: Date | null;
+      payload: { missionType?: string } | null;
+    }>(
+      `SELECT status,lease_owner,lease_token_hash,lease_expires_at,payload FROM pull_assignments
+       WHERE workspace_id=$1 AND execution_id=$2`,
+      [input.actor.workspaceId, input.executionId],
+    )
+  ).rows[0];
+  if (
+    assignment?.status === "available" &&
+    assignment.payload?.missionType !== "consensus_plan" &&
+    !assignment.lease_owner &&
+    !assignment.lease_token_hash &&
+    !assignment.lease_expires_at
+  )
+    return handleExecutionTransition({
+      actor: input.actor,
+      commandId: stableUuid(`cancel-unclaimed:${input.commandId}:${input.executionId}`),
+      executionId: input.executionId,
+      target: "cancelled",
+      details: { reason: "cancellation_requested_before_claim" },
+      expectedVersion: requested.state.version,
+    });
+  return requested;
 }
