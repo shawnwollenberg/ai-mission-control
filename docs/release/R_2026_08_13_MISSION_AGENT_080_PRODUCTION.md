@@ -54,8 +54,11 @@ is disabled. Any later implementation path requires a separate human decision.
 ## Rollout and rollback
 
 Publish the exact artifact and signed Manifest v3 at the versioned governed
-distribution path. Keep the legacy guided-onboarding `latest` pointer on 0.7.2
-because that path does not carry Runtime-v6's required exact model binding.
+distribution path. The original release kept guided onboarding on 0.7.2.
+Production subsequently proved that 0.7.2 cannot present Runtime-v6 assignment
+fencing authority. `R_2026_08_14_MISSION_AGENT_080_ONBOARDING_COMPAT` supersedes
+that delivery decision and moves guided onboarding to the same signed 0.8.0
+artifact without changing its capabilities or role/model authority.
 Onboard only exact capability attestations for Claude Code
 2.1.224 / `claude-fable-5`, Codex CLI 0.146.0 / `gpt-5.6-sol`, Claude Code
 2.1.224 / `claude-fable-5`, and Codex CLI 0.146.0 /

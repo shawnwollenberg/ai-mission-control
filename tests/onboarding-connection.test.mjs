@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { connectionProgress } from "../app/onboarding/connection-progress.ts";
@@ -74,18 +75,31 @@ test("connection UI keeps the payload masked and advanced setup collapsed", asyn
 test("Mission Agent maintains pull readiness with periodic signed heartbeats", async () => {
   const manifestText = await readFile(new URL("../public/mission-agent-latest.json", import.meta.url), "utf8");
   const signedManifestText = await readFile(
-    new URL("../release/mission-agent-0.7.2/signed-manifest-v3.json", import.meta.url),
+    new URL("../release/mission-agent-0.8.0/signed-manifest-v3.json", import.meta.url),
     "utf8",
   );
   assert.equal(manifestText, signedManifestText);
   const manifest = JSON.parse(manifestText);
   const source = await readFile(new URL(`../public/${manifest.artifactName}`, import.meta.url), "utf8");
+  const metadataText = await readFile(new URL(`../public/${manifest.artifactName}.artifact.json`, import.meta.url));
+  const capabilitiesText = await readFile(
+    new URL(`../public/${manifest.artifactName}.capabilities.json`, import.meta.url),
+  );
+  const metadata = JSON.parse(metadataText);
   const connectRoute = await readFile(new URL("../app/api/onboarding/connect/route.ts", import.meta.url), "utf8");
   assert.match(connectRoute, new RegExp(`missionAgentVersion = "${manifest.releaseVersion}"`));
   assert.match(connectRoute, new RegExp(`missionAgentChecksum = "${manifest.artifactSha256}"`));
-  assert.match(connectRoute, /canonicalizationVersion: "release-manifest-json-v3"/);
-  assert.match(connectRoute, /releaseAuthorityVersion: "v2"/);
-  assert.match(connectRoute, /signingKeyId: "mission-agent-release-2026-01"/);
+  assert.equal(metadata.sha256, manifest.artifactSha256);
+  assert.equal(metadata.version, manifest.releaseVersion);
+  assert.match(connectRoute, new RegExp(createHash("sha256").update(metadataText).digest("hex")));
+  assert.match(connectRoute, new RegExp(createHash("sha256").update(capabilitiesText).digest("hex")));
+  assert.match(connectRoute, /mission-agent-\$\{missionAgentVersion\}\.mjs\.artifact\.json/);
+  assert.match(connectRoute, /mission-agent-\$\{missionAgentVersion\}\.mjs\.capabilities\.json/);
+  assert.match(connectRoute, /artifactMetadataChecksum/);
+  assert.match(connectRoute, /capabilityManifestChecksum/);
+  assert.match(connectRoute, /node "\$\(realpath "\$tmp"\)" connect/);
+  assert.match(connectRoute, /install -m 600 "\$metadata"/);
+  assert.match(connectRoute, /install -m 600 "\$capabilities"/);
   assert.match(source, /const heartbeatTimer = setInterval/);
   assert.match(source, /60_000/);
   assert.match(source, /heartbeatTimer\.unref\(\)/);

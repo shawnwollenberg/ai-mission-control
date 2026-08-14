@@ -167,7 +167,7 @@ test("0.6.8 artifact remains byte-for-byte valid after the published pointer adv
     createHash("sha256").update(bytes).digest("hex"),
     "e6cdf9d962231844b1887959411a8d262bf9371092eb0e789a4971ba3c3fc28d",
   );
-  assert.equal(published.releaseVersion, "0.7.2");
+  assert.equal(published.releaseVersion, "0.8.0");
   assert.equal(published.manifestVersion, "3");
 });
 
