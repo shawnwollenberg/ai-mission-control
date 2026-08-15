@@ -12,7 +12,21 @@ export default async function MissionListPage({
 }) {
   const identity = await requirePageIdentity("/missions");
   const query = await searchParams;
-  const activeFilterCount = [query.status, query.origin, query.unknownCost].filter(Boolean).length;
+  const activeFilterCount = [
+    query.status,
+    query.domain,
+    query.template,
+    query.schedule,
+    query.origin,
+    query.agent,
+    query.runtime,
+    query.repository,
+    query.approval,
+    query.failed,
+    query.blocked,
+    query.openPr,
+    query.unknownCost,
+  ].filter(Boolean).length;
   const missions = await searchMissions(identity.workspaceId, {
     query: query.q,
     status: query.status,
@@ -29,18 +43,39 @@ export default async function MissionListPage({
     hasOpenPr: query.openPr === "true",
     hasUnknownCost: query.unknownCost === "true",
   });
+  const activeMissions = missions.filter((mission) => mission.status === "running");
+  const attentionMissions = missions.filter((mission) => ["paused", "failed"].includes(mission.status));
+  const completedMissions = missions.filter((mission) => ["completed", "failed", "cancelled"].includes(mission.status));
   return (
     <main className="archive-shell">
-      <AppNavigation subtitle="Durable mission archive" />
+      <AppNavigation subtitle="Mission operations" />
       <header className="archive-header">
         <div>
-          <p className="section-label">Mission archive</p>
-          <h1>Recorded outcomes and active work.</h1>
+          <p className="section-label">Mission operations</p>
+          <h1>Active work, decisions, and outcomes.</h1>
+          <p className="archive-lede">Move between live missions without losing the evidence trail.</p>
         </div>
         <Link className="primary-link" href="/">
-          Launch mission →
+          New mission →
         </Link>
       </header>
+      <section className="mission-overview-grid" aria-label="Mission overview">
+        <Link className="mission-overview-card" href="/missions?status=running">
+          <span>Active now</span>
+          <strong>{activeMissions.length}</strong>
+          <small>Running missions in this view</small>
+        </Link>
+        <Link className="mission-overview-card mission-overview-card-attention" href="/missions?status=paused">
+          <span>Needs attention</span>
+          <strong>{attentionMissions.length}</strong>
+          <small>Paused or failed missions</small>
+        </Link>
+        <div className="mission-overview-card">
+          <span>Recorded outcomes</span>
+          <strong>{completedMissions.length}</strong>
+          <small>Completed, failed, or cancelled in this view</small>
+        </div>
+      </section>
       <form className="mission-search-form" method="get">
         <label className="mission-search-field">
           Safe mission search
@@ -82,16 +117,25 @@ export default async function MissionListPage({
       </form>
       {missions.length ? (
         <section className="mission-table">
+          <div className="mission-table-heading" aria-hidden="true">
+            <span>Mission</span>
+            <span>Status</span>
+            <span>Priority</span>
+            <span>Risk</span>
+            <span>Updated</span>
+          </div>
           {missions.map((mission) => (
             <Link className="mission-row" href={`/missions/${mission.mission_id}`} key={mission.mission_id}>
               <div>
                 <strong>{mission.name}</strong>
                 <span>{mission.domain.replaceAll("_", " ")}</span>
               </div>
-              <span>{mission.status}</span>
-              <span>{mission.priority}</span>
-              <span>{mission.risk_level} risk</span>
-              <time>{new Date(mission.updated_at).toLocaleString()}</time>
+              <span className={`mission-status mission-status-${mission.status}`} data-label="Status">
+                {mission.status}
+              </span>
+              <span data-label="Priority">{mission.priority}</span>
+              <span data-label="Risk">{mission.risk_level} risk</span>
+              <time data-label="Updated">{new Date(mission.updated_at).toLocaleString()}</time>
             </Link>
           ))}
         </section>

@@ -84,33 +84,56 @@ export default function AgentRegistry({ initialAgents }: { initialAgents: Agent[
     <>
       <header className="mission-header compact">
         <div>
-          <p className="section-label">Execution plane</p>
-          <h1>Agent registry</h1>
+          <p className="section-label">Mission crew</p>
+          <h1>Agents</h1>
           <p>Owner-managed connected and simulated execution capacity.</p>
         </div>
       </header>
       <section className="durable-grid">
         <section className="command-panel">
-          <h2>Register agent</h2>
-          <p>
-            Standard onboarding: <Link href="/onboarding?mode=standard&agent=codex">Codex</Link> ·{" "}
-            <Link href="/onboarding?mode=standard&agent=claude_code">Claude Code</Link>
-          </p>
-          <p>
-            Governed Consensus onboarding: <Link href="/onboarding?mode=consensus&agent=codex">Codex</Link> ·{" "}
-            <Link href="/onboarding?mode=consensus&agent=claude_code">Claude Code</Link>
-          </p>
-          <select value={adapterType} onChange={(event) => setAdapterType(event.target.value as typeof adapterType)}>
-            <option value="codex">Codex worker</option>
-            <option value="remote_http">Remote HTTP / Hermes</option>
-          </select>
-          <input value={name} onChange={(event) => setName(event.target.value)} />
-          {adapterType === "remote_http" && (
-            <input value={endpoint} onChange={(event) => setEndpoint(event.target.value)} />
-          )}
-          <div className="mission-actions">
-            <button onClick={register}>Register connected worker</button>
+          <h2>Connect an agent</h2>
+          <p>Start with guided onboarding so the connection, capabilities, and health checks are easy to verify.</p>
+          <div className="agent-connect-options">
+            <Link className="button-primary" href="/onboarding?mode=standard&agent=codex">
+              Connect Codex
+            </Link>
+            <Link className="button-secondary" href="/onboarding?mode=standard&agent=claude_code">
+              Connect Claude Code
+            </Link>
           </div>
+          <details className="agent-manual-registration">
+            <summary>Register a remote adapter manually</summary>
+            <p>Use this path for a self-hosted HTTP agent or a governed provider profile that is already configured.</p>
+            <p>
+              Consensus onboarding: <Link href="/onboarding?mode=consensus&agent=codex">Codex</Link> ·{" "}
+              <Link href="/onboarding?mode=consensus&agent=claude_code">Claude Code</Link>
+            </p>
+            <label>
+              Adapter type
+              <select
+                value={adapterType}
+                onChange={(event) => setAdapterType(event.target.value as typeof adapterType)}
+              >
+                <option value="codex">Codex worker</option>
+                <option value="remote_http">Remote HTTP / Hermes</option>
+              </select>
+            </label>
+            <label>
+              Agent name
+              <input value={name} onChange={(event) => setName(event.target.value)} />
+            </label>
+            {adapterType === "remote_http" && (
+              <label>
+                Execution endpoint
+                <input value={endpoint} onChange={(event) => setEndpoint(event.target.value)} />
+              </label>
+            )}
+            <div className="mission-actions">
+              <button className="button-secondary" onClick={register} type="button">
+                Register connected worker
+              </button>
+            </div>
+          </details>
           {error && <p className="form-error">{error}</p>}
           {credential && (
             <div className="truth-banner live">
@@ -122,7 +145,8 @@ export default function AgentRegistry({ initialAgents }: { initialAgents: Agent[
           )}
         </section>
         <section className="command-panel">
-          <h2>Registered agents</h2>
+          <h2>Crew status</h2>
+          <p className="panel-lede">Connected capacity available to missions in this workspace.</p>
           <div className="log-list">
             {agents.map((agent) => (
               <div className="log-item" key={agent.agent_id}>
@@ -142,42 +166,57 @@ export default function AgentRegistry({ initialAgents }: { initialAgents: Agent[
                     Domains: {(agent.supported_domains ?? []).join(" · ") || "None"} · Credential:{" "}
                     {agent.credential_status ?? "n/a"}
                   </p>
-                  <p>
-                    Provider: {agent.provider_id ?? "generic"} · Version: {agent.agent_version ?? "unreported"} ·
-                    Models: {(agent.supported_models ?? []).join(" · ") || "none advertised"}
-                  </p>
-                  {!!agent.supported_mission_roles?.length && (
+                  <details className="agent-technical-details">
+                    <summary>Technical details</summary>
                     <p>
-                      Roles: {agent.supported_mission_roles.join(" · ")} · Operations:{" "}
-                      {(agent.supported_operations ?? []).join(" · ")}
+                      Provider: {agent.provider_id ?? "generic"} · Version: {agent.agent_version ?? "unreported"} ·
+                      Models: {(agent.supported_models ?? []).join(" · ") || "none advertised"}
                     </p>
-                  )}
-                  {agent.provider_runtime_requirements_id && (
-                    <p>
-                      Consensus runtime contract: {agent.provider_runtime_requirements_id} · Heartbeat probe:{" "}
-                      {agent.provider_runtime_requirements_satisfied
-                        ? "satisfied (not provider-attested)"
-                        : "not satisfied"}{" "}
-                      · Binding: {agent.provider_runtime_requirements_hash?.slice(0, 12) ?? "missing"}
-                    </p>
-                  )}
-                  {agent.provider_runtime_status && Object.keys(agent.provider_runtime_status).length > 0 && (
-                    <p>
-                      Runtime: {agent.provider_runtime_status.platform ?? "unknown platform"} ·{" "}
-                      {agent.provider_runtime_status.providerVersion ?? "version unavailable"} · Auth:{" "}
-                      {agent.provider_runtime_status.authenticationAvailable ? "available" : "unavailable"} · Isolation:{" "}
-                      {agent.provider_runtime_status.isolationAvailable
-                        ? agent.provider_runtime_status.isolationMechanism
-                        : "unavailable"}{" "}
-                      · Model selection: {agent.provider_runtime_status.modelSelectionMechanism ?? "unreported"} ·
-                      Identity: {agent.provider_runtime_status.runtimeModelIdentity ?? "unreported"}
-                    </p>
-                  )}
+                    {!!agent.supported_mission_roles?.length && (
+                      <p>
+                        Roles: {agent.supported_mission_roles.join(" · ")} · Operations:{" "}
+                        {(agent.supported_operations ?? []).join(" · ")}
+                      </p>
+                    )}
+                    {agent.provider_runtime_requirements_id && (
+                      <p>
+                        Consensus runtime contract: {agent.provider_runtime_requirements_id} · Heartbeat probe:{" "}
+                        {agent.provider_runtime_requirements_satisfied
+                          ? "satisfied (not provider-attested)"
+                          : "not satisfied"}{" "}
+                        · Binding: {agent.provider_runtime_requirements_hash?.slice(0, 12) ?? "missing"}
+                      </p>
+                    )}
+                    {agent.provider_runtime_status && Object.keys(agent.provider_runtime_status).length > 0 && (
+                      <p>
+                        Runtime: {agent.provider_runtime_status.platform ?? "unknown platform"} ·{" "}
+                        {agent.provider_runtime_status.providerVersion ?? "version unavailable"} · Auth:{" "}
+                        {agent.provider_runtime_status.authenticationAvailable ? "available" : "unavailable"} ·
+                        Isolation:{" "}
+                        {agent.provider_runtime_status.isolationAvailable
+                          ? agent.provider_runtime_status.isolationMechanism
+                          : "unavailable"}{" "}
+                        · Model selection: {agent.provider_runtime_status.modelSelectionMechanism ?? "unreported"} ·
+                        Identity: {agent.provider_runtime_status.runtimeModelIdentity ?? "unreported"}
+                      </p>
+                    )}
+                  </details>
                   <p>
                     Last heartbeat:{" "}
                     {agent.last_heartbeat_at ? new Date(agent.last_heartbeat_at).toLocaleString() : "Never"}
                   </p>
-                  <button onClick={() => toggle(agent)}>{agent.status === "disabled" ? "Enable" : "Disable"}</button>
+                  <div className="agent-card-actions">
+                    <Link className="secondary-link" href={`/agents/${agent.agent_id}`}>
+                      View agent details →
+                    </Link>
+                    <button
+                      className={agent.status === "disabled" ? "button-secondary" : "button-danger"}
+                      onClick={() => toggle(agent)}
+                      type="button"
+                    >
+                      {agent.status === "disabled" ? "Enable" : "Disable"}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

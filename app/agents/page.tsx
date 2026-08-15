@@ -7,7 +7,7 @@ export default async function AgentsPage() {
   const identity = await requirePageIdentity("/agents");
   return (
     <main className="durable-mission-shell">
-      <AppNavigation subtitle="Agent registry" />
+      <AppNavigation subtitle="Agents" />
       <section className="principle">
         Your Mission Agent can now manage multiple repositories. Add another project with{" "}
         <code>mission-agent repository add</code>.
