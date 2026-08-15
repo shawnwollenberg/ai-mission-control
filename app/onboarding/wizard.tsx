@@ -49,6 +49,7 @@ export default function OnboardingWizard({
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<"default" | "advanced" | "doctor">();
   const [error, setError] = useState("");
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [waitingLonger, setWaitingLonger] = useState(false);
   const currentAgent =
     agents.find((agent) => agent.agent_id === connection?.agentId) ??
@@ -70,16 +71,22 @@ export default function OnboardingWizard({
   const environmentName = connection?.agentName.split(" – ")[0] ?? "your computer";
   const adapterName = choices.find((item) => item.id === choice)?.label ?? "Agent";
   const commandPreview = connection?.command.replace(/ connect '[^']+'/g, " connect '[protected credential hidden]'");
+  const signInHref = `/login?next=${encodeURIComponent(`/onboarding?agent=${choice}&mode=${mode}`)}`;
 
   useEffect(() => {
-    if (!connection || connected) return;
+    if (!connection || connected || sessionExpired) return;
     const poll = window.setInterval(async () => {
       const response = await fetch("/api/agents", { cache: "no-store" });
+      if (response.status === 401) {
+        setSessionExpired(true);
+        setError("Your Mission Control session expired. Sign in again to resume connection status.");
+        return;
+      }
       if (!response.ok) return;
       setAgents(((await response.json()) as { agents: Agent[] }).agents);
     }, 2500);
     return () => window.clearInterval(poll);
-  }, [connection, connected]);
+  }, [connection, connected, sessionExpired]);
 
   useEffect(() => {
     if (!connection || connected) return;
@@ -90,6 +97,7 @@ export default function OnboardingWizard({
   async function createConnection() {
     setCreating(true);
     setError("");
+    setSessionExpired(false);
     setWaitingLonger(false);
     try {
       const response = await fetch("/api/onboarding/connect", {
@@ -98,6 +106,7 @@ export default function OnboardingWizard({
         body: JSON.stringify({ agentType: choice, mode }),
       });
       const body = (await response.json()) as Connection & { error?: { message?: string } };
+      if (response.status === 401) setSessionExpired(true);
       if (!response.ok) throw new Error(body.error?.message ?? "Mission Control could not create the connection.");
       setConnection(body);
     } catch (caught) {
@@ -213,6 +222,7 @@ export default function OnboardingWizard({
                 {error}
               </p>
             )}
+            {sessionExpired && <Link href={signInHref}>Sign in again →</Link>}
             <button className="launch-button onboarding-primary" disabled={creating} onClick={createConnection}>
               {creating ? "Creating secure connection…" : "Continue →"}
             </button>
@@ -317,6 +327,7 @@ export default function OnboardingWizard({
                 {error}
               </p>
             )}
+            {sessionExpired && <Link href={signInHref}>Sign in again →</Link>}
           </div>
         )}
         {connected && (

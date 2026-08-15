@@ -689,6 +689,34 @@ body {
   color: #aeb5aa;
   font-size: 11px;
 }
+.registered-repository-panel {
+  padding: 24px;
+}
+.registered-repository-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.registered-repository-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.025);
+}
+.registered-repository-card > div {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.registered-repository-card strong,
+.registered-repository-card small {
+  display: block;
+}
+.registered-repository-card small,
+.registered-repository-card p {
+  overflow-wrap: anywhere;
+}
 .repository-score-explanation {
   position: relative;
 }
@@ -888,6 +916,9 @@ body {
     align-items: stretch;
   }
   .repository-index-grid {
+    grid-template-columns: 1fr;
+  }
+  .registered-repository-grid {
     grid-template-columns: 1fr;
   }
   .repository-card-heading {
