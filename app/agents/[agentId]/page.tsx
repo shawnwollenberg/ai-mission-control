@@ -101,40 +101,46 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
           </div>
         </section>
       </section>
-      <section className="command-panel">
+      <section className="command-panel registered-repository-panel">
         <h2>Registered repositories</h2>
         <p>One Mission Agent can manage multiple repositories on this computer. Local filesystem paths stay private.</p>
         {repositories.length ? (
-          repositories.map((repository) => (
-            <article className="log-item" id={`repository-${repository.repository_id}`} key={repository.repository_id}>
-              <div>
-                <strong>{repository.name}</strong>
-                <small>
-                  {repository.observed_remote_url || "Local repository"} · {repository.default_branch}
-                </small>
-                <p>
-                  Commit {repository.observed_commit?.slice(0, 12) || "not observed"} ·{" "}
-                  {repository.disabled_at ? "Disabled" : "Connected"}
-                </p>
-                <p>
-                  Agent: {repository.agent_name} · Read: {repository.read_allowed ? "allowed" : "blocked"} · Write:{" "}
-                  {repository.write_allowed ? "allowed" : "blocked"}
-                </p>
-                <p>
-                  Registered {new Date(repository.created_at).toLocaleString()} · Last used{" "}
-                  {repository.last_used_at ? new Date(repository.last_used_at).toLocaleString() : "Never"}
-                </p>
-                {repository.last_used_mission_id && (
-                  <Link href={`/missions/${repository.last_used_mission_id}`}>View last mission</Link>
-                )}
-                <RepositoryControls
-                  repositoryId={repository.repository_id}
-                  agentId={agent.agent_id}
-                  disabled={Boolean(repository.disabled_at)}
-                />
-              </div>
-            </article>
-          ))
+          <div className="registered-repository-grid">
+            {repositories.map((repository) => (
+              <article
+                className="registered-repository-card"
+                id={`repository-${repository.repository_id}`}
+                key={repository.repository_id}
+              >
+                <div>
+                  <strong>{repository.name}</strong>
+                  <small>
+                    {repository.observed_remote_url || "Local repository"} · {repository.default_branch}
+                  </small>
+                  <p>
+                    Commit {repository.observed_commit?.slice(0, 12) || "not observed"} ·{" "}
+                    {repository.disabled_at ? "Disabled" : "Connected"}
+                  </p>
+                  <p>
+                    Agent: {repository.agent_name} · Read: {repository.read_allowed ? "allowed" : "blocked"} · Write:{" "}
+                    {repository.write_allowed ? "allowed" : "blocked"}
+                  </p>
+                  <p>
+                    Registered {new Date(repository.created_at).toLocaleString()} · Last used{" "}
+                    {repository.last_used_at ? new Date(repository.last_used_at).toLocaleString() : "Never"}
+                  </p>
+                  {repository.last_used_mission_id && (
+                    <Link href={`/missions/${repository.last_used_mission_id}`}>View last mission</Link>
+                  )}
+                  <RepositoryControls
+                    repositoryId={repository.repository_id}
+                    agentId={agent.agent_id}
+                    disabled={Boolean(repository.disabled_at)}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
         ) : (
           <p>
             No repositories registered. Run <code>mission-agent repository add /path/to/repository</code> locally.

@@ -69,6 +69,10 @@ test("connection UI keeps the payload masked and advanced setup collapsed", asyn
     source,
     /This page will advance automatically once Mission Agent is connected and ready to receive work\./,
   );
+  assert.match(source, /response\.status === 401/);
+  assert.match(source, /Your Mission Control session expired\. Sign in again to resume connection status\./);
+  assert.match(source, /encodeURIComponent\(`\/onboarding\?agent=\$\{choice\}&mode=\$\{mode\}`\)/);
+  assert.match(source, /Sign in again →/);
 });
 
 test("Mission Agent maintains pull readiness with periodic signed heartbeats", async () => {
