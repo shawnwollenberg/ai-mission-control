@@ -18,7 +18,7 @@ export default async function ApprovalsPage({
   const filters = await searchParams;
   return (
     <main className="durable-mission-shell">
-      <AppNavigation subtitle="Approval inbox" />
+      <AppNavigation subtitle="Approvals" />
       <header className="mission-header compact">
         <div>
           <p className="section-label">Human authority</p>

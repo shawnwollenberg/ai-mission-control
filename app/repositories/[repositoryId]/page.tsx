@@ -155,7 +155,7 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
   }
   return (
     <main className="durable-mission-shell">
-      <AppNavigation subtitle="Repository Intelligence" />
+      <AppNavigation subtitle="Repository detail" />
       <header className="mission-header compact">
         <div>
           <p className="section-label">{repository.observed_remote_url || "Local repository"}</p>
@@ -177,32 +177,37 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
       </header>
 
       <section className="health-summary-grid">
-        <ProjectBrainPanel
-          projection={projectBrainProjection}
-          projectedStatus={String(projectBrainProjection?.last_operation_status ?? "not refreshed")}
-          inbox={{
-            proposals: learningInbox.filter((item) => item.kind === "proposed_learning"),
-            evaluations: learningInbox.filter((item) => item.kind === "knowledge_evaluation"),
-            promotionAvailable: false,
-          }}
-        />
-        <form action={inspectProjectBrain}>
-          <button name="operation" value="detect_repository" type="submit">
-            Detect Project Brain
-          </button>
-          <button name="operation" value="validate_repository" type="submit">
-            Validate Project Brain
-          </button>
-          <button name="operation" value="list_knowledge" type="submit">
-            Refresh learning inbox
-          </button>
-          <button name="operation" value="get_health" type="submit">
-            Refresh knowledge health
-          </button>
-        </form>
-        <form action={initializeProjectBrain}>
-          <button type="submit">Authorize or initialize Project Brain</button>
-        </form>
+        <details className="repository-knowledge-details">
+          <summary>Project Brain knowledge and controls</summary>
+          <div className="repository-knowledge-panel">
+            <ProjectBrainPanel
+              projection={projectBrainProjection}
+              projectedStatus={String(projectBrainProjection?.last_operation_status ?? "not refreshed")}
+              inbox={{
+                proposals: learningInbox.filter((item) => item.kind === "proposed_learning"),
+                evaluations: learningInbox.filter((item) => item.kind === "knowledge_evaluation"),
+                promotionAvailable: false,
+              }}
+            />
+            <form action={inspectProjectBrain}>
+              <button name="operation" value="detect_repository" type="submit">
+                Detect Project Brain
+              </button>
+              <button name="operation" value="validate_repository" type="submit">
+                Validate Project Brain
+              </button>
+              <button name="operation" value="list_knowledge" type="submit">
+                Refresh learning inbox
+              </button>
+              <button name="operation" value="get_health" type="submit">
+                Refresh knowledge health
+              </button>
+            </form>
+            <form action={initializeProjectBrain}>
+              <button type="submit">Authorize or initialize Project Brain</button>
+            </form>
+          </div>
+        </details>
         <article className="command-panel">
           <p className="section-label">Repository Health</p>
           <h2>

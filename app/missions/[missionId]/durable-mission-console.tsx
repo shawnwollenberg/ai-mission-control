@@ -63,6 +63,7 @@ const missionStatusSymbol = (status: string) => {
     );
   return null;
 };
+const terminalExecutionStatuses = ["succeeded", "failed", "timed_out", "cancelled"];
 
 export default function DurableMissionConsole({
   initialMission,
@@ -200,9 +201,64 @@ export default function DurableMissionConsole({
     }
   }
 
+  const pendingApproval = approvals.find((approval) => approval.status === "pending");
+  const openRecommendation = recommendations.find((recommendation) => recommendation.status === "open");
+  const activeExecution = executions.find((execution) => !terminalExecutionStatuses.includes(execution.status));
+  const scheduleHealth =
+    mission.status === "running"
+      ? "In progress"
+      : mission.status === "planned"
+        ? "Awaiting launch"
+        : mission.status === "paused"
+          ? "Paused"
+          : mission.status === "completed"
+            ? "Complete"
+            : mission.status === "failed" || mission.status === "cancelled"
+              ? "Stopped"
+              : "Planning";
+  const scheduleDetail = activeExecution
+    ? `${activeExecution.stage ?? "Execution"} · ${activeExecution.progressSummary ?? "Awaiting the next heartbeat"}`
+    : mission.status === "paused"
+      ? "Resume when the blocking decision is resolved."
+      : mission.status === "completed"
+        ? "The recorded outcome is ready for debrief."
+        : mission.status === "failed" || mission.status === "cancelled"
+          ? "Review the recorded evidence before retrying."
+          : "No active execution is running.";
+  const nextDecision = pendingApproval
+    ? "Approval required"
+    : openRecommendation
+      ? "Review recommendation"
+      : mission.status === "draft"
+        ? "Plan mission"
+        : mission.status === "planned"
+          ? "Start execution"
+          : mission.status === "paused"
+            ? "Resume execution"
+            : mission.status === "completed"
+              ? "Debrief ready"
+              : mission.status === "failed" || mission.status === "cancelled"
+                ? "Review outcome"
+                : "No decision required";
+  const nextDecisionDetail = pendingApproval
+    ? pendingApproval.riskExplanation
+    : openRecommendation
+      ? openRecommendation.title
+      : mission.status === "running"
+        ? (activeExecution?.progressSummary ?? "Monitor the current execution.")
+        : "Use the mission controls or review the recorded evidence.";
+
   return (
     <main className="durable-mission-shell">
-      <AppNavigation subtitle="Durable mission command" />
+      <AppNavigation subtitle="Mission detail" />
+      <div className="mission-breadcrumbs">
+        <Link href="/missions">Missions</Link>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{mission.name}</span>
+        <Link className="mission-switcher-link" href="/missions">
+          Switch mission →
+        </Link>
+      </div>
       <header className="mission-header compact">
         <div>
           <p className="section-label">Mission / {mission.missionId.slice(0, 8)}</p>
@@ -218,6 +274,86 @@ export default function DurableMissionConsole({
           <span>{mission.status}</span>
         </div>
       </header>
+      <section className="mission-health-strip" aria-label="Mission health">
+        <article className="mission-health-card">
+          <span>Schedule</span>
+          <strong>{scheduleHealth}</strong>
+          <small>{scheduleDetail}</small>
+        </article>
+        <article className={`mission-health-card mission-risk-${mission.riskLevel}`}>
+          <span>Risk</span>
+          <strong>{mission.riskLevel.replaceAll("_", " ")}</strong>
+          <small>
+            {mission.constraints.length
+              ? `${mission.constraints.length} operating constraint${mission.constraints.length === 1 ? "" : "s"}`
+              : "No additional constraints recorded"}
+          </small>
+        </article>
+        <article
+          className={`mission-health-card${pendingApproval || openRecommendation ? " mission-health-attention" : ""}`}
+        >
+          <span>Next decision</span>
+          <strong>{nextDecision}</strong>
+          <small>{nextDecisionDetail}</small>
+          {pendingApproval ? (
+            <a className="mission-health-link" href="#mission-approvals">
+              Review decision →
+            </a>
+          ) : openRecommendation ? (
+            <Link className="mission-health-link" href={`/recommendations/${openRecommendation.recommendationId}`}>
+              Open recommendation →
+            </Link>
+          ) : null}
+        </article>
+      </section>
+      {approvals.length > 0 && (
+        <section
+          className={`mission-decision-panel${pendingApproval ? " needs-attention" : ""}`}
+          id="mission-approvals"
+        >
+          <div className="panel-title">
+            <div>
+              <p className="section-label">Human authority</p>
+              <h2>{pendingApproval ? "Needs your decision" : "Approval record"}</h2>
+            </div>
+            <Link className="secondary-link" href="/approvals">
+              Open approval inbox →
+            </Link>
+          </div>
+          {approvals.map((approval) => (
+            <div className="approval-card mission-decision-card" key={approval.approvalId}>
+              <strong>{approval.status === "pending" ? "Approval required" : `Approval ${approval.status}`}</strong>
+              <p>{approval.riskExplanation}</p>
+              {approval.status === "pending" && (
+                <div className="mission-actions">
+                  <button
+                    className="button-approve"
+                    disabled={pending}
+                    onClick={() => decide(approval.approvalId, "grant")}
+                    type="button"
+                  >
+                    {actions.some(
+                      (action) =>
+                        action.approvalId === approval.approvalId &&
+                        action.actionType === "repository.publish_for_review",
+                    )
+                      ? "Publish for review"
+                      : "Grant and continue"}
+                  </button>
+                  <button
+                    className="button-danger"
+                    disabled={pending}
+                    onClick={() => decide(approval.approvalId, "deny")}
+                    type="button"
+                  >
+                    Deny
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
       <section className="execution-mode">
         <span>Execution mode</span>
         <strong>{modeLabel(mission.executionMode, executions)}</strong>
@@ -275,7 +411,13 @@ export default function DurableMissionConsole({
           )}
           <div className="mission-actions">
             {(availableCommands[mission.status] ?? []).map((item) => (
-              <button disabled={pending} key={item.command} onClick={() => command(item.command)}>
+              <button
+                className={item.command === "cancel" ? "button-danger" : "button-primary"}
+                disabled={pending}
+                key={item.command}
+                onClick={() => command(item.command)}
+                type="button"
+              >
                 {item.label}
               </button>
             ))}
@@ -334,7 +476,12 @@ export default function DurableMissionConsole({
                             String(action.result?.message ?? "").includes("evidence checksum")),
                       ) && (
                         <div className="mission-actions">
-                          <button disabled={pending} onClick={() => publishForReview(execution.executionId)}>
+                          <button
+                            className="button-primary"
+                            disabled={pending}
+                            onClick={() => publishForReview(execution.executionId)}
+                            type="button"
+                          >
                             {actions.some(
                               (action) =>
                                 action.executionId === execution.executionId &&
@@ -379,8 +526,10 @@ export default function DurableMissionConsole({
                 </ul>
                 {!["succeeded", "failed", "timed_out", "cancelled"].includes(execution.status) && (
                   <button
+                    className="button-danger"
                     disabled={pending || Boolean(execution.cancellationRequestedAt)}
                     onClick={() => cancelExecution(execution.executionId)}
+                    type="button"
                   >
                     {execution.cancellationRequestedAt ? "Cancellation requested" : "Cancel execution"}
                   </button>
@@ -458,6 +607,7 @@ export default function DurableMissionConsole({
                           Check GitHub pull requests
                         </a>
                         <button
+                          className="button-secondary"
                           disabled={pending}
                           onClick={() => reconcilePublication(action.actionRequestId)}
                           type="button"
@@ -543,28 +693,6 @@ export default function DurableMissionConsole({
               </div>
             ))}
           </div>
-          {approvals.map((approval) => (
-            <div className="approval-card" key={approval.approvalId}>
-              <strong>{approval.status === "pending" ? "Approval required" : `Approval ${approval.status}`}</strong>
-              <p>{approval.riskExplanation}</p>
-              {approval.status === "pending" && (
-                <div className="mission-actions">
-                  <button disabled={pending} onClick={() => decide(approval.approvalId, "grant")}>
-                    {actions.some(
-                      (action) =>
-                        action.approvalId === approval.approvalId &&
-                        action.actionType === "repository.publish_for_review",
-                    )
-                      ? "Publish for Review"
-                      : "Grant and continue"}
-                  </button>
-                  <button disabled={pending} onClick={() => decide(approval.approvalId, "deny")}>
-                    Deny
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
           {["completed", "failed", "cancelled"].includes(mission.status) && (
             <div>
               <h3>Durable debrief</h3>
@@ -608,7 +736,7 @@ export default function DurableMissionConsole({
             </div>
             <span>{timeline.length} events</span>
           </div>
-          <div className="log-list">
+          <div className="log-list canonical-log-list" aria-label="Canonical mission events">
             {[...timeline].reverse().map((entry) => (
               <div className="log-item log-milestone" key={entry.eventId}>
                 <span className="log-sequence">{String(entry.sequence).padStart(2, "0")}</span>

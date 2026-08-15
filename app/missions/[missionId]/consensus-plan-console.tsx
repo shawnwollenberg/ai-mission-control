@@ -106,7 +106,15 @@ export default function ConsensusPlanConsole({
 
   return (
     <main className="durable-mission-shell">
-      <AppNavigation subtitle="Consensus Plan · Read only" />
+      <AppNavigation subtitle="Mission planning · Read only" />
+      <div className="mission-breadcrumbs">
+        <Link href="/missions">Missions</Link>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{mission.name}</span>
+        <Link className="mission-switcher-link" href="/missions">
+          Switch mission →
+        </Link>
+      </div>
       <header className="mission-header">
         <div>
           <p className="section-label">Server-authoritative planning mission</p>
@@ -262,8 +270,12 @@ export default function ConsensusPlanConsole({
             <>
               <code>{String(state.canonical_plan_hash)}</code>
               <div className="mission-actions">
-                <button onClick={copyPlan}>Copy plan</button>
-                <button onClick={downloadPlan}>Download JSON</button>
+                <button className="button-secondary" onClick={copyPlan} type="button">
+                  Copy plan
+                </button>
+                <button className="button-secondary" onClick={downloadPlan} type="button">
+                  Download JSON
+                </button>
               </div>
             </>
           ) : (
@@ -272,10 +284,10 @@ export default function ConsensusPlanConsole({
           {state.status === "awaiting_human_approval" &&
             (owner ? (
               <div className="mission-actions">
-                <button disabled={pending} onClick={() => decide("grant")}>
+                <button className="button-approve" disabled={pending} onClick={() => decide("grant")} type="button">
                   Approve plan + bounded local implementation
                 </button>
-                <button disabled={pending} onClick={() => decide("deny")}>
+                <button className="button-danger" disabled={pending} onClick={() => decide("deny")} type="button">
                   Reject plan
                 </button>
               </div>
@@ -307,9 +319,10 @@ export default function ConsensusPlanConsole({
                 attempts
               </p>
               <button
-                className="launch-button"
+                className="launch-button button-primary"
                 disabled={pending || !executorId || !modelId}
                 onClick={createImplementation}
+                type="button"
               >
                 Create separate implementation mission →
               </button>

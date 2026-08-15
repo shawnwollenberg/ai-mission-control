@@ -58,7 +58,7 @@ export default async function RepositoriesPage() {
 
   return (
     <main className="archive-shell repository-index-shell">
-      <AppNavigation subtitle="Repository Intelligence" />
+      <AppNavigation subtitle="Repositories" />
       <header className="archive-header repository-index-header">
         <div>
           <p className="section-label">Repository overview</p>
@@ -141,8 +141,8 @@ export default async function RepositoriesPage() {
                 <span>{repository.actionable_recommendations} actionable recommendations</span>
                 <span>{repository.mission_count} missions</span>
               </div>
-              <Link className="primary-link" href={`/repositories/${repository.repository_id}`}>
-                Open repository →
+              <Link className="button-primary repository-open-link" href={`/repositories/${repository.repository_id}`}>
+                View repository →
               </Link>
             </article>
           ))}
