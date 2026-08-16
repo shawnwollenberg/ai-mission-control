@@ -148,7 +148,7 @@ export async function registerRemoteAgent(input: {
   trustLevel?: string;
   expiresAt?: string;
   deliveryMode?: "push" | "pull";
-  missionAgentAdapter?: "codex" | "hermes" | "claude-code" | "generic";
+  missionAgentAdapter?: "codex" | "hermes" | "claude-code" | "generic" | "grok";
   providerProfile?: AgentProviderProfile;
 }) {
   requireOwner(input.actor);

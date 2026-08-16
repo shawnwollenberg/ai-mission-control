@@ -32,7 +32,7 @@ export default async function LaunchPage({
     if (!state.configured_agents) return <FirstRunHome workspaceName={state.name} />;
     const [repositories, planningAgents, pendingApprovals, recentMissions, openRecommendations] = await Promise.all([
       db.query(
-        `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name,
+        `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name,a.mission_agent_adapter,
           health.score health_score,health.confidence health_confidence,health.assessed_at health_assessed_at,
           (SELECT count(*)::int FROM recommendation_projections recommendation
            WHERE recommendation.workspace_id=r.workspace_id AND recommendation.repository_id=r.repository_id
@@ -230,6 +230,7 @@ function FirstRunHome({ workspaceName }: { workspaceName: string }) {
         <div className="agent-choice-grid">
           {[
             ["Codex", "codex", "Runs analysis, change, and consensus missions"],
+            ["Grok", "grok", "Runs repository analysis. Change and consensus still need Codex."],
             ["Hermes", "hermes", "Connect only — cannot run repository missions yet"],
             ["Claude Code", "claude_code", "Consensus planning. Analysis and change still need Codex."],
             ["Generic Agent", "generic_remote", "Connect only — cannot run repository missions yet"],

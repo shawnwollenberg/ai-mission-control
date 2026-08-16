@@ -1,8 +1,8 @@
 import { parseAgentProviderProfile, type AgentProviderProfile } from "@/domain/agent-provider";
 
-export type OnboardingAgentType = "codex" | "hermes" | "claude_code" | "generic_remote";
+export type OnboardingAgentType = "codex" | "hermes" | "claude_code" | "generic_remote" | "grok";
 export type OnboardingMode = "standard" | "consensus";
-const onboardingAgentTypes = ["codex", "hermes", "claude_code", "generic_remote"] as const;
+const onboardingAgentTypes = ["codex", "hermes", "claude_code", "generic_remote", "grok"] as const;
 const onboardingModes = ["standard", "consensus"] as const;
 
 const commonPlanningOperations = [
@@ -130,6 +130,12 @@ export function onboardingProfile(mode: OnboardingMode, agentType: OnboardingAge
       capabilities: [...standardCapabilities],
       domains: ["software_delivery"],
     },
+    grok: {
+      name: "Grok",
+      description: "Grok Build connector for read-only repository analysis",
+      capabilities: ["repository.read", "code.review", "artifact.create"],
+      domains: ["software_delivery"],
+    },
     generic_remote: {
       name: "Generic Remote Agent",
       description: "Protocol 1.0 remote agent connected during guided onboarding",
@@ -137,6 +143,14 @@ export function onboardingProfile(mode: OnboardingMode, agentType: OnboardingAge
       domains: ["software_delivery", "business_operations"],
     },
   } as const;
+  if (agentType === "grok") {
+    return {
+      ...standard.grok,
+      providerProfile: undefined,
+      missionAgentVersion: "0.7.3",
+      missionAgentChecksum: "a4321cb88a98411941675e0a9343fc53710359f03ae4a79df0c1968accd555f4",
+    } as const;
+  }
   return {
     ...standard[agentType],
     providerProfile: undefined,
@@ -156,5 +170,19 @@ export function standardArtifactMetadata() {
     signingKeyId: "mission-agent-release-2026-01",
     sourceCommit: "31b45c98f2ffba613b56cd23819ba8b0c9c09a43",
     version: "0.7.2",
+  });
+}
+
+export function grokArtifactMetadata() {
+  return JSON.stringify({
+    artifactByteLength: 155078,
+    canonicalizationVersion: "release-manifest-json-v3",
+    manifestVersion: "3",
+    publicKeyFingerprint: "ed25519-spki-sha256:7943a55a297cd50faf0a5841d06bcd0046d84dab73cc83543ba4021520706e8b",
+    releaseAuthorityVersion: "v2",
+    sha256: "a4321cb88a98411941675e0a9343fc53710359f03ae4a79df0c1968accd555f4",
+    signingKeyId: "mission-agent-release-2026-01",
+    sourceCommit: "f6ffb3a5702e6a9bc4e4f3ca3c4055427d14fafd",
+    version: "0.7.3",
   });
 }

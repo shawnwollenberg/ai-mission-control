@@ -6,6 +6,7 @@ import { apiErrorResponse } from "@/lib/http-errors";
 import { requireApiIdentity, requireMutationOrigin, unauthenticatedResponse } from "@/lib/request-auth";
 import { parseAgentProviderProfile } from "@/domain/agent-provider";
 import {
+  grokArtifactMetadata,
   onboardingProfile,
   standardArtifactMetadata,
   type OnboardingAgentType,
@@ -49,7 +50,9 @@ export async function POST(request: Request) {
           ? "claude-code"
           : body.agentType === "generic_remote"
             ? "generic"
-            : body.agentType,
+            : body.agentType === "grok"
+              ? "grok"
+              : body.agentType,
       providerProfile: profile.providerProfile ? parseAgentProviderProfile(profile.providerProfile) : undefined,
     });
     const config = Buffer.from(
@@ -72,7 +75,7 @@ export async function POST(request: Request) {
     const command =
       mode === "consensus"
         ? `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && capabilities="$tmp.capabilities.json" && agent_home="$HOME/.mission-agent-consensus-${body.agentType}" && agent_bin="$HOME/.local/mission-agent-consensus-${body.agentType}" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs.artifact.json' -o "$metadata" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs.capabilities.json' -o "$capabilities" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" '${profile.artifactMetadataChecksum}' "$metadata" '${profile.capabilityManifestChecksum}' "$capabilities" | shasum -a 256 -c - && mkdir -p "$agent_home" "$agent_bin" && chmod 700 "$agent_home" "$agent_bin" && MISSION_AGENT_HOME="$agent_home" MISSION_AGENT_BIN_DIR="$agent_bin" node "$(realpath "$tmp")" connect '${config}' --no-start && cp "$metadata" "$agent_home/mission-agent-${missionAgentVersion}.mjs.artifact.json" && cp "$capabilities" "$agent_home/mission-agent-${missionAgentVersion}.mjs.capabilities.json" && chmod 600 "$agent_home/mission-agent-${missionAgentVersion}.mjs.artifact.json" "$agent_home/mission-agent-${missionAgentVersion}.mjs.capabilities.json" && (nohup env MISSION_AGENT_HOME="$agent_home" node "$agent_home/mission-agent-${missionAgentVersion}.mjs" run </dev/null >>"$agent_home/mission-agent.log" 2>>"$agent_home/mission-agent-error.log" &)`
-        : `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && printf '%s\\n' '${standardArtifactMetadata()}' > "$metadata" && chmod 600 "$metadata" && node "$tmp" connect '${config}'`;
+        : `tmp_dir=$(mktemp -d) && tmp="$tmp_dir/mission-agent-${missionAgentVersion}.mjs" && metadata="$tmp.artifact.json" && curl -fsSL '${publicUrl}/mission-agent-${missionAgentVersion}.mjs' -o "$tmp" && printf '%s  %s\\n' '${missionAgentChecksum}' "$tmp" | shasum -a 256 -c - && printf '%s\\n' '${body.agentType === "grok" ? grokArtifactMetadata() : standardArtifactMetadata()}' > "$metadata" && chmod 600 "$metadata" && node "$tmp" connect '${config}'`;
     await recordOnboardingEvent({
       workspaceId: identity.workspaceId,
       actorId: identity.userId,

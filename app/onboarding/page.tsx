@@ -34,7 +34,7 @@ export default async function OnboardingPage({
       initialMode={requested.mode === "consensus" ? "consensus" : "standard"}
       initialAgentType={
         (requested.agent ?? workspace.onboarding_agent_type) as
-          "codex" | "hermes" | "claude_code" | "generic_remote" | undefined
+          "codex" | "hermes" | "claude_code" | "generic_remote" | "grok" | undefined
       }
       agents={agents.map((agent) => ({
         ...agent,

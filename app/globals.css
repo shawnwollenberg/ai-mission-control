@@ -1606,6 +1606,11 @@ select:focus {
   width: 100%;
 }
 
+.mission-intent-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
 .mission-intent-card:hover,
 .mission-intent-card.is-selected {
   background: var(--signal-soft);
