@@ -167,6 +167,47 @@ database rollback.
 
 ## Execution evidence and closure
 
-Deployment command IDs, exact running digest, production verification,
-Grok smoke evidence, mutation counters, service restart counts, and rollback
-status will be appended here after the authorized cutover.
+### Authorized web cutover
+
+- Release-record commit: `4e93880`.
+- Protected release-record PR: [#32](https://github.com/shawnwollenberg/ai-mission-control/pull/32).
+- Release-record merge commit: `a3999dd73bd78c30c635324d7ddc6f77826aecfa`.
+- Exact cutover SSM command: `dfc68120-7aca-4fdf-b390-1a896f9a023d` — `Success`.
+- Post-cutover SSM verification: `d8823c0b-34ed-4167-85dd-864df56895f2` — `Success`.
+- Running web image: `661452835066.dkr.ecr.us-east-1.amazonaws.com/mission-control@sha256:0a3bc3699892161f64bddee885942b8f00442a4cc8f319dc544bd55faaface8b`.
+- Running web Docker image ID: `sha256:00ba4e0dc9e08e731e4a0b7d4ca014936afaa430be1a8d7c68403aa208c44f55`.
+- Running web container: `mission-control-web`, restart count `0`, status `running`.
+- Retained rollback container: `mission-control-web-pre-75bb17d`, exact predecessor digest `sha256:dc2d029df9680f0d40de541c82b1e8968641e0c515e3ee4e8e80a6cf2d9be76b`, restart count `0`, status `exited`.
+
+### Production verification completed
+
+- Public `/api/health`: `200`, `status: ok`, database reachable.
+- Public `/api/readiness`: `200`, `status: ready`, no failed checks.
+- Public `/login`: `200`.
+- Unauthenticated `/` and `/missions`: redirected to login (`307`).
+- Unauthenticated `/api/navigation/mission-summary` and `/api/missions`: rejected with `401`.
+- Public `mission-agent-0.7.3.mjs`: `200`, `application/javascript`, `155078` bytes, SHA-256 `a4321cb88a98411941675e0a9343fc53710359f03ae4a79df0c1968accd555f4`.
+- Generic worker, action worker, Project Brain worker, PostgreSQL, and Caddy remained on their pre-cutover image identities with restart count `0`; no worker, database, or Caddy restart was performed.
+- No migration, infrastructure, or other production-service change was performed.
+- Rollback was not invoked.
+
+### Authenticated verification stop
+
+The available browser session was not authenticated. It reached the
+Mission Control login page, and no credentials were entered or account was
+created. Therefore the following authorized checks remain pending:
+
+- authenticated login and protected-route behavior;
+- Grok onboarding, registration, heartbeat, capability eligibility, and exact
+  runtime/provider identity evidence;
+- Analyze-only mission admission and mutation-requiring mission rejection;
+- one bounded, non-destructive Grok Analyze-only smoke mission against an
+  already-registered safe repository.
+
+No smoke mission was created, so there is no mission ID or smoke-mission
+mutation counter to report. The release verification performed no mission,
+repository, commit, push, pull-request, merge, deployment, or infrastructure
+mutation.
+
+**Current release status:** web cutover complete; authenticated verification
+blocked by the explicit stop condition `HUMAN AUTHENTICATION REQUIRED`.
