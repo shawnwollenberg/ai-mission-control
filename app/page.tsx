@@ -8,13 +8,19 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function LaunchPage() {
+export default async function LaunchPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const requestHeaders = await headers();
   const host = (requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"))?.split(":")[0];
   if (host?.startsWith("app.")) {
     const identity = await requirePageIdentity("/");
+    const query = await searchParams;
+    const db = getDatabasePool();
     const state = (
-      await getDatabasePool().query(
+      await db.query(
         `SELECT w.name,
           (SELECT count(*)::int FROM agents a WHERE a.workspace_id=w.id AND a.delivery_mode='pull' AND a.status='active') configured_agents,
           (SELECT count(*)::int FROM agents a WHERE a.workspace_id=w.id AND a.delivery_mode='pull' AND a.status='active' AND a.last_heartbeat_at>now()-interval '5 minutes' AND a.pull_ready_at>now()-interval '5 minutes') ready_agents,
@@ -23,19 +29,15 @@ export default async function LaunchPage() {
         [identity.workspaceId],
       )
     ).rows[0];
-    if (!state.ready_agents)
-      return state.configured_agents ? (
-        <ReconnectAgentHome workspaceName={state.name} />
-      ) : (
-        <FirstRunHome workspaceName={state.name} />
-      );
-    const repositories = (
-      await getDatabasePool().query(
+    if (!state.configured_agents) return <FirstRunHome workspaceName={state.name} />;
+    const [repositories, planningAgents, pendingApprovals, recentMissions, openRecommendations] = await Promise.all([
+      db.query(
         `SELECT r.repository_id,r.name,r.default_branch,a.agent_id,a.name agent_name,
           health.score health_score,health.confidence health_confidence,health.assessed_at health_assessed_at,
           (SELECT count(*)::int FROM recommendation_projections recommendation
            WHERE recommendation.workspace_id=r.workspace_id AND recommendation.repository_id=r.repository_id
-             AND recommendation.status IN ('open','accepted','in_progress')) actionable_recommendations
+             AND recommendation.status IN ('open','accepted','in_progress')) actionable_recommendations,
+          (a.last_heartbeat_at>now()-interval '5 minutes' AND a.pull_ready_at>now()-interval '5 minutes') agent_ready
          FROM repositories r
          JOIN agents a ON a.workspace_id=r.workspace_id AND r.allowed_agent_ids ? a.agent_id::text
          LEFT JOIN LATERAL (
@@ -44,14 +46,10 @@ export default async function LaunchPage() {
            ORDER BY assessed_at DESC LIMIT 1
          ) health ON true
          WHERE r.workspace_id=$1 AND r.location_mode='mission_agent' AND r.disabled_at IS NULL AND a.status='active'
-           AND a.last_heartbeat_at>now()-interval '5 minutes' AND a.pull_ready_at>now()-interval '5 minutes'
          ORDER BY r.updated_at DESC`,
         [identity.workspaceId],
-      )
-    ).rows;
-    if (!repositories.length) return <RepositoryRequiredHome workspaceName={state.name} />;
-    const planningAgents = (
-      await getDatabasePool().query(
+      ),
+      db.query(
         `SELECT agent_id,name,provider_id,supported_models,model_capabilities,
            capability_attestation_id,capability_attestation_hash,supported_mission_roles,supported_operations
          FROM agents WHERE workspace_id=$1 AND status='active' AND delivery_mode='pull'
@@ -63,9 +61,69 @@ export default async function LaunchPage() {
            AND jsonb_array_length(model_capabilities)>0
          ORDER BY name,agent_id`,
         [identity.workspaceId],
-      )
-    ).rows;
-    return <FirstMissionForm repositories={repositories} planningAgents={planningAgents} />;
+      ),
+      db.query(
+        `SELECT ap.approval_id,ap.mission_id,ap.risk_explanation,m.name mission_name
+         FROM approval_projections ap
+         LEFT JOIN mission_projections m ON m.workspace_id=ap.workspace_id AND m.mission_id=ap.mission_id
+         WHERE ap.workspace_id=$1 AND ap.status='pending'
+         ORDER BY ap.created_at DESC LIMIT 5`,
+        [identity.workspaceId],
+      ),
+      db.query(
+        `SELECT mission_id,name,status,updated_at FROM mission_projections
+         WHERE workspace_id=$1 ORDER BY updated_at DESC LIMIT 5`,
+        [identity.workspaceId],
+      ),
+      db.query(
+        `SELECT rec.recommendation_id,rec.title,rec.estimated_risk,r.name repository_name
+         FROM recommendation_projections rec
+         JOIN repositories r ON r.workspace_id=rec.workspace_id AND r.repository_id=rec.repository_id
+         WHERE rec.workspace_id=$1 AND rec.status IN ('open','accepted','in_progress')
+         ORDER BY rec.updated_at DESC LIMIT 5`,
+        [identity.workspaceId],
+      ),
+    ]);
+    const liveRepositories = repositories.rows.filter((repository) => repository.agent_ready);
+    return (
+      <FirstMissionForm
+        repositories={repositories.rows.map((repository) => ({
+          ...repository,
+          health_assessed_at: repository.health_assessed_at
+            ? new Date(repository.health_assessed_at).toISOString()
+            : null,
+        }))}
+        planningAgents={planningAgents.rows}
+        initialMissionType={query.type}
+        initialRepositoryId={query.repository}
+        liveLaunchAvailable={liveRepositories.length > 0}
+        attentionBanner={
+          !state.ready_agents ? (
+            <ReconnectAgentHome workspaceName={state.name} />
+          ) : !repositories.rows.length ? (
+            <RepositoryRequiredHome workspaceName={state.name} />
+          ) : null
+        }
+        pendingApprovals={pendingApprovals.rows.map((approval) => ({
+          approvalId: approval.approval_id,
+          missionId: approval.mission_id,
+          missionName: approval.mission_name ?? "Untitled mission",
+          riskExplanation: approval.risk_explanation,
+        }))}
+        recentMissions={recentMissions.rows.map((mission) => ({
+          missionId: mission.mission_id,
+          name: mission.name,
+          status: mission.status,
+          updatedAt: new Date(mission.updated_at).toISOString(),
+        }))}
+        openRecommendations={openRecommendations.rows.map((recommendation) => ({
+          recommendationId: recommendation.recommendation_id,
+          title: recommendation.title,
+          repositoryName: recommendation.repository_name,
+          estimatedRisk: recommendation.estimated_risk,
+        }))}
+      />
+    );
   }
   return (
     <PublicShell>
@@ -171,13 +229,16 @@ function FirstRunHome({ workspaceName }: { workspaceName: string }) {
         <h2>Connect your first agent</h2>
         <div className="agent-choice-grid">
           {[
-            ["Codex", "codex"],
-            ["Hermes", "hermes"],
-            ["Claude Code", "claude_code"],
-            ["Generic Agent", "generic_remote"],
-          ].map(([label, id]) => (
+            ["Codex", "codex", "Runs analysis, change, and consensus missions"],
+            ["Hermes", "hermes", "Connect only — cannot run repository missions yet"],
+            ["Claude Code", "claude_code", "Consensus planning. Analysis and change still need Codex."],
+            ["Generic Agent", "generic_remote", "Connect only — cannot run repository missions yet"],
+          ].map(([label, id, capability]) => (
             <Link className="first-run-agent" href={`/onboarding?agent=${id}`} key={id}>
-              {label}
+              <span>
+                {label}
+                <small>{capability}</small>
+              </span>
               <span>→</span>
             </Link>
           ))}
@@ -194,39 +255,39 @@ function FirstRunHome({ workspaceName }: { workspaceName: string }) {
 
 function ReconnectAgentHome({ workspaceName }: { workspaceName: string }) {
   return (
-    <main className="onboarding-shell">
-      <section className="onboarding-intro">
+    <section className="home-attention-banner" role="status">
+      <div>
         <p className="section-label">{workspaceName}</p>
-        <h1>Reconnect your Mission Agent.</h1>
+        <h2>Reconnect your Mission Agent.</h2>
         <p>Your agent and repositories are still registered, but its recent heartbeat has expired.</p>
-      </section>
-      <section className="onboarding-panel">
+      </div>
+      <div>
         <code>mission-agent status</code>
         <code>mission-agent service install</code>
         <p>Once a fresh heartbeat arrives, the live repository mission will unlock automatically.</p>
         <Link className="launch-button onboarding-action" href="/onboarding">
           View connection status →
         </Link>
-      </section>
-    </main>
+      </div>
+    </section>
   );
 }
 
 function RepositoryRequiredHome({ workspaceName }: { workspaceName: string }) {
   return (
-    <main className="onboarding-shell">
-      <section className="onboarding-intro">
+    <section className="home-attention-banner" role="status">
+      <div>
         <p className="section-label">{workspaceName}</p>
-        <h1>Register your first repository.</h1>
+        <h2>Register your first repository.</h2>
         <p>Your agent is connected, but it needs a repository before it can receive work.</p>
-      </section>
-      <section className="onboarding-panel">
+      </div>
+      <div>
         <code>mission-agent repository add /path/to/repository</code>
         <p>The page will unlock live repository missions after the repository is registered.</p>
         <Link className="launch-button" href="/onboarding">
           View connection status →
         </Link>
-      </section>
-    </main>
+      </div>
+    </section>
   );
 }

@@ -33,15 +33,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ rec
     const commandId = stableUuid(
       `recommendation-change-mission:${recommendationId}:${recommendation.linkedMissionId ?? "initial"}`,
     );
+    const body = (await request.json().catch(() => ({}))) as {
+      objective?: string;
+      acceptanceCriteria?: string;
+      validationInstructions?: string;
+    };
     const launched = await launchFirstRepositoryMission({
       actor: { workspaceId: identity.workspaceId, userId: identity.userId, role: identity.role },
       commandId,
       agentId: agent.agent_id,
       repositoryId: recommendation.repositoryId,
       missionType: "change",
-      objective: `${recommendation.title}: ${recommendation.description}`,
-      acceptanceCriteria: recommendation.acceptanceCriteria.join("\n"),
-      validationInstructions: recommendation.suggestedValidation.join("\n"),
+      objective: body.objective?.trim() || `${recommendation.title}: ${recommendation.description}`,
+      acceptanceCriteria: body.acceptanceCriteria ?? recommendation.acceptanceCriteria.join("\n"),
+      validationInstructions: body.validationInstructions ?? recommendation.suggestedValidation.join("\n"),
       sourceRecommendationId: recommendation.recommendationId,
       sourceEvidence: recommendation.evidence,
     });

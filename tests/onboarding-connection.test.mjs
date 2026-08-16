@@ -153,10 +153,49 @@ test("recommendations expose traceable one-click Change Mission creation", async
   assert.match(actions, /Create Change Mission/);
   assert.match(actions, /Retry Change Mission/);
   assert.match(actions, /Create Follow-up Change Mission/);
+  assert.match(actions, /Review the change before launch/);
+  assert.match(actions, /acceptanceCriteria/);
+  assert.match(actions, /validationInstructions/);
   assert.match(route, /retriableMissionStatuses/);
   assert.match(route, /sourceRecommendationId/);
   assert.match(route, /acceptanceCriteria/);
   assert.match(route, /suggestedValidation/);
+});
+
+test("repository pages can start analyze, change, and consensus missions", async () => {
+  const detail = await readFile(new URL("../app/repositories/[repositoryId]/page.tsx", import.meta.url), "utf8");
+  const index = await readFile(new URL("../app/repositories/page.tsx", import.meta.url), "utf8");
+  const launch = await readFile(new URL("../app/first-mission-form.tsx", import.meta.url), "utf8");
+  assert.match(detail, /type=analysis&repository=/);
+  assert.match(detail, /type=change&repository=/);
+  assert.match(detail, /type=consensus&repository=/);
+  assert.match(index, /type=consensus&repository=/);
+  assert.match(launch, /initialMissionType/);
+  assert.match(launch, /What needs you/);
+});
+
+test("consensus review uses the same human language as analyze and change", async () => {
+  const launch = await readFile(new URL("../app/first-mission-form.tsx", import.meta.url), "utf8");
+  const consoleSource = await readFile("app/missions/[missionId]/consensus-plan-console.tsx", "utf8");
+  assert.match(launch, /Two agents independently propose a plan/);
+  assert.match(launch, /You approve the chosen plan before any files change/);
+  assert.match(launch, /Launch consensus mission/);
+  assert.match(launch, /Implements after approval/);
+  assert.doesNotMatch(launch, /Canonical-plan synthesizer/);
+  assert.match(consoleSource, /Approve this plan/);
+  assert.match(consoleSource, /Start the change/);
+  assert.match(consoleSource, /Waiting on you/);
+  assert.doesNotMatch(consoleSource, /Server-authoritative planning mission/);
+  assert.doesNotMatch(consoleSource, /Approve plan \+ bounded local implementation/);
+});
+
+test("mission console presents stages and human-readable evidence", async () => {
+  const source = await readFile("app/missions/[missionId]/durable-mission-console.tsx", "utf8");
+  assert.match(source, /Waiting on you/);
+  assert.match(source, /Evidence ready/);
+  assert.match(source, /Approve this plan/);
+  assert.match(source, /artifactLabel/);
+  assert.match(source, /Technical details/);
 });
 
 test("repository preflight failures use actionable product language", async () => {

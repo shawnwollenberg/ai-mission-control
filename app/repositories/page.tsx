@@ -141,6 +141,11 @@ export default async function RepositoriesPage() {
                 <span>{repository.actionable_recommendations} actionable recommendations</span>
                 <span>{repository.mission_count} missions</span>
               </div>
+              <div className="repository-card-missions">
+                <Link href={`/?type=analysis&repository=${repository.repository_id}`}>Analyze</Link>
+                <Link href={`/?type=change&repository=${repository.repository_id}`}>Change</Link>
+                <Link href={`/?type=consensus&repository=${repository.repository_id}`}>Consensus</Link>
+              </div>
               <Link className="button-primary repository-open-link" href={`/repositories/${repository.repository_id}`}>
                 View repository →
               </Link>

@@ -15,13 +15,47 @@ type History = {
 type Executor = { agent_id: string; name: string; provider_id: string; supported_models: string[] };
 
 const phases = [
-  ["Context prepared", "project_brain_context_pack"],
+  ["Repository context", "project_brain_context_pack"],
   ["Independent proposals", "consensus_proposal"],
-  ["Cross-critiques", "consensus_critique"],
+  ["Critiques", "consensus_critique"],
   ["Revisions", "consensus_revision"],
-  ["Canonical plan", "canonical_implementation_plan"],
-  ["Final verdicts", "canonical_plan_verdict"],
+  ["Combined plan", "canonical_implementation_plan"],
+  ["Verdicts", "canonical_plan_verdict"],
 ] as const;
+const missionStages = [
+  { id: "plan", label: "Plan" },
+  { id: "working", label: "Working" },
+  { id: "waiting", label: "Waiting on you" },
+  { id: "evidence", label: "Evidence ready" },
+  { id: "done", label: "Done" },
+] as const;
+const roleLabels: Record<string, string> = {
+  planner: "Planner",
+  synthesizer: "Combines plans",
+  executor: "Implements",
+  implementation_reviewer: "Reviews",
+};
+const artifactLabels: Record<string, string> = {
+  project_brain_context_pack: "Repository context",
+  consensus_proposal: "Proposal",
+  consensus_critique: "Critique",
+  consensus_revision: "Revision",
+  canonical_implementation_plan: "Combined plan",
+  canonical_plan_verdict: "Verdict",
+};
+const statusLabels: Record<string, string> = {
+  awaiting_human_approval: "Waiting on you",
+  approved: "Plan approved",
+  rejected: "Plan rejected",
+  planning: "Working",
+  preparing_context: "Preparing context",
+  completed: "Completed",
+  failed: "Failed",
+  cancelled: "Cancelled",
+};
+const roleLabel = (role: string) => roleLabels[role] ?? role.replaceAll("_", " ");
+const artifactLabel = (kind: string) => artifactLabels[kind] ?? kind.replaceAll("_", " ");
+const statusLabel = (status: string) => statusLabels[status] ?? status.replaceAll("_", " ");
 
 export default function ConsensusPlanConsole({
   mission,
@@ -99,14 +133,28 @@ export default function ConsensusPlanConsole({
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = `canonical-plan-${String(state.canonical_plan_hash).slice(0, 12)}.json`;
+    link.download = `combined-plan-${String(state.canonical_plan_hash).slice(0, 12)}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }
 
+  const waiting = state.status === "awaiting_human_approval";
+  const stageId = state.implementation_mission_id
+    ? "done"
+    : ["completed", "failed", "cancelled", "rejected"].includes(String(state.status))
+      ? "done"
+      : waiting
+        ? "waiting"
+        : canonical
+          ? "evidence"
+          : history.artifacts.some((artifact) => artifact.artifact_kind === "consensus_proposal")
+            ? "working"
+            : "plan";
+  const stageIndex = missionStages.findIndex((stage) => stage.id === stageId);
+
   return (
     <main className="durable-mission-shell">
-      <AppNavigation subtitle="Mission planning · Read only" />
+      <AppNavigation subtitle="Consensus mission" />
       <div className="mission-breadcrumbs">
         <Link href="/missions">Missions</Link>
         <span aria-hidden="true">/</span>
@@ -115,24 +163,69 @@ export default function ConsensusPlanConsole({
           Switch mission →
         </Link>
       </div>
-      <header className="mission-header">
+      <header className="mission-header compact">
         <div>
-          <p className="section-label">Server-authoritative planning mission</p>
+          <p className="section-label">Consensus plan</p>
           <h1>{mission.name}</h1>
           <p>{mission.objective}</p>
         </div>
-        <div className="status-stack">
-          <span className="secure">{String(state.status).replaceAll("_", " ")}</span>
-          <code>{String(state.repository_base_commit).slice(0, 12)}</code>
+        <div
+          className={`status-pill status-${mission.status}`}
+          role="status"
+          aria-label={`Mission status: ${mission.status}`}
+        >
+          <span>{statusLabel(String(state.status))}</span>
         </div>
       </header>
-      <section className="principle">
-        Consensus is evidence, not proof of correctness. Planning is read-only, the canonical plan is immutable and
-        hash-bound, and the one human action binds the executor, isolated write, validation, and local commit.
-      </section>
+      <ol className="mission-stage-strip" aria-label="Mission stages">
+        {missionStages.map((stage, index) => (
+          <li
+            className={`${index < stageIndex ? "is-complete" : ""}${index === stageIndex ? " is-current" : ""}`}
+            key={stage.id}
+          >
+            <span>{index + 1}</span>
+            {stage.label}
+          </li>
+        ))}
+      </ol>
+      <section className="principle">Two agents propose a plan. You approve it before any files change.</section>
+      {waiting && (
+        <section className="mission-decision-panel needs-attention" id="mission-approvals">
+          <div className="panel-title">
+            <div>
+              <p className="section-label">Needs you</p>
+              <h2>Approve this plan</h2>
+            </div>
+          </div>
+          <div className="approval-card mission-decision-card">
+            <strong>Approval required</strong>
+            <p>
+              This plan is read-only until you approve it. Approval lets the chosen agent implement it on an isolated
+              branch and stop at a local commit.
+            </p>
+            {owner ? (
+              <div className="mission-actions">
+                <button className="button-approve" disabled={pending} onClick={() => decide("grant")} type="button">
+                  Approve this plan
+                </button>
+                <button className="button-danger" disabled={pending} onClick={() => decide("deny")} type="button">
+                  Deny
+                </button>
+              </div>
+            ) : (
+              <p>A workspace owner must decide this approval.</p>
+            )}
+          </div>
+        </section>
+      )}
       <section className="durable-grid">
         <section className="command-panel">
-          <h2>Planning timeline</h2>
+          <div className="panel-title">
+            <div>
+              <p className="section-label">What happened</p>
+              <h2>Activity</h2>
+            </div>
+          </div>
           <div className="log-list">
             {phases.map(([label, kind]) => {
               const artifacts = history.artifacts.filter((artifact) => artifact.artifact_kind === kind);
@@ -150,12 +243,11 @@ export default function ConsensusPlanConsole({
                   <div>
                     <strong>{label}</strong>
                     <p>
-                      {artifacts.length} of {expected} immutable artifact{expected === 1 ? "" : "s"}
+                      {artifacts.length} of {expected} ready
                     </p>
                     {artifacts.map((artifact) => (
                       <Link href={`/artifacts/${artifact.artifact_id}`} key={String(artifact.artifact_id)}>
-                        {String(artifact.artifact_kind).replaceAll("_", " ")} ·{" "}
-                        {String(artifact.checksum_sha256).slice(0, 12)}
+                        {artifactLabel(String(artifact.artifact_kind))}
                       </Link>
                     ))}
                   </div>
@@ -165,51 +257,38 @@ export default function ConsensusPlanConsole({
             <div className="log-item">
               <span className="log-sequence">{state.human_approval_id ? "✓" : "·"}</span>
               <div>
-                <strong>Human approval</strong>
-                <p>{state.human_approval_id ? String(state.status).replaceAll("_", " ") : "Not requested"}</p>
-              </div>
-            </div>
-            <div className="log-item">
-              <span className="log-sequence">{history.learningCandidate ? "✓" : "·"}</span>
-              <div>
-                <strong>Project Brain learning candidate</strong>
-                {history.learningCandidate ? (
-                  <Link href={`/artifacts/${history.learningCandidate.artifact_id}`}>
-                    Open proposed evidence · human review required →
-                  </Link>
-                ) : (
-                  <p>Proposed only after the implementation mission completes</p>
-                )}
+                <strong>Your decision</strong>
+                <p>{state.human_approval_id ? statusLabel(String(state.status)) : "Not requested yet"}</p>
               </div>
             </div>
             <div className="log-item">
               <span className="log-sequence">{state.implementation_mission_id ? "✓" : "·"}</span>
               <div>
-                <strong>Implementation mission</strong>
+                <strong>Change mission</strong>
                 {state.implementation_mission_id ? (
-                  <Link href={`/missions/${state.implementation_mission_id}`}>Open governed child mission →</Link>
+                  <Link href={`/missions/${state.implementation_mission_id}`}>Open the change →</Link>
                 ) : (
-                  <p>Not created</p>
+                  <p>Starts after you approve the plan</p>
                 )}
               </div>
             </div>
           </div>
         </section>
         <section className="command-panel">
-          <h2>Participants and accounting</h2>
+          <div className="panel-title">
+            <div>
+              <p className="section-label">Crew</p>
+              <h2>Who is working</h2>
+            </div>
+          </div>
           {history.participants.map((participant) => (
             <div className="log-item" key={String(participant.participant_assignment_id)}>
-              <span className="log-sequence">
-                {String(participant.role).replaceAll("implementation_", "I·").replaceAll("planner_", "P·").slice(0, 3)}
-              </span>
+              <span className="log-sequence">{roleLabel(String(participant.role)).slice(0, 2).toUpperCase()}</span>
               <div>
                 <strong>{String(participant.agent_name)}</strong>
-                <p>
-                  {String(participant.provider_id)} · {String(participant.model_id)} · {String(participant.role)}
-                </p>
+                <p>{roleLabel(String(participant.role))}</p>
                 <small>
-                  capability {String(participant.capability_attestation_hash).slice(0, 12)} · assignment v
-                  {String(participant.assignment_version)}
+                  {String(participant.provider_id)} · {String(participant.model_id)}
                 </small>
                 <p>
                   {history.usage
@@ -218,7 +297,7 @@ export default function ConsensusPlanConsole({
                       (item) =>
                         `${String(item.metric_type)} ${String(item.quantity ?? item.cost_amount ?? "unreported")} ${String(item.unit ?? item.currency ?? "")}`,
                     )
-                    .join(" · ") || "No usage reported for this role"}
+                    .join(" · ") || "No usage reported yet"}
                 </p>
               </div>
             </div>
@@ -228,25 +307,21 @@ export default function ConsensusPlanConsole({
               <dt>Planning cost</dt>
               <dd>{actualCost ? `${actualCost.toFixed(4)} ${String(state.cost_currency)}` : "No reported cost"}</dd>
             </div>
-            <div>
-              <dt>Context hash</dt>
-              <dd>
-                <code>{state.context_pack_hash ? String(state.context_pack_hash).slice(0, 16) : "pending"}</code>
-              </dd>
-            </div>
-            <div>
-              <dt>Plan hash</dt>
-              <dd>
-                <code>{state.canonical_plan_hash ? String(state.canonical_plan_hash).slice(0, 16) : "pending"}</code>
-              </dd>
-            </div>
           </dl>
+          <details className="mission-technical-details">
+            <summary>Technical details</summary>
+            <p>
+              Base commit {String(state.repository_base_commit).slice(0, 12)} · context{" "}
+              {state.context_pack_hash ? String(state.context_pack_hash).slice(0, 16) : "pending"} · plan{" "}
+              {state.canonical_plan_hash ? String(state.canonical_plan_hash).slice(0, 16) : "pending"}
+            </p>
+          </details>
         </section>
       </section>
       <section className="durable-grid">
         <section className="command-panel">
           <h2>Disagreements</h2>
-          {!history.objections.length && <p>No blocking objections have been recorded yet.</p>}
+          {!history.objections.length && <p>No blocking disagreements yet.</p>}
           {history.objections.map((objection) => (
             <article
               className={`truth-banner ${objection.status === "resolved" ? "live" : "warning"}`}
@@ -256,60 +331,55 @@ export default function ConsensusPlanConsole({
                 {String(objection.category)} · {String(objection.status)}
               </strong>
               <p>{String(objection.description)}</p>
-              <small>Required change: {String(objection.required_change)}</small>
-              <small>
-                Provider label: {String(objection.raw_provider_objection_id)} · Mission Control ID:{" "}
-                <code>{String(objection.objection_id)}</code> · Source: {String(objection.source_artifact_id)}
-              </small>
+              <small>Needed change: {String(objection.required_change)}</small>
+              <details className="mission-technical-details">
+                <summary>Technical details</summary>
+                <small>
+                  Provider label: {String(objection.raw_provider_objection_id)} · Mission Control ID:{" "}
+                  <code>{String(objection.objection_id)}</code>
+                </small>
+              </details>
             </article>
           ))}
         </section>
         <section className="command-panel">
-          <h2>Canonical plan control</h2>
+          <div className="panel-title">
+            <div>
+              <p className="section-label">Combined plan</p>
+              <h2>Review the result</h2>
+            </div>
+          </div>
           {canonical ? (
             <>
-              <code>{String(state.canonical_plan_hash)}</code>
+              <p>The agents agreed on one implementation plan. Download it, or approve it when you are ready.</p>
               <div className="mission-actions">
                 <button className="button-secondary" onClick={copyPlan} type="button">
                   Copy plan
                 </button>
                 <button className="button-secondary" onClick={downloadPlan} type="button">
-                  Download JSON
+                  Download plan
                 </button>
               </div>
             </>
           ) : (
-            <p>The canonical plan is not available yet.</p>
+            <p>The combined plan is not ready yet.</p>
           )}
-          {state.status === "awaiting_human_approval" &&
-            (owner ? (
-              <div className="mission-actions">
-                <button className="button-approve" disabled={pending} onClick={() => decide("grant")} type="button">
-                  Approve plan + bounded local implementation
-                </button>
-                <button className="button-danger" disabled={pending} onClick={() => decide("deny")} type="button">
-                  Reject plan
-                </button>
-              </div>
-            ) : (
-              <p>A workspace owner must decide this approval.</p>
-            ))}
           {state.status === "approved" && !state.implementation_mission_id && (
             <>
               <dl className="summary-grid">
                 <div>
-                  <dt>Approved executor</dt>
+                  <dt>Will implement</dt>
                   <dd>
                     {selectedExecutor ? `${selectedExecutor.name} · ${selectedExecutor.provider_id}` : executorId}
                   </dd>
                 </div>
                 <div>
-                  <dt>Approved model</dt>
+                  <dt>Model</dt>
                   <dd>{modelId}</dd>
                 </div>
               </dl>
               <p>
-                Approved execution budget:{" "}
+                Time limit:{" "}
                 {String(
                   (state.execution_budget as { maximumDurationSeconds?: number } | undefined)?.maximumDurationSeconds ??
                     0,
@@ -324,12 +394,19 @@ export default function ConsensusPlanConsole({
                 onClick={createImplementation}
                 type="button"
               >
-                Create separate implementation mission →
+                Start the change →
               </button>
             </>
           )}
+          {history.learningCandidate ? (
+            <p>
+              <Link href={`/artifacts/${history.learningCandidate.artifact_id}`}>
+                Proposed learning · review required →
+              </Link>
+            </p>
+          ) : null}
           <p>
-            <Link href="/">Request a new consensus mission</Link>
+            <Link href="/">Start another consensus mission</Link>
           </p>
           {error && (
             <p className="form-error" role="alert">

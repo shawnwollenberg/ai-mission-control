@@ -69,6 +69,10 @@ export default async function RecommendationPage({ params }: { params: Promise<{
           recommendationId={recommendationId}
           status={r.status}
           linkedMissionStatus={r.linkedMissionStatus}
+          title={r.title}
+          description={r.description}
+          acceptanceCriteria={r.acceptanceCriteria}
+          suggestedValidation={r.suggestedValidation}
         />
       </section>
     </main>
