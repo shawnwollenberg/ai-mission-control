@@ -24,11 +24,33 @@ type Connection = {
   protocolVersion: string;
   onboardingMode: OnboardingMode;
 };
-const choices: { id: AgentType; label: string; description: string }[] = [
-  { id: "codex", label: "Codex", description: "Analyze and review a local repository." },
-  { id: "hermes", label: "Hermes", description: "Coordinate reports and operational analysis." },
-  { id: "claude_code", label: "Claude Code", description: "Connect a repository-aware coding agent." },
-  { id: "generic_remote", label: "Generic Remote Agent", description: "Use Mission Control protocol 1.0." },
+const choices: { id: AgentType; label: string; description: string; capability: string; connectOnly?: boolean }[] = [
+  {
+    id: "codex",
+    label: "Codex",
+    description: "Analyze, change, and plan consensus work in a local repository.",
+    capability: "Runs analysis, change, and consensus missions",
+  },
+  {
+    id: "hermes",
+    label: "Hermes",
+    description: "Coordinate reports and operational analysis.",
+    capability: "Connect only — cannot run repository missions yet",
+    connectOnly: true,
+  },
+  {
+    id: "claude_code",
+    label: "Claude Code",
+    description: "Join consensus planning with a repository-aware coding agent.",
+    capability: "Consensus planning. Analysis and change still need Codex.",
+  },
+  {
+    id: "generic_remote",
+    label: "Generic Remote Agent",
+    description: "Use Mission Control protocol 1.0.",
+    capability: "Connect only — cannot run repository missions yet",
+    connectOnly: true,
+  },
 ];
 
 export default function OnboardingWizard({
@@ -214,6 +236,7 @@ export default function OnboardingWizard({
                     <span className="choice-radio">{choice === agent.id ? "●" : "○"}</span>
                     <strong>{agent.label}</strong>
                     <small>{agent.description}</small>
+                    <em className={agent.connectOnly ? "connect-only-note" : "capability-note"}>{agent.capability}</em>
                   </button>
                 ))}
             </div>

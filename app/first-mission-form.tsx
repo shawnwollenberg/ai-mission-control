@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, ReactNode, useRef, useState } from "react";
 import Link from "next/link";
 import { AppNavigation } from "@/app/app-navigation";
 
@@ -14,6 +14,25 @@ type Repository = {
   health_confidence: number | null;
   health_assessed_at: string | null;
   actionable_recommendations: number;
+  agent_ready?: boolean;
+};
+type PendingApproval = {
+  approvalId: string;
+  missionId: string;
+  missionName: string;
+  riskExplanation: string;
+};
+type RecentMission = {
+  missionId: string;
+  name: string;
+  status: string;
+  updatedAt: string;
+};
+type OpenRecommendation = {
+  recommendationId: string;
+  title: string;
+  repositoryName: string;
+  estimatedRisk: string;
 };
 type PlanningAgent = {
   agent_id: string;
@@ -82,19 +101,40 @@ const missionTypeObjectives: Record<MissionType, string> = {
   consensus: "Produce a production-ready, approval-bound implementation plan for this repository",
 };
 
+function isMissionType(value: string | undefined): value is MissionType {
+  return value === "analysis" || value === "change" || value === "consensus";
+}
+
 export default function FirstMissionForm({
   repositories,
   planningAgents,
+  initialMissionType,
+  initialRepositoryId,
+  liveLaunchAvailable = true,
+  attentionBanner,
+  pendingApprovals = [],
+  recentMissions = [],
+  openRecommendations = [],
 }: {
   repositories: Repository[];
   planningAgents: PlanningAgent[];
+  initialMissionType?: string;
+  initialRepositoryId?: string;
+  liveLaunchAvailable?: boolean;
+  attentionBanner?: ReactNode;
+  pendingApprovals?: PendingApproval[];
+  recentMissions?: RecentMission[];
+  openRecommendations?: OpenRecommendation[];
 }) {
-  const [missionType, setMissionType] = useState<MissionType>("analysis");
-  const [stage, setStage] = useState<LaunchStage>("intent");
-  const [repositoryId, setRepositoryId] = useState(repositories[0]?.repository_id ?? "");
-  const [objective, setObjective] = useState(
-    "Analyze this repository and produce a concise architecture, risk, and next-steps report",
-  );
+  const startingType = isMissionType(initialMissionType) ? initialMissionType : "analysis";
+  const startingRepository =
+    repositories.find((repository) => repository.repository_id === initialRepositoryId)?.repository_id ??
+    repositories[0]?.repository_id ??
+    "";
+  const [missionType, setMissionType] = useState<MissionType>(startingType);
+  const [stage, setStage] = useState<LaunchStage>(isMissionType(initialMissionType) ? "scope" : "intent");
+  const [repositoryId, setRepositoryId] = useState(startingRepository);
+  const [objective, setObjective] = useState(missionTypeObjectives[startingType]);
   const [acceptanceCriteria, setAcceptanceCriteria] = useState("");
   const [validationInstructions, setValidationInstructions] = useState("");
   const [constraints, setConstraints] = useState("");
@@ -173,6 +213,10 @@ export default function FirstMissionForm({
   async function launch(event: FormEvent) {
     event.preventDefault();
     if (stage !== "review" || !selected || pending) return;
+    if (!liveLaunchAvailable || selected.agent_ready === false) {
+      setError("Reconnect Mission Agent before launching a live repository mission.");
+      return;
+    }
     setPending(true);
     setError("");
     const response = await fetch(
@@ -225,10 +269,73 @@ export default function FirstMissionForm({
   return (
     <main className="launch-shell">
       <AppNavigation subtitle="New mission" />
+      {attentionBanner}
+      {(pendingApprovals.length > 0 || openRecommendations.length > 0 || recentMissions.length > 0) && (
+        <section className="home-attention-board" aria-label="What needs you">
+          {pendingApprovals.length > 0 && (
+            <article className="home-attention-panel home-attention-urgent">
+              <p className="section-label">Needs you</p>
+              <h2>
+                {pendingApprovals.length} approval{pendingApprovals.length === 1 ? "" : "s"} waiting
+              </h2>
+              <ul>
+                {pendingApprovals.map((approval) => (
+                  <li key={approval.approvalId}>
+                    <Link href={`/missions/${approval.missionId}`}>
+                      <strong>{approval.missionName}</strong>
+                      <small>{approval.riskExplanation}</small>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/approvals">Open approvals →</Link>
+            </article>
+          )}
+          {openRecommendations.length > 0 && (
+            <article className="home-attention-panel">
+              <p className="section-label">Next work</p>
+              <h2>
+                {openRecommendations.length} open recommendation{openRecommendations.length === 1 ? "" : "s"}
+              </h2>
+              <ul>
+                {openRecommendations.map((recommendation) => (
+                  <li key={recommendation.recommendationId}>
+                    <Link href={`/recommendations/${recommendation.recommendationId}`}>
+                      <strong>{recommendation.title}</strong>
+                      <small>
+                        {recommendation.repositoryName} · {recommendation.estimatedRisk} risk
+                      </small>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          )}
+          {recentMissions.length > 0 && (
+            <article className="home-attention-panel">
+              <p className="section-label">Recent missions</p>
+              <h2>Pick up where you left off</h2>
+              <ul>
+                {recentMissions.map((mission) => (
+                  <li key={mission.missionId}>
+                    <Link href={`/missions/${mission.missionId}`}>
+                      <strong>{mission.name}</strong>
+                      <small>
+                        {mission.status} · {new Date(mission.updatedAt).toLocaleString()}
+                      </small>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/missions">All missions →</Link>
+            </article>
+          )}
+        </section>
+      )}
       <section className="repository-dashboard">
         <div className="panel-heading">
           <div>
-            <p className="section-label">Daily control plane</p>
+            <p className="section-label">Your repositories</p>
             <h2>Repositories</h2>
           </div>
           <div className="repository-heading-actions">
@@ -255,21 +362,29 @@ export default function FirstMissionForm({
         </div>
         <div className="repository-card-grid">
           {repositories.map((repository) => (
-            <Link href={`/repositories/${repository.repository_id}`} key={repository.repository_id}>
-              <span>
-                {repository.name} · {repository.default_branch}
-              </span>
-              <strong>
-                {repository.health_score ?? "—"}
-                <small>/ 100</small>
-              </strong>
-              <p>{repository.actionable_recommendations} open recommendations</p>
-              <small>
-                {repository.health_assessed_at
-                  ? `${repository.health_confidence}% confidence · ${new Date(repository.health_assessed_at).toLocaleDateString()}`
-                  : "Run an analysis to establish health"}
-              </small>
-            </Link>
+            <article className="repository-launch-card" key={repository.repository_id}>
+              <Link href={`/repositories/${repository.repository_id}`}>
+                <span>
+                  {repository.name} · {repository.default_branch}
+                  {repository.agent_ready === false ? " · agent offline" : ""}
+                </span>
+                <strong>
+                  {repository.health_score ?? "—"}
+                  <small>/ 100</small>
+                </strong>
+                <p>{repository.actionable_recommendations} open recommendations</p>
+                <small>
+                  {repository.health_assessed_at
+                    ? `${repository.health_confidence}% confidence · ${new Date(repository.health_assessed_at).toLocaleDateString()}`
+                    : "Run an analysis to establish health"}
+                </small>
+              </Link>
+              <div className="repository-card-missions">
+                <Link href={`/?type=analysis&repository=${repository.repository_id}`}>Analyze</Link>
+                <Link href={`/?type=change&repository=${repository.repository_id}`}>Change</Link>
+                <Link href={`/?type=consensus&repository=${repository.repository_id}`}>Consensus</Link>
+              </div>
+            </article>
           ))}
         </div>
       </section>
@@ -288,11 +403,11 @@ export default function FirstMissionForm({
               ? "Start with the outcome. Mission Control will only ask for the repository and execution details needed for that kind of work."
               : stage === "scope"
                 ? "Choose the repository, write the objective, and define the evidence that will make the result useful."
-                : "Confirm the repository, objective, authority boundary, and any advanced execution settings before creating the durable mission."}
+                : "Confirm the repository, objective, and approval boundary before launching the mission."}
           </p>
           <div className="principle">
             {missionType === "consensus"
-              ? "Planning is read-only. Approval binds only the exact selected executor, isolated worktree, validation, and local evidence."
+              ? "Two agents propose a plan. You approve it before any files change."
               : missionType === "change"
                 ? "Local change only. Push, pull request, merge, deployment, and secrets remain unavailable."
                 : "Read only. No repository changes."}
@@ -354,7 +469,7 @@ export default function FirstMissionForm({
                 />
                 <small>
                   {missionType === "consensus"
-                    ? "Both planners receive this exact objective, acceptance criteria, constraints, snapshot, and context hash."
+                    ? "Both planners receive this same objective and acceptance criteria."
                     : missionType === "change"
                       ? "Codex will propose a plan before requesting permission to modify an isolated worktree."
                       : "Analysis missions can investigate and recommend changes, but cannot modify files."}
@@ -443,12 +558,53 @@ export default function FirstMissionForm({
                   <p>{validationInstructions.trim() || "No additional commands provided"}</p>
                 </div>
               )}
+              {missionType === "consensus" && (
+                <>
+                  <div>
+                    <span>Planner 1</span>
+                    <strong>{plannerA?.name ?? "Not selected"}</strong>
+                    <small>
+                      {roleModels(plannerA, "planner").find((model) => model.modelId === plannerAModel)?.displayName ||
+                        plannerAModel ||
+                        "Choose a model"}
+                    </small>
+                  </div>
+                  <div>
+                    <span>Planner 2</span>
+                    <strong>{plannerB?.name ?? "Not selected"}</strong>
+                    <small>
+                      {roleModels(plannerB, "planner").find((model) => model.modelId === plannerBModel)?.displayName ||
+                        plannerBModel ||
+                        "Choose a model"}
+                    </small>
+                  </div>
+                  <div>
+                    <span>Combines the plans</span>
+                    <strong>{synthesizer?.name ?? "Not selected"}</strong>
+                    <small>
+                      {roleModels(synthesizer, "synthesizer").find((model) => model.modelId === synthesizerModel)
+                        ?.displayName ||
+                        synthesizerModel ||
+                        "Choose a model"}
+                    </small>
+                  </div>
+                  <div>
+                    <span>Implements after approval</span>
+                    <strong>{executor?.name ?? "Not selected"}</strong>
+                    <small>
+                      {roleModels(executor, "executor").find((model) => model.modelId === executorModel)?.displayName ||
+                        executorModel ||
+                        "Choose a model"}
+                    </small>
+                  </div>
+                </>
+              )}
             </section>
           )}
           {stage === "review" && missionType === "consensus" && (
             <details className="launch-advanced-settings">
               <summary>
-                Execution settings <small>Consensus plan · optional reviewer and cost guardrails</small>
+                Choose the crew <small>Optional reviewer and cost limits</small>
               </summary>
               <div className="launch-advanced-settings-body">
                 <label>
@@ -461,7 +617,7 @@ export default function FirstMissionForm({
                   />
                 </label>
                 <label>
-                  Planner A
+                  Planner 1
                   <select
                     value={plannerAId}
                     onChange={(event) => {
@@ -478,7 +634,7 @@ export default function FirstMissionForm({
                   </select>
                 </label>
                 <label>
-                  Planner A model
+                  Planner 1 model
                   <select value={plannerAModel} onChange={(event) => setPlannerAModel(event.target.value)}>
                     {roleModels(plannerA, "planner").map((model) => (
                       <option value={model.modelId} key={model.modelId}>
@@ -488,7 +644,7 @@ export default function FirstMissionForm({
                   </select>
                 </label>
                 <label>
-                  Planner B
+                  Planner 2
                   <select
                     value={plannerBId}
                     onChange={(event) => {
@@ -505,7 +661,7 @@ export default function FirstMissionForm({
                   </select>
                 </label>
                 <label>
-                  Planner B model
+                  Planner 2 model
                   <select value={plannerBModel} onChange={(event) => setPlannerBModel(event.target.value)}>
                     {roleModels(plannerB, "planner").map((model) => (
                       <option value={model.modelId} key={model.modelId}>
@@ -515,7 +671,7 @@ export default function FirstMissionForm({
                   </select>
                 </label>
                 <label>
-                  Canonical-plan synthesizer agent
+                  Combines the plans
                   <select
                     value={synthesizerId}
                     onChange={(event) => {
@@ -532,7 +688,7 @@ export default function FirstMissionForm({
                   </select>
                 </label>
                 <label>
-                  Synthesizer model
+                  Combine-plans model
                   <select value={synthesizerModel} onChange={(event) => setSynthesizerModel(event.target.value)}>
                     {roleModels(synthesizer, "synthesizer").map((model) => (
                       <option value={model.modelId} key={model.modelId}>
@@ -542,7 +698,7 @@ export default function FirstMissionForm({
                   </select>
                 </label>
                 <label>
-                  Approved implementation executor
+                  Implements after approval
                   <select
                     value={executorId}
                     onChange={(event) => {
@@ -559,7 +715,7 @@ export default function FirstMissionForm({
                   </select>
                 </label>
                 <label>
-                  Approved executor model
+                  Implementation model
                   <select value={executorModel} onChange={(event) => setExecutorModel(event.target.value)}>
                     {roleModels(executor, "executor").map((model) => (
                       <option value={model.modelId} key={model.modelId}>
@@ -569,7 +725,7 @@ export default function FirstMissionForm({
                   </select>
                 </label>
                 <label>
-                  Implementation reviewer agent <small>Recorded; automatic review remains disabled</small>
+                  Reviewer <small>Optional · recorded only</small>
                   <select
                     value={reviewerId}
                     onChange={(event) => {
@@ -578,7 +734,7 @@ export default function FirstMissionForm({
                       setReviewerModel(roleModels(agent, "implementation_reviewer")[0]?.modelId ?? "");
                     }}
                   >
-                    <option value="">No reviewer assignment</option>
+                    <option value="">No reviewer</option>
                     {reviewerAgents.map((agent) => (
                       <option value={agent.agent_id} key={agent.agent_id}>
                         {agent.name} · {agent.provider_id}
@@ -587,7 +743,7 @@ export default function FirstMissionForm({
                   </select>
                 </label>
                 <label>
-                  Implementation reviewer model
+                  Reviewer model
                   <select
                     disabled={!reviewerId}
                     value={reviewerModel}
@@ -601,7 +757,7 @@ export default function FirstMissionForm({
                   </select>
                 </label>
                 <label>
-                  Maximum planning cost <small>Optional USD hard stop</small>
+                  Cost limit <small>Optional USD stop</small>
                   <input
                     type="number"
                     min="0"
@@ -611,7 +767,7 @@ export default function FirstMissionForm({
                   />
                 </label>
                 <label>
-                  Maximum duration
+                  Time limit
                   <select value={maximumDuration} onChange={(event) => setMaximumDuration(event.target.value)}>
                     <option value="1800">30 minutes</option>
                     <option value="3600">1 hour</option>
@@ -625,10 +781,10 @@ export default function FirstMissionForm({
             <ul>
               {missionType === "consensus" ? (
                 <>
-                  <li>Exactly two distinct, capability-eligible planners</li>
-                  <li>One proposal, critique, and revision round</li>
-                  <li>Hash-bound verdicts and one exact bounded-action approval</li>
-                  <li>Separate governed implementation mission</li>
+                  <li>Two agents independently propose a plan</li>
+                  <li>They critique each other once</li>
+                  <li>You approve the chosen plan before any files change</li>
+                  <li>Implementation uses an isolated branch and local commit only</li>
                 </>
               ) : missionType === "change" ? (
                 <>
@@ -649,8 +805,8 @@ export default function FirstMissionForm({
           )}
           {stage === "review" && missionType === "consensus" && !consensusReady && (
             <p className="launch-gate-note" role="status">
-              Open execution settings to add the required acceptance criteria and eligible planner, synthesizer, and
-              executor assignments before launch.
+              Add acceptance criteria, then choose two different planners, who combines the plans, and who implements
+              after you approve.
             </p>
           )}
           {error && (
@@ -685,9 +841,9 @@ export default function FirstMissionForm({
                 type="submit"
               >
                 {pending
-                  ? "Creating durable assignment…"
+                  ? "Launching mission…"
                   : missionType === "consensus"
-                    ? "Launch consensus plan"
+                    ? "Launch consensus mission"
                     : missionType === "change"
                       ? "Launch change mission"
                       : "Launch analysis mission"}

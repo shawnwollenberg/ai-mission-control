@@ -35,6 +35,15 @@ test("stale registered agents are shown as reconnecting instead of unconfigured"
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.match(page, /ReconnectAgentHome/);
   assert.match(page, /Your agent and repositories are still registered/);
+  assert.match(page, /attentionBanner=/);
+  assert.match(page, /pendingApprovals=/);
+  assert.doesNotMatch(page, /if \(!state\.ready_agents\)\s*return/);
+});
+
+test("incomplete first-run adapters are labeled as connect-only", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /Connect only — cannot run repository missions yet/);
+  assert.match(page, /Runs analysis, change, and consensus missions/);
 });
 
 test("the production outbox dispatcher cannot consume simulated execution jobs", async () => {

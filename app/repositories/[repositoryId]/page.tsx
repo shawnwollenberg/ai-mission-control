@@ -164,15 +164,28 @@ export default async function RepositoryPage({ params }: { params: Promise<{ rep
             {repository.default_branch} · commit {repository.observed_commit?.slice(0, 12) || "not observed"}
           </p>
         </div>
-        <div
-          className="health-score"
-          aria-label={
-            current?.score == null ? "Repository health unknown" : `Repository health ${current.score} out of 100`
-          }
-        >
-          <strong>{current?.score ?? "—"}</strong>
-          <span>/ 100</span>
-          <small>{current ? `${current.confidence}% confidence` : "Run an analysis"}</small>
+        <div className="repository-header-actions">
+          <div
+            className="health-score"
+            aria-label={
+              current?.score == null ? "Repository health unknown" : `Repository health ${current.score} out of 100`
+            }
+          >
+            <strong>{current?.score ?? "—"}</strong>
+            <span>/ 100</span>
+            <small>{current ? `${current.confidence}% confidence` : "Run an analysis"}</small>
+          </div>
+          <div className="repository-mission-actions" aria-label="Start a mission">
+            <Link className="button-primary" href={`/?type=analysis&repository=${repositoryId}`}>
+              Analyze
+            </Link>
+            <Link className="button-secondary" href={`/?type=change&repository=${repositoryId}`}>
+              Change
+            </Link>
+            <Link className="button-secondary" href={`/?type=consensus&repository=${repositoryId}`}>
+              Consensus
+            </Link>
+          </div>
         </div>
       </header>
 

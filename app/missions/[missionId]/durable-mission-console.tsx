@@ -64,6 +64,37 @@ const missionStatusSymbol = (status: string) => {
   return null;
 };
 const terminalExecutionStatuses = ["succeeded", "failed", "timed_out", "cancelled"];
+const missionStages = [
+  { id: "plan", label: "Plan" },
+  { id: "working", label: "Working" },
+  { id: "waiting", label: "Waiting on you" },
+  { id: "evidence", label: "Evidence ready" },
+  { id: "done", label: "Done" },
+] as const;
+const artifactLabels: Record<string, string> = {
+  git_patch: "Diff",
+  test_result: "Validation output",
+  final_summary: "Summary",
+  markdown: "Report",
+  repository_analysis: "Analysis report",
+  implementation_plan: "Implementation plan",
+  repository_recommendations: "Recommendations",
+  repository_health_observations: "Health observations",
+};
+const artifactLabel = (kind: string) => artifactLabels[kind] ?? kind.replaceAll("_", " ");
+const currentMissionStage = (input: { status: string; pendingApproval: boolean; executions: ExecutionReadModel[] }) => {
+  if (["completed", "failed", "cancelled"].includes(input.status)) return "done";
+  if (input.pendingApproval) return "waiting";
+  const succeeded = input.executions.some((execution) => execution.status === "succeeded");
+  const hasArtifacts = input.executions.some((execution) => execution.artifacts.length > 0);
+  if (succeeded && hasArtifacts) return "evidence";
+  if (
+    input.status === "running" ||
+    input.executions.some((execution) => !terminalExecutionStatuses.includes(execution.status))
+  )
+    return "working";
+  return "plan";
+};
 
 export default function DurableMissionConsole({
   initialMission,
@@ -204,6 +235,12 @@ export default function DurableMissionConsole({
   const pendingApproval = approvals.find((approval) => approval.status === "pending");
   const openRecommendation = recommendations.find((recommendation) => recommendation.status === "open");
   const activeExecution = executions.find((execution) => !terminalExecutionStatuses.includes(execution.status));
+  const stageId = currentMissionStage({
+    status: mission.status,
+    pendingApproval: Boolean(pendingApproval),
+    executions,
+  });
+  const stageIndex = missionStages.findIndex((stage) => stage.id === stageId);
   const scheduleHealth =
     mission.status === "running"
       ? "In progress"
@@ -274,6 +311,17 @@ export default function DurableMissionConsole({
           <span>{mission.status}</span>
         </div>
       </header>
+      <ol className="mission-stage-strip" aria-label="Mission stages">
+        {missionStages.map((stage, index) => (
+          <li
+            className={`${index < stageIndex ? "is-complete" : ""}${index === stageIndex ? " is-current" : ""}`}
+            key={stage.id}
+          >
+            <span>{index + 1}</span>
+            {stage.label}
+          </li>
+        ))}
+      </ol>
       <section className="mission-health-strip" aria-label="Mission health">
         <article className="mission-health-card">
           <span>Schedule</span>
@@ -337,8 +385,8 @@ export default function DurableMissionConsole({
                         action.approvalId === approval.approvalId &&
                         action.actionType === "repository.publish_for_review",
                     )
-                      ? "Publish for review"
-                      : "Grant and continue"}
+                      ? "Open a pull request"
+                      : "Approve this plan"}
                   </button>
                   <button
                     className="button-danger"
@@ -361,7 +409,7 @@ export default function DurableMissionConsole({
       </section>
       <section className="durable-grid">
         <section className="command-panel mission-summary">
-          <p className="section-label">Mission directive</p>
+          <p className="section-label">Mission</p>
           <dl>
             <div>
               <dt>Domain</dt>
@@ -376,10 +424,6 @@ export default function DurableMissionConsole({
               <dd>{mission.riskLevel}</dd>
             </div>
             <div>
-              <dt>Aggregate version</dt>
-              <dd>{mission.aggregateVersion}</dd>
-            </div>
-            <div>
               <dt>Created</dt>
               <dd>{new Date(mission.createdAt).toLocaleString()}</dd>
             </div>
@@ -388,6 +432,13 @@ export default function DurableMissionConsole({
               <dd>{new Date(mission.updatedAt).toLocaleString()}</dd>
             </div>
           </dl>
+          <details className="mission-technical-details">
+            <summary>Technical details</summary>
+            <p>
+              Mission ID {mission.missionId} · aggregate version {mission.aggregateVersion} ·{" "}
+              {modeLabel(mission.executionMode, executions)}
+            </p>
+          </details>
           {mission.description && <p>{mission.description}</p>}
           {mission.successCriteria.length > 0 && (
             <div>
@@ -432,7 +483,7 @@ export default function DurableMissionConsole({
           <section className="command-panel mission-summary">
             <div className="panel-title">
               <div>
-                <p className="section-label">Execution supervision</p>
+                <p className="section-label">What the agent is doing</p>
                 <h2>
                   {hasMissionAgentCodex(executions)
                     ? "Live Mission Agent · Codex"
@@ -450,17 +501,20 @@ export default function DurableMissionConsole({
                 <strong>
                   {execution.agentName ?? execution.agentId ?? "Agent"} · {execution.status}
                 </strong>
-                <p>
-                  Execution {execution.executionId.slice(0, 8)} · attempt {execution.attempt} · stage{" "}
-                  {execution.stage ?? "requested"}
-                </p>
                 <p>{execution.progressSummary ?? "Waiting for progress"}</p>
                 <small>
                   {execution.status === "failed" && execution.stage === "assignment_received"
                     ? "Execution heartbeat: Not expected — stopped during repository preflight"
-                    : `Last heartbeat: ${execution.lastHeartbeat ? new Date(execution.lastHeartbeat).toLocaleString() : "Not received"}`}{" "}
-                  · {execution.commandsCompleted} commands · {execution.artifacts.length} artifacts
+                    : `Last update: ${execution.lastHeartbeat ? new Date(execution.lastHeartbeat).toLocaleString() : "Not received"}`}{" "}
+                  · {execution.artifacts.length} evidence files
                 </small>
+                <details className="mission-technical-details">
+                  <summary>Execution details</summary>
+                  <p>
+                    Execution {execution.executionId.slice(0, 8)} · attempt {execution.attempt} · stage{" "}
+                    {execution.stage ?? "requested"} · {execution.commandsCompleted} commands
+                  </p>
+                </details>
                 {execution.commitId && (
                   <>
                     <p>
@@ -519,7 +573,10 @@ export default function DurableMissionConsole({
                   {execution.artifacts.map((artifact) => (
                     <li key={artifact.artifactId}>
                       <Link href={`/artifacts/${artifact.artifactId}`}>
-                        {artifact.kind} · {artifact.byteSize} bytes · {artifact.checksum.slice(0, 12)} →
+                        {artifactLabel(artifact.kind)}
+                        <small>
+                          {artifact.byteSize} bytes · {artifact.checksum.slice(0, 12)}
+                        </small>
                       </Link>
                     </li>
                   ))}
@@ -657,8 +714,8 @@ export default function DurableMissionConsole({
         <section className="command-panel mission-summary">
           <div className="panel-title">
             <div>
-              <p className="section-label">Durable task plan</p>
-              <h2>Dependency execution</h2>
+              <p className="section-label">Work plan</p>
+              <h2>Tasks</h2>
             </div>
             <span>
               {mission.completedTaskCount}/{mission.totalTaskCount} complete
@@ -694,8 +751,28 @@ export default function DurableMissionConsole({
             ))}
           </div>
           {["completed", "failed", "cancelled"].includes(mission.status) && (
-            <div>
-              <h3>Durable debrief</h3>
+            <div className="mission-debrief">
+              <h3>Outcome</h3>
+              <dl>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{mission.status}</dd>
+                </div>
+                <div>
+                  <dt>Tasks</dt>
+                  <dd>
+                    {mission.completedTaskCount} completed · {mission.failedTaskCount} failed ·{" "}
+                    {mission.cancelledTaskCount} cancelled
+                  </dd>
+                </div>
+                <div>
+                  <dt>Evidence</dt>
+                  <dd>
+                    {executions.reduce((count, execution) => count + execution.artifacts.length, 0)} files ·{" "}
+                    {approvals.filter((approval) => approval.status !== "pending").length} decisions
+                  </dd>
+                </div>
+              </dl>
               <p>
                 {mission.name} finished with status <strong>{mission.status}</strong>. {mission.completedTaskCount}{" "}
                 tasks completed, {mission.failedTaskCount} failed, and {mission.cancelledTaskCount} were cancelled.{" "}
@@ -731,8 +808,8 @@ export default function DurableMissionConsole({
         <section className="command-panel mission-log">
           <div className="panel-title">
             <div>
-              <p className="section-label">Mission timeline</p>
-              <h2>Canonical history</h2>
+              <p className="section-label">What happened</p>
+              <h2>Activity</h2>
             </div>
             <span>{timeline.length} events</span>
           </div>
