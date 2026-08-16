@@ -44,6 +44,8 @@ test("incomplete first-run adapters are labeled as connect-only", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.match(page, /Connect only — cannot run repository missions yet/);
   assert.match(page, /Runs analysis, change, and consensus missions/);
+  assert.match(page, /\["Grok", "grok"/);
+  assert.match(page, /Runs repository analysis\. Change and consensus still need Codex\./);
 });
 
 test("the production outbox dispatcher cannot consume simulated execution jobs", async () => {

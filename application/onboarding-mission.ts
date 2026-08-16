@@ -41,7 +41,9 @@ export async function launchFirstRepositoryMission(input: {
     throw new ValidationFailedError(
       "Governed Consensus agents accept Consensus Plan assignments only. Choose a Standard agent for this mission.",
     );
-  if (resource.mission_agent_adapter !== "codex")
+  if (resource.mission_agent_adapter === "grok" && missionType !== "analysis")
+    throw new ValidationFailedError("Grok can analyze only. Connect Codex to launch a change mission.");
+  if (resource.mission_agent_adapter !== "codex" && resource.mission_agent_adapter !== "grok")
     throw new ValidationFailedError("This adapter can connect but cannot execute the first local mission yet");
   if (!supportsMissionExecution(resource.mission_agent_version))
     throw new ValidationFailedError(
@@ -58,7 +60,9 @@ export async function launchFirstRepositoryMission(input: {
       description:
         missionType === "change"
           ? "An approval-gated repository change executed in an isolated local Mission Agent worktree."
-          : "A genuine read-only analysis executed by the locally connected Mission Agent Codex adapter.",
+          : resource.mission_agent_adapter === "grok"
+            ? "A genuine read-only analysis executed by the locally connected Mission Agent Grok adapter."
+            : "A genuine read-only analysis executed by the locally connected Mission Agent Codex adapter.",
       domain: "software_delivery",
       priority: "normal",
       riskLevel: missionType === "change" ? "moderate" : "low",

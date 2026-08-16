@@ -12,6 +12,14 @@ test("Standard onboarding remains pinned to legacy Mission Agent 0.7.2", () => {
   }
 });
 
+test("Grok standard onboarding is Analyze-only on Mission Agent 0.7.3", () => {
+  const grok = onboardingProfile("standard", "grok");
+  assert.equal(grok.missionAgentVersion, "0.7.3");
+  assert.equal(grok.missionAgentChecksum, "a4321cb88a98411941675e0a9343fc53710359f03ae4a79df0c1968accd555f4");
+  assert.deepEqual(grok.capabilities, ["repository.read", "code.review", "artifact.create"]);
+  assert.equal(onboardingProfile("consensus", "grok"), undefined);
+});
+
 test("Governed Consensus onboarding advertises only the frozen 0.8 provider/model roles", () => {
   const codex = onboardingProfile("consensus", "codex");
   assert.equal(codex.missionAgentVersion, "0.8.0");
@@ -32,6 +40,7 @@ test("Governed Consensus onboarding advertises only the frozen 0.8 provider/mode
   assert.equal(claude.providerProfile.repositoryMutation, false);
   assert.equal(onboardingProfile("consensus", "hermes"), undefined);
   assert.equal(onboardingProfile("consensus", "generic_remote"), undefined);
+  assert.equal(onboardingProfile("consensus", "grok"), undefined);
   assert.equal(onboardingProfile("unsupported", "codex"), undefined);
   assert.equal(onboardingProfile("standard", "unsupported"), undefined);
 });

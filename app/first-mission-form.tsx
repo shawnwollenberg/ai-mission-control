@@ -15,6 +15,7 @@ type Repository = {
   health_assessed_at: string | null;
   actionable_recommendations: number;
   agent_ready?: boolean;
+  mission_agent_adapter?: string;
 };
 type PendingApproval = {
   approvalId: string;
@@ -126,7 +127,15 @@ export default function FirstMissionForm({
   recentMissions?: RecentMission[];
   openRecommendations?: OpenRecommendation[];
 }) {
-  const startingType = isMissionType(initialMissionType) ? initialMissionType : "analysis";
+  const startingRepositoryAdapter = repositories.find(
+    (repository) => repository.repository_id === initialRepositoryId,
+  )?.mission_agent_adapter;
+  const startingType =
+    startingRepositoryAdapter === "grok"
+      ? "analysis"
+      : isMissionType(initialMissionType)
+        ? initialMissionType
+        : "analysis";
   const startingRepository =
     repositories.find((repository) => repository.repository_id === initialRepositoryId)?.repository_id ??
     repositories[0]?.repository_id ??
@@ -164,6 +173,7 @@ export default function FirstMissionForm({
   const [error, setError] = useState("");
   const commandId = useRef(crypto.randomUUID());
   const selected = repositories.find((repository) => repository.repository_id === repositoryId);
+  const analysisOnly = selected?.mission_agent_adapter === "grok";
   const plannerA = planningAgents.find((agent) => agent.agent_id === plannerAId);
   const plannerB = planningAgents.find((agent) => agent.agent_id === plannerBId);
   const synthesizer = planningAgents.find((agent) => agent.agent_id === synthesizerId);
@@ -187,6 +197,10 @@ export default function FirstMissionForm({
     );
 
   function chooseMissionType(next: MissionType) {
+    if (analysisOnly && next !== "analysis") {
+      setError("Grok can analyze this repository today. Connect Codex to run a change or consensus mission.");
+      return;
+    }
     setMissionType(next);
     setObjective(missionTypeObjectives[next]);
     setError("");
@@ -213,6 +227,10 @@ export default function FirstMissionForm({
   async function launch(event: FormEvent) {
     event.preventDefault();
     if (stage !== "review" || !selected || pending) return;
+    if (analysisOnly && missionType !== "analysis") {
+      setError("Grok can analyze only. Connect Codex to launch a change or consensus mission.");
+      return;
+    }
     if (!liveLaunchAvailable || selected.agent_ready === false) {
       setError("Reconnect Mission Agent before launching a live repository mission.");
       return;
@@ -441,7 +459,23 @@ export default function FirstMissionForm({
               {repositories.length ? (
                 <label>
                   Registered repository
-                  <select value={repositoryId} onChange={(event) => setRepositoryId(event.target.value)}>
+                  <select
+                    value={repositoryId}
+                    onChange={(event) => {
+                      const nextId = event.target.value;
+                      setRepositoryId(nextId);
+                      const adapter = repositories.find(
+                        (repository) => repository.repository_id === nextId,
+                      )?.mission_agent_adapter;
+                      if (adapter === "grok" && missionType !== "analysis") {
+                        setMissionType("analysis");
+                        setObjective(missionTypeObjectives.analysis);
+                        setError(
+                          "Grok can analyze this repository today. Connect Codex to run a change or consensus mission.",
+                        );
+                      }
+                    }}
+                  >
                     {repositories.map((repository) => (
                       <option value={repository.repository_id} key={repository.repository_id}>
                         {repository.name} · {repository.default_branch} · {repository.agent_name}
@@ -504,11 +538,18 @@ export default function FirstMissionForm({
               )}
             </>
           )}
+          {stage === "intent" && analysisOnly && (
+            <p className="launch-gate-note" role="status">
+              This repository is connected through Grok. Analysis is available now. Change and consensus still need
+              Codex.
+            </p>
+          )}
           {stage === "intent" && (
             <div className="mission-intent-grid" aria-label="Mission intent">
               {missionIntentOptions.map((option) => (
                 <button
                   className={`mission-intent-card${missionType === option.value ? " is-selected" : ""}`}
+                  disabled={analysisOnly && option.value !== "analysis"}
                   key={option.value}
                   onClick={() => chooseMissionType(option.value)}
                   type="button"

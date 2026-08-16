@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { BrandSprite } from "@/app/brand-assets";
 import { connectionProgress } from "./connection-progress";
 
-type AgentType = "codex" | "hermes" | "claude_code" | "generic_remote";
+type AgentType = "codex" | "hermes" | "claude_code" | "generic_remote" | "grok";
 type OnboardingMode = "standard" | "consensus";
 type Agent = {
   agent_id: string;
@@ -30,6 +30,12 @@ const choices: { id: AgentType; label: string; description: string; capability: 
     label: "Codex",
     description: "Analyze, change, and plan consensus work in a local repository.",
     capability: "Runs analysis, change, and consensus missions",
+  },
+  {
+    id: "grok",
+    label: "Grok",
+    description: "Analyze a local repository with Grok Build.",
+    capability: "Runs repository analysis. Change and consensus still need Codex.",
   },
   {
     id: "hermes",
@@ -209,7 +215,7 @@ export default function OnboardingWizard({
               <button className={mode === "standard" ? "selected" : ""} onClick={() => setMode("standard")}>
                 <span className="choice-radio">{mode === "standard" ? "●" : "○"}</span>
                 <strong>Standard</strong>
-                <small>Mission Agent 0.7.2 for existing Analyze and Change Mission workflows.</small>
+                <small>Analyze and Change with Codex. Grok can analyze only.</small>
               </button>
               <button
                 className={mode === "consensus" ? "selected" : ""}
