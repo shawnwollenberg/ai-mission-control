@@ -160,3 +160,29 @@ rollback or delete retained evidence.
 **APPROVED for the exact merged PR #28 web-only scope above.** Any additional
 source, runtime, infrastructure, data, authority, or product change requires
 a separate release record and human approval.
+
+## Execution evidence and closure
+
+- Authorization record commit: `5b693394e754b99654387b73be604e743df40a89`.
+- Authorization record PR #29 merged as
+  `1d50116aabb62ce4596d750fc21c1eceab169152`.
+- SSM cutover command `7cfef0f5-4b32-48e6-98f3-3007cc9783d5` completed
+  successfully on `i-0f9f584fddf6be617`.
+- `mission-control-web` is running the exact ECR digest
+  `sha256:dc2d029df9680f0d40de541c82b1e8968641e0c515e3ee4e8e80a6cf2d9be76b`
+  with zero restarts.
+- The prior web image `sha256:c677f59209a47d5136d3b01ca0550269bd331cd37df883f4eb1376702ad37967`
+  is stopped and retained as `mission-control-web-pre-a185d07`.
+- Post-deploy `/api/health` returned `status: ok` with a reachable database;
+  `/api/readiness` returned `status: ready` with no failed checks.
+- Post-deploy bounded route checks returned `/login: 200`, `/: 307`,
+  `/missions: 307`, `/api/navigation/mission-summary: 401`, and
+  `/api/missions: 401` without a session.
+- Generic worker, action worker, Project Brain worker, PostgreSQL, and Caddy
+  remained running with zero restarts and their pre-release image digests.
+- No database migration, worker restart, infrastructure update, secret
+  retrieval, or destructive mission/repository mutation was performed.
+- Rollback was not invoked. The retained prior web container is ready for the
+  documented routine rollback if later verification requires it.
+
+The release is closed as deployed for the exact authorized web-only scope.
