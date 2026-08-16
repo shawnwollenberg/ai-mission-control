@@ -205,9 +205,10 @@ created. Therefore the following authorized checks remain pending:
   already-registered safe repository.
 
 No smoke mission was created, so there is no mission ID or smoke-mission
-mutation counter to report. The release verification performed no mission,
-repository, commit, push, pull-request, merge, deployment, or infrastructure
-mutation.
+mutation counter to report. No mission or registered-repository mutation was
+performed during release verification. The authorized release-record commits,
+protected PRs, merge, and web deployment are recorded above; no additional
+production-service or infrastructure mutation was performed.
 
 **Current release status:** web cutover complete; authenticated verification
 blocked by the explicit stop condition `HUMAN AUTHENTICATION REQUIRED`.
