@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { routeMission } from "../routing/router";
 import type {
   ArchitectDecision,
+  CtoDecision,
   CtoRequest,
   EngineerReport,
   Mission,
@@ -35,10 +36,12 @@ export type ReconciledMission = {
   latestRevision: number;
   latestEngineerReport?: EngineerReport;
   latestArchitectDecision?: ArchitectDecision;
+  latestCtoDecision?: CtoDecision;
   pendingCtoRequest?: CtoRequest;
   complete: boolean;
   ignoredHumanCommentIds: number[];
   historyDigest: string;
+  recentTransitions: Array<{ revision: number; schema: RoutingSignal["schema"] }>;
 };
 
 export function reconcileGitHubMission(input: {
@@ -73,6 +76,7 @@ export function reconcileGitHubMission(input: {
 
   let latestEngineerReport: EngineerReport | undefined;
   let latestArchitectDecision: ArchitectDecision | undefined;
+  let latestCtoDecision: CtoDecision | undefined;
   let pendingCtoRequest: CtoRequest | undefined;
   const history = [JSON.stringify(mission)];
 
@@ -93,7 +97,10 @@ export function reconcileGitHubMission(input: {
     if (signal.schema === "mc.engineer-report/v1") latestEngineerReport = signal;
     if (signal.schema === "mc.architect-decision/v1") latestArchitectDecision = signal;
     if (signal.schema === "mc.cto-request/v1") pendingCtoRequest = signal;
-    if (signal.schema === "mc.cto-decision/v1") pendingCtoRequest = undefined;
+    if (signal.schema === "mc.cto-decision/v1") {
+      latestCtoDecision = signal;
+      pendingCtoRequest = undefined;
+    }
   }
 
   const expectedStateLabel = `mc:${mission.state.toLowerCase().replaceAll("_", "-")}`;
@@ -110,10 +117,17 @@ export function reconcileGitHubMission(input: {
     latestRevision: mission.revision,
     ...(latestEngineerReport ? { latestEngineerReport } : {}),
     ...(latestArchitectDecision ? { latestArchitectDecision } : {}),
+    ...(latestCtoDecision ? { latestCtoDecision } : {}),
     ...(pendingCtoRequest ? { pendingCtoRequest } : {}),
     complete: mission.state === "COMPLETE" && input.issue.state === "closed",
     ignoredHumanCommentIds,
     historyDigest: createHash("sha256").update(history.join("\n")).digest("hex"),
+    recentTransitions: Array.from(byRevision.values(), ({ signal }) => ({
+      revision: signal.revision,
+      schema: signal.schema,
+    }))
+      .sort((left, right) => left.revision - right.revision)
+      .slice(-8),
   };
 }
 

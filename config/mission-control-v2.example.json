@@ -1,0 +1,54 @@
+{
+  "schema": "mc.config/v1",
+  "authorizedGitHubLogins": ["shawnwollenberg"],
+  "projects": [
+    {
+      "projectId": "agent-payment-risk-check",
+      "name": "Agent Payment Risk Check",
+      "githubRepo": "shawnwollenberg/agent_payment_risk_check",
+      "localCheckout": "/Users/shawnwollenberg/Developer/agent_payment_risk_check",
+      "repositoryUrl": "https://github.com/shawnwollenberg/agent_payment_risk_check",
+      "architectAdapter": "openai-responses",
+      "engineerAdapter": "codex-sdk",
+      "active": true,
+      "trackedMissionIssues": [],
+      "constitution": {
+        "schema": "mc.project-constitution/v1",
+        "projectId": "agent-payment-risk-check",
+        "repository": "shawnwollenberg/agent_payment_risk_check",
+        "defaultBranch": "main",
+        "architect": { "adapter": "openai-responses", "channel": "CHATGPT" },
+        "engineer": { "adapter": "codex-sdk" },
+        "authority": {
+          "engineer": [
+            "CODE_WRITE",
+            "TEST_EXECUTE",
+            "REPO_COMMIT",
+            "REPO_PUSH",
+            "READ_EXTERNAL",
+            "REVERSIBLE_DEV_OPERATION",
+            "ROUTINE_DEBUGGING"
+          ],
+          "architect": [
+            "MISSION_CREATE",
+            "MISSION_APPROVE",
+            "MISSION_REMEDIATE",
+            "ARCHITECTURE_DECISION",
+            "NON_ECONOMIC_EXTERNAL_TEST",
+            "TECHNICAL_RISK_DECISION"
+          ],
+          "ctoRequired": [
+            "MOVE_MONEY",
+            "SIGN_WALLET_MESSAGE",
+            "EXPAND_CREDENTIAL_AUTHORITY",
+            "ACCEPT_LEGAL_TERMS",
+            "MATERIAL_COST",
+            "DESTRUCTIVE_PRODUCTION_ACTION",
+            "IRREVERSIBLE_EXTERNAL_ACTION",
+            "MAJOR_PRODUCT_SCOPE_CHANGE"
+          ]
+        }
+      }
+    }
+  ]
+}

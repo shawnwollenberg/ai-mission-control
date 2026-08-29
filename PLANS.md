@@ -924,3 +924,13 @@ dedicated V2 validation boundary, implement bounded GitHub Issue envelopes and a
 reconstruction and webhook/idempotency behavior locally, then exercise one reversible test issue if existing GitHub
 credentials already have the required authority. No Codex, Architect, dashboard, database, PR, merge, deployment,
 permission expansion, or V1 fixture remediation is authorized.
+
+**Mission Control 2.0 non-production vertical slice authorized on 2026-08-29:** continue autonomously from the accepted
+V2 foundation through the official Codex SDK Engineer adapter, supported OpenAI Responses Architect adapter, minimal
+provider bindings, deterministic closed-loop orchestration, exact revision-bound CTO escalation, authenticated V2
+dashboard/Inbox/detail routes, tests, documentation, coherent commits, and pushes to the current development branch.
+The GitHub Issue remains durable Mission truth and V1 remains intact. This authorization includes ordinary bounded
+development provider usage and reversible non-production GitHub evidence; it explicitly excludes production cutover,
+V1 data cleanup, database migration, permission or credential expansion, material cost, wallet/financial effects,
+merge, and deployment. A missing provider credential must be reported as an acceptance blocker rather than created,
+requested, copied, or exposed by Mission Control.

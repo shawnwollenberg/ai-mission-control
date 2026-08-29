@@ -4,6 +4,7 @@ node_modules/
 *.tsbuildinfo
 .DS_Store
 .mission-control/
+.mission-control-v2-runtime/
 .agents/
 /agent/
 .env*
