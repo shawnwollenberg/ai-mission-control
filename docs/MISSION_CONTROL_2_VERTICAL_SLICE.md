@@ -42,6 +42,12 @@ summary, Architect decision, exact pending CTO request, recent transitions, GitH
 context IDs. Approve, Reject, and Discuss are owner-only, same-origin, optimistic-concurrency mutations. Discuss routes
 back to the Architect context; Mission Control has no chat UI.
 
+While `/v2` is visible, the dashboard refreshes its server projection every 10 seconds. This updates Mission, actor,
+CTO Inbox, and Local Worker presentation without issuing a mutation. Refresh scheduling stops while the document is
+hidden where the Visibility API is supported, refreshes once when visibility returns, then resumes the bounded timer.
+The dashboard read path reconstructs directly from the fetched Issue and comments with label enforcement disabled for
+presentation; it never repairs labels, appends comments, updates the Issue, or invokes the mutating MissionStore path.
+
 ## Validation evidence
 
 `npm run test:v2` covers the router, strict envelopes, GitHub reconstruction, idempotency, adapters, same-thread

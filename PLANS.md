@@ -966,3 +966,12 @@ persistent macOS service installation, permission expansion, merge, and V1 delet
 is `docs/MISSION_CONTROL_2_LOCAL_SUBSCRIPTION_WORKER.md`. A readiness commit is review evidence, not deployment
 approval. The next exact human decision, if validation succeeds, is
 `AUTHORIZE_CONTROLLED_V2_DEPLOYMENT_AND_LOCAL_WORKER_PROVISIONING`.
+
+## Mission Control 2.0 — Dashboard readability and automatic refresh release
+
+**Authorized by the product owner on 2026-08-29:** after V2 Missions #36 and #37 complete, commit, push, and deploy the
+exact combined dashboard contrast and read-only automatic-refresh changes. The routine governed application release is
+bounded by `docs/release/R_2026_08_29_V2_DASHBOARD_READABILITY_REFRESH.md`. It changes no authentication,
+authorization, routing authority, provider authority, credentials, migration, infrastructure, canonical GitHub
+reconciliation semantics, or V1 behavior. Deployment must remain digest-pinned with the existing backup and rollback
+procedure and must verify V1 health/readiness after replacement.
