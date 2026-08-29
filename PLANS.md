@@ -934,3 +934,21 @@ development provider usage and reversible non-production GitHub evidence; it exp
 V1 data cleanup, database migration, permission or credential expansion, material cost, wallet/financial effects,
 merge, and deployment. A missing provider credential must be reported as an acceptance blocker rather than created,
 requested, copied, or exposed by Mission Control.
+
+## Mission Control 2.0 — Production readiness and dogfood preparation
+
+**Classification:** Security-sensitive application and provider-runtime preparation.
+
+**Development authorization:** The product owner authorized readiness review, autonomous remediation, reversible
+non-production GitHub/provider evidence, coherent commits, and pushes on 2026-08-29. This authorization explicitly
+excludes production deployment, cutover, V1 deletion, permission/credential expansion, material cost, merge, and
+production database mutation.
+
+**Release status:** Human production approval is pending and controlled deployment is blocked. The exact readiness
+evidence, rollout, rollback, residual risks, and dogfood plan are in
+`docs/MISSION_CONTROL_2_PRODUCTION_READINESS.md`. Official OpenAI guidance distinguishes local subscription-authenticated
+Codex work from API-key programmatic CI/CD use. The current production worker expects API credentials, while accepted
+V2 uses subscription authentication. A human must approve an exact supported provider-worker topology and any required
+credential/billing authority before an exact V2 deployment release can be authorized.
+
+No readiness document or development commit constitutes approval to deploy. V1 remains authoritative and intact.

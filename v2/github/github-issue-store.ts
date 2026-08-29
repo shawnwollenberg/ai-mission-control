@@ -55,11 +55,29 @@ export class GitHubIssueMissionStore implements MissionStore {
   }
 
   async reconcileMission(ref: MissionIssueRef) {
-    return reconcileGitHubMission({
-      constitution: this.configuration.constitution,
-      issue: await this.api.readIssue(ref.issueNumber),
-      authorizedLogins: this.configuration.authorizedLogins,
-    });
+    const issue = await this.api.readIssue(ref.issueNumber);
+    try {
+      return reconcileGitHubMission({
+        constitution: this.configuration.constitution,
+        issue,
+        authorizedLogins: this.configuration.authorizedLogins,
+      });
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.startsWith("Issue must contain exactly the derived state label"))
+        throw error;
+      const derived = reconcileGitHubMission({
+        constitution: this.configuration.constitution,
+        issue,
+        authorizedLogins: this.configuration.authorizedLogins,
+        enforceLabels: false,
+      });
+      await this.updateMissionState(ref, derived.mission);
+      return reconcileGitHubMission({
+        constitution: this.configuration.constitution,
+        issue: await this.api.readIssue(ref.issueNumber),
+        authorizedLogins: this.configuration.authorizedLogins,
+      });
+    }
   }
 
   private async reconcileWithoutPresentation(ref: MissionIssueRef) {
@@ -134,6 +152,8 @@ export class GhCliIssueApi implements GitHubIssueApi {
           )
         : [],
       authorLogin: user(issue.user),
+      createdAt: String(issue.created_at),
+      updatedAt: String(issue.updated_at),
       comments: comments.map((comment) => ({
         id: Number(comment.id),
         body: String(comment.body ?? ""),
@@ -182,4 +202,89 @@ export class GhCliIssueApi implements GitHubIssueApi {
     });
     return (output.trim() ? JSON.parse(output) : undefined) as T;
   }
+}
+
+export class GitHubRestIssueApi implements GitHubIssueApi {
+  private readonly baseUrl: string;
+  constructor(
+    private readonly repository: string,
+    private readonly token: string,
+    apiBaseUrl = "https://api.github.com",
+  ) {
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error("Invalid GitHub repository identity");
+    if (token.length < 20) throw new Error("GitHub token is not configured");
+    this.baseUrl = apiBaseUrl.replace(/\/$/, "");
+  }
+
+  async readIssue(issueNumber: number): Promise<GitHubMissionIssue> {
+    const issue = await this.request<Record<string, unknown>>(`/repos/${this.repository}/issues/${issueNumber}`);
+    const comments: Array<Record<string, unknown>> = [];
+    for (let page = 1; page <= 20; page++) {
+      const batch = await this.request<Array<Record<string, unknown>>>(
+        `/repos/${this.repository}/issues/${issueNumber}/comments?per_page=100&page=${page}`,
+      );
+      comments.push(...batch);
+      if (batch.length < 100) break;
+      if (page === 20) throw new Error("GitHub Mission exceeds the 2000-comment reconciliation limit");
+    }
+    const user = (value: unknown) =>
+      value && typeof value === "object" && typeof (value as { login?: unknown }).login === "string"
+        ? (value as { login: string }).login
+        : null;
+    return {
+      number: Number(issue.number),
+      url: String(issue.html_url),
+      title: String(issue.title),
+      body: String(issue.body ?? ""),
+      state: issue.state === "closed" ? "closed" : "open",
+      stateReason: typeof issue.state_reason === "string" ? issue.state_reason : null,
+      labels: Array.isArray(issue.labels)
+        ? issue.labels.flatMap((label) =>
+            label && typeof label === "object" && typeof (label as { name?: unknown }).name === "string"
+              ? [(label as { name: string }).name]
+              : [],
+          )
+        : [],
+      authorLogin: user(issue.user),
+      createdAt: String(issue.created_at),
+      updatedAt: String(issue.updated_at),
+      comments: comments.map((comment) => ({
+        id: Number(comment.id),
+        body: String(comment.body ?? ""),
+        authorLogin: user(comment.user),
+        createdAt: String(comment.created_at),
+        updatedAt: String(comment.updated_at),
+      })),
+    };
+  }
+
+  async addComment(issueNumber: number, body: string) {
+    await this.request(`/repos/${this.repository}/issues/${issueNumber}/comments`, "POST", { body });
+  }
+
+  async updateIssue(issueNumber: number, input: { labels?: string[]; state?: "open" | "closed" }) {
+    await this.request(`/repos/${this.repository}/issues/${issueNumber}`, "PATCH", input);
+  }
+
+  private async request<T = unknown>(path: string, method = "GET", body?: unknown): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method,
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${this.token}`,
+        "content-type": "application/json",
+        "x-github-api-version": "2022-11-28",
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) throw new Error(`GitHub Issues request failed with status ${response.status}`);
+    return (response.status === 204 ? undefined : await response.json()) as T;
+  }
+}
+
+export function createGitHubIssueApi(repository: string): GitHubIssueApi {
+  return process.env.GITHUB_TOKEN
+    ? new GitHubRestIssueApi(repository, process.env.GITHUB_TOKEN)
+    : new GhCliIssueApi(repository);
 }

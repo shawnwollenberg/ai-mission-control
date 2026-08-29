@@ -1,6 +1,6 @@
 import { CodexSdkEngineerAdapter } from "../adapters/codex-sdk-engineer";
 import { CodexSdkArchitectAdapter } from "../adapters/codex-sdk-architect";
-import { GhCliIssueApi, GitHubIssueMissionStore } from "../github/github-issue-store";
+import { createGitHubIssueApi, GitHubIssueMissionStore } from "../github/github-issue-store";
 import { MissionOrchestrator } from "../orchestration/orchestrator";
 import { JsonBindingStore } from "./bindings";
 import { loadV2Configuration } from "./config";
@@ -10,7 +10,7 @@ export async function createV2MissionRuntime(projectId: string) {
   const configuration = await loadV2Configuration();
   const project = configuration.projects.find((value) => value.active && value.projectId === projectId);
   if (!project) throw new Error(`Unknown active V2 project ${projectId}`);
-  const api = new GhCliIssueApi(project.githubRepo);
+  const api = createGitHubIssueApi(project.githubRepo);
   const store = new GitHubIssueMissionStore(api, {
     constitution: project.constitution,
     authorizedLogins: configuration.authorizedGitHubLogins,

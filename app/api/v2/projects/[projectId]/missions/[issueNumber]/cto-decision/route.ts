@@ -23,12 +23,12 @@ export async function POST(
     };
     if (!["APPROVED", "REJECTED", "DISCUSS"].includes(body.decision)) throw new Error("Invalid CTO decision");
     const runtime = await createV2MissionRuntime(projectId);
-    await runtime.orchestrator.decide(issueNumber, body);
-    const result = await runtime.orchestrator.advance(issueNumber);
+    const result = await runtime.orchestrator.decide(issueNumber, body);
     return NextResponse.json({
       missionId: result.mission.missionId,
       state: result.mission.state,
       revision: result.latestRevision,
+      routing: "queued_for_v2_worker",
     });
   } catch (error) {
     return NextResponse.json(

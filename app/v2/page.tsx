@@ -64,10 +64,11 @@ function MissionRow({ card }: { card: Awaited<ReturnType<typeof loadDashboardCar
         background: card.color === "WHITE" ? "#fafafa" : "white",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-        <div>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+        <div style={{ minWidth: 0, flex: "1 1 360px" }}>
           <strong>{card.projectName}</strong> · {card.actor}
           <p style={{ margin: "7px 0" }}>{card.status}</p>
+          {card.systemFailure ? <small>System/provider failure · Mission truth remains in GitHub</small> : null}
         </div>
         <div style={{ whiteSpace: "nowrap" }}>
           <Link href={`/v2/projects/${card.projectId}?issue=${card.issueNumber}`}>Open</Link> ·{" "}

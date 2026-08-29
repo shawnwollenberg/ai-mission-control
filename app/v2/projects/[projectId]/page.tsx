@@ -20,13 +20,30 @@ export default async function ProjectDetail({
   const issue = await runtime.api.readIssue(issueNumber);
   const binding = await runtime.bindings.get(state.mission.missionId);
   return (
-    <main style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px", fontFamily: "system-ui" }}>
+    <main
+      style={{
+        width: "100%",
+        maxWidth: 900,
+        margin: "0 auto",
+        padding: "48px 24px",
+        boxSizing: "border-box",
+        overflowWrap: "anywhere",
+        fontFamily: "system-ui",
+      }}
+    >
       <a href="/v2">← Dashboard</a>
       <p style={{ fontFamily: "monospace" }}>{runtime.project.name}</p>
-      <h1>{state.mission.objective}</h1>
+      <h1 style={{ fontSize: "clamp(28px, 7vw, 42px)" }}>{state.mission.objective}</h1>
       <p>
         <strong>{state.mission.currentActor}</strong> · {state.mission.state} · revision {state.latestRevision}
       </p>
+      {binding?.failure ? (
+        <section role="alert" style={{ border: "2px solid #6b7280", padding: 20 }}>
+          <h2>System/provider failure</h2>
+          <p>{binding.failure.message}</p>
+          <p>Mission truth remains in GitHub. No authority was implicitly granted and no unsafe retry occurs.</p>
+        </section>
+      ) : null}
       {state.latestEngineerReport ? (
         <section>
           <h2>Latest Engineer report</h2>
@@ -47,6 +64,18 @@ export default async function ProjectDetail({
           <p>
             <strong>{state.pendingCtoRequest.capability}</strong> · {state.pendingCtoRequest.action}
           </p>
+          <dl>
+            <dt>Financial effect</dt>
+            <dd>{state.pendingCtoRequest.financialEffect}</dd>
+            <dt>External/on-chain effect</dt>
+            <dd>{state.pendingCtoRequest.externalEffect}</dd>
+            <dt>Reversible</dt>
+            <dd>{state.pendingCtoRequest.reversible ? "Yes" : "No"}</dd>
+            <dt>Architect recommendation</dt>
+            <dd>{state.pendingCtoRequest.architectRecommendation}</dd>
+            <dt>Age</dt>
+            <dd>{formatAge(issue.comments.at(-1)?.createdAt ?? issue.updatedAt)}</dd>
+          </dl>
           <DecisionForm
             projectId={projectId}
             issueNumber={issueNumber}
@@ -74,14 +103,21 @@ export default async function ProjectDetail({
               · Codex thread <code>{binding.codexThreadId}</code>
             </>
           ) : null}
-          {binding?.architectResponseId ? (
+          {binding?.architectThreadId ? (
             <>
               {" "}
-              · Architect response <code>{binding.architectResponseId}</code>
+              · Architect thread <code>{binding.architectThreadId}</code>
             </>
           ) : null}
         </p>
       </section>
     </main>
   );
+}
+
+function formatAge(value: string) {
+  const minutes = Math.max(0, Math.floor((Date.now() - Date.parse(value)) / 60_000));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 48 ? `${hours}h` : `${Math.floor(hours / 24)}d`;
 }

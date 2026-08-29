@@ -28,11 +28,14 @@ export type GitHubMissionIssue = {
   stateReason?: string | null;
   labels: string[];
   authorLogin: string | null;
+  createdAt: string;
+  updatedAt: string;
   comments: GitHubMissionComment[];
 };
 
 export type ReconciledMission = {
   mission: Mission;
+  sourceMissionDigest: string;
   latestRevision: number;
   latestEngineerReport?: EngineerReport;
   latestArchitectDecision?: ArchitectDecision;
@@ -55,6 +58,7 @@ export function reconcileGitHubMission(input: {
     throw new Error("Mission envelope author is unauthorized");
 
   let mission = parseMissionBody(input.issue.body);
+  const sourceMissionDigest = createHash("sha256").update(JSON.stringify(mission)).digest("hex");
   const byRevision = new Map<number, { signal: RoutingSignal; canonical: string }>();
   const ignoredHumanCommentIds: number[] = [];
 
@@ -114,6 +118,7 @@ export function reconcileGitHubMission(input: {
 
   return {
     mission,
+    sourceMissionDigest,
     latestRevision: mission.revision,
     ...(latestEngineerReport ? { latestEngineerReport } : {}),
     ...(latestArchitectDecision ? { latestArchitectDecision } : {}),
