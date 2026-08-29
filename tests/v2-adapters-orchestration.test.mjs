@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { CodexSdkArchitectAdapter } from "../v2/adapters/codex-sdk-architect.ts";
 import { CodexSdkEngineerAdapter } from "../v2/adapters/codex-sdk-engineer.ts";
 import { OpenAIResponsesArchitectAdapter } from "../v2/adapters/openai-architect.ts";
 import { GitHubIssueMissionStore } from "../v2/github/github-issue-store.ts";
@@ -18,7 +19,7 @@ const project = {
   githubRepo: fixture.constitution.repository,
   localCheckout: "/tmp/fixture",
   repositoryUrl: `https://github.com/${fixture.constitution.repository}`,
-  architectAdapter: "openai-responses",
+  architectAdapter: "codex-sdk",
   engineerAdapter: "codex-sdk",
   active: true,
   constitution: fixture.constitution,
@@ -124,6 +125,49 @@ test("Codex may request an exact CTO escalation but cannot request ownerless aut
       }),
     /no configured authority owner/,
   );
+});
+
+test("Codex Architect uses a separate read-only resumable thread and strict output", async () => {
+  const calls = [];
+  const decision = {
+    schema: "mc.architect-decision/v1",
+    missionId: fixture.mission.missionId,
+    revision: 2,
+    decision: "REMEDIATE",
+    rationale: "One bounded validation step remains.",
+    nextMission: {
+      objective: "Run the bounded validation",
+      acceptanceCriteria: ["Validation passes"],
+      constraints: ["No deployment"],
+    },
+  };
+  const thread = (id) => ({
+    id,
+    run: async (prompt, options) => {
+      calls.push({ id, prompt, options });
+      return { finalResponse: JSON.stringify(decision), items: [], usage: null };
+    },
+  });
+  const client = { startThread: () => thread("architect-thread-1"), resumeThread: (id) => thread(id) };
+  const adapter = new CodexSdkArchitectAdapter(client);
+  const first = await adapter.review({
+    mission: fixture.mission,
+    constitution: fixture.constitution,
+    localCheckout: "/tmp/fixture",
+  });
+  await adapter.review({
+    mission: fixture.mission,
+    constitution: fixture.constitution,
+    localCheckout: "/tmp/fixture",
+    architectThreadId: first.architectThreadId,
+  });
+  assert.equal(first.architectThreadId, "architect-thread-1");
+  assert.deepEqual(
+    calls.map((call) => call.id),
+    ["architect-thread-1", "architect-thread-1"],
+  );
+  assert.match(calls[0].prompt, /read-only technical Architect/);
+  assert.equal(calls[0].options.outputSchema.additionalProperties, false);
 });
 
 test("Responses Architect uses strict structured output, no tools, and resumes response context", async () => {

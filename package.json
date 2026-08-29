@@ -33,6 +33,7 @@
     "acceptance:project-brain:local": "tsx scripts/run-project-brain-final-local-acceptance.ts",
     "acceptance:project-brain:remote": "tsx scripts/run-project-brain-042-remote-acceptance.ts",
     "acceptance:consensus:real": "tsx scripts/run-consensus-real-acceptance.ts",
+    "acceptance:v2:real": "tsx scripts/run-v2-real-acceptance.ts",
     "acceptance:contract:generate": "node --import tsx scripts/generate-consensus-acceptance-contract.mjs",
     "acceptance:contract:check": "node --import tsx scripts/generate-consensus-acceptance-contract.mjs --check",
     "acceptance:finalize": "node --import tsx scripts/finalize-consensus-real-acceptance.ts",

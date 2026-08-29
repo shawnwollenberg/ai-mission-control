@@ -6,20 +6,24 @@ authorization. V2 is not deployed and no production traffic or V1 data was chang
 ## Runtime boundary
 
 The deterministic routing kernel remains side-effect free. `MissionOrchestrator` performs provider and GitHub side
-effects through `CodexSdkEngineerAdapter`, `OpenAIResponsesArchitectAdapter`, and `MissionStore`. The official Codex
-SDK starts one thread per mission and resumes the stored thread ID for remediation. It runs in the configured checkout
-with workspace-only writes, no network, no interactive approval, medium reasoning, a bounded mission packet, and a
-strict Engineer Report schema. CTO-owned capabilities may be requested for escalation but are never granted to Codex.
+effects through `CodexSdkEngineerAdapter`, `CodexSdkArchitectAdapter`, and `MissionStore`. The official Codex SDK uses
+the owner's existing ChatGPT subscription authentication. It starts separate Engineer and Architect threads per
+mission and resumes their stored thread IDs. The Engineer runs in the configured checkout with workspace-only writes;
+the Architect runs read-only. Both have network disabled, no interactive approval, medium reasoning, bounded mission
+packets, and strict output schemas. CTO-owned capabilities may be requested for escalation but are never granted to
+either provider.
 
-The Architect uses the official OpenAI Responses API with versioned instructions, strict JSON Schema output, no
-tools, and `previous_response_id` continuity. It makes decisions only. A `CTO_REQUIRED` decision becomes an inbox
-request only when an Engineer Report identifies an exact CTO-owned capability. Mission Control binds decisions to the
-mission and pending request revision and rejects stale decisions.
+The Codex SDK adapter is the default Architect. It makes decisions only and cannot mutate the repository. The
+Responses Architect remains disabled at runtime, so V2 neither requires an API key nor creates separate Responses API
+billing. `WorkspaceAgentArchitectAdapter` preserves the future trigger/result interface without making Workspace Agent
+a current dependency. A `CTO_REQUIRED` decision becomes an inbox request only when an Engineer Report identifies an
+exact CTO-owned capability. Mission Control binds decisions to the mission and pending request revision and rejects
+stale decisions.
 
 ## Minimal persistence
 
 Project definitions and constitutions live in the Mission Control JSON configuration. The runtime JSON store contains
-only mission/project/issue identity, Codex thread ID, Architect response ID, last processed revision, and a bounded
+only mission/project/issue identity, separate Engineer and Architect Codex thread IDs, last processed revision, and a bounded
 in-flight dispatch marker. File replacement is atomic and owner-only. It contains no GitHub body, comment, report,
 decision, or mission-history copy. Deleting derived UI/cache state is safe: Mission state, current actor, reports,
 decisions, requests, transitions, and completion rebuild from GitHub; provider bindings remain the minimal required
@@ -44,13 +48,17 @@ back to the Architect context; Mission Control has no chat UI.
 remediation, Architect context continuation, exact CTO escalation, stale-decision rejection, dispatch pause, simulated
 approval, completion, dashboard derivation, and history rebuild.
 
-A real Codex SDK acceptance used the clean `agent_payment_risk_check` checkout without modifying it. Thread
-`01a04e88-ccd1-7871-b421-146d3bb95fa1` returned revision 2 after passing 11/11 targeted tests and a clean-tree check;
-the remediation turn resumed the same thread and returned revision 4 with another clean-tree check and a bounded test
-gap. No OpenAI API key was available to the Mission Control process, so the real Responses Architect and therefore the
-single real-provider end-to-end GitHub loop remain unexercised. The adapter contract and complete loop are validated
-with deterministic provider doubles. Supplying a development `OPENAI_API_KEY` is credential authority and remains an
-owner action.
+The full real-provider acceptance completed in the private `agent_payment_risk_check` repository as
+[Issue #2](https://github.com/shawnwollenberg/agent_payment_risk_check/issues/2). Engineer thread
+`01a04ea1-7f40-7e93-8d2a-188eab4fa20c` and read-only Architect thread
+`01a04ea1-dc93-7e10-bf91-a036d96519bf` drove revisions 1 through 9 without human copy/paste. The Architect returned
+`REMEDIATE`; Mission Control resumed the same Engineer thread; the bounded pytest target passed; the Engineer requested
+the inert `SIGN_WALLET_MESSAGE` boundary; the Architect returned `CTO_REQUIRED`; Mission Control paused, recorded an
+exact simulated approval, resumed the same Engineer thread, observed the test pass again and a clean worktree, then
+recorded Architect `APPROVE` and closed the Issue. A fresh GitHub store reconstructed revision 9 and history digest
+`ba1ba922ca871a7da2eac284f6a15da72a7e56212f8d604e92f48e0326e503e7`; the derived dashboard state was
+`COMPLETE` / `NONE` / `BLACK`. Responses remained disabled. No wallet access, signature, money movement, network tool,
+deployment, repository modification, commit, or push occurred in the fixture repository.
 
 ## Rollback and legacy
 

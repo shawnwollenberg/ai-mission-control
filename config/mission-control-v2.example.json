@@ -8,7 +8,7 @@
       "githubRepo": "shawnwollenberg/agent_payment_risk_check",
       "localCheckout": "/Users/shawnwollenberg/Developer/agent_payment_risk_check",
       "repositoryUrl": "https://github.com/shawnwollenberg/agent_payment_risk_check",
-      "architectAdapter": "openai-responses",
+      "architectAdapter": "codex-sdk",
       "engineerAdapter": "codex-sdk",
       "active": true,
       "trackedMissionIssues": [],
@@ -17,7 +17,7 @@
         "projectId": "agent-payment-risk-check",
         "repository": "shawnwollenberg/agent_payment_risk_check",
         "defaultBranch": "main",
-        "architect": { "adapter": "openai-responses", "channel": "CHATGPT" },
+        "architect": { "adapter": "codex-sdk", "channel": "CHATGPT" },
         "engineer": { "adapter": "codex-sdk" },
         "authority": {
           "engineer": [

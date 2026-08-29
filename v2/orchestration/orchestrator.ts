@@ -27,7 +27,9 @@ export type ArchitectRunner = {
     engineerReport?: EngineerReport;
     priorSignal?: RoutingSignal;
     previousResponseId?: string;
-  }): Promise<{ decision: ArchitectDecision; responseId: string }>;
+    architectThreadId?: string;
+    localCheckout: string;
+  }): Promise<{ decision: ArchitectDecision; responseId?: string; architectThreadId?: string }>;
 };
 
 export class MissionOrchestrator {
@@ -72,8 +74,14 @@ export class MissionOrchestrator {
         engineerReport: current.latestEngineerReport,
         priorSignal: this.latestSignal(current),
         previousResponseId: binding.architectResponseId,
+        architectThreadId: binding.architectThreadId,
+        localCheckout: this.project.localCheckout,
       });
-      binding = { ...binding, architectResponseId: result.responseId };
+      binding = {
+        ...binding,
+        ...(result.responseId ? { architectResponseId: result.responseId } : {}),
+        ...(result.architectThreadId ? { architectThreadId: result.architectThreadId } : {}),
+      };
       current = await this.store.appendArchitectDecision({ issueNumber }, result.decision);
       if (result.decision.decision === "CTO_REQUIRED") {
         const report = current.latestEngineerReport;

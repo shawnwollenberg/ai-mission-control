@@ -6,6 +6,7 @@ export type MissionBinding = {
   projectId: string;
   issueNumber: number;
   codexThreadId?: string;
+  architectThreadId?: string;
   architectResponseId?: string;
   lastProcessedRevision: number;
   inFlight?: { idempotencyKey: string; actor: "ENGINEER" | "ARCHITECT"; revision: number };

@@ -1,5 +1,5 @@
 import { CodexSdkEngineerAdapter } from "../adapters/codex-sdk-engineer";
-import { OpenAIResponsesArchitectAdapter } from "../adapters/openai-architect";
+import { CodexSdkArchitectAdapter } from "../adapters/codex-sdk-architect";
 import { GhCliIssueApi, GitHubIssueMissionStore } from "../github/github-issue-store";
 import { MissionOrchestrator } from "../orchestration/orchestrator";
 import { JsonBindingStore } from "./bindings";
@@ -17,12 +17,14 @@ export async function createV2MissionRuntime(projectId: string) {
   });
   const dataDirectory = process.env.MISSION_CONTROL_V2_DATA_DIR ?? join(process.cwd(), ".mission-control-v2-runtime");
   const bindings = new JsonBindingStore(join(dataDirectory, "provider-bindings.json"));
-  const orchestrator = new MissionOrchestrator(
-    project,
-    store,
-    bindings,
-    new CodexSdkEngineerAdapter(),
-    new OpenAIResponsesArchitectAdapter(),
-  );
+  const architect =
+    project.architectAdapter === "codex-sdk"
+      ? new CodexSdkArchitectAdapter()
+      : {
+          review: async () => {
+            throw new Error(`Architect adapter ${project.architectAdapter} is not enabled`);
+          },
+        };
+  const orchestrator = new MissionOrchestrator(project, store, bindings, new CodexSdkEngineerAdapter(), architect);
   return { configuration, project, api, store, bindings, orchestrator };
 }

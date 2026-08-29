@@ -8,7 +8,7 @@ export type ProjectConfiguration = {
   githubRepo: string;
   localCheckout: string;
   repositoryUrl: string;
-  architectAdapter: "openai-responses";
+  architectAdapter: "codex-sdk" | "workspace-agent" | "openai-responses-disabled";
   engineerAdapter: "codex-sdk";
   active: boolean;
   trackedMissionIssues?: number[];
