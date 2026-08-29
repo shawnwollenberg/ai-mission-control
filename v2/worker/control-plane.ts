@@ -11,8 +11,15 @@ export class WorkerControlPlane {
   async synchronizeEligibleDispatches() {
     const configuration = await loadV2Configuration();
     for (const project of configuration.projects.filter((item) => item.active)) {
-      const store = missionStore(project, configuration.authorizedGitHubLogins);
-      for (const issueNumber of project.trackedMissionIssues ?? []) {
+      const api = createGitHubIssueApi(project.githubRepo);
+      const store = new GitHubIssueMissionStore(api, {
+        constitution: project.constitution,
+        authorizedLogins: configuration.authorizedGitHubLogins,
+      });
+      const issueNumbers = Array.from(
+        new Set([...(project.trackedMissionIssues ?? []), ...(await api.listTrackedIssueNumbers())]),
+      );
+      for (const issueNumber of issueNumbers) {
         const current = await store.readMission({ issueNumber });
         const actor = current.mission.currentActor;
         if (!(["ARCHITECT", "ENGINEER"] as const).includes(actor as "ARCHITECT" | "ENGINEER")) continue;

@@ -108,7 +108,9 @@ export function reconcileGitHubMission(input: {
   }
 
   const expectedStateLabel = `mc:${mission.state.toLowerCase().replaceAll("_", "-")}`;
-  const stateLabels = input.issue.labels.filter((label) => label.startsWith("mc:") && label !== "mc:mission");
+  const stateLabels = input.issue.labels.filter(
+    (label) => label.startsWith("mc:") && label !== "mc:mission" && label !== "mc:tracked",
+  );
   if (input.enforceLabels !== false && (stateLabels.length !== 1 || stateLabels[0] !== expectedStateLabel))
     throw new Error(`Issue must contain exactly the derived state label ${expectedStateLabel}`);
   if (input.issue.state === "closed" && mission.state !== "COMPLETE")

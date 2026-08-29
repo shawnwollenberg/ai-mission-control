@@ -38,6 +38,56 @@
             "TECHNICAL_RISK_DECISION"
           ],
           "ctoRequired": [
+            "OWNER_AUTHENTICATION",
+            "MOVE_MONEY",
+            "SIGN_WALLET_MESSAGE",
+            "EXPAND_CREDENTIAL_AUTHORITY",
+            "ACCEPT_LEGAL_TERMS",
+            "MATERIAL_COST",
+            "DESTRUCTIVE_PRODUCTION_ACTION",
+            "IRREVERSIBLE_EXTERNAL_ACTION",
+            "MAJOR_PRODUCT_SCOPE_CHANGE"
+          ]
+        }
+      }
+    },
+    {
+      "projectId": "permixa",
+      "name": "Permixa",
+      "githubRepo": "shawnwollenberg/permixa",
+      "localCheckout": "/Users/shawnwollenberg/Developer/permixa",
+      "repositoryUrl": "https://github.com/shawnwollenberg/permixa",
+      "architectAdapter": "codex-sdk",
+      "engineerAdapter": "codex-sdk",
+      "active": true,
+      "trackedMissionIssues": [],
+      "constitution": {
+        "schema": "mc.project-constitution/v1",
+        "projectId": "permixa",
+        "repository": "shawnwollenberg/permixa",
+        "defaultBranch": "main",
+        "architect": { "adapter": "codex-sdk", "channel": "CHATGPT" },
+        "engineer": { "adapter": "codex-sdk" },
+        "authority": {
+          "engineer": [
+            "CODE_WRITE",
+            "TEST_EXECUTE",
+            "REPO_COMMIT",
+            "REPO_PUSH",
+            "READ_EXTERNAL",
+            "REVERSIBLE_DEV_OPERATION",
+            "ROUTINE_DEBUGGING"
+          ],
+          "architect": [
+            "MISSION_CREATE",
+            "MISSION_APPROVE",
+            "MISSION_REMEDIATE",
+            "ARCHITECTURE_DECISION",
+            "NON_ECONOMIC_EXTERNAL_TEST",
+            "TECHNICAL_RISK_DECISION"
+          ],
+          "ctoRequired": [
+            "OWNER_AUTHENTICATION",
             "MOVE_MONEY",
             "SIGN_WALLET_MESSAGE",
             "EXPAND_CREDENTIAL_AUTHORITY",

@@ -975,3 +975,15 @@ bounded by `docs/release/R_2026_08_29_V2_DASHBOARD_READABILITY_REFRESH.md`. It c
 authorization, routing authority, provider authority, credentials, migration, infrastructure, canonical GitHub
 reconciliation semantics, or V1 behavior. Deployment must remain digest-pinned with the existing backup and rollback
 procedure and must verify V1 health/readiness after replacement.
+
+## Mission Control 2.0 — Direct Codex handoff bridge release
+
+**Classification:** Security-sensitive V2 application/provider-runtime release.
+
+**Authorized by the product owner on 2026-08-29:** implement, test, commit, push, and deploy the bounded explicit
+direct-Codex handoff bridge; minimally admit Permixa; create safe canonical GitHub Missions for the identified Permixa
+and Agent Payment Risk Check threads; bind those exact existing Engineer threads where supported; and repair the local
+worker PID defect. The authorization excludes arbitrary task discovery, UI scraping, private APIs, transcript copying,
+MFA, ACP retries, wallet/signature/financial action, credential or permission expansion, Responses/API billing, V1
+changes, and infrastructure changes. Exact scope, validation, rollout, and rollback are controlled by
+`docs/release/R_2026_08_29_V2_DIRECT_CODEX_HANDOFF.md`.

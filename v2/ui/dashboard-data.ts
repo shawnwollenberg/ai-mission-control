@@ -6,7 +6,7 @@ import { PostgresWorkerCoordinationStore, type WorkerPresence } from "../worker/
 
 type DashboardDataDependencies = {
   loadConfiguration: () => Promise<MissionControlV2Configuration>;
-  createIssueReader: (repository: string) => Pick<GitHubIssueApi, "readIssue">;
+  createIssueReader: (repository: string) => Pick<GitHubIssueApi, "readIssue" | "listTrackedIssueNumbers">;
   loadWorkerPresence: () => Promise<WorkerPresence | undefined>;
 };
 
@@ -25,7 +25,9 @@ export async function loadDashboardData(overrides: Partial<DashboardDataDependen
   const cards = [];
   for (const project of configuration.projects.filter((value) => value.active)) {
     const issueReader = dependencies.createIssueReader(project.githubRepo);
-    for (const issueNumber of project.trackedMissionIssues ?? []) {
+    const discovered = issueReader.listTrackedIssueNumbers ? await issueReader.listTrackedIssueNumbers() : [];
+    const issueNumbers = Array.from(new Set([...(project.trackedMissionIssues ?? []), ...discovered]));
+    for (const issueNumber of issueNumbers) {
       const issue = await issueReader.readIssue(issueNumber);
       const mission = reconcileGitHubMission({
         constitution: project.constitution,

@@ -48,6 +48,20 @@ hidden where the Visibility API is supported, refreshes once when visibility ret
 The dashboard read path reconstructs directly from the fetched Issue and comments with label enforcement disabled for
 presentation; it never repairs labels, appends comments, updates the Issue, or invokes the mutating MissionStore path.
 
+## Explicit direct Codex handoff
+
+A direct Codex task remains private provider context until the owner explicitly promotes that exact thread with
+`npm run mc:v2:handoff -- /absolute/path/to/handoff.json`. The command validates the admitted project, exact local
+Codex session metadata, checkout, normalized GitHub origin, and exclusive thread ownership before creating a GitHub
+Issue. It then writes a bounded initial Engineer report, binds the existing Engineer thread, and labels the Issue
+`mc:tracked`. The dashboard and worker discover only this explicit label; Mission Control never enumerates or mirrors
+arbitrary Codex tasks. GitHub becomes canonical immediately after promotion. A new Architect thread reviews the
+bounded status normally, while the full Codex transcript remains outside GitHub and Mission Control.
+
+`OWNER_AUTHENTICATION` is an explicit CTO-owned routing capability for authentication ceremonies such as MFA. It
+authorizes only the owner to complete authentication; it does not grant an agent credentials or permission to perform
+the ceremony. External provider failures without owner action remain external blocks and do not enter the CTO Inbox.
+
 ## Validation evidence
 
 `npm run test:v2` covers the router, strict envelopes, GitHub reconstruction, idempotency, adapters, same-thread

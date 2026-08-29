@@ -12,6 +12,9 @@ import { missionStateLabel, reconcileGitHubMission, type GitHubMissionIssue } fr
 import type { MissionIssueRef, MissionStore, MissionStoreConfiguration } from "./mission-store";
 
 export interface GitHubIssueApi {
+  createIssue(input: { title: string; body: string; labels: string[] }): Promise<{ number: number; url: string }>;
+  listTrackedIssueNumbers(): Promise<number[]>;
+  ensureLabel(name: string, color: string, description: string): Promise<void>;
   readIssue(issueNumber: number): Promise<GitHubMissionIssue>;
   addComment(issueNumber: number, body: string): Promise<void>;
   updateIssue(issueNumber: number, input: { labels?: string[]; state?: "open" | "closed" }): Promise<void>;
@@ -44,7 +47,13 @@ export class GitHubIssueMissionStore implements MissionStore {
   }
 
   async updateMissionState(ref: MissionIssueRef, mission: Mission) {
-    await this.api.updateIssue(ref.issueNumber, { labels: ["mc:mission", missionStateLabel(mission)] });
+    const issue = await this.api.readIssue(ref.issueNumber);
+    const preserved = issue.labels.filter(
+      (label) => !label.startsWith("mc:") || label === "mc:mission" || label === "mc:tracked",
+    );
+    await this.api.updateIssue(ref.issueNumber, {
+      labels: Array.from(new Set([...preserved, "mc:mission", missionStateLabel(mission)])),
+    });
   }
 
   async closeMission(ref: MissionIssueRef) {
@@ -120,6 +129,30 @@ export class GitHubIssueMissionStore implements MissionStore {
 export class GhCliIssueApi implements GitHubIssueApi {
   constructor(private readonly repository: string) {
     if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error("Invalid GitHub repository identity");
+  }
+
+  async createIssue(input: { title: string; body: string; labels: string[] }) {
+    const issue = await this.request<Record<string, unknown>>(
+      ["repos", this.repository, "issues"].join("/"),
+      "POST",
+      input,
+    );
+    return { number: Number(issue.number), url: String(issue.html_url) };
+  }
+
+  async listTrackedIssueNumbers() {
+    const issues = await this.request<Array<Record<string, unknown>>>(
+      ["repos", this.repository, "issues?state=all&labels=mc%3Atracked&per_page=100"].join("/"),
+    );
+    return issues.filter((issue) => !issue.pull_request).map((issue) => Number(issue.number));
+  }
+
+  async ensureLabel(name: string, color: string, description: string) {
+    try {
+      await this.request(["repos", this.repository, "labels", encodeURIComponent(name)].join("/"));
+    } catch {
+      await this.request(["repos", this.repository, "labels"].join("/"), "POST", { name, color, description });
+    }
   }
 
   async readIssue(issueNumber: number): Promise<GitHubMissionIssue> {
@@ -214,6 +247,32 @@ export class GitHubRestIssueApi implements GitHubIssueApi {
     if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error("Invalid GitHub repository identity");
     if (token.length < 20) throw new Error("GitHub token is not configured");
     this.baseUrl = apiBaseUrl.replace(/\/$/, "");
+  }
+
+  async createIssue(input: { title: string; body: string; labels: string[] }) {
+    const issue = await this.request<Record<string, unknown>>(`/repos/${this.repository}/issues`, "POST", input);
+    return { number: Number(issue.number), url: String(issue.html_url) };
+  }
+
+  async listTrackedIssueNumbers() {
+    const issues = await this.request<Array<Record<string, unknown>>>(
+      `/repos/${this.repository}/issues?state=all&labels=mc%3Atracked&per_page=100`,
+    );
+    return issues.filter((issue) => !issue.pull_request).map((issue) => Number(issue.number));
+  }
+
+  async ensureLabel(name: string, color: string, description: string) {
+    const response = await fetch(`${this.baseUrl}/repos/${this.repository}/labels/${encodeURIComponent(name)}`, {
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${this.token}`,
+        "x-github-api-version": "2022-11-28",
+      },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (response.status === 404)
+      await this.request(`/repos/${this.repository}/labels`, "POST", { name, color, description });
+    else if (!response.ok) throw new Error(`GitHub label request failed with status ${response.status}`);
   }
 
   async readIssue(issueNumber: number): Promise<GitHubMissionIssue> {
