@@ -1,0 +1,25 @@
+{
+  "constitution": {
+    "schema": "mc.project-constitution/v1",
+    "projectId": "agent-payment-risk-check",
+    "repository": "example/agent-payment-risk-check",
+    "defaultBranch": "main",
+    "architect": { "adapter": "fake-architect", "channel": "CHATGPT" },
+    "engineer": { "adapter": "fake-engineer" },
+    "authority": {
+      "engineer": ["CODE_WRITE", "TEST_EXECUTE", "ROUTINE_DEBUGGING"],
+      "architect": ["MISSION_APPROVE", "MISSION_REMEDIATE", "ARCHITECTURE_DECISION"],
+      "ctoRequired": ["SIGN_WALLET_MESSAGE", "MOVE_MONEY"]
+    }
+  },
+  "mission": {
+    "schema": "mc.mission/v1",
+    "missionId": "aprc-400",
+    "revision": 1,
+    "objective": "Resolve /auth/agent HTTP 400",
+    "acceptanceCriteria": ["Root cause identified", "Fix implemented", "Relevant tests pass"],
+    "constraints": ["No production changes", "No wallet signing"],
+    "state": "ENGINEER_WORKING",
+    "currentActor": "ENGINEER"
+  }
+}

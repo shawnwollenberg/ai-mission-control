@@ -907,3 +907,14 @@ Tests use controllable clocks and deterministic adapters; arbitrary sleeps are p
 ## Phase working method
 
 Before each phase, present exact scope, files/systems, migrations, compatibility risks, and rollback. Implement the smallest complete vertical slice, run every relevant gate, report real/mocked/incomplete/deferred behavior, make one reviewable phase commit only when requested, and stop for approval. Architectural changes update the source-of-truth documents in the same phase.
+
+## Mission Control 2.0 — Phase 1 routing-kernel spike
+
+**Authorized by the product owner on 2026-08-29:** implement only the offline routing-kernel spike described in
+`docs/MISSION_CONTROL_2_ROUTING_KERNEL.md`. Project configuration initially lives in Mission Control; Architect and
+Engineer are adapter interfaces; internal persistence is minimal and reconstructable; and `DISCUSS` routes to the
+Architect through ChatGPT rather than creating a Mission Control chat surface.
+
+This authorization covers local contracts, deterministic transition and dispatch logic, validation, fixtures, tests,
+and design documentation. It does not authorize GitHub, Codex, OpenAI, database, UI, worker, production, migration,
+commit, staging, push, pull-request, merge, signing, transaction, or deployment actions.
