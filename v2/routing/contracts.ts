@@ -76,7 +76,6 @@ export type ArchitectDecision = {
   decision: "APPROVE" | "REMEDIATE" | "CTO_REQUIRED" | "BLOCKED_EXTERNAL";
   rationale: string;
   nextMission: Pick<Mission, "objective" | "acceptanceCriteria" | "constraints"> | null;
-  ctoRequest: CtoRequest | null;
 };
 
 export type CtoRequest = {
@@ -102,7 +101,7 @@ export type CtoDecision = {
   comment?: string;
 };
 
-export type RoutingSignal = EngineerReport | ArchitectDecision | CtoDecision;
+export type RoutingSignal = EngineerReport | ArchitectDecision | CtoRequest | CtoDecision;
 
 export type ArchitectDispatch = {
   actor: "ARCHITECT";

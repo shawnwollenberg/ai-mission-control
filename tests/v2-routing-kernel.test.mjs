@@ -48,7 +48,6 @@ test("routes Architect remediation to the configured Engineer interface", () => 
         acceptanceCriteria: ["New regression tests pass"],
         constraints: ["No external signing"],
       },
-      ctoRequest: null,
     },
   });
   assert.equal(result.mission.state, "ENGINEER_WORKING");
@@ -57,7 +56,7 @@ test("routes Architect remediation to the configured Engineer interface", () => 
   assert.equal(result.dispatch?.reason, "REMEDIATION");
 });
 
-test("waits for the CTO only for a capability owned by the CTO", () => {
+test("waits for a separate CTO request and accepts only CTO-owned capabilities", () => {
   const reviewing = { ...original, revision: 4, state: "ARCHITECT_REVIEW", currentActor: "ARCHITECT" };
   const decision = {
     schema: "mc.architect-decision/v1",
@@ -66,21 +65,32 @@ test("waits for the CTO only for a capability owned by the CTO", () => {
     decision: "CTO_REQUIRED",
     rationale: "ACP authentication now requires a wallet signature.",
     nextMission: null,
-    ctoRequest: {
-      schema: "mc.cto-request/v1",
-      missionId: original.missionId,
-      revision: 5,
-      capability: "SIGN_WALLET_MESSAGE",
-      action: "Approve ACP authentication signature",
-      financialEffect: "$0",
-      externalEffect: "Authentication signature only",
-      reversible: true,
-      architectRecommendation: "APPROVE",
-      evidence: [{ kind: "engineer-report", revision: 4 }],
-      status: "PENDING",
-    },
   };
-  const result = routeMission({ constitution, mission: reviewing, signal: decision, lastProcessedRevision: 4 });
+  const pending = routeMission({ constitution, mission: reviewing, signal: decision, lastProcessedRevision: 4 });
+  assert.equal(pending.outcome, "WAITING");
+  assert.equal(pending.mission.state, "ARCHITECT_REVIEW");
+  assert.equal(pending.dispatch, undefined);
+
+  const request = {
+    schema: "mc.cto-request/v1",
+    missionId: original.missionId,
+    revision: 6,
+    capability: "SIGN_WALLET_MESSAGE",
+    action: "Approve ACP authentication signature",
+    financialEffect: "$0",
+    externalEffect: "Authentication signature only",
+    reversible: true,
+    architectRecommendation: "APPROVE",
+    evidence: [{ kind: "engineer-report", revision: 4 }],
+    status: "PENDING",
+  };
+  const result = routeMission({
+    constitution,
+    mission: pending.mission,
+    signal: request,
+    lastProcessedRevision: 5,
+    pendingArchitectDecisionRevision: 5,
+  });
   assert.equal(result.outcome, "WAITING");
   assert.equal(result.mission.state, "CTO_DECISION");
   assert.equal(result.dispatch, undefined);
@@ -89,9 +99,10 @@ test("waits for the CTO only for a capability owned by the CTO", () => {
     () =>
       routeMission({
         constitution,
-        mission: reviewing,
-        lastProcessedRevision: 4,
-        signal: { ...decision, ctoRequest: { ...decision.ctoRequest, capability: "CODE_WRITE" } },
+        mission: pending.mission,
+        lastProcessedRevision: 5,
+        pendingArchitectDecisionRevision: 5,
+        signal: { ...request, capability: "CODE_WRITE" },
       }),
     /does not require CTO authority/,
   );
@@ -187,7 +198,6 @@ test("Architect approval completes the mission without dispatch", () => {
       decision: "APPROVE",
       rationale: "Acceptance criteria are satisfied.",
       nextMission: null,
-      ctoRequest: null,
     },
   });
   assert.equal(result.outcome, "COMPLETE");

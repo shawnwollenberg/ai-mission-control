@@ -20,6 +20,13 @@ fixture, and tests using fake adapter identifiers.
 The spike deliberately contains no GitHub client, Codex client, OpenAI client, provider credentials, network access,
 database state, UI, worker, repository mutation, signing, transaction, or deployment behavior.
 
+## V2 validation boundary
+
+`npm run test:v2` is the dedicated Mission Control 2.0 acceptance command. V2 acceptance requires this suite plus
+shared typecheck, lint, formatting, and diff checks to pass. Legacy V1 failures are reported separately and still
+block releases of affected V1 behavior. Expiration of V1-only fixtures must not create a false V2 failure; a failure
+in code shared by V2 remains a V2 failure.
+
 ## Reconstruction model
 
 The kernel is a pure function of the Mission Control-owned project constitution, current durable mission envelope,

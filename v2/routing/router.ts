@@ -5,6 +5,7 @@ import {
   type ArchitectDecision,
   type ArchitectDispatch,
   type CtoDecision,
+  type CtoRequest,
   type EngineerDispatch,
   type Mission,
   type ProjectConstitution,
@@ -16,7 +17,7 @@ export type RoutingResult = {
   mission: Mission;
   processedRevision: number;
   dispatch?: ArchitectDispatch | EngineerDispatch;
-  ctoRequest?: NonNullable<ArchitectDecision["ctoRequest"]>;
+  ctoRequest?: CtoRequest;
 };
 
 const actorForState: Record<Mission["state"], Mission["currentActor"]> = {
@@ -48,6 +49,7 @@ export function routeMission(input: {
   signal: RoutingSignal;
   lastProcessedRevision: number;
   pendingCtoRequestRevision?: number;
+  pendingArchitectDecisionRevision?: number;
 }): RoutingResult {
   const constitution = validateProjectConstitution(input.constitution);
   const mission = validateMission(input.mission);
@@ -78,6 +80,19 @@ export function routeMission(input: {
     return routeArchitectDecision(constitution, mission, signal);
   }
 
+  if (mission.state === "ARCHITECT_REVIEW" && signal.schema === "mc.cto-request/v1") {
+    if (!input.pendingArchitectDecisionRevision || signal.revision !== input.pendingArchitectDecisionRevision + 1)
+      throw new Error("CTO request does not follow the pending Architect decision");
+    if (!constitution.authority.ctoRequired.includes(signal.capability))
+      throw new Error("Requested capability does not require CTO authority");
+    return {
+      outcome: "WAITING",
+      mission: advance(mission, signal, "CTO_DECISION"),
+      processedRevision: signal.revision,
+      ctoRequest: signal,
+    };
+  }
+
   if (mission.state === "CTO_DECISION" && signal.schema === "mc.cto-decision/v1") {
     return routeCtoDecision(constitution, mission, signal, input.pendingCtoRequestRevision);
   }
@@ -91,12 +106,11 @@ function routeArchitectDecision(
   signal: ArchitectDecision,
 ): RoutingResult {
   if (signal.decision === "APPROVE") {
-    if (signal.nextMission || signal.ctoRequest) throw new Error("Approval cannot include next work or a CTO request");
+    if (signal.nextMission) throw new Error("Approval cannot include next work");
     return { outcome: "COMPLETE", mission: advance(mission, signal, "COMPLETE"), processedRevision: signal.revision };
   }
   if (signal.decision === "BLOCKED_EXTERNAL") {
-    if (signal.nextMission || signal.ctoRequest)
-      throw new Error("External block cannot dispatch work or request CTO authority");
+    if (signal.nextMission) throw new Error("External block cannot dispatch work");
     return {
       outcome: "BLOCKED",
       mission: advance(mission, signal, "BLOCKED_EXTERNAL"),
@@ -104,19 +118,14 @@ function routeArchitectDecision(
     };
   }
   if (signal.decision === "CTO_REQUIRED") {
-    if (!signal.ctoRequest || signal.nextMission) throw new Error("CTO_REQUIRED must contain exactly one CTO request");
-    if (signal.ctoRequest.missionId !== mission.missionId || signal.ctoRequest.revision !== signal.revision)
-      throw new Error("CTO request must bind the Architect decision revision");
-    if (!constitution.authority.ctoRequired.includes(signal.ctoRequest.capability))
-      throw new Error("Requested capability does not require CTO authority");
+    if (signal.nextMission) throw new Error("CTO_REQUIRED cannot contain next work");
     return {
       outcome: "WAITING",
-      mission: advance(mission, signal, "CTO_DECISION"),
+      mission: advance(mission, signal, "ARCHITECT_REVIEW"),
       processedRevision: signal.revision,
-      ctoRequest: signal.ctoRequest,
     };
   }
-  if (!signal.nextMission || signal.ctoRequest) throw new Error("REMEDIATE must contain next work and no CTO request");
+  if (!signal.nextMission) throw new Error("REMEDIATE must contain next work");
   const next = { ...advance(mission, signal, "ENGINEER_WORKING"), ...signal.nextMission };
   return {
     outcome: "ROUTED",

@@ -918,3 +918,9 @@ Architect through ChatGPT rather than creating a Mission Control chat surface.
 This authorization covers local contracts, deterministic transition and dispatch logic, validation, fixtures, tests,
 and design documentation. It does not authorize GitHub, Codex, OpenAI, database, UI, worker, production, migration,
 commit, staging, push, pull-request, merge, signing, transaction, or deployment actions.
+
+**Phase 2 GitHub Mission Bridge authorized on 2026-08-29:** freeze and push the accepted routing kernel, add a
+dedicated V2 validation boundary, implement bounded GitHub Issue envelopes and a narrow `MissionStore`, prove full
+reconstruction and webhook/idempotency behavior locally, then exercise one reversible test issue if existing GitHub
+credentials already have the required authority. No Codex, Architect, dashboard, database, PR, merge, deployment,
+permission expansion, or V1 fixture remediation is authorized.
