@@ -49,6 +49,102 @@
           ]
         }
       }
+    },
+    {
+      "projectId": "mission-control",
+      "name": "Mission Control",
+      "githubRepo": "shawnwollenberg/ai-mission-control",
+      "localCheckout": "/Users/shawnwollenberg/Developer/mission-control",
+      "repositoryUrl": "https://github.com/shawnwollenberg/ai-mission-control",
+      "architectAdapter": "codex-sdk",
+      "engineerAdapter": "codex-sdk",
+      "active": true,
+      "trackedMissionIssues": [],
+      "constitution": {
+        "schema": "mc.project-constitution/v1",
+        "projectId": "mission-control",
+        "repository": "shawnwollenberg/ai-mission-control",
+        "defaultBranch": "main",
+        "architect": { "adapter": "codex-sdk", "channel": "CHATGPT" },
+        "engineer": { "adapter": "codex-sdk" },
+        "authority": {
+          "engineer": [
+            "CODE_WRITE",
+            "TEST_EXECUTE",
+            "REPO_COMMIT",
+            "REPO_PUSH",
+            "READ_EXTERNAL",
+            "REVERSIBLE_DEV_OPERATION",
+            "ROUTINE_DEBUGGING"
+          ],
+          "architect": [
+            "MISSION_CREATE",
+            "MISSION_APPROVE",
+            "MISSION_REMEDIATE",
+            "ARCHITECTURE_DECISION",
+            "NON_ECONOMIC_EXTERNAL_TEST",
+            "TECHNICAL_RISK_DECISION"
+          ],
+          "ctoRequired": [
+            "MOVE_MONEY",
+            "SIGN_WALLET_MESSAGE",
+            "EXPAND_CREDENTIAL_AUTHORITY",
+            "ACCEPT_LEGAL_TERMS",
+            "MATERIAL_COST",
+            "DESTRUCTIVE_PRODUCTION_ACTION",
+            "IRREVERSIBLE_EXTERNAL_ACTION",
+            "MAJOR_PRODUCT_SCOPE_CHANGE"
+          ]
+        }
+      }
+    },
+    {
+      "projectId": "meal-planning",
+      "name": "Meal Planning",
+      "githubRepo": "shawnwollenberg/meal-planning",
+      "localCheckout": "/Users/shawnwollenberg/Developer/meal-planning",
+      "repositoryUrl": "https://github.com/shawnwollenberg/meal-planning",
+      "architectAdapter": "codex-sdk",
+      "engineerAdapter": "codex-sdk",
+      "active": true,
+      "trackedMissionIssues": [],
+      "constitution": {
+        "schema": "mc.project-constitution/v1",
+        "projectId": "meal-planning",
+        "repository": "shawnwollenberg/meal-planning",
+        "defaultBranch": "main",
+        "architect": { "adapter": "codex-sdk", "channel": "CHATGPT" },
+        "engineer": { "adapter": "codex-sdk" },
+        "authority": {
+          "engineer": [
+            "CODE_WRITE",
+            "TEST_EXECUTE",
+            "REPO_COMMIT",
+            "REPO_PUSH",
+            "READ_EXTERNAL",
+            "REVERSIBLE_DEV_OPERATION",
+            "ROUTINE_DEBUGGING"
+          ],
+          "architect": [
+            "MISSION_CREATE",
+            "MISSION_APPROVE",
+            "MISSION_REMEDIATE",
+            "ARCHITECTURE_DECISION",
+            "NON_ECONOMIC_EXTERNAL_TEST",
+            "TECHNICAL_RISK_DECISION"
+          ],
+          "ctoRequired": [
+            "MOVE_MONEY",
+            "SIGN_WALLET_MESSAGE",
+            "EXPAND_CREDENTIAL_AUTHORITY",
+            "ACCEPT_LEGAL_TERMS",
+            "MATERIAL_COST",
+            "DESTRUCTIVE_PRODUCTION_ACTION",
+            "IRREVERSIBLE_EXTERNAL_ACTION",
+            "MAJOR_PRODUCT_SCOPE_CHANGE"
+          ]
+        }
+      }
     }
   ]
 }

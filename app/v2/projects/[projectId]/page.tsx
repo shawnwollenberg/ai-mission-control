@@ -1,6 +1,7 @@
 import { requirePageIdentity } from "@/lib/page-auth";
 import { createV2MissionRuntime } from "@/v2/runtime/service";
 import { DecisionForm } from "./decision-form";
+import { PostgresWorkerCoordinationStore } from "@/v2/worker/store";
 
 export const dynamic = "force-dynamic";
 export default async function ProjectDetail({
@@ -18,7 +19,10 @@ export default async function ProjectDetail({
   const runtime = await createV2MissionRuntime(projectId);
   const state = await runtime.store.readMission({ issueNumber });
   const issue = await runtime.api.readIssue(issueNumber);
-  const binding = await runtime.bindings.get(state.mission.missionId);
+  const dispatches = (await new PostgresWorkerCoordinationStore().list()).filter(
+    (item) => item.dispatch.missionId === state.mission.missionId,
+  );
+  const latestDispatch = dispatches.at(-1);
   return (
     <main
       style={{
@@ -37,10 +41,10 @@ export default async function ProjectDetail({
       <p>
         <strong>{state.mission.currentActor}</strong> · {state.mission.state} · revision {state.latestRevision}
       </p>
-      {binding?.failure ? (
+      {latestDispatch?.failureCode ? (
         <section role="alert" style={{ border: "2px solid #6b7280", padding: 20 }}>
           <h2>System/provider failure</h2>
-          <p>{binding.failure.message}</p>
+          <p>{latestDispatch.failureCode}</p>
           <p>Mission truth remains in GitHub. No authority was implicitly granted and no unsafe retry occurs.</p>
         </section>
       ) : null}
@@ -97,16 +101,10 @@ export default async function ProjectDetail({
         <h2>Contexts</h2>
         <p>
           <a href={issue.url}>GitHub Mission</a> · <a href={runtime.project.repositoryUrl}>Repository</a>
-          {binding?.codexThreadId ? (
+          {latestDispatch?.providerThreadId ? (
             <>
               {" "}
-              · Codex thread <code>{binding.codexThreadId}</code>
-            </>
-          ) : null}
-          {binding?.architectThreadId ? (
-            <>
-              {" "}
-              · Architect thread <code>{binding.architectThreadId}</code>
+              · Provider thread <code>{latestDispatch.providerThreadId}</code>
             </>
           ) : null}
         </p>

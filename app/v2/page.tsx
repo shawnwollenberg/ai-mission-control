@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePageIdentity } from "@/lib/page-auth";
-import { loadDashboardCards } from "@/v2/ui/dashboard-data";
+import { loadDashboardCards, loadWorkerPresence } from "@/v2/ui/dashboard-data";
 
 export const dynamic = "force-dynamic";
 
@@ -8,8 +8,9 @@ export default async function V2Dashboard() {
   await requirePageIdentity("/v2");
   let cards: Awaited<ReturnType<typeof loadDashboardCards>> = [];
   let unavailable = "";
+  let worker: Awaited<ReturnType<typeof loadWorkerPresence>>;
   try {
-    cards = await loadDashboardCards();
+    [cards, worker] = await Promise.all([loadDashboardCards(), loadWorkerPresence()]);
   } catch (error) {
     unavailable = (error as Error).message;
   }
@@ -19,6 +20,15 @@ export default async function V2Dashboard() {
       <p style={{ fontFamily: "monospace", letterSpacing: 2 }}>MISSION CONTROL 2.0</p>
       <h1 style={{ fontSize: 48, margin: "8px 0" }}>Chief of Staff</h1>
       <p>Who has the ball, what they are doing, and where you are needed.</p>
+      <p style={{ color: worker?.status === "ONLINE" ? "#18733b" : "#6b7280", fontSize: 14 }}>
+        Local Worker:{" "}
+        {worker?.status === "ONLINE"
+          ? "Online"
+          : worker?.status === "AUTH_REQUIRED"
+            ? "Codex sign-in required"
+            : "Offline"}
+        {worker ? ` · last contact ${new Date(worker.lastSeenAt).toLocaleString()}` : ""}
+      </p>
       {unavailable ? (
         <p role="alert" style={{ padding: 16, background: "#eee" }}>
           V2 configuration unavailable: {unavailable}
@@ -69,6 +79,9 @@ function MissionRow({ card }: { card: Awaited<ReturnType<typeof loadDashboardCar
           <strong>{card.projectName}</strong> · {card.actor}
           <p style={{ margin: "7px 0" }}>{card.status}</p>
           {card.systemFailure ? <small>System/provider failure · Mission truth remains in GitHub</small> : null}
+          {card.workerOffline ? (
+            <small>Mission state is unchanged; work resumes when the worker reconnects.</small>
+          ) : null}
         </div>
         <div style={{ whiteSpace: "nowrap" }}>
           <Link href={`/v2/projects/${card.projectId}?issue=${card.issueNumber}`}>Open</Link> ·{" "}

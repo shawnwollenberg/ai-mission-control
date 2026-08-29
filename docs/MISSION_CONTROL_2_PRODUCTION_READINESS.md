@@ -1,7 +1,7 @@
 # Mission Control 2.0 — Production Readiness and Dogfood Preparation
 
-**Status:** Development readiness evidence complete on 2026-08-29; controlled deployment is blocked pending an exact
-provider-worker topology and credential decision. No production mutation is authorized by this document.
+**Status:** Superseded on 2026-08-29 by the authorized `LOCAL_SUBSCRIPTION_WORKER` decision and
+`docs/MISSION_CONTROL_2_LOCAL_SUBSCRIPTION_WORKER.md`. No production mutation is authorized by either document.
 
 ## Readiness disposition
 
@@ -127,11 +127,9 @@ database domain modules. The production build emits `/v2` and its one CTO-decisi
 Prerequisites:
 
 1. Record human approval for the exact security-sensitive V2 release commit and this deployment scope.
-2. Choose and approve one supported provider topology:
-   - an owner-controlled persistent local V2 web/worker runtime using ChatGPT subscription authentication; or
-   - the existing hosted worker topology with a separately authorized API credential and billing; or
-   - a future supported Workspace Agent bridge after its own reviewed implementation.
-3. Prove the chosen topology supplies persistent minimal bindings, exact project checkouts, native GitHub access,
+2. Use the approved outbound-only owner Mac topology documented in
+   `docs/MISSION_CONTROL_2_LOCAL_SUBSCRIPTION_WORKER.md`.
+3. Confirm the topology supplies persistent minimal bindings, exact project checkouts, native GitHub access,
    single-worker fencing, restart behavior, and redacted logs. Do not copy local ChatGPT session files into a hosted
    container.
 4. Record the exact 1–3 dogfood projects and Issues. Keep Responses disabled.

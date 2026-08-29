@@ -944,11 +944,25 @@ non-production GitHub/provider evidence, coherent commits, and pushes on 2026-08
 excludes production deployment, cutover, V1 deletion, permission/credential expansion, material cost, merge, and
 production database mutation.
 
-**Release status:** Human production approval is pending and controlled deployment is blocked. The exact readiness
-evidence, rollout, rollback, residual risks, and dogfood plan are in
-`docs/MISSION_CONTROL_2_PRODUCTION_READINESS.md`. Official OpenAI guidance distinguishes local subscription-authenticated
-Codex work from API-key programmatic CI/CD use. The current production worker expects API credentials, while accepted
-V2 uses subscription authentication. A human must approve an exact supported provider-worker topology and any required
-credential/billing authority before an exact V2 deployment release can be authorized.
+**Release status (superseded 2026-08-29):** The provider topology blocker was resolved by the subsequent human
+`LOCAL_SUBSCRIPTION_WORKER` decision below. Production deployment and worker-secret provisioning still require their
+own exact authorization.
 
 No readiness document or development commit constitutes approval to deploy. V1 remains authoritative and intact.
+
+## Mission Control 2.0 — Local subscription worker preparation
+
+**Architecture decision:** `LOCAL_SUBSCRIPTION_WORKER`, authorized by the product owner on 2026-08-29. One trusted
+owner Mac polls the existing hosted control plane over HTTPS and executes the Codex SDK Architect and Engineer through
+local ChatGPT subscription authentication. Responses and OpenAI API billing remain disabled.
+
+**Security-sensitive development authorization:** Implement and validate the worker coordination boundary, existing
+PostgreSQL dispatch ledger, worker-only token authentication, offline/online UI, local operations, three-project
+configuration, reversible non-production acceptance, documentation, commits, and pushes on the current development
+branch. V1 authority remains intact.
+
+**Still prohibited:** Production deployment, production migration, production worker credential provisioning,
+persistent macOS service installation, permission expansion, merge, and V1 deletion. The deployment and rollback plan
+is `docs/MISSION_CONTROL_2_LOCAL_SUBSCRIPTION_WORKER.md`. A readiness commit is review evidence, not deployment
+approval. The next exact human decision, if validation succeeds, is
+`AUTHORIZE_CONTROLLED_V2_DEPLOYMENT_AND_LOCAL_WORKER_PROVISIONING`.

@@ -17,6 +17,7 @@ export type MissionCard = {
   sortRank: number;
   ageMs: number;
   systemFailure?: ProviderFailure;
+  workerOffline?: boolean;
 };
 
 export function missionCard(input: {
@@ -27,6 +28,7 @@ export function missionCard(input: {
   lastActivity: string;
   now?: Date;
   systemFailure?: ProviderFailure;
+  workerOffline?: boolean;
 }): MissionCard {
   const { mission } = input;
   const ageMs = (input.now ?? new Date()).getTime() - new Date(input.lastActivity).getTime();
@@ -56,13 +58,16 @@ export function missionCard(input: {
           : stale
             ? 5
             : 4;
+  const providerQueued = input.workerOffline && ["ARCHITECT", "ENGINEER"].includes(mission.mission.currentActor);
   const status = input.systemFailure
     ? input.systemFailure.message
-    : state === "CTO_DECISION"
-      ? (mission.pendingCtoRequest?.action ?? "CTO decision required")
-      : (mission.latestArchitectDecision?.rationale ??
-        mission.latestEngineerReport?.summary ??
-        mission.mission.objective);
+    : providerQueued
+      ? `${mission.mission.currentActor === "ENGINEER" ? "Engineer" : "Architect"} queued — local worker offline`
+      : state === "CTO_DECISION"
+        ? (mission.pendingCtoRequest?.action ?? "CTO decision required")
+        : (mission.latestArchitectDecision?.rationale ??
+          mission.latestEngineerReport?.summary ??
+          mission.mission.objective);
   return {
     projectId: input.project.projectId,
     projectName: input.project.name,
@@ -78,6 +83,7 @@ export function missionCard(input: {
     sortRank,
     ageMs,
     ...(input.systemFailure ? { systemFailure: input.systemFailure } : {}),
+    ...(providerQueued ? { workerOffline: true } : {}),
   };
 }
 
