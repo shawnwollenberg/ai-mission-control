@@ -10,6 +10,7 @@ export type WorkerPresence = Omit<WorkerHealth, "schema" | "status"> & {
 };
 
 export interface WorkerCoordinationStore {
+  heartbeat(health: WorkerHealth): Promise<void>;
   get(dispatchId: string): Promise<WorkerDispatch | undefined>;
   enqueue(input: Omit<WorkerDispatch, "schema" | "dispatchId">): Promise<WorkerDispatch>;
   claim(health: WorkerHealth, duplicateWindowMs: number): Promise<WorkerDispatch | undefined>;
@@ -99,6 +100,9 @@ async function recordPresence(client: PoolClient, health: WorkerHealth, current?
 }
 
 export class PostgresWorkerCoordinationStore implements WorkerCoordinationStore {
+  async heartbeat(health: WorkerHealth) {
+    await withTransaction((client) => recordPresence(client, health));
+  }
   async get(dispatchId: string) {
     const result = await getDatabasePool().query<DispatchRow>(
       `SELECT * FROM v2_worker_dispatches WHERE dispatch_id=$1`,
@@ -252,6 +256,9 @@ export class MemoryWorkerCoordinationStore implements WorkerCoordinationStore {
   private now = () => new Date();
   constructor(now?: () => Date) {
     if (now) this.now = now;
+  }
+  async heartbeat(health: WorkerHealth) {
+    this.see(health);
   }
   async get(dispatchId: string) {
     const item = this.dispatches.get(dispatchId);

@@ -108,6 +108,13 @@ test("second active session is rejected and offline is operational only", async 
   assert.equal((await store.list())[0].status, "CLAIMED");
 });
 
+test("heartbeat records worker presence before external coordination work", async () => {
+  const store = new MemoryWorkerCoordinationStore();
+  await store.heartbeat(health());
+  assert.equal((await store.presence(75_000)).status, "ONLINE");
+  assert.equal((await store.list()).length, 0);
+});
+
 test("three projects remain isolated and only one dispatch is claimed at a time", async () => {
   const store = new MemoryWorkerCoordinationStore();
   for (let index = 1; index <= 3; index++)

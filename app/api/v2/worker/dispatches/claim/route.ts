@@ -10,6 +10,7 @@ export async function POST(request: Request) {
     const health = (await request.json()) as WorkerHealth;
     validateWorkerHealth(health);
     const store = new PostgresWorkerCoordinationStore();
+    await store.heartbeat(health);
     await new WorkerControlPlane(store).synchronizeEligibleDispatches();
     const dispatch = await store.claim(health, 45_000);
     return NextResponse.json({ dispatch: dispatch ?? null });
