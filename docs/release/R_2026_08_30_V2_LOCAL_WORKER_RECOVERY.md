@@ -15,6 +15,7 @@ approve the release.
 - Keep the worker alive across transient hosted/network failures with exponential backoff capped at five minutes.
 - Record worker presence before external GitHub synchronization so a GitHub failure cannot misreport a live worker
   as offline.
+- During longer coordination backoff, send a lightweight 30-second worker heartbeat that does not invoke GitHub.
 - Preserve the exact provider failure code through the worker health endpoint and show failed dispatch truth on the
   dashboard.
 - On definitive `PROVIDER_THREAD_UNAVAILABLE`, requeue the same idempotent dispatch and clear only that actor's stale

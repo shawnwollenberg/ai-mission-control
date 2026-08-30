@@ -255,6 +255,16 @@ async function releaseLock() {
   } catch {}
 }
 
+async function waitForCoordinationRetry(backoffMs: number) {
+  let remainingMs = backoffMs;
+  while (remainingMs > 0 && !stopping) {
+    const sliceMs = Math.min(intervalMs, remainingMs);
+    await delay(sliceMs);
+    remainingMs -= sliceMs;
+    if (remainingMs > 0) await post("/api/v2/worker/health", health()).catch(() => undefined);
+  }
+}
+
 async function main() {
   if (!Number.isSafeInteger(intervalMs) || intervalMs < 1_000) throw new Error("Poll interval must be at least 1000ms");
   await acquireLock();
@@ -272,7 +282,7 @@ async function main() {
         const backoffMs = Math.min(intervalMs * 2 ** (consecutiveCoordinationFailures - 1), 300_000);
         console.error(JSON.stringify({ schema: "mc.local-worker/v1", event: "coordination_retry", backoffMs }));
         if (once) throw new Error("WORKER_COORDINATION_UNAVAILABLE");
-        if (!stopping) await delay(backoffMs);
+        if (!stopping) await waitForCoordinationRetry(backoffMs);
       }
     } while (!once && !stopping);
   } finally {
