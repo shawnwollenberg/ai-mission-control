@@ -19,6 +19,14 @@ export async function POST(request: Request) {
       ? message
       : "WORKER_COORDINATION_UNAVAILABLE";
     const status = message === "WORKER_UNAUTHORIZED" ? 401 : message === "DUPLICATE_WORKER_ACTIVE" ? 409 : 503;
+    console.error(
+      JSON.stringify({
+        schema: "mc.operational-log/v1",
+        event: "worker.coordination_rejected",
+        failureCode: code,
+        reason: message.slice(0, 240),
+      }),
+    );
     return NextResponse.json({ error: { code, message: "Worker coordination request rejected" } }, { status });
   }
 }
