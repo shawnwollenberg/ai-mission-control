@@ -152,6 +152,28 @@ test("ordinary human comments remain readable and cannot alter machine state", (
   assert.equal(result.latestRevision, 1);
 });
 
+test("owner reconciliation is canonical, revision-bound, and reconstructs an Architect route", async () => {
+  const api = new MemoryIssueApi();
+  const store = new GitHubIssueMissionStore(api, { constitution, authorizedLogins });
+  const ref = { issueNumber: 42 };
+  await store.appendEngineerReport(ref, engineerReport(2));
+  await store.appendArchitectDecision(ref, architectDecision(3, "BLOCKED_EXTERNAL"));
+  const reopened = await store.appendOwnerReconciliation(ref, {
+    schema: "mc.owner-reconciliation/v1",
+    missionId: initialMission.missionId,
+    revision: 4,
+    blockedRevision: 3,
+    reason: "New deployment evidence is available.",
+    evidence: [{ kind: "deployment", ref: "digest:abc", result: "healthy" }],
+  });
+  assert.equal(reopened.mission.state, "ARCHITECT_REVIEW");
+  assert.equal(reopened.latestOwnerReconciliation?.blockedRevision, 3);
+  assert.deepEqual(api.issue.labels, ["mc:mission", "mc:architect-review"]);
+  const rebuilt = reconcileGitHubMission({ constitution, issue: api.issue, authorizedLogins });
+  assert.equal(rebuilt.latestRevision, 4);
+  assert.equal(rebuilt.latestOwnerReconciliation?.reason, "New deployment evidence is available.");
+});
+
 test("duplicate delivery is idempotent, out-of-order comments reconcile by revision, and conflicts fail", () => {
   const api = new MemoryIssueApi();
   const report = engineerReport(2);

@@ -53,6 +53,14 @@ eligible for the same personal worker again. A locally persisted result uploads 
 unknown provider outcome is not retried automatically. A second live session for the same identity is rejected and
 shown as an operational fault.
 
+Failed-dispatch recovery is an explicit ledger transition, separate from idempotent enqueue. Read-only Architect work
+may receive one replacement after a definitive thread, output-validation, or provider-process failure. Engineer work
+may receive one fresh-thread replacement only after definitive thread unavailability. The local binding records the
+attempt before another provider call; a second failure becomes `PROVIDER_RECOVERY_EXHAUSTED`. Indeterminate outcomes,
+durable uncommitted results, authentication/usage failures, source changes, and GitHub failures never enter this
+replacement path. Dashboard liveness is derived from the exact current-revision dispatch and distinguishes active,
+queued, failed, and worker-offline work from the canonical next-actor state.
+
 The CTO Inbox is independent of worker health. Approve, Reject, or Discuss writes the decision to GitHub immediately;
 any provider work it enables waits in the queue while the Mac is offline.
 

@@ -3,6 +3,7 @@ import { mkdir, open, readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { loadV2Configuration } from "../v2/runtime/config";
+import { parseWorkerPid, resolveWorkerPid } from "../v2/worker/process-state";
 
 const exec = promisify(execFile);
 const directory = process.env.MISSION_CONTROL_V2_DATA_DIR ?? join(process.cwd(), ".mission-control-v2-runtime");
@@ -13,23 +14,22 @@ const command = process.argv[2] ?? "status";
 
 async function pid() {
   try {
-    return Number((await readFile(pidPath, "utf8")).trim());
+    return parseWorkerPid(await readFile(pidPath, "utf8"));
   } catch {
     return undefined;
   }
 }
 async function lockPid() {
   try {
-    return Number((await readFile(lockPath, "utf8")).trim());
+    return parseWorkerPid(await readFile(lockPath, "utf8"));
   } catch {
     return undefined;
   }
 }
 async function actualPid() {
   const recorded = await pid();
-  if (alive(recorded)) return recorded;
   const owner = await lockPid();
-  return alive(owner) ? owner : undefined;
+  return resolveWorkerPid({ recordedPid: recorded, lockPid: owner, isAlive: alive });
 }
 function alive(value: number | undefined) {
   if (!value) return false;

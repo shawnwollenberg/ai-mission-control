@@ -5,6 +5,7 @@ import type {
   CtoRequest,
   EngineerReport,
   Mission,
+  OwnerReconciliation,
   ProjectConstitution,
   RoutingSignal,
 } from "../routing/contracts";
@@ -131,6 +132,27 @@ export class MissionOrchestrator {
     return result;
   }
 
+  async reconcileExternalBlock(
+    issueNumber: number,
+    input: { blockedRevision: number; reason: string; evidence: OwnerReconciliation["evidence"] },
+  ) {
+    const current = await this.store.readMission({ issueNumber });
+    if (current.mission.state !== "BLOCKED_EXTERNAL" || current.latestRevision !== input.blockedRevision)
+      throw new Error("Owner reconciliation is stale or the mission is not externally blocked");
+    const reconciliation: OwnerReconciliation = {
+      schema: "mc.owner-reconciliation/v1",
+      missionId: current.mission.missionId,
+      revision: current.latestRevision + 1,
+      blockedRevision: input.blockedRevision,
+      reason: input.reason,
+      evidence: input.evidence,
+    };
+    const result = await this.store.appendOwnerReconciliation({ issueNumber }, reconciliation);
+    const binding = await this.binding(result.mission.missionId, issueNumber, result.latestRevision);
+    await this.bindings.put({ ...binding, lastProcessedRevision: result.latestRevision });
+    return result;
+  }
+
   async retryReadOnlyArchitect(issueNumber: number) {
     const current = await this.store.readMission({ issueNumber });
     const binding = await this.binding(current.mission.missionId, issueNumber, current.latestRevision);
@@ -153,6 +175,7 @@ export class MissionOrchestrator {
   private latestSignal(current: Awaited<ReturnType<MissionStore["readMission"]>>): RoutingSignal | undefined {
     return (
       current.latestCtoDecision ??
+      current.latestOwnerReconciliation ??
       current.pendingCtoRequest ??
       current.latestArchitectDecision ??
       current.latestEngineerReport

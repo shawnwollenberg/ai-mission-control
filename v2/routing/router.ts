@@ -97,6 +97,24 @@ export function routeMission(input: {
     return routeCtoDecision(constitution, mission, signal, input.pendingCtoRequestRevision);
   }
 
+  if (mission.state === "BLOCKED_EXTERNAL" && signal.schema === "mc.owner-reconciliation/v1") {
+    if (signal.blockedRevision !== mission.revision)
+      throw new Error("Owner reconciliation does not bind the current blocked revision");
+    const next = advance(mission, signal, "ARCHITECT_REVIEW");
+    return {
+      outcome: "ROUTED",
+      mission: next,
+      processedRevision: signal.revision,
+      dispatch: {
+        actor: "ARCHITECT",
+        channel: "CHATGPT",
+        adapter: constitution.architect.adapter,
+        reason: "OWNER_RECONCILIATION",
+        idempotencyKey: key(mission.missionId, signal.revision, "ARCHITECT"),
+      },
+    };
+  }
+
   throw new Error(`Invalid signal ${signal.schema} while mission is ${mission.state}`);
 }
 

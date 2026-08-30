@@ -17,6 +17,7 @@ export function MissionCardRow({ card }: { card: MissionCard }) {
       <div style={{ display: "flex", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
         <div style={{ minWidth: 0, flex: "1 1 360px" }}>
           <strong>{card.projectName}</strong> · {card.actor}
+          <small style={{ display: "block", marginTop: 6 }}>Work status: {workStatusLabel(card.workStatus)}</small>
           <p style={{ margin: "7px 0" }}>{card.status}</p>
           {card.systemFailure ? <small>System/provider failure · Mission truth remains in GitHub</small> : null}
           {card.workerOffline ? (
@@ -35,4 +36,14 @@ export function MissionCardRow({ card }: { card: MissionCard }) {
       </div>
     </article>
   );
+}
+
+function workStatusLabel(status: MissionCard["workStatus"]) {
+  return {
+    ACTIVE: "Active",
+    QUEUED: "Queued",
+    FAILED: "Failed",
+    WORKER_OFFLINE: "Worker offline",
+    NONE: "No provider work",
+  }[status];
 }

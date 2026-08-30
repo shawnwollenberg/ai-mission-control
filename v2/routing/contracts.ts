@@ -102,13 +102,22 @@ export type CtoDecision = {
   comment?: string;
 };
 
-export type RoutingSignal = EngineerReport | ArchitectDecision | CtoRequest | CtoDecision;
+export type OwnerReconciliation = {
+  schema: "mc.owner-reconciliation/v1";
+  missionId: string;
+  revision: number;
+  blockedRevision: number;
+  reason: string;
+  evidence: Array<{ kind: string; ref: string; result?: string }>;
+};
+
+export type RoutingSignal = EngineerReport | ArchitectDecision | CtoRequest | CtoDecision | OwnerReconciliation;
 
 export type ArchitectDispatch = {
   actor: "ARCHITECT";
   channel: "CHATGPT";
   adapter: string;
-  reason: "ENGINEER_REPORT_READY" | "CTO_REJECTED" | "CTO_DISCUSS";
+  reason: "ENGINEER_REPORT_READY" | "CTO_REJECTED" | "CTO_DISCUSS" | "OWNER_RECONCILIATION";
   idempotencyKey: string;
 };
 
@@ -160,5 +169,11 @@ export function validateRoutingSignal(value: RoutingSignal): RoutingSignal {
     throw new Error("Architect rationale is required");
   if (value.schema === "mc.cto-decision/v1" && value.requestRevision < 1)
     throw new Error("CTO decision must bind a request revision");
+  if (value.schema === "mc.owner-reconciliation/v1") {
+    if (value.blockedRevision < 1 || !Number.isSafeInteger(value.blockedRevision))
+      throw new Error("Owner reconciliation must bind a blocked revision");
+    if (!value.reason.trim() || !value.evidence.length)
+      throw new Error("Owner reconciliation requires a reason and evidence");
+  }
   return value;
 }

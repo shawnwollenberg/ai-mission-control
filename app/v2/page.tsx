@@ -28,7 +28,9 @@ export default async function V2Dashboard() {
           ? "Online"
           : worker?.status === "AUTH_REQUIRED"
             ? "Codex sign-in required"
-            : "Offline"}
+            : worker?.status === "DEGRADED"
+              ? "Degraded"
+              : "Offline"}
         {worker ? ` · last contact ${new Date(worker.lastSeenAt).toLocaleString()}` : ""}
       </p>
       {unavailable ? (

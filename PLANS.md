@@ -1000,3 +1000,19 @@ is limited to one fresh Codex thread after a definitive `PROVIDER_THREAD_UNAVAIL
 The release may not widen repository, credential, provider, execution, approval, GitHub, or deployment authority.
 Exact scope, acceptance, rollout, and rollback are controlled by
 `docs/release/R_2026_08_30_V2_LOCAL_WORKER_RECOVERY.md`.
+
+## Mission Control 2.0 — Owner reconciliation transition
+
+**Development authorization from the product owner on 2026-08-30:** add a canonical owner-authorized transition that
+reopens only an exact `BLOCKED_EXTERNAL` Mission revision and routes it to the Architect for reassessment. The
+transition requires authenticated owner authority, same-origin mutation, optimistic revision binding, a reason, and
+evidence. It cannot reopen completed or active Missions, mutate Mission truth through labels, grant agent capability,
+or bypass policy and approval boundaries. This authorization covers implementation and local validation only; commit,
+push, production deployment, and invoking the transition on a real Mission require an exact governed release approval.
+
+**Production release authorization on 2026-08-30:** the product owner explicitly authorized Codex to push, merge, and
+deploy the reviewed combined V2 recovery, owner-reconciliation, and Discuss-feedback working tree. This approval also
+authorizes invoking the exact revision-bound owner reconciliation on Mission Control Issue #38 after production
+health, readiness, and worker presence verify. It does not authorize any unrelated repository, credential, provider,
+financial, signing, infrastructure, or agent-authority expansion. The exact release is controlled by
+`docs/release/R_2026_08_30_V2_RECONCILIATION_AND_DISCUSS.md`.

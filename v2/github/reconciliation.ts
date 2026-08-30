@@ -6,6 +6,7 @@ import type {
   CtoRequest,
   EngineerReport,
   Mission,
+  OwnerReconciliation,
   ProjectConstitution,
   RoutingSignal,
 } from "../routing/contracts";
@@ -40,6 +41,7 @@ export type ReconciledMission = {
   latestEngineerReport?: EngineerReport;
   latestArchitectDecision?: ArchitectDecision;
   latestCtoDecision?: CtoDecision;
+  latestOwnerReconciliation?: OwnerReconciliation;
   pendingCtoRequest?: CtoRequest;
   complete: boolean;
   ignoredHumanCommentIds: number[];
@@ -81,6 +83,7 @@ export function reconcileGitHubMission(input: {
   let latestEngineerReport: EngineerReport | undefined;
   let latestArchitectDecision: ArchitectDecision | undefined;
   let latestCtoDecision: CtoDecision | undefined;
+  let latestOwnerReconciliation: OwnerReconciliation | undefined;
   let pendingCtoRequest: CtoRequest | undefined;
   const history = [JSON.stringify(mission)];
 
@@ -105,6 +108,7 @@ export function reconcileGitHubMission(input: {
       latestCtoDecision = signal;
       pendingCtoRequest = undefined;
     }
+    if (signal.schema === "mc.owner-reconciliation/v1") latestOwnerReconciliation = signal;
   }
 
   const expectedStateLabel = `mc:${mission.state.toLowerCase().replaceAll("_", "-")}`;
@@ -125,6 +129,7 @@ export function reconcileGitHubMission(input: {
     ...(latestEngineerReport ? { latestEngineerReport } : {}),
     ...(latestArchitectDecision ? { latestArchitectDecision } : {}),
     ...(latestCtoDecision ? { latestCtoDecision } : {}),
+    ...(latestOwnerReconciliation ? { latestOwnerReconciliation } : {}),
     ...(pendingCtoRequest ? { pendingCtoRequest } : {}),
     complete: mission.state === "COMPLETE" && input.issue.state === "closed",
     ignoredHumanCommentIds,

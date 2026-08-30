@@ -204,3 +204,45 @@ test("Architect approval completes the mission without dispatch", () => {
   assert.equal(result.mission.currentActor, "NONE");
   assert.equal(result.dispatch, undefined);
 });
+
+test("owner reconciliation reopens only the exact blocked revision for Architect reassessment", () => {
+  const blocked = { ...original, revision: 5, state: "BLOCKED_EXTERNAL", currentActor: "EXTERNAL" };
+  const signal = {
+    schema: "mc.owner-reconciliation/v1",
+    missionId: original.missionId,
+    revision: 6,
+    blockedRevision: 5,
+    reason: "The recovery release is now deployed and verified.",
+    evidence: [{ kind: "deployment", ref: "commit:55e8bba", result: "production ready" }],
+  };
+  const result = routeMission({ constitution, mission: blocked, signal, lastProcessedRevision: 5 });
+  assert.equal(result.mission.state, "ARCHITECT_REVIEW");
+  assert.equal(result.mission.currentActor, "ARCHITECT");
+  assert.deepEqual(result.dispatch, {
+    actor: "ARCHITECT",
+    channel: "CHATGPT",
+    adapter: "fake-architect",
+    reason: "OWNER_RECONCILIATION",
+    idempotencyKey: "aprc-400:6:architect",
+  });
+  assert.throws(
+    () =>
+      routeMission({
+        constitution,
+        mission: blocked,
+        signal: { ...signal, blockedRevision: 4 },
+        lastProcessedRevision: 5,
+      }),
+    /does not bind the current blocked revision/,
+  );
+  assert.throws(
+    () =>
+      routeMission({
+        constitution,
+        mission: original,
+        signal: { ...signal, revision: 2, blockedRevision: 1 },
+        lastProcessedRevision: 1,
+      }),
+    /Invalid signal/,
+  );
+});

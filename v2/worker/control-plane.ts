@@ -23,7 +23,7 @@ export class WorkerControlPlane {
         const current = await store.readMission({ issueNumber });
         const actor = current.mission.currentActor;
         if (!(["ARCHITECT", "ENGINEER"] as const).includes(actor as "ARCHITECT" | "ENGINEER")) continue;
-        await this.coordination.enqueue({
+        const dispatch = await this.coordination.enqueue({
           projectId: project.projectId,
           missionId: current.mission.missionId,
           issueNumber,
@@ -39,6 +39,7 @@ export class WorkerControlPlane {
             ...(latestSignal(current) ? { priorSignal: latestSignal(current) } : {}),
           },
         });
+        await this.coordination.recoverFailed(dispatch.dispatchId);
       }
     }
   }
@@ -75,6 +76,7 @@ function missionStore(project: ProjectConfiguration, authorizedLogins: string[])
 function latestSignal(current: Awaited<ReturnType<GitHubIssueMissionStore["readMission"]>>): RoutingSignal | undefined {
   return (
     current.latestCtoDecision ??
+    current.latestOwnerReconciliation ??
     current.pendingCtoRequest ??
     current.latestArchitectDecision ??
     current.latestEngineerReport

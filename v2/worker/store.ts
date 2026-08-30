@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { getDatabasePool, withTransaction } from "../../lib/database";
 import type { WorkerDispatch, WorkerHealth, WorkerResult, WorkerStatus } from "./protocol";
 import { sha256 } from "./protocol";
+import { failedDispatchRecovery, type FailedDispatchRecovery } from "./recovery";
 
 export type WorkerPresence = Omit<WorkerHealth, "schema" | "status"> & {
   status: WorkerStatus;
@@ -13,6 +14,7 @@ export interface WorkerCoordinationStore {
   heartbeat(health: WorkerHealth): Promise<void>;
   get(dispatchId: string): Promise<WorkerDispatch | undefined>;
   enqueue(input: Omit<WorkerDispatch, "schema" | "dispatchId">): Promise<WorkerDispatch>;
+  recoverFailed(dispatchId: string): Promise<FailedDispatchRecovery | undefined>;
   claim(health: WorkerHealth, duplicateWindowMs: number): Promise<WorkerDispatch | undefined>;
   complete(health: WorkerHealth, result: WorkerResult): Promise<{ dispatch: WorkerDispatch; duplicate: boolean }>;
   markCommitted(dispatchId: string, githubRevision: number): Promise<void>;
@@ -114,16 +116,7 @@ export class PostgresWorkerCoordinationStore implements WorkerCoordinationStore 
     const id = randomUUID();
     const result = await getDatabasePool().query<DispatchRow>(
       `INSERT INTO v2_worker_dispatches(dispatch_id,project_id,mission_id,issue_number,mission_revision,actor,adapter,idempotency_key,mission_digest,packet,status)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'QUEUED') ON CONFLICT(idempotency_key) DO UPDATE SET
-       status=CASE WHEN v2_worker_dispatches.status='FAILED' AND v2_worker_dispatches.failure_code='PROVIDER_THREAD_UNAVAILABLE'
-         THEN 'QUEUED' ELSE v2_worker_dispatches.status END,
-       worker_id=CASE WHEN v2_worker_dispatches.status='FAILED' AND v2_worker_dispatches.failure_code='PROVIDER_THREAD_UNAVAILABLE'
-         THEN NULL ELSE v2_worker_dispatches.worker_id END,
-       worker_session_id=CASE WHEN v2_worker_dispatches.status='FAILED' AND v2_worker_dispatches.failure_code='PROVIDER_THREAD_UNAVAILABLE'
-         THEN NULL ELSE v2_worker_dispatches.worker_session_id END,
-       failure_code=CASE WHEN v2_worker_dispatches.status='FAILED' AND v2_worker_dispatches.failure_code='PROVIDER_THREAD_UNAVAILABLE'
-         THEN NULL ELSE v2_worker_dispatches.failure_code END,
-       updated_at=now()
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'QUEUED') ON CONFLICT(idempotency_key) DO UPDATE SET updated_at=now()
        RETURNING *`,
       [
         id,
@@ -139,6 +132,24 @@ export class PostgresWorkerCoordinationStore implements WorkerCoordinationStore 
       ],
     );
     return fromRow(result.rows[0]);
+  }
+  async recoverFailed(dispatchId: string) {
+    return withTransaction(async (client) => {
+      const found = await client.query<DispatchRow>(
+        `SELECT * FROM v2_worker_dispatches WHERE dispatch_id=$1 FOR UPDATE`,
+        [dispatchId],
+      );
+      if (!found.rowCount || found.rows[0].status !== "FAILED") return undefined;
+      const row = found.rows[0];
+      const recovery = failedDispatchRecovery(row.actor, row.failure_code ?? undefined);
+      if (!recovery) return undefined;
+      await client.query(
+        `UPDATE v2_worker_dispatches SET status='QUEUED',worker_id=NULL,worker_session_id=NULL,
+         updated_at=now() WHERE dispatch_id=$1 AND status='FAILED'`,
+        [dispatchId],
+      );
+      return recovery;
+    });
   }
   async claim(health: WorkerHealth, _duplicateWindowMs: number) {
     void _duplicateWindowMs;
@@ -186,7 +197,7 @@ export class PostgresWorkerCoordinationStore implements WorkerCoordinationStore 
       if (row.result_sha256 && row.result_sha256 !== digest) throw new Error("Conflicting retried worker result");
       await client.query(
         `UPDATE v2_worker_dispatches SET status='COMPLETED',result=$2,result_sha256=$3,
-        provider_thread_id=$4,completed_at=now(),updated_at=now() WHERE dispatch_id=$1`,
+        provider_thread_id=$4,failure_code=NULL,completed_at=now(),updated_at=now() WHERE dispatch_id=$1`,
         [result.dispatchId, JSON.stringify(result), digest, result.providerThreadId],
       );
       return { dispatch: fromRow(row), duplicate: false };
@@ -268,18 +279,20 @@ export class MemoryWorkerCoordinationStore implements WorkerCoordinationStore {
     const existing = Array.from(this.dispatches.values()).find(
       (item) => item.dispatch.idempotencyKey === input.idempotencyKey,
     );
-    if (existing) {
-      if (existing.status === "FAILED" && existing.failureCode === "PROVIDER_THREAD_UNAVAILABLE") {
-        existing.status = "QUEUED";
-        existing.owner = undefined;
-        existing.claimedAt = undefined;
-        existing.failureCode = undefined;
-      }
-      return structuredClone(existing.dispatch);
-    }
+    if (existing) return structuredClone(existing.dispatch);
     const dispatch: WorkerDispatch = { schema: "mc.worker-dispatch/v1", dispatchId: randomUUID(), ...input };
     this.dispatches.set(dispatch.dispatchId, { dispatch, status: "QUEUED" });
     return structuredClone(dispatch);
+  }
+  async recoverFailed(dispatchId: string) {
+    const item = this.dispatches.get(dispatchId);
+    if (!item || item.status !== "FAILED") return undefined;
+    const recovery = failedDispatchRecovery(item.dispatch.actor, item.failureCode);
+    if (!recovery) return undefined;
+    item.status = "QUEUED";
+    item.owner = undefined;
+    item.claimedAt = undefined;
+    return recovery;
   }
   private see(health: WorkerHealth) {
     if (
@@ -322,6 +335,7 @@ export class MemoryWorkerCoordinationStore implements WorkerCoordinationStore {
       throw new Error("Worker result is not owned by the active claim");
     item.status = "COMPLETED";
     item.resultHash = digest;
+    item.failureCode = undefined;
     return { dispatch: structuredClone(item.dispatch), duplicate: false };
   }
   async markCommitted(dispatchId: string, githubRevision: number) {

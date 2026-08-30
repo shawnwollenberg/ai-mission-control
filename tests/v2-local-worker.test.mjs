@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryWorkerCoordinationStore } from "../v2/worker/store.ts";
 import { validateWorkerHealth, validateWorkerResult } from "../v2/worker/protocol.ts";
+import { coordinationBackoffMs, runWorkerPollingLoop } from "../v2/worker/polling.ts";
+import { failedDispatchRecovery, isIndeterminateFailure } from "../v2/worker/recovery.ts";
 
 const constitution = {
   schema: "mc.project-constitution/v1",
@@ -153,20 +155,120 @@ test("offline queued work resumes after the personal worker reconnects without c
   assert.equal((await store.presence(30_000)).status, "ONLINE");
 });
 
-test("thread-unavailable dispatch is requeued exactly while other provider failures remain failed", async () => {
+test("failed dispatch recovery is explicit, actor-bound, and does not recover completed provider work", async () => {
   const store = new MemoryWorkerCoordinationStore();
   const dispatch = await store.enqueue(input);
   await store.claim(health(), 45_000);
   await store.fail(health(), dispatch.dispatchId, "PROVIDER_THREAD_UNAVAILABLE");
   assert.equal((await store.list())[0].failureCode, "PROVIDER_THREAD_UNAVAILABLE");
   assert.equal((await store.enqueue(input)).dispatchId, dispatch.dispatchId);
+  assert.equal((await store.list())[0].status, "FAILED", "enqueue alone cannot conceal a failed dispatch");
+  assert.equal(await store.recoverFailed(dispatch.dispatchId), "ENGINEER_THREAD_REPLACEMENT");
   assert.equal((await store.list())[0].status, "QUEUED");
+  assert.equal(
+    (await store.list())[0].failureCode,
+    "PROVIDER_THREAD_UNAVAILABLE",
+    "the bounded recovery reason remains visible until completion",
+  );
 
   await store.claim(health(), 45_000);
   await store.fail(health(), dispatch.dispatchId, "PROVIDER_RECOVERY_EXHAUSTED");
   await store.enqueue(input);
+  assert.equal(await store.recoverFailed(dispatch.dispatchId), undefined);
   assert.equal((await store.list())[0].status, "FAILED");
   assert.equal((await store.list())[0].failureCode, "PROVIDER_RECOVERY_EXHAUSTED");
+
+  const completedStore = new MemoryWorkerCoordinationStore();
+  const completed = await completedStore.enqueue(input);
+  const claimed = await completedStore.claim(health(), 45_000);
+  await completedStore.complete(health(), {
+    schema: "mc.worker-result/v1",
+    dispatchId: claimed.dispatchId,
+    idempotencyKey: claimed.idempotencyKey,
+    missionId: claimed.missionId,
+    missionRevision: claimed.missionRevision,
+    actor: claimed.actor,
+    providerThreadId: "durable-result-thread",
+    result: {
+      schema: "mc.engineer-report/v1",
+      missionId: claimed.missionId,
+      revision: claimed.missionRevision + 1,
+      outcome: "COMPLETED",
+      summary: "provider result is already durable",
+      evidence: [],
+      risks: [],
+      blockedOn: [],
+      capabilitiesRequested: [],
+    },
+  });
+  assert.equal(await completedStore.recoverFailed(completed.dispatchId), undefined);
+  assert.equal((await completedStore.list())[0].status, "COMPLETED");
+});
+
+test("read-only Architect replacement is bounded while indeterminate and ineligible Engineer failures fail closed", async () => {
+  assert.equal(failedDispatchRecovery("ARCHITECT", "PROVIDER_PROCESS_FAILED"), "READ_ONLY_ARCHITECT_REPLACEMENT");
+  assert.equal(failedDispatchRecovery("ARCHITECT", "PROVIDER_OUTPUT_INVALID"), "READ_ONLY_ARCHITECT_REPLACEMENT");
+  assert.equal(failedDispatchRecovery("ENGINEER", "PROVIDER_PROCESS_FAILED"), undefined);
+  assert.equal(failedDispatchRecovery("ENGINEER", "PROVIDER_DISPATCH_INDETERMINATE"), undefined);
+  assert.equal(failedDispatchRecovery("ARCHITECT", "PROVIDER_DISPATCH_INDETERMINATE"), undefined);
+  assert.equal(isIndeterminateFailure("PROVIDER_DISPATCH_INDETERMINATE"), true);
+  assert.equal(
+    failedDispatchRecovery("ARCHITECT", "PROVIDER_RECOVERY_EXHAUSTED"),
+    undefined,
+    "a second eligible failure is terminal",
+  );
+
+  const store = new MemoryWorkerCoordinationStore();
+  const architectInput = {
+    ...input,
+    actor: "ARCHITECT",
+    idempotencyKey: "mission-one:1:architect",
+  };
+  const dispatch = await store.enqueue(architectInput);
+  await store.claim(health(), 45_000);
+  await store.fail(health(), dispatch.dispatchId, "PROVIDER_PROCESS_FAILED");
+  assert.equal(await store.recoverFailed(dispatch.dispatchId), "READ_ONLY_ARCHITECT_REPLACEMENT");
+  assert.equal((await store.list())[0].status, "QUEUED");
+
+  const indeterminate = new MemoryWorkerCoordinationStore();
+  const unsafe = await indeterminate.enqueue(input);
+  await indeterminate.claim(health(), 45_000);
+  await indeterminate.fail(health(), unsafe.dispatchId, "PROVIDER_DISPATCH_INDETERMINATE");
+  assert.equal(await indeterminate.recoverFailed(unsafe.dispatchId), undefined);
+  assert.equal((await indeterminate.list())[0].status, "FAILED");
+});
+
+test("transient coordination failures use bounded backoff and the polling loop survives", async () => {
+  assert.equal(coordinationBackoffMs(1, 30_000), 30_000);
+  assert.equal(coordinationBackoffMs(5, 30_000), 300_000);
+  assert.equal(coordinationBackoffMs(30, 30_000), 300_000);
+
+  let attempts = 0;
+  let stopped = false;
+  const retries = [];
+  const delays = [];
+  let heartbeats = 0;
+  await runWorkerPollingLoop({
+    tick: async () => {
+      attempts += 1;
+      if (attempts < 3) throw new Error("transient hosted failure");
+      stopped = true;
+    },
+    heartbeat: async () => {
+      heartbeats += 1;
+    },
+    delay: async (milliseconds) => {
+      delays.push(milliseconds);
+    },
+    intervalMs: 30_000,
+    once: false,
+    shouldStop: () => stopped,
+    onCoordinationRetry: (backoffMs) => retries.push(backoffMs),
+  });
+  assert.equal(attempts, 3, "the worker continues after transient failures");
+  assert.deepEqual(retries, [30_000, 60_000]);
+  assert.deepEqual(delays, [30_000, 30_000, 30_000]);
+  assert.equal(heartbeats, 1, "longer backoff reports presence without GitHub synchronization");
 });
 
 test("worker health accepts only explicit provider failure codes", () => {

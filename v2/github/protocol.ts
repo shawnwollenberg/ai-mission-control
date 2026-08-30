@@ -7,10 +7,12 @@ import {
   type CtoRequest,
   type EngineerReport,
   type Mission,
+  type OwnerReconciliation,
   type RoutingSignal,
 } from "../routing/contracts";
 
-export type EnvelopeKind = "mission" | "engineer-report" | "architect-decision" | "cto-request" | "cto-decision";
+export type EnvelopeKind =
+  "mission" | "engineer-report" | "architect-decision" | "cto-request" | "cto-decision" | "owner-reconciliation";
 
 const schemas: Record<EnvelopeKind, string> = {
   mission: "mc.mission/v1",
@@ -18,6 +20,7 @@ const schemas: Record<EnvelopeKind, string> = {
   "architect-decision": "mc.architect-decision/v1",
   "cto-request": "mc.cto-request/v1",
   "cto-decision": "mc.cto-decision/v1",
+  "owner-reconciliation": "mc.owner-reconciliation/v1",
 };
 
 const kinds = Object.keys(schemas) as EnvelopeKind[];
@@ -169,7 +172,7 @@ function validateSignalEnvelope(value: unknown): RoutingSignal {
       throw new Error("CTO Request recommendation is unsupported");
     if (item.status !== "PENDING") throw new Error("CTO Request status must be PENDING");
     validateEvidence(item.evidence);
-  } else {
+  } else if (item.schema === "mc.cto-decision/v1") {
     exact(
       item,
       [
@@ -188,6 +191,14 @@ function validateSignalEnvelope(value: unknown): RoutingSignal {
       throw new Error("CTO Decision is unsupported");
     if (item.comment !== undefined && typeof item.comment !== "string")
       throw new Error("CTO Decision comment must be text");
+  } else {
+    exact(item, ["schema", "missionId", "revision", "blockedRevision", "reason", "evidence"], "Owner Reconciliation");
+    if (!Number.isSafeInteger(item.blockedRevision) || Number(item.blockedRevision) < 1)
+      throw new Error("Owner Reconciliation blockedRevision must be positive");
+    text(item.reason, "Owner Reconciliation reason");
+    validateEvidence(item.evidence);
+    if (!Array.isArray(item.evidence) || item.evidence.length < 1)
+      throw new Error("Owner Reconciliation requires evidence");
   }
   return validateRoutingSignal(item as RoutingSignal);
 }
@@ -269,4 +280,4 @@ export function envelopeKind(signal: RoutingSignal): Exclude<EnvelopeKind, "miss
   return found;
 }
 
-export type { ArchitectDecision, CtoDecision, CtoRequest, EngineerReport };
+export type { ArchitectDecision, CtoDecision, CtoRequest, EngineerReport, OwnerReconciliation };

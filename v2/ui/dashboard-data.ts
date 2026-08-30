@@ -41,7 +41,14 @@ export async function loadDashboardData(overrides: Partial<DashboardDataDependen
       });
       const lastActivity = issue.comments.at(-1)?.updatedAt ?? issue.updatedAt;
       const latestDispatch = dispatches
-        .filter((item) => item.dispatch.projectId === project.projectId && item.dispatch.issueNumber === issueNumber)
+        .filter(
+          (item) =>
+            item.dispatch.projectId === project.projectId &&
+            item.dispatch.issueNumber === issueNumber &&
+            item.dispatch.missionId === mission.mission.missionId &&
+            item.dispatch.missionRevision === mission.mission.revision &&
+            item.dispatch.actor === mission.mission.currentActor,
+        )
         .at(-1);
       const systemFailure = latestDispatch?.status === "FAILED" ? dispatchFailure(latestDispatch) : undefined;
       cards.push(
@@ -53,6 +60,7 @@ export async function loadDashboardData(overrides: Partial<DashboardDataDependen
           lastActivity,
           workerOffline: !worker || worker.status === "OFFLINE",
           systemFailure,
+          dispatchStatus: latestDispatch?.status,
         }),
       );
     }

@@ -1,6 +1,7 @@
 import { requirePageIdentity } from "@/lib/page-auth";
 import { createV2MissionRuntime } from "@/v2/runtime/service";
 import { DecisionForm } from "./decision-form";
+import { ReconciliationForm } from "./reconciliation-form";
 import { PostgresWorkerCoordinationStore } from "@/v2/worker/store";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +86,16 @@ export default async function ProjectDetail({
             issueNumber={issueNumber}
             requestRevision={state.pendingCtoRequest.revision}
           />
+        </section>
+      ) : null}
+      {state.mission.state === "BLOCKED_EXTERNAL" ? (
+        <section style={{ border: "2px solid #6b7280", padding: 20 }}>
+          <h2>Owner reconciliation</h2>
+          <p>
+            Reopen only when new evidence materially changes the external block. This appends canonical Mission truth
+            and routes a fresh Architect reassessment.
+          </p>
+          <ReconciliationForm projectId={projectId} issueNumber={issueNumber} blockedRevision={state.latestRevision} />
         </section>
       ) : null}
       <section>

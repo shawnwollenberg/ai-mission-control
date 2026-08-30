@@ -296,6 +296,7 @@ test("system failure is distinct from CTO-required presentation", () => {
   });
   assert.equal(card.color, "GRAY");
   assert.equal(card.status, "Codex authentication expired");
+  assert.equal(card.workStatus, "FAILED");
 });
 
 test("dashboard refresh reconstructs GitHub and worker changes without invoking any mutation", async () => {
@@ -344,6 +345,7 @@ test("dashboard refresh reconstructs GitHub and worker changes without invoking 
   const offline = await loadDashboardData(dependencies);
   assert.equal(offline.worker.status, "OFFLINE");
   assert.equal(offline.cards[0].workerOffline, true);
+  assert.equal(offline.cards[0].workStatus, "WORKER_OFFLINE");
   assert.match(offline.cards[0].status, /Engineer queued/);
 
   const signals = [
@@ -405,6 +407,82 @@ test("dashboard refresh reconstructs GitHub and worker changes without invoking 
   assert.deepEqual(mutationCalls, []);
 });
 
+test("dashboard projects active, queued, failed, and worker-offline work from the exact current dispatch", async () => {
+  const api = new MemoryIssueApi();
+  const configuration = {
+    schema: "mc.config/v1",
+    authorizedGitHubLogins: ["owner"],
+    projects: [{ ...project, trackedMissionIssues: [42] }],
+  };
+  let worker = {
+    workerId: "personal-worker",
+    displayName: "Owner Mac",
+    sessionId: "11111111-1111-4111-8111-111111111111",
+    status: "ONLINE",
+    architectAvailable: true,
+    engineerAvailable: true,
+    lastSeenAt: new Date().toISOString(),
+  };
+  const currentDispatch = {
+    dispatch: {
+      schema: "mc.worker-dispatch/v1",
+      dispatchId: "dispatch-current",
+      projectId: project.projectId,
+      missionId: fixture.mission.missionId,
+      issueNumber: 42,
+      missionRevision: fixture.mission.revision,
+      actor: fixture.mission.currentActor,
+      adapter: "codex-sdk",
+      idempotencyKey: `${fixture.mission.missionId}:${fixture.mission.revision}:engineer`,
+      missionDigest: "a".repeat(64),
+      packet: { mission: fixture.mission, constitution: project.constitution },
+    },
+    status: "QUEUED",
+  };
+  let dispatches = [
+    {
+      ...currentDispatch,
+      dispatch: {
+        ...currentDispatch.dispatch,
+        dispatchId: "old-failed",
+        missionRevision: fixture.mission.revision - 1,
+      },
+      status: "FAILED",
+      failureCode: "PROVIDER_PROCESS_FAILED",
+    },
+    currentDispatch,
+  ];
+  const dependencies = {
+    loadConfiguration: async () => configuration,
+    createIssueReader: () => api,
+    loadWorkerPresence: async () => worker,
+    loadDispatches: async () => dispatches,
+  };
+
+  let card = (await loadDashboardData(dependencies)).cards[0];
+  assert.equal(card.workStatus, "QUEUED", "an old failed revision cannot poison the current projection");
+  assert.equal(card.systemFailure, undefined);
+
+  dispatches = [{ ...currentDispatch, status: "CLAIMED" }];
+  card = (await loadDashboardData(dependencies)).cards[0];
+  assert.equal(card.workStatus, "ACTIVE");
+  assert.equal(card.status, "Engineer active");
+
+  dispatches = [{ ...currentDispatch, status: "FAILED", failureCode: "PROVIDER_PROCESS_FAILED" }];
+  card = (await loadDashboardData(dependencies)).cards[0];
+  assert.equal(card.workStatus, "FAILED");
+  assert.doesNotMatch(card.status, /active/i);
+  const failedHtml = renderToStaticMarkup(React.createElement(MissionCardRow, { card }));
+  assert.match(failedHtml, /Work status: Failed/);
+  assert.doesNotMatch(failedHtml, /Work status: Active/);
+
+  worker = { ...worker, status: "OFFLINE" };
+  dispatches = [{ ...currentDispatch, status: "QUEUED" }];
+  card = (await loadDashboardData(dependencies)).cards[0];
+  assert.equal(card.workStatus, "WORKER_OFFLINE");
+  assert.match(card.status, /local worker offline/);
+});
+
 test("every V2 mission card state defines readable text and link colors on its light surface", () => {
   for (const color of ["BLUE", "ORANGE", "RED", "GRAY", "BLACK", "WHITE"]) {
     const presentation = missionCardPresentation(color);
@@ -439,6 +517,7 @@ test("completed BLACK/NONE MissionCardRow consumes the accessible palette", () =
         lastActivity: "2026-08-29T00:00:00.000Z",
         sortRank: 4,
         ageMs: 0,
+        workStatus: "NONE",
       },
     }),
   );
@@ -446,6 +525,7 @@ test("completed BLACK/NONE MissionCardRow consumes the accessible palette", () =
   assert.match(html, /<article style="[^"]*border-left:8px solid #171717/);
   assert.match(html, /<article style="[^"]*background:#ffffff;color:#171717/);
   assert.match(html, /Completed project<\/strong> · NONE/);
+  assert.match(html, /Work status: No provider work/);
   assert.equal(html.match(/style="color:#0645ad"/g)?.length, 2, "both V2 card links apply the accessible color");
   assert.match(html, /href="\/v2\/projects\/project-1\?issue=42"[^>]*>Open<\/a>/);
   assert.match(html, /href="https:\/\/github\.com\/example\/fixture\/issues\/42"[^>]*>GitHub<\/a>/);

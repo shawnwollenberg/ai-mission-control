@@ -48,6 +48,11 @@ hidden where the Visibility API is supported, refreshes once when visibility ret
 The dashboard read path reconstructs directly from the fetched Issue and comments with label enforcement disabled for
 presentation; it never repairs labels, appends comments, updates the Issue, or invokes the mutating MissionStore path.
 
+An externally blocked Mission can resume only through an authenticated owner reconciliation. The command appends an
+`mc.owner-reconciliation/v1` envelope at the next revision, binds the exact `BLOCKED_EXTERNAL` revision, requires a
+reason and evidence, and routes a fresh Architect reassessment. Labels remain derived presentation and cannot reopen
+a Mission. `COMPLETE`, active, stale, or mismatched blocked revisions fail closed.
+
 ## Explicit direct Codex handoff
 
 A direct Codex task remains private provider context until the owner explicitly promotes that exact thread with

@@ -18,6 +18,7 @@ export type MissionCard = {
   ageMs: number;
   systemFailure?: ProviderFailure;
   workerOffline?: boolean;
+  workStatus: "ACTIVE" | "QUEUED" | "FAILED" | "WORKER_OFFLINE" | "NONE";
 };
 
 export function missionCard(input: {
@@ -29,6 +30,7 @@ export function missionCard(input: {
   now?: Date;
   systemFailure?: ProviderFailure;
   workerOffline?: boolean;
+  dispatchStatus?: string;
 }): MissionCard {
   const { mission } = input;
   const ageMs = (input.now ?? new Date()).getTime() - new Date(input.lastActivity).getTime();
@@ -59,15 +61,29 @@ export function missionCard(input: {
             ? 5
             : 4;
   const providerQueued = input.workerOffline && ["ARCHITECT", "ENGINEER"].includes(mission.mission.currentActor);
+  const providerActor = ["ARCHITECT", "ENGINEER"].includes(mission.mission.currentActor);
+  const workStatus = input.systemFailure
+    ? "FAILED"
+    : providerQueued
+      ? "WORKER_OFFLINE"
+      : input.dispatchStatus === "CLAIMED" || input.dispatchStatus === "COMPLETED"
+        ? "ACTIVE"
+        : providerActor
+          ? "QUEUED"
+          : "NONE";
   const status = input.systemFailure
     ? input.systemFailure.message
     : providerQueued
       ? `${mission.mission.currentActor === "ENGINEER" ? "Engineer" : "Architect"} queued — local worker offline`
-      : state === "CTO_DECISION"
-        ? (mission.pendingCtoRequest?.action ?? "CTO decision required")
-        : (mission.latestArchitectDecision?.rationale ??
-          mission.latestEngineerReport?.summary ??
-          mission.mission.objective);
+      : workStatus === "ACTIVE"
+        ? `${mission.mission.currentActor === "ENGINEER" ? "Engineer" : "Architect"} active`
+        : workStatus === "QUEUED"
+          ? `${mission.mission.currentActor === "ENGINEER" ? "Engineer" : "Architect"} queued`
+          : state === "CTO_DECISION"
+            ? (mission.pendingCtoRequest?.action ?? "CTO decision required")
+            : (mission.latestArchitectDecision?.rationale ??
+              mission.latestEngineerReport?.summary ??
+              mission.mission.objective);
   return {
     projectId: input.project.projectId,
     projectName: input.project.name,
@@ -82,6 +98,7 @@ export function missionCard(input: {
     lastActivity: input.lastActivity,
     sortRank,
     ageMs,
+    workStatus,
     ...(input.systemFailure ? { systemFailure: input.systemFailure } : {}),
     ...(providerQueued ? { workerOffline: true } : {}),
   };
