@@ -330,6 +330,7 @@ test("dashboard refresh reconstructs GitHub and worker changes without invoking 
       return api;
     },
     loadWorkerPresence: async () => worker,
+    loadDispatches: async () => [],
   };
 
   const initial = await loadDashboardData(dependencies);
@@ -512,7 +513,7 @@ test("V2 dashboard refresh integration renders a subtle accessible status and mo
     React.createElement(AutoRefreshStatus, { lastRefreshedAt: new Date("2026-08-29T20:34:20.000Z") }),
   );
   assert.match(html, /aria-live="polite"/);
-  assert.match(html, /Auto-refreshes while this page is visible every 10 seconds/);
+  assert.match(html, /Auto-refreshes while this page is visible every 30 seconds/);
   assert.match(html, /refreshed/);
 
   const dashboardSource = await readFile(new URL("../app/v2/page.tsx", import.meta.url), "utf8");

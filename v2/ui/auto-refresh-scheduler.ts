@@ -1,4 +1,4 @@
-export const V2_DASHBOARD_REFRESH_INTERVAL_MS = 10_000;
+export const V2_DASHBOARD_REFRESH_INTERVAL_MS = 30_000;
 
 type VisibilityState = "hidden" | "visible";
 

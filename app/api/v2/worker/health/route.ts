@@ -12,7 +12,9 @@ export async function POST(request: Request) {
     await store.fail(
       health,
       health.status === "DEGRADED" ? health.currentDispatchId : undefined,
-      health.status === "AUTH_REQUIRED" ? "CODEX_AUTH_REQUIRED" : "PROVIDER_FAILED",
+      health.status === "AUTH_REQUIRED"
+        ? "CODEX_AUTHENTICATION_EXPIRED"
+        : (health.failureCode ?? "PROVIDER_PROCESS_FAILED"),
     );
     return NextResponse.json({ accepted: true });
   } catch (error) {

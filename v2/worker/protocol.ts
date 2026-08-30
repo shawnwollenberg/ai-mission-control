@@ -6,6 +6,7 @@ import type {
   ProjectConstitution,
   RoutingSignal,
 } from "../routing/contracts";
+import type { ProviderFailureCode } from "../runtime/bindings";
 
 export type WorkerActor = "ARCHITECT" | "ENGINEER";
 export type WorkerStatus = "ONLINE" | "OFFLINE" | "AUTH_REQUIRED" | "DEGRADED";
@@ -51,6 +52,7 @@ export type WorkerHealth = {
   currentDispatchId?: string;
   architectAvailable: boolean;
   engineerAvailable: boolean;
+  failureCode?: ProviderFailureCode;
 };
 
 export function sha256(value: unknown) {
@@ -78,6 +80,17 @@ export function validateWorkerResult(value: WorkerResult, dispatch: WorkerDispat
 }
 
 export function validateWorkerHealth(value: WorkerHealth) {
+  const failureCodes: ProviderFailureCode[] = [
+    "CODEX_AUTHENTICATION_EXPIRED",
+    "CODEX_USAGE_LIMIT_REACHED",
+    "PROVIDER_THREAD_UNAVAILABLE",
+    "PROVIDER_OUTPUT_INVALID",
+    "PROVIDER_PROCESS_FAILED",
+    "PROVIDER_RECOVERY_EXHAUSTED",
+    "PROVIDER_DISPATCH_INDETERMINATE",
+    "MISSION_SOURCE_CHANGED",
+    "GITHUB_UNAVAILABLE",
+  ];
   if (
     value.schema !== "mc.worker-health/v1" ||
     !/^[A-Za-z0-9_-]{3,80}$/.test(value.workerId) ||
@@ -85,7 +98,8 @@ export function validateWorkerHealth(value: WorkerHealth) {
     !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(value.sessionId) ||
     !["ONLINE", "AUTH_REQUIRED", "DEGRADED"].includes(value.status) ||
     typeof value.architectAvailable !== "boolean" ||
-    typeof value.engineerAvailable !== "boolean"
+    typeof value.engineerAvailable !== "boolean" ||
+    (value.failureCode !== undefined && !failureCodes.includes(value.failureCode))
   )
     throw new Error("Invalid worker health envelope");
   return value;

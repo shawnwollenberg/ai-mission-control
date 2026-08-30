@@ -19,13 +19,17 @@ const endpoint = process.env.MISSION_CONTROL_V2_ENDPOINT?.replace(/\/$/, "");
 const token = process.env.MISSION_CONTROL_V2_WORKER_TOKEN;
 const workerId = process.env.MISSION_CONTROL_V2_WORKER_ID ?? "owner-mac";
 const displayName = process.env.MISSION_CONTROL_V2_WORKER_NAME ?? "Owner Mac";
-const intervalMs = Number(process.env.MISSION_CONTROL_V2_POLL_INTERVAL_MS ?? 5_000);
+const intervalMs = Number(process.env.MISSION_CONTROL_V2_POLL_INTERVAL_MS ?? 30_000);
 const once = process.argv.includes("--once");
 const sessionId = randomUUID();
 const bindings = new JsonBindingStore(join(dataDirectory, "provider-bindings.json"));
 let stopping = false;
 
-function health(status: WorkerHealth["status"] = "ONLINE", currentDispatchId?: string): WorkerHealth {
+function health(
+  status: WorkerHealth["status"] = "ONLINE",
+  currentDispatchId?: string,
+  failureCode?: WorkerHealth["failureCode"],
+): WorkerHealth {
   return {
     schema: "mc.worker-health/v1",
     workerId,
@@ -35,6 +39,7 @@ function health(status: WorkerHealth["status"] = "ONLINE", currentDispatchId?: s
     ...(currentDispatchId ? { currentDispatchId } : {}),
     architectAvailable: true,
     engineerAvailable: true,
+    ...(failureCode ? { failureCode } : {}),
   };
 }
 
@@ -96,6 +101,19 @@ async function execute(dispatch: WorkerDispatch): Promise<WorkerResult> {
     };
   if (binding.inFlight && binding.inFlight.idempotencyKey !== dispatch.idempotencyKey)
     throw new Error("PROVIDER_DISPATCH_INDETERMINATE");
+  if (
+    binding.inFlight?.idempotencyKey === dispatch.idempotencyKey &&
+    binding.failure?.code === "PROVIDER_THREAD_UNAVAILABLE"
+  ) {
+    if (binding.recoveryAttemptedFor === dispatch.idempotencyKey) throw new Error("PROVIDER_RECOVERY_EXHAUSTED");
+    binding = await bindings.update(dispatch.missionId, (stored) => ({
+      ...stored!,
+      ...(dispatch.actor === "ENGINEER" ? { codexThreadId: undefined } : { architectThreadId: undefined }),
+      recoveryAttemptedFor: dispatch.idempotencyKey,
+      failure: undefined,
+      inFlight: undefined,
+    }));
+  }
   binding = await bindings.update(dispatch.missionId, (stored) => ({
     ...(stored ?? binding),
     sourceMissionDigest: dispatch.missionDigest,
@@ -149,12 +167,26 @@ async function tick() {
   try {
     result = await new LocalSubscriptionWorker(execute).execute(dispatch);
   } catch (error) {
-    const failure = classifyProviderFailure(error, dispatch.actor, dispatch.missionRevision);
-    if (failure.code === "CODEX_AUTHENTICATION_EXPIRED")
-      await bindings.update(dispatch.missionId, (stored) => ({ ...stored!, inFlight: undefined, failure }));
+    let failure = classifyProviderFailure(error, dispatch.actor, dispatch.missionRevision);
+    const stored = await bindings.get(dispatch.missionId);
+    if (failure.code === "PROVIDER_THREAD_UNAVAILABLE" && stored?.recoveryAttemptedFor === dispatch.idempotencyKey)
+      failure = {
+        ...failure,
+        code: "PROVIDER_RECOVERY_EXHAUSTED",
+        message: "Provider thread recovery failed — operator reconciliation required",
+      };
+    await bindings.update(dispatch.missionId, (current) => ({
+      ...current!,
+      ...(failure.code === "CODEX_AUTHENTICATION_EXPIRED" ? { inFlight: undefined } : {}),
+      failure,
+    }));
     await post(
       "/api/v2/worker/health",
-      health(failure.code === "CODEX_AUTHENTICATION_EXPIRED" ? "AUTH_REQUIRED" : "DEGRADED", dispatch.dispatchId),
+      health(
+        failure.code === "CODEX_AUTHENTICATION_EXPIRED" ? "AUTH_REQUIRED" : "DEGRADED",
+        dispatch.dispatchId,
+        failure.code,
+      ),
     ).catch(() => undefined);
     console.error(
       JSON.stringify({
@@ -229,9 +261,19 @@ async function main() {
   process.once("SIGINT", () => (stopping = true));
   process.once("SIGTERM", () => (stopping = true));
   try {
+    let consecutiveCoordinationFailures = 0;
     do {
-      const worked = await tick();
-      if (!once && !stopping) await delay(worked ? 250 : intervalMs);
+      try {
+        await tick();
+        consecutiveCoordinationFailures = 0;
+        if (!once && !stopping) await delay(intervalMs);
+      } catch {
+        consecutiveCoordinationFailures += 1;
+        const backoffMs = Math.min(intervalMs * 2 ** (consecutiveCoordinationFailures - 1), 300_000);
+        console.error(JSON.stringify({ schema: "mc.local-worker/v1", event: "coordination_retry", backoffMs }));
+        if (once) throw new Error("WORKER_COORDINATION_UNAVAILABLE");
+        if (!stopping) await delay(backoffMs);
+      }
     } while (!once && !stopping);
   } finally {
     await releaseLock();

@@ -9,6 +9,7 @@ export type ProviderFailureCode =
   | "PROVIDER_THREAD_UNAVAILABLE"
   | "PROVIDER_OUTPUT_INVALID"
   | "PROVIDER_PROCESS_FAILED"
+  | "PROVIDER_RECOVERY_EXHAUSTED"
   | "PROVIDER_DISPATCH_INDETERMINATE"
   | "MISSION_SOURCE_CHANGED"
   | "GITHUB_UNAVAILABLE";
@@ -40,6 +41,7 @@ export type MissionBinding = {
   lastProcessedRevision: number;
   inFlight?: InFlightDispatch;
   failure?: ProviderFailure;
+  recoveryAttemptedFor?: string;
 };
 
 export interface BindingStore {

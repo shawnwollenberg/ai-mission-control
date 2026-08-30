@@ -987,3 +987,16 @@ worker PID defect. The authorization excludes arbitrary task discovery, UI scrap
 MFA, ACP retries, wallet/signature/financial action, credential or permission expansion, Responses/API billing, V1
 changes, and infrastructure changes. Exact scope, validation, rollout, and rollback are controlled by
 `docs/release/R_2026_08_29_V2_DIRECT_CODEX_HANDOFF.md`.
+
+## Mission Control 2.0 — Local worker bounded recovery release
+
+**Classification:** Security-sensitive application/provider-runtime remediation.
+
+**Authorized by the product owner on 2026-08-30:** implement the worker recovery fix directly outside Mission
+Control and reduce both local-worker coordination polling and visible-dashboard refresh polling to 30 seconds; after
+validation, commit, push, deploy, restart the local worker, and reconcile the three known failed dispatches. Recovery
+is limited to one fresh Codex thread after a definitive `PROVIDER_THREAD_UNAVAILABLE`; a second failure stops as
+`PROVIDER_RECOVERY_EXHAUSTED`. Network and control-plane failures use bounded exponential backoff instead of exiting.
+The release may not widen repository, credential, provider, execution, approval, GitHub, or deployment authority.
+Exact scope, acceptance, rollout, and rollback are controlled by
+`docs/release/R_2026_08_30_V2_LOCAL_WORKER_RECOVERY.md`.

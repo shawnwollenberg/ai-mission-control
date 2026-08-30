@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryWorkerCoordinationStore } from "../v2/worker/store.ts";
-import { validateWorkerResult } from "../v2/worker/protocol.ts";
+import { validateWorkerHealth, validateWorkerResult } from "../v2/worker/protocol.ts";
 
 const constitution = {
   schema: "mc.project-constitution/v1",
@@ -144,4 +144,31 @@ test("offline queued work resumes after the personal worker reconnects without c
   assert.equal(resumed.dispatchId, first.dispatchId);
   assert.equal(resumed.missionRevision, 1);
   assert.equal((await store.presence(30_000)).status, "ONLINE");
+});
+
+test("thread-unavailable dispatch is requeued exactly while other provider failures remain failed", async () => {
+  const store = new MemoryWorkerCoordinationStore();
+  const dispatch = await store.enqueue(input);
+  await store.claim(health(), 45_000);
+  await store.fail(health(), dispatch.dispatchId, "PROVIDER_THREAD_UNAVAILABLE");
+  assert.equal((await store.list())[0].failureCode, "PROVIDER_THREAD_UNAVAILABLE");
+  assert.equal((await store.enqueue(input)).dispatchId, dispatch.dispatchId);
+  assert.equal((await store.list())[0].status, "QUEUED");
+
+  await store.claim(health(), 45_000);
+  await store.fail(health(), dispatch.dispatchId, "PROVIDER_RECOVERY_EXHAUSTED");
+  await store.enqueue(input);
+  assert.equal((await store.list())[0].status, "FAILED");
+  assert.equal((await store.list())[0].failureCode, "PROVIDER_RECOVERY_EXHAUSTED");
+});
+
+test("worker health accepts only explicit provider failure codes", () => {
+  assert.equal(
+    validateWorkerHealth({ ...health(), status: "DEGRADED", failureCode: "PROVIDER_THREAD_UNAVAILABLE" }).failureCode,
+    "PROVIDER_THREAD_UNAVAILABLE",
+  );
+  assert.throws(
+    () => validateWorkerHealth({ ...health(), status: "DEGRADED", failureCode: "UNBOUNDED_RETRY" }),
+    /Invalid worker health envelope/,
+  );
 });

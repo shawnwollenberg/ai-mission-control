@@ -6,6 +6,7 @@ const messages: Record<ProviderFailureCode, string> = {
   PROVIDER_THREAD_UNAVAILABLE: "Provider thread unavailable — reconciliation required",
   PROVIDER_OUTPUT_INVALID: "Provider output failed validation",
   PROVIDER_PROCESS_FAILED: "Provider process failed",
+  PROVIDER_RECOVERY_EXHAUSTED: "Provider thread recovery failed — operator reconciliation required",
   PROVIDER_DISPATCH_INDETERMINATE: "Provider dispatch outcome is indeterminate — reconciliation required",
   MISSION_SOURCE_CHANGED: "GitHub Mission envelope changed after dispatch — reconciliation required",
   GITHUB_UNAVAILABLE: "GitHub unavailable — retry when service is restored",
@@ -29,8 +30,9 @@ export function classifyProviderFailure(
   if (error instanceof V2OperationalError)
     return { code: error.code, message: error.message, actor, revision, occurredAt: new Date().toISOString() };
   const raw = error instanceof Error ? error.message.toLowerCase() : "";
-  const code: ProviderFailureCode =
-    raw.includes("github") || raw.includes("gh exited") || raw.includes("issues request")
+  const code: ProviderFailureCode = raw.includes("provider_recovery_exhausted")
+    ? "PROVIDER_RECOVERY_EXHAUSTED"
+    : raw.includes("github") || raw.includes("gh exited") || raw.includes("issues request")
       ? "GITHUB_UNAVAILABLE"
       : raw.includes("auth") || raw.includes("unauthorized") || raw.includes("sign in")
         ? "CODEX_AUTHENTICATION_EXPIRED"

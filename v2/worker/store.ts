@@ -110,7 +110,16 @@ export class PostgresWorkerCoordinationStore implements WorkerCoordinationStore 
     const id = randomUUID();
     const result = await getDatabasePool().query<DispatchRow>(
       `INSERT INTO v2_worker_dispatches(dispatch_id,project_id,mission_id,issue_number,mission_revision,actor,adapter,idempotency_key,mission_digest,packet,status)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'QUEUED') ON CONFLICT(idempotency_key) DO UPDATE SET updated_at=now()
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'QUEUED') ON CONFLICT(idempotency_key) DO UPDATE SET
+       status=CASE WHEN v2_worker_dispatches.status='FAILED' AND v2_worker_dispatches.failure_code='PROVIDER_THREAD_UNAVAILABLE'
+         THEN 'QUEUED' ELSE v2_worker_dispatches.status END,
+       worker_id=CASE WHEN v2_worker_dispatches.status='FAILED' AND v2_worker_dispatches.failure_code='PROVIDER_THREAD_UNAVAILABLE'
+         THEN NULL ELSE v2_worker_dispatches.worker_id END,
+       worker_session_id=CASE WHEN v2_worker_dispatches.status='FAILED' AND v2_worker_dispatches.failure_code='PROVIDER_THREAD_UNAVAILABLE'
+         THEN NULL ELSE v2_worker_dispatches.worker_session_id END,
+       failure_code=CASE WHEN v2_worker_dispatches.status='FAILED' AND v2_worker_dispatches.failure_code='PROVIDER_THREAD_UNAVAILABLE'
+         THEN NULL ELSE v2_worker_dispatches.failure_code END,
+       updated_at=now()
        RETURNING *`,
       [
         id,
@@ -236,6 +245,7 @@ export class MemoryWorkerCoordinationStore implements WorkerCoordinationStore {
       githubRevision?: number;
       owner?: string;
       claimedAt?: string;
+      failureCode?: string;
     }
   >();
   private worker?: WorkerPresence;
@@ -251,7 +261,15 @@ export class MemoryWorkerCoordinationStore implements WorkerCoordinationStore {
     const existing = Array.from(this.dispatches.values()).find(
       (item) => item.dispatch.idempotencyKey === input.idempotencyKey,
     );
-    if (existing) return structuredClone(existing.dispatch);
+    if (existing) {
+      if (existing.status === "FAILED" && existing.failureCode === "PROVIDER_THREAD_UNAVAILABLE") {
+        existing.status = "QUEUED";
+        existing.owner = undefined;
+        existing.claimedAt = undefined;
+        existing.failureCode = undefined;
+      }
+      return structuredClone(existing.dispatch);
+    }
     const dispatch: WorkerDispatch = { schema: "mc.worker-dispatch/v1", dispatchId: randomUUID(), ...input };
     this.dispatches.set(dispatch.dispatchId, { dispatch, status: "QUEUED" });
     return structuredClone(dispatch);
@@ -304,12 +322,14 @@ export class MemoryWorkerCoordinationStore implements WorkerCoordinationStore {
     if (!item) throw new Error("Unknown worker dispatch");
     item.githubRevision = githubRevision;
   }
-  async fail(health: WorkerHealth, dispatchId: string | undefined, _code: string) {
-    void _code;
+  async fail(health: WorkerHealth, dispatchId: string | undefined, code: string) {
     this.see(health);
     if (dispatchId) {
       const item = this.dispatches.get(dispatchId);
-      if (item) item.status = "FAILED";
+      if (item) {
+        item.status = "FAILED";
+        item.failureCode = code;
+      }
     }
   }
   async presence(offlineAfterMs: number) {
@@ -327,6 +347,7 @@ export class MemoryWorkerCoordinationStore implements WorkerCoordinationStore {
       dispatch: structuredClone(item.dispatch),
       status: item.status,
       ...(item.githubRevision ? { resultingGitHubRevision: item.githubRevision } : {}),
+      ...(item.failureCode ? { failureCode: item.failureCode } : {}),
     }));
   }
 }
