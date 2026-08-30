@@ -174,6 +174,42 @@ test("owner reconciliation is canonical, revision-bound, and reconstructs an Arc
   assert.equal(rebuilt.latestOwnerReconciliation?.reason, "New deployment evidence is available.");
 });
 
+test("owner Mission amendment preserves history and reconstructs replacement criteria", async () => {
+  const api = new MemoryIssueApi();
+  const store = new GitHubIssueMissionStore(api, { constitution, authorizedLogins });
+  const ref = { issueNumber: 42 };
+  await store.appendEngineerReport(ref, engineerReport(2));
+  await store.appendArchitectDecision(ref, architectDecision(3, "BLOCKED_EXTERNAL"));
+  const originalCriteria = [...initialMission.acceptanceCriteria];
+  const replacementAcceptanceCriteria = [
+    "Current canonical Mission state is projected truthfully",
+    "Historical failed dispatch evidence remains preserved",
+  ];
+  const amended = await store.appendOwnerMissionAmendment(ref, {
+    schema: "mc.owner-mission-amendment/v1",
+    missionId: initialMission.missionId,
+    revision: 4,
+    blockedRevision: 3,
+    reason: "The old dashboard criterion references a superseded revision.",
+    replacementAcceptanceCriteria,
+    evidence: [{ kind: "owner-scope-decision", ref: "issue-38:revision-15" }],
+  });
+  assert.equal(amended.mission.state, "ARCHITECT_REVIEW");
+  assert.deepEqual(amended.mission.acceptanceCriteria, replacementAcceptanceCriteria);
+  assert.deepEqual(initialMission.acceptanceCriteria, originalCriteria);
+  assert.equal(amended.latestOwnerMissionAmendment?.blockedRevision, 3);
+  assert.deepEqual(api.issue.labels, ["mc:mission", "mc:architect-review"]);
+  const comment = api.issue.comments.at(-1).body;
+  assert.match(comment, /mission-control:owner-mission-amendment:start/);
+  const rebuilt = reconcileGitHubMission({ constitution, issue: api.issue, authorizedLogins });
+  assert.equal(rebuilt.latestRevision, 4);
+  assert.deepEqual(rebuilt.mission.acceptanceCriteria, replacementAcceptanceCriteria);
+  assert.equal(
+    rebuilt.latestOwnerMissionAmendment?.reason,
+    "The old dashboard criterion references a superseded revision.",
+  );
+});
+
 test("duplicate delivery is idempotent, out-of-order comments reconcile by revision, and conflicts fail", () => {
   const api = new MemoryIssueApi();
   const report = engineerReport(2);

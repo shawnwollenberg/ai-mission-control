@@ -53,6 +53,13 @@ An externally blocked Mission can resume only through an authenticated owner rec
 reason and evidence, and routes a fresh Architect reassessment. Labels remain derived presentation and cannot reopen
 a Mission. `COMPLETE`, active, stale, or mismatched blocked revisions fail closed.
 
+When an external block proves that an acceptance criterion has become obsolete, an authenticated owner may instead
+append `mc.owner-mission-amendment/v1`. The amendment binds the exact current `BLOCKED_EXTERNAL` revision, records a
+reason and evidence, and supplies the complete replacement acceptance-criteria list. Reconstruction preserves the
+original criteria and every prior signal in GitHub history, projects only the replacement criteria from the amendment
+revision forward, and routes the same Mission to Architect reassessment. It cannot change the objective, constraints,
+capabilities, approval policy, or any completed or active Mission.
+
 ## Explicit direct Codex handoff
 
 A direct Codex task remains private provider context until the owner explicitly promotes that exact thread with

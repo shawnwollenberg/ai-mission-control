@@ -2,6 +2,7 @@ import { requirePageIdentity } from "@/lib/page-auth";
 import { createV2MissionRuntime } from "@/v2/runtime/service";
 import { DecisionForm } from "./decision-form";
 import { ReconciliationForm } from "./reconciliation-form";
+import { AmendmentForm } from "./amendment-form";
 import { PostgresWorkerCoordinationStore } from "@/v2/worker/store";
 
 export const dynamic = "force-dynamic";
@@ -96,6 +97,18 @@ export default async function ProjectDetail({
             and routes a fresh Architect reassessment.
           </p>
           <ReconciliationForm projectId={projectId} issueNumber={issueNumber} blockedRevision={state.latestRevision} />
+          <hr />
+          <h3>Amend obsolete acceptance criteria</h3>
+          <p>
+            This preserves the prior criteria in canonical history and replaces only the complete acceptance-criteria
+            list at the exact blocked revision. Objective, constraints, and authority do not change.
+          </p>
+          <AmendmentForm
+            projectId={projectId}
+            issueNumber={issueNumber}
+            blockedRevision={state.latestRevision}
+            acceptanceCriteria={state.mission.acceptanceCriteria}
+          />
         </section>
       ) : null}
       <section>

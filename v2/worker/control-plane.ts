@@ -74,13 +74,16 @@ function missionStore(project: ProjectConfiguration, authorizedLogins: string[])
 }
 
 function latestSignal(current: Awaited<ReturnType<GitHubIssueMissionStore["readMission"]>>): RoutingSignal | undefined {
-  return (
-    current.latestCtoDecision ??
-    current.latestOwnerReconciliation ??
-    current.pendingCtoRequest ??
-    current.latestArchitectDecision ??
-    current.latestEngineerReport
-  );
+  return [
+    current.latestCtoDecision,
+    current.latestOwnerReconciliation,
+    current.latestOwnerMissionAmendment,
+    current.pendingCtoRequest,
+    current.latestArchitectDecision,
+    current.latestEngineerReport,
+  ]
+    .filter((signal): signal is RoutingSignal => signal !== undefined)
+    .sort((left, right) => right.revision - left.revision)[0];
 }
 
 async function appendCtoRequest(

@@ -115,6 +115,27 @@ export function routeMission(input: {
     };
   }
 
+  if (mission.state === "BLOCKED_EXTERNAL" && signal.schema === "mc.owner-mission-amendment/v1") {
+    if (signal.blockedRevision !== mission.revision)
+      throw new Error("Owner Mission amendment does not bind the current blocked revision");
+    const next = {
+      ...advance(mission, signal, "ARCHITECT_REVIEW"),
+      acceptanceCriteria: [...signal.replacementAcceptanceCriteria],
+    };
+    return {
+      outcome: "ROUTED",
+      mission: next,
+      processedRevision: signal.revision,
+      dispatch: {
+        actor: "ARCHITECT",
+        channel: "CHATGPT",
+        adapter: constitution.architect.adapter,
+        reason: "OWNER_MISSION_AMENDMENT",
+        idempotencyKey: key(mission.missionId, signal.revision, "ARCHITECT"),
+      },
+    };
+  }
+
   throw new Error(`Invalid signal ${signal.schema} while mission is ${mission.state}`);
 }
 

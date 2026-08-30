@@ -5,6 +5,7 @@ import type {
   CtoRequest,
   EngineerReport,
   Mission,
+  OwnerMissionAmendment,
   OwnerReconciliation,
   RoutingSignal,
 } from "../routing/contracts";
@@ -49,6 +50,10 @@ export class GitHubIssueMissionStore implements MissionStore {
 
   appendOwnerReconciliation(ref: MissionIssueRef, reconciliation: OwnerReconciliation) {
     return this.appendSignal(ref, "Owner reconciliation", reconciliation);
+  }
+
+  appendOwnerMissionAmendment(ref: MissionIssueRef, amendment: OwnerMissionAmendment) {
+    return this.appendSignal(ref, "Owner Mission amendment", amendment);
   }
 
   async updateMissionState(ref: MissionIssueRef, mission: Mission) {

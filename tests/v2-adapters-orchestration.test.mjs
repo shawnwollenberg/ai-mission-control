@@ -170,6 +170,76 @@ test("Codex Architect uses a separate read-only resumable thread and strict outp
   assert.equal(calls[0].options.outputSchema.additionalProperties, false);
 });
 
+test("Architect receives the newest canonical owner signal when reconciliation precedes amendment", async () => {
+  const api = new MemoryIssueApi();
+  const store = new GitHubIssueMissionStore(api, {
+    constitution: fixture.constitution,
+    authorizedLogins: ["mission-control-test"],
+  });
+  const bindings = new MemoryBindingStore();
+  await store.appendEngineerReport({ issueNumber: 42 }, report(fixture.mission));
+  await store.appendArchitectDecision(
+    { issueNumber: 42 },
+    {
+      schema: "mc.architect-decision/v1",
+      missionId: fixture.mission.missionId,
+      revision: 3,
+      decision: "BLOCKED_EXTERNAL",
+      rationale: "External evidence is unavailable.",
+      nextMission: null,
+    },
+  );
+  await store.appendOwnerReconciliation(
+    { issueNumber: 42 },
+    {
+      schema: "mc.owner-reconciliation/v1",
+      missionId: fixture.mission.missionId,
+      revision: 4,
+      blockedRevision: 3,
+      reason: "New evidence is available.",
+      evidence: [{ kind: "supported-read", ref: "github:42" }],
+    },
+  );
+  await store.appendArchitectDecision(
+    { issueNumber: 42 },
+    {
+      schema: "mc.architect-decision/v1",
+      missionId: fixture.mission.missionId,
+      revision: 5,
+      decision: "BLOCKED_EXTERNAL",
+      rationale: "One criterion is now obsolete.",
+      nextMission: null,
+    },
+  );
+  let priorSignal;
+  const architect = {
+    review: async ({ mission, priorSignal: received }) => {
+      priorSignal = received;
+      return {
+        architectThreadId: "architect-amendment",
+        decision: {
+          schema: "mc.architect-decision/v1",
+          missionId: mission.missionId,
+          revision: mission.revision + 1,
+          decision: "APPROVE",
+          rationale: "The amended criteria are satisfied.",
+          nextMission: null,
+        },
+      };
+    },
+  };
+  const orchestrator = new MissionOrchestrator(project, store, bindings, {}, architect);
+  await orchestrator.amendBlockedMission(42, {
+    blockedRevision: 5,
+    reason: "Replace the obsolete display requirement.",
+    replacementAcceptanceCriteria: ["Current canonical state is projected truthfully"],
+    evidence: [{ kind: "owner-scope-decision", ref: "issue:42" }],
+  });
+  await orchestrator.advance(42);
+  assert.equal(priorSignal?.schema, "mc.owner-mission-amendment/v1");
+  assert.equal(priorSignal?.revision, 6);
+});
+
 test("Responses Architect uses strict structured output, no tools, and resumes response context", async () => {
   const requests = [];
   const decision = {

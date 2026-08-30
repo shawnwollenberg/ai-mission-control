@@ -246,3 +246,61 @@ test("owner reconciliation reopens only the exact blocked revision for Architect
     /Invalid signal/,
   );
 });
+
+test("owner Mission amendment replaces only acceptance criteria at the exact blocked revision", () => {
+  const blocked = { ...original, revision: 5, state: "BLOCKED_EXTERNAL", currentActor: "EXTERNAL" };
+  const signal = {
+    schema: "mc.owner-mission-amendment/v1",
+    missionId: original.missionId,
+    revision: 6,
+    blockedRevision: 5,
+    reason: "A later canonical revision made the original display criterion obsolete.",
+    replacementAcceptanceCriteria: [
+      "Current canonical Mission state is projected truthfully",
+      "Historical failed dispatch evidence remains preserved",
+    ],
+    evidence: [{ kind: "owner-scope-decision", ref: "issue-38:revision-15" }],
+  };
+  const result = routeMission({ constitution, mission: blocked, signal, lastProcessedRevision: 5 });
+  assert.equal(result.mission.state, "ARCHITECT_REVIEW");
+  assert.equal(result.mission.objective, blocked.objective);
+  assert.deepEqual(result.mission.constraints, blocked.constraints);
+  assert.deepEqual(result.mission.acceptanceCriteria, signal.replacementAcceptanceCriteria);
+  assert.deepEqual(result.dispatch, {
+    actor: "ARCHITECT",
+    channel: "CHATGPT",
+    adapter: "fake-architect",
+    reason: "OWNER_MISSION_AMENDMENT",
+    idempotencyKey: "aprc-400:6:architect",
+  });
+  assert.throws(
+    () =>
+      routeMission({
+        constitution,
+        mission: blocked,
+        signal: { ...signal, blockedRevision: 4 },
+        lastProcessedRevision: 5,
+      }),
+    /does not bind the current blocked revision/,
+  );
+  assert.throws(
+    () =>
+      routeMission({
+        constitution,
+        mission: blocked,
+        signal: { ...signal, replacementAcceptanceCriteria: [] },
+        lastProcessedRevision: 5,
+      }),
+    /non-empty replacement acceptance criteria/,
+  );
+  assert.throws(
+    () =>
+      routeMission({
+        constitution,
+        mission: original,
+        signal: { ...signal, revision: 2, blockedRevision: 1 },
+        lastProcessedRevision: 1,
+      }),
+    /Invalid signal/,
+  );
+});

@@ -7,12 +7,19 @@ import {
   type CtoRequest,
   type EngineerReport,
   type Mission,
+  type OwnerMissionAmendment,
   type OwnerReconciliation,
   type RoutingSignal,
 } from "../routing/contracts";
 
 export type EnvelopeKind =
-  "mission" | "engineer-report" | "architect-decision" | "cto-request" | "cto-decision" | "owner-reconciliation";
+  | "mission"
+  | "engineer-report"
+  | "architect-decision"
+  | "cto-request"
+  | "cto-decision"
+  | "owner-reconciliation"
+  | "owner-mission-amendment";
 
 const schemas: Record<EnvelopeKind, string> = {
   mission: "mc.mission/v1",
@@ -21,6 +28,7 @@ const schemas: Record<EnvelopeKind, string> = {
   "cto-request": "mc.cto-request/v1",
   "cto-decision": "mc.cto-decision/v1",
   "owner-reconciliation": "mc.owner-reconciliation/v1",
+  "owner-mission-amendment": "mc.owner-mission-amendment/v1",
 };
 
 const kinds = Object.keys(schemas) as EnvelopeKind[];
@@ -191,7 +199,7 @@ function validateSignalEnvelope(value: unknown): RoutingSignal {
       throw new Error("CTO Decision is unsupported");
     if (item.comment !== undefined && typeof item.comment !== "string")
       throw new Error("CTO Decision comment must be text");
-  } else {
+  } else if (item.schema === "mc.owner-reconciliation/v1") {
     exact(item, ["schema", "missionId", "revision", "blockedRevision", "reason", "evidence"], "Owner Reconciliation");
     if (!Number.isSafeInteger(item.blockedRevision) || Number(item.blockedRevision) < 1)
       throw new Error("Owner Reconciliation blockedRevision must be positive");
@@ -199,8 +207,21 @@ function validateSignalEnvelope(value: unknown): RoutingSignal {
     validateEvidence(item.evidence);
     if (!Array.isArray(item.evidence) || item.evidence.length < 1)
       throw new Error("Owner Reconciliation requires evidence");
+  } else {
+    exact(
+      item,
+      ["schema", "missionId", "revision", "blockedRevision", "reason", "replacementAcceptanceCriteria", "evidence"],
+      "Owner Mission Amendment",
+    );
+    if (!Number.isSafeInteger(item.blockedRevision) || Number(item.blockedRevision) < 1)
+      throw new Error("Owner Mission Amendment blockedRevision must be positive");
+    text(item.reason, "Owner Mission Amendment reason");
+    stringArray(item.replacementAcceptanceCriteria, "Owner Mission Amendment replacementAcceptanceCriteria");
+    validateEvidence(item.evidence);
+    if (!Array.isArray(item.evidence) || item.evidence.length < 1)
+      throw new Error("Owner Mission Amendment requires evidence");
   }
-  return validateRoutingSignal(item as RoutingSignal);
+  return validateRoutingSignal(item as RoutingSignal | OwnerMissionAmendment);
 }
 
 export function renderEnvelope(kind: EnvelopeKind, value: Mission | RoutingSignal) {

@@ -1016,3 +1016,24 @@ authorizes invoking the exact revision-bound owner reconciliation on Mission Con
 health, readiness, and worker presence verify. It does not authorize any unrelated repository, credential, provider,
 financial, signing, infrastructure, or agent-authority expansion. The exact release is controlled by
 `docs/release/R_2026_08_30_V2_RECONCILIATION_AND_DISCUSS.md`.
+
+## Mission Control 2.0 — Owner Mission amendment transition
+
+**Classification:** Security-sensitive application and routing-authority change.
+
+**Development authorization from the product owner on 2026-08-30:** add a narrow canonical transition for obsolete
+acceptance criteria discovered after a Mission reaches `BLOCKED_EXTERNAL`. `mc.owner-mission-amendment/v1` must bind
+the exact blocked revision, require authenticated owner authority, same-origin mutation, a reason, evidence, and the
+complete replacement acceptance-criteria list. It preserves the original criteria in canonical GitHub history and
+routes only to Architect reassessment. It cannot change objective, constraints, capabilities, approval or policy
+authority, completed or active Missions, credentials, provider authority, or external-effect authority.
+
+This authorization covers implementation, documentation, and local validation only. Commit, push, merge, production
+deployment, and invocation against Issue #38 require a separate exact human release approval after review of the final
+diff and validation evidence. The pending release record is
+`docs/release/R_2026_08_30_V2_OWNER_MISSION_AMENDMENT.md`.
+
+**Production release authorization on 2026-08-30:** after review of the completed implementation and validation
+evidence, the product owner explicitly authorized commit, push, merge, and deployment of this exact owner Mission
+amendment release. This approval does not authorize invoking the transition against Issue #38 or any other Mission,
+changing credentials or infrastructure, retrying provider work, or expanding any unrelated authority.

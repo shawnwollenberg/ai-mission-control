@@ -111,13 +111,24 @@ export type OwnerReconciliation = {
   evidence: Array<{ kind: string; ref: string; result?: string }>;
 };
 
-export type RoutingSignal = EngineerReport | ArchitectDecision | CtoRequest | CtoDecision | OwnerReconciliation;
+export type OwnerMissionAmendment = {
+  schema: "mc.owner-mission-amendment/v1";
+  missionId: string;
+  revision: number;
+  blockedRevision: number;
+  reason: string;
+  replacementAcceptanceCriteria: string[];
+  evidence: Array<{ kind: string; ref: string; result?: string }>;
+};
+
+export type RoutingSignal =
+  EngineerReport | ArchitectDecision | CtoRequest | CtoDecision | OwnerReconciliation | OwnerMissionAmendment;
 
 export type ArchitectDispatch = {
   actor: "ARCHITECT";
   channel: "CHATGPT";
   adapter: string;
-  reason: "ENGINEER_REPORT_READY" | "CTO_REJECTED" | "CTO_DISCUSS" | "OWNER_RECONCILIATION";
+  reason: "ENGINEER_REPORT_READY" | "CTO_REJECTED" | "CTO_DISCUSS" | "OWNER_RECONCILIATION" | "OWNER_MISSION_AMENDMENT";
   idempotencyKey: string;
 };
 
@@ -174,6 +185,19 @@ export function validateRoutingSignal(value: RoutingSignal): RoutingSignal {
       throw new Error("Owner reconciliation must bind a blocked revision");
     if (!value.reason.trim() || !value.evidence.length)
       throw new Error("Owner reconciliation requires a reason and evidence");
+  }
+  if (value.schema === "mc.owner-mission-amendment/v1") {
+    if (value.blockedRevision < 1 || !Number.isSafeInteger(value.blockedRevision))
+      throw new Error("Owner Mission amendment must bind a blocked revision");
+    if (!value.reason.trim() || !value.evidence.length)
+      throw new Error("Owner Mission amendment requires a reason and evidence");
+    if (
+      !value.replacementAcceptanceCriteria.length ||
+      value.replacementAcceptanceCriteria.some((criterion) => !criterion.trim())
+    )
+      throw new Error("Owner Mission amendment requires non-empty replacement acceptance criteria");
+    if (new Set(value.replacementAcceptanceCriteria).size !== value.replacementAcceptanceCriteria.length)
+      throw new Error("Owner Mission amendment acceptance criteria must be unique");
   }
   return value;
 }

@@ -4,6 +4,7 @@ import type {
   CtoRequest,
   EngineerReport,
   Mission,
+  OwnerMissionAmendment,
   OwnerReconciliation,
   ProjectConstitution,
 } from "../routing/contracts";
@@ -18,6 +19,7 @@ export interface MissionStore {
   appendCtoRequest(ref: MissionIssueRef, request: CtoRequest): Promise<ReconciledMission>;
   appendCtoDecision(ref: MissionIssueRef, decision: CtoDecision): Promise<ReconciledMission>;
   appendOwnerReconciliation(ref: MissionIssueRef, reconciliation: OwnerReconciliation): Promise<ReconciledMission>;
+  appendOwnerMissionAmendment(ref: MissionIssueRef, amendment: OwnerMissionAmendment): Promise<ReconciledMission>;
   updateMissionState(ref: MissionIssueRef, mission: Mission): Promise<void>;
   closeMission(ref: MissionIssueRef): Promise<ReconciledMission>;
   reconcileMission(ref: MissionIssueRef): Promise<ReconciledMission>;
